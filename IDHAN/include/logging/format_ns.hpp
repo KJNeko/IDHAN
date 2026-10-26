@@ -4,6 +4,7 @@
 //! otherwise {fmt}. Use format_ns::format everywhere so call sites don't hard-code either backend.
 #ifdef IDHAN_USE_STD_FORMAT
 #include <format>
+#include "logging/std_formatters/path.hpp"
 namespace format_ns = std;
 #else
 #include <fmt/format.h>

@@ -26,6 +26,7 @@ class HydrusImporterWidget final : public QWidget
 
 	std::size_t m_total_preprocess { 0 };
 	std::size_t m_completed_preprocess { 0 };
+	bool m_preprocessing_failed { false };
 
   public:
 
@@ -45,7 +46,7 @@ class HydrusImporterWidget final : public QWidget
 	void on_selectHydrusPath_clicked();
 	void on_parseHydrusDB_pressed();
 	void on_importButton_pressed();
-	void onPreprocessingComplete();
+	void onPreprocessingComplete( bool success );
 
   signals:
 	void triggerPreImport();

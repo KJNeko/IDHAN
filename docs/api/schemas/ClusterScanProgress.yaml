@@ -1,0 +1,74 @@
+type: object
+description: >-
+  Live snapshot in JobStatus.progress. Active file subtasks are bounded by the
+  scan's concurrency, have IDs local to this job, and disappear when processed.
+  Polling does not retain a per-file history. Counts include failed attempts;
+  failed_count also includes missing-file and traversal failures.
+properties:
+  kind:
+    const: cluster_scan
+  phase:
+    type: string
+    enum: [ verifying_cluster, checking_missing_files, counting_files, scanning_files, stopping, stopped, completed, failed ]
+    description: >-
+      stopping drains already scheduled files. stopped means the scan ended
+      early; the job can still have status completed and a normal final result.
+  checked_records:
+    type: integer
+    minimum: 0
+    description: Assigned records inspected during optional missing-file preflight.
+  counted_files:
+    type: integer
+    minimum: 0
+    description: Eligible files discovered by a separate directory-and-size counting pass.
+  total_files:
+    type: integer
+    minimum: 0
+    description: >-
+      Present after a complete counting pass. An estimate while scanning because
+      directory contents can change; raised if additional files are scheduled.
+      At normal completion it equals processed_files. Absent when counting has
+      not finished or traversal errors prevent a complete count.
+  processed_files:
+    type: integer
+    minimum: 0
+  remaining_files:
+    type: integer
+    minimum: 0
+    description: total_files minus processed_files, including active and unscheduled files; omitted without a total.
+  processed_bytes:
+    type: integer
+    minimum: 0
+    description: Sizes of processed files, including failed attempts; not bytes read from disk.
+  failed_count:
+    type: integer
+    minimum: 0
+  active_files:
+    type: integer
+    minimum: 0
+    maximum: 64
+  tasks:
+    type: array
+    maxItems: 64
+    items:
+      type: object
+      properties:
+        task_id:
+          type: integer
+          minimum: 1
+        path:
+          type: string
+          description: Path relative to the cluster root at admission, before any scan repairs.
+        stage:
+          type: string
+          enum: [ checking_record, hashing, detecting_mime, moving_file, updating_database, parsing_metadata, storing_metadata, finishing ]
+      required: [ task_id, path, stage ]
+  last_failure:
+    type: object
+    properties:
+      path:
+        type: string
+      error:
+        type: string
+    required: [ path, error ]
+required: [ kind, phase, checked_records, counted_files, processed_files, processed_bytes, failed_count, active_files, tasks ]

@@ -16,7 +16,7 @@
 namespace idhan::db
 {
 
-bool tableExists( pqxx::nontransaction& tx, const std::string_view name, const std::string_view schema )
+bool tableExists( pqxx::transaction_base& tx, const std::string_view name, const std::string_view schema )
 {
 	pqxx::params params {};
 	params.append( name );

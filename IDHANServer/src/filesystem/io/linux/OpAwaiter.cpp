@@ -2,11 +2,12 @@
 
 #include "filesystem/io/linux/OpAwaiter.hpp"
 
+#include <folly/Executor.h>
+
 #include <liburing.h>
 
 #include "filesystem/io/linux/IOUringLinux.hpp"
 #include "logging/log.hpp"
-#include "trantor/net/EventLoop.h"
 
 namespace idhan
 {
@@ -18,7 +19,6 @@ bool OpAwaiter::await_ready() noexcept
 
 void OpAwaiter::await_suspend( const std::coroutine_handle<> h )
 {
-	m_event_loop = trantor::EventLoop::getEventLoopOfCurrentThread();
 	m_cont = h;
 
 	std::lock_guard lock { m_uring->mtx };
@@ -40,7 +40,10 @@ int OpAwaiter::await_resume() const
 	return m_result;
 }
 
-OpAwaiter::OpAwaiter( IOUringLinux* uring, io_uring_sqe sqe ) : m_uring( uring ), m_sqe( sqe )
+OpAwaiter::OpAwaiter( IOUringLinux* uring, io_uring_sqe sqe, folly::Executor* executor ) :
+  m_uring( uring ),
+  m_sqe( sqe ),
+  m_executor( executor )
 {}
 
 void OpAwaiter::complete( const int result )
@@ -53,7 +56,7 @@ void OpAwaiter::complete( const int result )
 		return;
 	}
 
-	m_event_loop->queueInLoop( m_cont );
+	m_executor->add( [ cont = m_cont ] { cont.resume(); } );
 }
 
 OpAwaiter::~OpAwaiter() = default;

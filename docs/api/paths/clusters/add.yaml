@@ -2,65 +2,75 @@ post:
   tags:
     - clusters
   summary: Creates a cluster
+  description: >-
+    Creates a cluster with a unique name and normalized path. Names use exact,
+    case-sensitive comparison. Paths are made absolute relative to the server's
+    working directory, then normalized lexically to simplify dot segments and
+    trailing separators before comparison and storage. Existing registered paths
+    use the same normalization for comparison, including legacy relative paths.
+    Physical directory aliases and duplicate marker UUIDs also conflict. New
+    registrations create a missing .idhan-cluster.json, including for logically
+    read-only clusters; this identity write requires filesystem permission.
+    Existing valid markers are reused without modification. Invalid markers
+    are rejected. Known name/path conflicts are checked before filesystem
+    initialization; database uniqueness also protects concurrent registration.
+    Removing a registration retains its marker and media for later reuse.
   requestBody:
     required: true
     content:
       application/json:
         schema:
-          $ref: '../../schemas/ClusterInfo.yaml'
+          $ref: ../../schemas/ClusterCreate.yaml
         examples:
           readonly_existing:
             summary: Point at an existing directory (readonly, recommended for migrations)
             value:
-              name: "My Media"
-              path: "/mnt/media/idhan"
+              name: My Media
+              path: /mnt/media/idhan
               readonly: true
           managed_new:
             summary: Create a new managed cluster IDHAN can write to
             value:
-              name: "My Media"
-              path: "/mnt/media/idhan"
+              name: My Media
+              path: /mnt/media/idhan
               readonly: false
               ratio: 1
               size:
                 limit: 0
   responses:
-    200:
+    '400':
+      description: Invalid JSON, missing name or path, invalid ratio or limit, or a missing read-only
+        path.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '409':
+      description: A cluster already uses the name, normalized path, physical directory, or marker UUID; or marker validation/initialization failed.
+      content:
+        text/plain:
+          schema:
+            type: string
+          examples:
+            duplicateName:
+              value: A cluster with the name Archive already exists
+            duplicatePath:
+              value: Path /mnt/archive already exists in the cluster list
+    '500':
+      description: Directory could not be created/opened, or the insert failed
+      content:
+        text/plain:
+          schema:
+            type: string
+    '201':
       description: The new cluster
       content:
         application/json:
           schema:
-            $ref: '../../schemas/ClusterInfo.yaml'
-    400:
-      description: No JSON body, missing `name`, or a read-only cluster whose path does not exist
+            $ref: ../../schemas/ClusterInfo.yaml
+    '401':
+      description: The supplied API key is not recognized.
       content:
-        application/json:
+        text/plain:
           schema:
-            type: object
-            properties:
-              error:
-                type: string
-              status:
-                type: integer
-    409:
-      description: A cluster already uses that path
-      content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              error:
-                type: string
-              status:
-                type: integer
-    500:
-      description: Directory could not be created, the write test failed, or the insert failed
-      content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              error:
-                type: string
-              status:
-                type: integer
+            type: string

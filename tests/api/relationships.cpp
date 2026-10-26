@@ -15,7 +15,7 @@ static Json::Value duplicateBody( const RecordID worse, const RecordID better )
 	return json;
 }
 
-SCENARIO_METHOD( ServerFixture, "Flat duplicate groups can be read", "[api][relationships]" )
+SCENARIO_METHOD( ServerFixture, "Direct duplicate relationships can be read", "[api][relationships]" )
 {
 	GIVEN( "a duplicate king with three lesser records and an alternative" )
 	{
@@ -27,19 +27,16 @@ SCENARIO_METHOD( ServerFixture, "Flat duplicate groups can be read", "[api][rela
 		const auto deep_inferior { records[ 4 ] };
 
 		REQUIRE(
-			api().post( "/relationships/duplicates/add", duplicateBody( first_inferior, superior ) ).status
-			== drogon::k200OK );
+			api().post( "/relationships/duplicates/add", duplicateBody( first_inferior, superior ) ).status == 200 );
 		REQUIRE(
-			api().post( "/relationships/duplicates/add", duplicateBody( second_inferior, superior ) ).status
-			== drogon::k200OK );
+			api().post( "/relationships/duplicates/add", duplicateBody( second_inferior, superior ) ).status == 200 );
 		REQUIRE(
-			api().post( "/relationships/duplicates/add", duplicateBody( deep_inferior, superior ) ).status
-			== drogon::k200OK );
+			api().post( "/relationships/duplicates/add", duplicateBody( deep_inferior, superior ) ).status == 200 );
 
 		Json::Value alternatives { Json::arrayValue };
 		alternatives.append( superior );
 		alternatives.append( alternative );
-		REQUIRE( api().post( "/relationships/alternatives/add", alternatives ).status == drogon::k200OK );
+		REQUIRE( api().post( "/relationships/alternatives/add", alternatives ).status == 200 );
 
 		WHEN( "the superior file's relationships are requested" )
 		{
@@ -47,14 +44,14 @@ SCENARIO_METHOD( ServerFixture, "Flat duplicate groups can be read", "[api][rela
 
 			THEN( "all its inferior copies and its alternative are returned by role" )
 			{
-				REQUIRE( response.status == drogon::k200OK );
+				REQUIRE( response.status == 200 );
 				CHECK( response.json[ "inferior" ].size() == 3 );
 				CHECK( response.json[ "superior" ].empty() );
 				REQUIRE( response.json[ "alternatives" ].size() == 1 );
 				CHECK( response.json[ "alternatives" ][ 0 ].asInt() == alternative );
 
 				const auto alternative_response { api().get( "/relationships/" + std::to_string( alternative ) ) };
-				REQUIRE( alternative_response.status == drogon::k200OK );
+				REQUIRE( alternative_response.status == 200 );
 				REQUIRE( alternative_response.json[ "alternatives" ].size() == 1 );
 				CHECK( alternative_response.json[ "alternatives" ][ 0 ].asInt() == superior );
 			}
@@ -66,11 +63,12 @@ SCENARIO_METHOD( ServerFixture, "Flat duplicate groups can be read", "[api][rela
 
 			THEN( "its superior is returned" )
 			{
-				REQUIRE( response.status == drogon::k200OK );
+				REQUIRE( response.status == 200 );
 				CHECK( response.json[ "inferior" ].empty() );
 				REQUIRE( response.json[ "superior" ].size() == 1 );
 				CHECK( response.json[ "superior" ][ 0 ].asInt() == superior );
-				CHECK( response.json[ "alternatives" ].empty() );
+				REQUIRE( response.json[ "alternatives" ].size() == 1 );
+				CHECK( response.json[ "alternatives" ][ 0 ].asInt() == alternative );
 			}
 		}
 
@@ -80,7 +78,7 @@ SCENARIO_METHOD( ServerFixture, "Flat duplicate groups can be read", "[api][rela
 
 			THEN( "only its king is returned" )
 			{
-				REQUIRE( response.status == drogon::k200OK );
+				REQUIRE( response.status == 200 );
 				REQUIRE( response.json[ "superior" ].size() == 1 );
 				CHECK( response.json[ "superior" ][ 0 ].asInt() == superior );
 				CHECK( response.json[ "inferior" ].empty() );
@@ -89,98 +87,54 @@ SCENARIO_METHOD( ServerFixture, "Flat duplicate groups can be read", "[api][rela
 	}
 }
 
-SCENARIO_METHOD( ServerFixture, "Duplicate groups keep one explicit king", "[api][relationships]" )
+SCENARIO_METHOD( ServerFixture, "Duplicate relationships retain only the current king", "[api][relationships]" )
 {
-	GIVEN( "two flat duplicate groups" )
-	{
-		const auto records { api().createRecords( { 61, 62, 63, 64 } ) };
-		const auto first_king { records[ 0 ] };
-		const auto first_lesser { records[ 1 ] };
-		const auto second_king { records[ 2 ] };
-		const auto second_lesser { records[ 3 ] };
+	const auto records { api().createRecords( { 61, 62, 63, 64 } ) };
+	const auto a { records[ 0 ] };
+	const auto b { records[ 1 ] };
+	const auto c { records[ 2 ] };
+	const auto d { records[ 3 ] };
 
-		REQUIRE(
-			api().post( "/relationships/duplicates/add", duplicateBody( first_lesser, first_king ) ).status
-			== drogon::k200OK );
-		REQUIRE(
-			api().post( "/relationships/duplicates/add", duplicateBody( second_lesser, second_king ) ).status
-			== drogon::k200OK );
+	Json::Value comparisons { Json::arrayValue };
+	comparisons.append( duplicateBody( b, a ) );
+	comparisons.append( duplicateBody( c, b ) );
+	comparisons.append( duplicateBody( d, c ) );
+	REQUIRE( api().post( "/relationships/duplicates/add", comparisons ).status == 200 );
 
-		WHEN( "a lesser member is promoted" )
-		{
-			Integer original_duplicate_id {};
-			{
-				pqxx::nontransaction tx { db() };
-				original_duplicate_id = tx.query_value< Integer >(
-					"SELECT duplicate_id FROM duplicate_groups WHERE king_id = $1", pqxx::params { first_king } );
-			}
+	const auto middle { api().get( "/relationships/" + std::to_string( b ) ) };
+	REQUIRE( middle.status == 200 );
+	REQUIRE( middle.json[ "superior" ].size() == 1 );
+	CHECK( middle.json[ "superior" ][ 0 ].asInt() == a );
+	CHECK( middle.json[ "inferior" ].empty() );
 
-			const auto response {
-				api().post( "/relationships/duplicates/add", duplicateBody( first_king, first_lesser ) )
-			};
+	const auto king { api().get( "/relationships/" + std::to_string( a ) ) };
+	REQUIRE( king.status == 200 );
+	CHECK( king.json[ "inferior" ].size() == 3 );
 
-			THEN( "it becomes the only king and every other member points directly to it" )
-			{
-				REQUIRE( response.status == drogon::k200OK );
+	Json::Value clear {};
+	clear[ "record_id_a" ] = b;
+	clear[ "record_id_b" ] = c;
+	const auto peers { api().post( "/relationships/clear", clear ) };
+	REQUIRE( peers.status == 200 );
+	CHECK_FALSE( peers.json[ "duplicate_removed" ].asBool() );
 
-				const auto king { api().get( "/relationships/" + std::to_string( first_lesser ) ) };
-				REQUIRE( king.status == drogon::k200OK );
-				REQUIRE( king.json[ "inferior" ].size() == 1 );
-				CHECK( king.json[ "inferior" ][ 0 ].asInt() == first_king );
-				CHECK( king.json[ "superior" ].empty() );
+	clear[ "record_id_a" ] = a;
+	const auto removed { api().post( "/relationships/clear", clear ) };
+	REQUIRE( removed.status == 200 );
+	CHECK( removed.json[ "duplicate_removed" ].asBool() );
 
-				pqxx::nontransaction tx { db() };
-				CHECK(
-					tx.query_value< Integer >(
-						"SELECT duplicate_id FROM duplicate_groups WHERE king_id = $1", pqxx::params { first_lesser } )
-					== original_duplicate_id );
-			}
-		}
+	const auto detached { api().get( "/relationships/" + std::to_string( c ) ) };
+	REQUIRE( detached.status == 200 );
+	CHECK( detached.json[ "superior" ].empty() );
+	CHECK( detached.json[ "inferior" ].empty() );
 
-		WHEN( "the groups are joined under a member of the second group" )
-		{
-			Integer second_duplicate_id {};
-			{
-				pqxx::nontransaction tx { db() };
-				second_duplicate_id = tx.query_value< Integer >(
-					"SELECT duplicate_id FROM duplicate_groups WHERE king_id = $1", pqxx::params { second_king } );
-			}
-
-			const auto response {
-				api().post( "/relationships/duplicates/add", duplicateBody( first_king, second_lesser ) )
-			};
-
-			THEN( "that member is king and the merged group has no chain or cycle" )
-			{
-				REQUIRE( response.status == drogon::k200OK );
-
-				const auto king { api().get( "/relationships/" + std::to_string( second_lesser ) ) };
-				REQUIRE( king.status == drogon::k200OK );
-				CHECK( king.json[ "inferior" ].size() == 3 );
-				CHECK( king.json[ "superior" ].empty() );
-
-				for ( const auto id : { first_king, first_lesser, second_king } )
-				{
-					const auto lesser { api().get( "/relationships/" + std::to_string( id ) ) };
-					REQUIRE( lesser.status == drogon::k200OK );
-					REQUIRE( lesser.json[ "superior" ].size() == 1 );
-					CHECK( lesser.json[ "superior" ][ 0 ].asInt() == second_lesser );
-					CHECK( lesser.json[ "inferior" ].empty() );
-				}
-
-				pqxx::nontransaction tx { db() };
-				CHECK(
-					tx.query_value< Integer >(
-						"SELECT duplicate_id FROM duplicate_groups WHERE king_id = $1", pqxx::params { second_lesser } )
-					== second_duplicate_id );
-				CHECK( tx.query_value< Integer >( "SELECT count(*) FROM duplicate_groups" ) == 1 );
-				CHECK( tx.query_value< Integer >( "SELECT count(*) FROM duplicate_group_inferiors" ) == 3 );
-				CHECK_FALSE( tx.query_value< bool >(
-					"SELECT EXISTS (SELECT 1 FROM duplicate_groups duplicate_group "
-					"JOIN duplicate_group_inferiors inferior ON inferior.inferior_id = duplicate_group.king_id)" ) );
-			}
-		}
-	}
+	pqxx::nontransaction tx { db() };
+	CHECK(
+		tx.query_value< RecordID >( "SELECT king_id FROM duplicate_members WHERE record_id = $1", pqxx::params { d } )
+		== a );
+	CHECK(
+		tx.query_value< RecordID >( "SELECT king_id FROM duplicate_members WHERE record_id = $1", pqxx::params { b } )
+		== a );
 }
 
 static void seedPerceptualHash( pqxx::connection& connection, const RecordID record_id, const std::string& hex )
@@ -217,7 +171,7 @@ SCENARIO_METHOD( ServerFixture, "Similar records are found by perceptual hash di
 
 			THEN( "they are returned nearest first, without the probe or the distant record" )
 			{
-				REQUIRE( response.status == drogon::k200OK );
+				REQUIRE( response.status == 200 );
 				REQUIRE( response.json[ "results" ].size() == 2 );
 				CHECK( response.json[ "results" ][ 0 ][ "record_id" ].asInt() == one_bit );
 				CHECK( response.json[ "results" ][ 0 ][ "distance" ].asInt() == 1 );
@@ -232,11 +186,11 @@ SCENARIO_METHOD( ServerFixture, "Similar records are found by perceptual hash di
 			THEN( "only the neighbours within it are returned" )
 			{
 				const auto exact { similar( probe, "?distance=0" ) };
-				REQUIRE( exact.status == drogon::k200OK );
+				REQUIRE( exact.status == 200 );
 				CHECK( exact.json[ "results" ].empty() );
 
 				const auto near { similar( probe, "?distance=1" ) };
-				REQUIRE( near.status == drogon::k200OK );
+				REQUIRE( near.status == 200 );
 				REQUIRE( near.json[ "results" ].size() == 1 );
 				CHECK( near.json[ "results" ][ 0 ][ "record_id" ].asInt() == one_bit );
 			}
@@ -248,7 +202,7 @@ SCENARIO_METHOD( ServerFixture, "Similar records are found by perceptual hash di
 
 			THEN( "distance is measured from that record instead" )
 			{
-				REQUIRE( response.status == drogon::k200OK );
+				REQUIRE( response.status == 200 );
 				REQUIRE( response.json[ "results" ].size() == 2 );
 				CHECK( response.json[ "results" ][ 0 ][ "record_id" ].asInt() == probe );
 				CHECK( response.json[ "results" ][ 0 ][ "distance" ].asInt() == 1 );
@@ -263,7 +217,7 @@ SCENARIO_METHOD( ServerFixture, "Similar records are found by perceptual hash di
 
 			THEN( "the truncation is reported" )
 			{
-				REQUIRE( response.status == drogon::k200OK );
+				REQUIRE( response.status == 200 );
 				REQUIRE( response.json[ "results" ].size() == 1 );
 				CHECK( response.json[ "truncated" ].asBool() );
 			}
@@ -275,7 +229,7 @@ SCENARIO_METHOD( ServerFixture, "Similar records are found by perceptual hash di
 
 			THEN( "the complete result is not reported as truncated" )
 			{
-				REQUIRE( response.status == drogon::k200OK );
+				REQUIRE( response.status == 200 );
 				REQUIRE( response.json[ "results" ].size() == 1 );
 				CHECK_FALSE( response.json[ "truncated" ].asBool() );
 			}
@@ -285,11 +239,11 @@ SCENARIO_METHOD( ServerFixture, "Similar records are found by perceptual hash di
 		{
 			THEN( "each failure is reported distinctly" )
 			{
-				CHECK( similar( unhashed, "?distance=3" ).status == drogon::k404NotFound );
-				CHECK( similar( 999999, "?distance=3" ).status == drogon::k404NotFound );
-				CHECK( similar( probe, "?distance=abc" ).status == drogon::k400BadRequest );
-				CHECK( similar( probe, "?distance=65" ).status == drogon::k400BadRequest );
-				CHECK( similar( probe, "?limit=99999" ).status == drogon::k400BadRequest );
+				CHECK( similar( unhashed, "?distance=3" ).status == 404 );
+				CHECK( similar( 999999, "?distance=3" ).status == 404 );
+				CHECK( similar( probe, "?distance=abc" ).status == 400 );
+				CHECK( similar( probe, "?distance=65" ).status == 400 );
+				CHECK( similar( probe, "?limit=99999" ).status == 400 );
 			}
 		}
 	}
@@ -315,14 +269,13 @@ SCENARIO_METHOD( ServerFixture, "Relationships between two records can be cleare
 		const auto third_alternative { records[ 4 ] };
 
 		REQUIRE(
-			api().post( "/relationships/duplicates/add", duplicateBody( inferior, superior ) ).status
-			== drogon::k200OK );
+			api().post( "/relationships/duplicates/add", duplicateBody( inferior, superior ) ).status == 200 );
 
 		Json::Value alternatives { Json::arrayValue };
 		alternatives.append( first_alternative );
 		alternatives.append( second_alternative );
 		alternatives.append( third_alternative );
-		REQUIRE( api().post( "/relationships/alternatives/add", alternatives ).status == drogon::k200OK );
+		REQUIRE( api().post( "/relationships/alternatives/add", alternatives ).status == 200 );
 
 		WHEN( "the duplicate pair is cleared" )
 		{
@@ -330,18 +283,19 @@ SCENARIO_METHOD( ServerFixture, "Relationships between two records can be cleare
 
 			THEN( "the pair is gone in both directions" )
 			{
-				REQUIRE( response.status == drogon::k200OK );
+				REQUIRE( response.status == 200 );
 				CHECK( response.json[ "duplicate_removed" ].asBool() );
 				CHECK_FALSE( response.json[ "alternative_removed" ].asBool() );
 
 				const auto after { api().get( "/relationships/" + std::to_string( superior ) ) };
-				REQUIRE( after.status == drogon::k200OK );
+				REQUIRE( after.status == 200 );
 				CHECK( after.json[ "inferior" ].empty() );
 				CHECK( after.json[ "superior" ].empty() );
 
 				pqxx::nontransaction tx { db() };
 				CHECK_FALSE( tx.query_value< bool >(
-					"SELECT EXISTS (SELECT 1 FROM duplicate_groups WHERE king_id = $1)", pqxx::params { superior } ) );
+					"SELECT EXISTS (SELECT 1 FROM duplicate_members WHERE king_id = $1 AND record_id <> king_id)",
+					pqxx::params { superior } ) );
 			}
 		}
 
@@ -353,16 +307,16 @@ SCENARIO_METHOD( ServerFixture, "Relationships between two records can be cleare
 
 			THEN( "only that pair goes, and every other pair survives" )
 			{
-				REQUIRE( response.status == drogon::k200OK );
+				REQUIRE( response.status == 200 );
 				CHECK( response.json[ "alternative_removed" ].asBool() );
 
 				const auto after { api().get( "/relationships/" + std::to_string( first_alternative ) ) };
-				REQUIRE( after.status == drogon::k200OK );
+				REQUIRE( after.status == 200 );
 				REQUIRE( after.json[ "alternatives" ].size() == 1 );
 				CHECK( after.json[ "alternatives" ][ 0 ].asInt() == second_alternative );
 
 				const auto cleared { api().get( "/relationships/" + std::to_string( third_alternative ) ) };
-				REQUIRE( cleared.status == drogon::k200OK );
+				REQUIRE( cleared.status == 200 );
 				REQUIRE( cleared.json[ "alternatives" ].size() == 1 );
 				CHECK( cleared.json[ "alternatives" ][ 0 ].asInt() == second_alternative );
 			}
@@ -371,23 +325,22 @@ SCENARIO_METHOD( ServerFixture, "Relationships between two records can be cleare
 		WHEN( "both of one record's pairs are cleared" )
 		{
 			REQUIRE(
-				api().post( "/relationships/clear", pairBody( first_alternative, third_alternative ) ).status
-				== drogon::k200OK );
+				api().post( "/relationships/clear", pairBody( first_alternative, third_alternative ) ).status == 200 );
 			const auto response {
 				api().post( "/relationships/clear", pairBody( first_alternative, second_alternative ) )
 			};
 
 			THEN( "it is left with none, while the pair it was not part of stands" )
 			{
-				REQUIRE( response.status == drogon::k200OK );
+				REQUIRE( response.status == 200 );
 				CHECK( response.json[ "alternative_removed" ].asBool() );
 
 				const auto after { api().get( "/relationships/" + std::to_string( first_alternative ) ) };
-				REQUIRE( after.status == drogon::k200OK );
+				REQUIRE( after.status == 200 );
 				CHECK( after.json[ "alternatives" ].empty() );
 
 				const auto remaining { api().get( "/relationships/" + std::to_string( second_alternative ) ) };
-				REQUIRE( remaining.status == drogon::k200OK );
+				REQUIRE( remaining.status == 200 );
 				REQUIRE( remaining.json[ "alternatives" ].size() == 1 );
 				CHECK( remaining.json[ "alternatives" ][ 0 ].asInt() == third_alternative );
 			}
@@ -399,7 +352,7 @@ SCENARIO_METHOD( ServerFixture, "Relationships between two records can be cleare
 
 			THEN( "nothing is reported as removed" )
 			{
-				REQUIRE( response.status == drogon::k200OK );
+				REQUIRE( response.status == 200 );
 				CHECK_FALSE( response.json[ "duplicate_removed" ].asBool() );
 				CHECK_FALSE( response.json[ "alternative_removed" ].asBool() );
 			}
@@ -410,16 +363,14 @@ SCENARIO_METHOD( ServerFixture, "Relationships between two records can be cleare
 			THEN( "it is rejected" )
 			{
 				CHECK(
-					api().post( "/relationships/clear", pairBody( superior, superior ) ).status
-					== drogon::k400BadRequest );
-				CHECK(
-					api().post( "/relationships/clear", pairBody( superior, 999999 ) ).status == drogon::k404NotFound );
+					api().post( "/relationships/clear", pairBody( superior, superior ) ).status == 400 );
+				CHECK( api().post( "/relationships/clear", pairBody( superior, 999999 ) ).status == 404 );
 			}
 		}
 	}
 }
 
-SCENARIO_METHOD( ServerFixture, "Alternatives do not spread between duplicates", "[api][relationships]" )
+SCENARIO_METHOD( ServerFixture, "Alternative rulings are inherited through duplicate groups", "[api][relationships]" )
 {
 	GIVEN( "a duplicate pair whose halves are each an alternative of the same third record" )
 	{
@@ -429,8 +380,7 @@ SCENARIO_METHOD( ServerFixture, "Alternatives do not spread between duplicates",
 		const auto shared { records[ 2 ] };
 
 		REQUIRE(
-			api().post( "/relationships/duplicates/add", duplicateBody( inferior, superior ) ).status
-			== drogon::k200OK );
+			api().post( "/relationships/duplicates/add", duplicateBody( inferior, superior ) ).status == 200 );
 
 		const auto pairAlternatives {
 			[ & ]( const RecordID first, const RecordID second )
@@ -442,8 +392,8 @@ SCENARIO_METHOD( ServerFixture, "Alternatives do not spread between duplicates",
 			}
 		};
 
-		REQUIRE( pairAlternatives( superior, shared ) == drogon::k200OK );
-		REQUIRE( pairAlternatives( inferior, shared ) == drogon::k200OK );
+		REQUIRE( pairAlternatives( superior, shared ) == 200 );
+		REQUIRE( pairAlternatives( inferior, shared ) == 200 );
 
 		WHEN( "each half is asked for its relationships" )
 		{
@@ -452,8 +402,8 @@ SCENARIO_METHOD( ServerFixture, "Alternatives do not spread between duplicates",
 
 			THEN( "the shared record is an alternative of both, and the two stay duplicates of each other" )
 			{
-				REQUIRE( better.status == drogon::k200OK );
-				REQUIRE( worse.status == drogon::k200OK );
+				REQUIRE( better.status == 200 );
+				REQUIRE( worse.status == 200 );
 
 				REQUIRE( better.json[ "alternatives" ].size() == 1 );
 				CHECK( better.json[ "alternatives" ][ 0 ].asInt() == shared );
@@ -471,29 +421,27 @@ SCENARIO_METHOD( ServerFixture, "Alternatives do not spread between duplicates",
 		{
 			const auto response { api().get( "/relationships/" + std::to_string( shared ) ) };
 
-			THEN( "it holds both pairs without either reaching the other" )
+			THEN( "it names the other group king once" )
 			{
-				REQUIRE( response.status == drogon::k200OK );
-				REQUIRE( response.json[ "alternatives" ].size() == 2 );
-				CHECK( response.json[ "alternatives" ][ 0 ].asInt() == std::min( superior, inferior ) );
-				CHECK( response.json[ "alternatives" ][ 1 ].asInt() == std::max( superior, inferior ) );
+				REQUIRE( response.status == 200 );
+				REQUIRE( response.json[ "alternatives" ].size() == 1 );
+				CHECK( response.json[ "alternatives" ][ 0 ].asInt() == superior );
 			}
 		}
 
 		WHEN( "one of the two pairs is cleared" )
 		{
-			REQUIRE( api().post( "/relationships/clear", pairBody( inferior, shared ) ).status == drogon::k200OK );
+			REQUIRE( api().post( "/relationships/clear", pairBody( inferior, shared ) ).status == 200 );
 
-			THEN( "the other is untouched" )
+			THEN( "the inherited ruling is cleared for the whole group" )
 			{
 				const auto worse { api().get( "/relationships/" + std::to_string( inferior ) ) };
-				REQUIRE( worse.status == drogon::k200OK );
+				REQUIRE( worse.status == 200 );
 				CHECK( worse.json[ "alternatives" ].empty() );
 
 				const auto better { api().get( "/relationships/" + std::to_string( superior ) ) };
-				REQUIRE( better.status == drogon::k200OK );
-				REQUIRE( better.json[ "alternatives" ].size() == 1 );
-				CHECK( better.json[ "alternatives" ][ 0 ].asInt() == shared );
+				REQUIRE( better.status == 200 );
+				CHECK( better.json[ "alternatives" ].empty() );
 			}
 		}
 	}
@@ -521,13 +469,12 @@ SCENARIO_METHOD( ServerFixture, "Unrelated pairs drop out of distance searches",
 
 		WHEN( "one of them is marked unrelated" )
 		{
-			REQUIRE(
-				api().post( "/relationships/unrelated/add", pairBody( probe, lookalike ) ).status == drogon::k200OK );
+			REQUIRE( api().post( "/relationships/unrelated/add", pairBody( probe, lookalike ) ).status == 200 );
 
 			THEN( "it stops being returned, and the other record is untouched" )
 			{
 				const auto response { similar( "?distance=4" ) };
-				REQUIRE( response.status == drogon::k200OK );
+				REQUIRE( response.status == 200 );
 				REQUIRE( response.json[ "results" ].size() == 1 );
 				CHECK( response.json[ "results" ][ 0 ][ "record_id" ].asInt() == other );
 				CHECK_FALSE( response.json[ "include_unrelated" ].asBool() );
@@ -536,7 +483,7 @@ SCENARIO_METHOD( ServerFixture, "Unrelated pairs drop out of distance searches",
 			THEN( "the flag brings it back, flagged as unrelated" )
 			{
 				const auto response { similar( "?distance=4&include_unrelated=true" ) };
-				REQUIRE( response.status == drogon::k200OK );
+				REQUIRE( response.status == 200 );
 				REQUIRE( response.json[ "results" ].size() == 2 );
 				CHECK( response.json[ "include_unrelated" ].asBool() );
 
@@ -549,7 +496,7 @@ SCENARIO_METHOD( ServerFixture, "Unrelated pairs drop out of distance searches",
 				const auto response {
 					api().get( "/relationships/" + std::to_string( lookalike ) + "/similar?distance=4" )
 				};
-				REQUIRE( response.status == drogon::k200OK );
+				REQUIRE( response.status == 200 );
 				REQUIRE( response.json[ "results" ].size() == 1 );
 				CHECK( response.json[ "results" ][ 0 ][ "record_id" ].asInt() == other );
 			}
@@ -557,15 +504,14 @@ SCENARIO_METHOD( ServerFixture, "Unrelated pairs drop out of distance searches",
 			THEN( "marking it twice is not an error" )
 			{
 				CHECK(
-					api().post( "/relationships/unrelated/add", pairBody( lookalike, probe ) ).status
-					== drogon::k200OK );
+					api().post( "/relationships/unrelated/add", pairBody( lookalike, probe ) ).status == 200 );
 				CHECK( similar( "?distance=4" ).json[ "results" ].size() == 1 );
 			}
 
 			THEN( "clearing the pair undoes it" )
 			{
 				const auto cleared { api().post( "/relationships/clear", pairBody( probe, lookalike ) ) };
-				REQUIRE( cleared.status == drogon::k200OK );
+				REQUIRE( cleared.status == 200 );
 				CHECK( cleared.json[ "unrelated_removed" ].asBool() );
 				CHECK( similar( "?distance=4" ).json[ "results" ].size() == 2 );
 			}
@@ -595,13 +541,12 @@ SCENARIO_METHOD( ServerFixture, "Decided pairs drop out of distance searches", "
 
 		REQUIRE( similar( "?distance=4" ).json[ "results" ].size() == 3 );
 
-		REQUIRE(
-			api().post( "/relationships/duplicates/add", duplicateBody( worse, probe ) ).status == drogon::k200OK );
+		REQUIRE( api().post( "/relationships/duplicates/add", duplicateBody( worse, probe ) ).status == 200 );
 
 		Json::Value alternatives { Json::arrayValue };
 		alternatives.append( probe );
 		alternatives.append( alternative );
-		REQUIRE( api().post( "/relationships/alternatives/add", alternatives ).status == drogon::k200OK );
+		REQUIRE( api().post( "/relationships/alternatives/add", alternatives ).status == 200 );
 
 		WHEN( "the search runs with its defaults" )
 		{
@@ -609,7 +554,7 @@ SCENARIO_METHOD( ServerFixture, "Decided pairs drop out of distance searches", "
 
 			THEN( "only the undecided lookalike is left" )
 			{
-				REQUIRE( response.status == drogon::k200OK );
+				REQUIRE( response.status == 200 );
 				REQUIRE( response.json[ "results" ].size() == 1 );
 				CHECK( response.json[ "results" ][ 0 ][ "record_id" ].asInt() == undecided );
 				CHECK_FALSE( response.json[ "include_related" ].asBool() );
@@ -622,9 +567,26 @@ SCENARIO_METHOD( ServerFixture, "Decided pairs drop out of distance searches", "
 
 			THEN( "all three come back" )
 			{
-				REQUIRE( response.status == drogon::k200OK );
+				REQUIRE( response.status == 200 );
 				CHECK( response.json[ "results" ].size() == 3 );
 				CHECK( response.json[ "include_related" ].asBool() );
+			}
+		}
+
+		WHEN( "similarity is requested from an inferior of either alternative group" )
+		{
+			const auto alternative_inferior { api().createRecords( { 46 } )[ 0 ] };
+			seedPerceptualHash( db(), alternative_inferior, "b44dc7b24dcb381e" );
+			REQUIRE(
+				api().post( "/relationships/duplicates/add", duplicateBody( alternative_inferior, alternative ) ).status
+				== 200 );
+
+			for ( const auto id : { worse, alternative_inferior } )
+			{
+				const auto response { api().get( "/relationships/" + std::to_string( id ) + "/similar?distance=4" ) };
+				REQUIRE( response.status == 200 );
+				REQUIRE( response.json[ "results" ].size() == 1 );
+				CHECK( response.json[ "results" ][ 0 ][ "record_id" ].asInt() == undecided );
 			}
 		}
 
@@ -632,13 +594,12 @@ SCENARIO_METHOD( ServerFixture, "Decided pairs drop out of distance searches", "
 		{
 			const auto deep { api().createRecords( { 45 } )[ 0 ] };
 			seedPerceptualHash( db(), deep, "b44dc7b24dcb3819" );
-			REQUIRE(
-				api().post( "/relationships/duplicates/add", duplicateBody( deep, worse ) ).status == drogon::k200OK );
+			REQUIRE( api().post( "/relationships/duplicates/add", duplicateBody( deep, worse ) ).status == 200 );
 
 			THEN( "it is filtered too, since the whole flat group is known" )
 			{
 				const auto response { similar( "?distance=4" ) };
-				REQUIRE( response.status == drogon::k200OK );
+				REQUIRE( response.status == 200 );
 				REQUIRE( response.json[ "results" ].size() == 1 );
 				CHECK( response.json[ "results" ][ 0 ][ "record_id" ].asInt() == undecided );
 			}
@@ -646,8 +607,7 @@ SCENARIO_METHOD( ServerFixture, "Decided pairs drop out of distance searches", "
 
 		WHEN( "the last lookalike is marked unrelated as well" )
 		{
-			REQUIRE(
-				api().post( "/relationships/unrelated/add", pairBody( probe, undecided ) ).status == drogon::k200OK );
+			REQUIRE( api().post( "/relationships/unrelated/add", pairBody( probe, undecided ) ).status == 200 );
 
 			THEN( "the search empties out, and each flag reopens its own half" )
 			{
@@ -664,7 +624,7 @@ SCENARIO_METHOD( ServerFixture, "Decided pairs drop out of distance searches", "
 
 SCENARIO_METHOD( ServerFixture, "Unknown file relationships are rejected", "[api][relationships]" )
 {
-	CHECK( api().get( "/relationships/999999" ).status == drogon::k404NotFound );
+	CHECK( api().get( "/relationships/999999" ).status == 404 );
 }
 
 } // namespace idhan::test

@@ -6,7 +6,9 @@
 #include <shared_mutex>
 #include <unordered_map>
 
+#include "filesystem/clusters/ClusterManager.hpp"
 #include "hyapi/constants/ServiceTypes.hpp"
+#include "idhan/db/DBContext.hpp"
 #include "logging/format_ns.hpp"
 
 namespace idhan::hyapi
@@ -154,40 +156,30 @@ static ServiceInfo makeService( std::string key, std::string name, const std::si
 	};
 }
 
-drogon::Task< std::vector< ServiceInfo > > listServices( DbClientPtr db )
+runtime::Task< std::vector< ServiceInfo > > listServices( db::DBContext& db )
 {
-	auto tag_domains { db->execSqlCoro( "SELECT tag_domain_id, domain_name FROM tag_domains ORDER BY tag_domain_id" ) };
+	const auto tag_domains {
+		co_await db.query( "SELECT tag_domain_id, domain_name FROM tag_domains ORDER BY tag_domain_id" )
+			.rows< TagDomainID, std::string >()
+	};
 
-	auto clusters { db->execSqlCoro(
-		"SELECT cluster_id, coalesce(cluster_name, folder_path) AS cluster_name FROM file_clusters ORDER BY cluster_id" ) };
+	const auto clusters { filesystem::ClusterManager::getInstance().list() };
 
 	std::vector< ServiceInfo > services {};
 
-	for ( const auto& row : co_await tag_domains )
-	{
-		const auto tag_domain_id { row[ "tag_domain_id" ].as< TagDomainID >() };
+	for ( const auto& [ tag_domain_id, domain_name ] : tag_domains )
+		services.emplace_back(
+			makeService( tagDomainServiceKey( tag_domain_id ), domain_name, hydrus::gen_constants::LOCAL_TAG ) );
 
+	for ( const auto& cluster : clusters )
 		services.emplace_back( makeService(
-			tagDomainServiceKey( tag_domain_id ),
-			row[ "domain_name" ].as< std::string >(),
-			hydrus::gen_constants::LOCAL_TAG ) );
-	}
-
-	for ( const auto& row : co_await clusters )
-	{
-		const auto cluster_id { row[ "cluster_id" ].as< ClusterID >() };
-
-		services.emplace_back( makeService(
-			fileClusterServiceKey( cluster_id ),
-			row[ "cluster_name" ].as< std::string >(),
+			fileClusterServiceKey( cluster.id ),
+			cluster.name.value_or( cluster.path.string() ),
 			hydrus::gen_constants::LOCAL_FILE_DOMAIN ) );
-	}
 
 	for ( const auto& fixed : FIXED_SERVICES )
-	{
 		services.emplace_back(
 			makeService( encodeServiceKey( fixed.key_source ), std::string( fixed.name ), fixed.type ) );
-	}
 
 	co_return services;
 }

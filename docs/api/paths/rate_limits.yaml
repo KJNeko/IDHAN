@@ -1,0 +1,75 @@
+get:
+  tags:
+    - downloader
+  summary: Lists downloader rate-limit lanes
+  responses:
+    '200':
+      description: Lists downloader rate-limit lanes
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              type: object
+              properties:
+                lane:
+                  type: string
+                group:
+                  type: string
+                throttled:
+                  type: boolean
+                requests:
+                  type: integer
+                seconds:
+                  type: number
+                effective_interval_ms:
+                  type: integer
+                  format: int64
+                  minimum: 0
+                remaining_ms:
+                  type: integer
+                  format: int64
+                  minimum: 0
+                consecutive_failures:
+                  type: integer
+                  format: int64
+                  minimum: 0
+                backed_off:
+                  type: boolean
+                in_flight:
+                  type: integer
+                  format: int64
+                  minimum: 0
+                queued:
+                  type: integer
+                  format: int64
+                  minimum: 0
+                shards:
+                  type: integer
+                  format: int64
+                  minimum: 0
+                download_bytes_per_second:
+                  type: integer
+                  format: int64
+                  minimum: 0
+                  description: Received body bytes over the last second across all lane transfers, sampled in 100 ms buckets. Includes decoded error and redirect bodies; excludes headers.
+                active:
+                  type: boolean
+    '400':
+      description: Request rejected; the body is a plain-text error message.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string

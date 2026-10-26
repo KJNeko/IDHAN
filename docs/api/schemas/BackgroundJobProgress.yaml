@@ -1,0 +1,40 @@
+type: object
+description: >-
+  Live state of an automatically registered background service in JobStatus.progress.
+  The parent job has continuous=true and remains running while the service is waiting or retrying and
+  completes when its owner has stopped and drained its work. Recoverable failures
+  increment failed_count without failing the job. Fatal termination fails the job.
+  These jobs are process-local and IDs are assigned anew (and may be reused) on each server start; identify
+  services by the stable service field, not job ID or display name.
+properties:
+  kind:
+    const: background_service
+  service:
+    type: string
+    enum: [ hamming_distance, phash_backfill, module_workers ]
+  phase:
+    type: string
+    enum: [ starting, working, waiting, retrying, stopping, stopped, failed ]
+  message:
+    type: string
+    description: Human-readable current activity, including the waiting or retry policy.
+  processed_units:
+    type: integer
+    minimum: 0
+    description: >-
+      Lifetime records rebuilt by completed Hamming sweeps or records attempted by
+      perceptual hash backfill. Zero for module maintenance, which reports current activity.
+      Perceptual hash attempts include failures and images producing no hash;
+      the same record can be attempted again in a later cycle.
+  failed_count:
+    type: integer
+    minimum: 0
+    description: Observed recoverable errors; retained after subsequent recovery.
+  last_error:
+    type: string
+    description: Most recent recoverable error, retained for context after recovery.
+  updated_at:
+    type: integer
+    format: int64
+    description: Unix seconds at the latest activity or counter update, not the latest status poll.
+required: [ kind, service, phase, message, processed_units, failed_count, updated_at ]

@@ -9,7 +9,7 @@
 #include <variant>
 #include <vector>
 
-#include "threading/IDHANTask.hpp"
+#include "idhan/runtime/Task.hpp"
 
 namespace idhan
 {
@@ -28,7 +28,7 @@ class MimeReader
 	mutable std::vector< std::byte > m_window {};
 	mutable std::size_t m_window_offset { 0 };
 
-	[[nodiscard]] IDHANTask< std::span< const std::byte > > at( std::size_t offset, std::size_t length ) const;
+	[[nodiscard]] runtime::Task< std::span< const std::byte > > at( std::size_t offset, std::size_t length ) const;
 
   public:
 
@@ -39,9 +39,9 @@ class MimeReader
 
 	[[nodiscard]] std::size_t size() const;
 
-	[[nodiscard]] IDHANTask< bool > matchAt( std::size_t offset, std::string_view pattern ) const;
+	[[nodiscard]] runtime::Task< bool > matchAt( std::size_t offset, std::string_view pattern ) const;
 
-	[[nodiscard]] IDHANTask< std::optional< std::size_t > > find(
+	[[nodiscard]] runtime::Task< std::optional< std::size_t > > find(
 		std::string_view pattern,
 		std::size_t from,
 		std::size_t limit ) const;

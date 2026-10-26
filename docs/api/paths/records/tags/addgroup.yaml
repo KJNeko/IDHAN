@@ -3,15 +3,16 @@ post:
     - tags
     - records
   summary: Adds tags to multiple records
-  description: |
+  description: |-
     Use `/records/{record_id}/tags/add` for a single record.
     With neither `tags` nor `sets` given, the request is a 200 no-op.
+    The `records` array must not be empty; empty batches return 400.
   parameters:
     - name: tag_domain_id
       in: query
       required: true
       schema:
-        $ref: '../../../schemas/TagDomainID.yaml'
+        $ref: ../../../schemas/TagDomainID.yaml
   requestBody:
     required: true
     content:
@@ -24,41 +25,72 @@ post:
             records:
               type: array
               items:
-                $ref: '../../../schemas/RecordID.yaml'
+                $ref: ../../../schemas/RecordID.yaml
               minItems: 1
             tags:
               type: array
               items:
-                $ref: '../../../schemas/TagInput.yaml'
+                $ref: ../../../schemas/TagInput.yaml
               description: Added to every record in `records`.
             sets:
               type: array
               items:
                 type: array
                 items:
-                  $ref: '../../../schemas/TagInput.yaml'
+                  $ref: ../../../schemas/TagInput.yaml
               description: One set per record, in order. Must match `records` in length.
         examples:
           bulk_tags:
             summary: Add same tags to multiple records
             value:
-              records: [ 1, 2, 3 ]
+              records:
+                - 1
+                - 2
+                - 3
               tags:
-                - "character:toujou koneko"
-                - "catgirl"
-                - "series:highschool dxd"
+                - character:toujou koneko
+                - catgirl
+                - series:highschool dxd
           individual_sets:
             summary: Add different tag sets to each record
+            description: Numeric namespaces are existing namespace IDs; subtags are always literal strings.
             value:
-              records: [ 1, 2, 3 ]
+              records:
+                - 1
+                - 2
+                - 3
               sets:
-                - [ { namespace: "character", subtag: "toujou koneko" } ]
-                - [ { namespace: "character", subtag: "toujou koneko" }, { namespace: 3, subtag: 5 } ]
-                - [ { namespace: 9, subtag: 2 } ]
+                - - namespace: character
+                    subtag: toujou koneko
+                - - namespace: character
+                    subtag: toujou koneko
+                  - namespace: 3
+                    subtag: catgirl
+                - - namespace: 9
+                    subtag: '5'
   responses:
-    200:
-      description: Tags added
-    400:
+    '200':
+      description: Tags added.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+    '400':
       description: Malformed body, bad `records`, `sets` length mismatch, or unknown `tag_domain_id`
-    500:
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
       description: Internal server error
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string

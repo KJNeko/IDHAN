@@ -9,12 +9,13 @@
 namespace pqxx
 {
 class nontransaction;
-}
+class transaction_base;
+} // namespace pqxx
 
 namespace idhan::db
 {
 
-[[nodiscard]] bool tableExists( pqxx::nontransaction& tx, std::string_view name, std::string_view schema );
+[[nodiscard]] bool tableExists( pqxx::transaction_base& tx, std::string_view name, std::string_view schema );
 
 void addTableToInfo(
 	pqxx::nontransaction& tx,

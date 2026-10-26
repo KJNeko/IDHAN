@@ -4,7 +4,7 @@
 
 #include "IDHANTypes.hpp"
 #include "caching/LRUCache.hpp"
-#include "crypto/SHA256.hpp"
+#include "idhan/SHA256.hpp"
 
 namespace idhan::caching
 {

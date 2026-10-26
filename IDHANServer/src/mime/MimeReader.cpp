@@ -29,7 +29,7 @@ std::size_t MimeReader::size() const
 	return std::get< std::shared_ptr< FileIOUring > >( m_source )->size();
 }
 
-IDHANTask< std::span< const std::byte > > MimeReader::at( const std::size_t offset, const std::size_t length ) const
+runtime::Task< std::span< const std::byte > > MimeReader::at( const std::size_t offset, const std::size_t length ) const
 {
 	const auto total { size() };
 
@@ -58,7 +58,7 @@ IDHANTask< std::span< const std::byte > > MimeReader::at( const std::size_t offs
 	co_return std::span< const std::byte > { m_window.data() + start, available };
 }
 
-IDHANTask< bool > MimeReader::matchAt( const std::size_t offset, const std::string_view pattern ) const
+runtime::Task< bool > MimeReader::matchAt( const std::size_t offset, const std::string_view pattern ) const
 {
 	if ( pattern.empty() ) co_return false;
 
@@ -69,7 +69,7 @@ IDHANTask< bool > MimeReader::matchAt( const std::size_t offset, const std::stri
 	co_return std::memcmp( data.data(), pattern.data(), pattern.size() ) == 0;
 }
 
-IDHANTask< std::optional< std::size_t > > MimeReader::find(
+runtime::Task< std::optional< std::size_t > > MimeReader::find(
 	const std::string_view pattern,
 	const std::size_t from,
 	const std::size_t limit ) const

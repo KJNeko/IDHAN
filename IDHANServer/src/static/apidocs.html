@@ -5,17 +5,17 @@
     <meta content="width=device-width, initial-scale=1" name="viewport"/>
     <meta content="SwaggerUI" name="description"/>
     <title>SwaggerUI</title>
-    <link href="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui.css" rel="stylesheet"/>
+    <link href="https://unpkg.com/swagger-ui-dist@5.33.1/swagger-ui.css" rel="stylesheet"/>
 </head>
 <body>
 <div id="swagger-ui"></div>
-<script crossorigin src="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui-bundle.js"></script>
+<script crossorigin src="https://unpkg.com/swagger-ui-dist@5.33.1/swagger-ui-bundle.js"></script>
 <script>
-    url = `${window.location.protocol}//${window.location.hostname}` + (window.location.port ? `:${window.location.port}` : '') + '/api/index.yaml';
+    const url = new URL('/api/index.yaml', window.location.origin).href;
 
     window.onload = () => {
         window.ui = SwaggerUIBundle({
-            url: `${url}`,
+            url,
             dom_id: '#swagger-ui',
         });
     };

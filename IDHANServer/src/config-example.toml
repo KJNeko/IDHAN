@@ -4,8 +4,12 @@
 #user = "idhan"
 #password = "idhan"
 #database = "idhan-db"
-# PostgreSQL schema the server puts on its search path.
-#schema = "public"
+# Application schema; created automatically.
+# Missing extensions are created in extension_schema when permitted; otherwise ask the database administrator.
+# Startup rejects public.idhan_info; migrate public installations manually first.
+#schema = "idhan"
+# Extension namespace; created when missing and permitted. Existing extensions are not moved.
+#extension_schema = "public"
 
 [server]
 #port = 16609
@@ -21,9 +25,12 @@
 #ipv4_listen = "127.0.0.1"
 #ipv6_listen = "::1"
 #use_tls = false
-# Required when use_tls is true.
+# Required when use_tls is true unless self_sign_tls is enabled.
 #server_cert_path = "./server.crt"
 #server_key_path = "./server.key"
+# Generate a persistent localhost certificate when both paths are absent. Browsers
+# will still require you to trust this certificate before treating it as secure.
+#self_sign_tls = true
 
 [logging]
 # Level: trace, debug, info, warn, error, or critical.
@@ -31,7 +38,7 @@ level = "info"
 # Output directory.
 path = "./log"
 # Entries held in memory for the /log endpoint. Zero disables the endpoint.
-#buffer_size = 0
+#buffer_size = 1000000
 # Logs a warning when a request outruns its performance threshold.
 #enable_perf_warnings = false
 
@@ -98,8 +105,71 @@ render_threads = 2
 #path = "./static/plugins"
 
 [cluster]
+# Acknowledge missing marker/root recovery at next startup; automatically reset to false first.
+# Check that the intended storage is mounted. Existing conflicting markers are never replaced.
+# Requires a writable TOML file and directory; true environment/CLI overrides are rejected.
+#recreate_missing_markers = false
 # Concurrent files per cluster scan; overridable per request by "concurrency" and clamped to 1..64.
-#scan_concurrency = 4
+scan_concurrency = 12
+
+[downloader]
+# Download known direct URLs again instead of reusing their stored file.
+#force_download = false
+# Directory containing parser JavaScript modules. The packaged server uses its bundled parsers.
+#parser_directory = "/usr/share/idhan/downloader"
+# URL-class routing directory or legacy JSON file. Defaults to url-classes in parser_directory.
+#url_classes = "/usr/share/idhan/downloader/url-classes"
+# URL classes without requestRate are limited to one request every five seconds.
+# Set requestRate to false for an explicitly unthrottled class or host.
+# Wire version offered to sites: "1.1", "2", or "3". HTTP/3 is preferred and falls back when unavailable.
+#http_version = "3"
+
+# Threads driving the HTTP lanes. 0 takes max(2, hardware threads / 2).
+#io_threads = 0
+# How long a lane keeps its connections open after the last request was queued for its host.
+# Keeping them open is what lets HTTP/2 and HTTP/3 multiplex the next batch over one connection.
+#lane_keep_alive_seconds = 30
+# A request that fails stops its whole lane for this long before anything else is dispatched to the
+# host. Failures arriving during the pause join it rather than extending it. Repeated failures past
+# the pause widen it exponentially. 0 keeps only that widening.
+#lane_error_backoff_seconds = 30
+# A busy unthrottled lane spreads across this many connections so one fast host is not capped by a
+# single IO thread. Rate limited lanes always stay at one.
+#max_shards_per_lane = 4
+# In-flight HTTP requests per download session before the session stops starting new scripts.
+#session_inflight_requests = 64
+# Memory budget for one script worker's runtime, covering every script in flight on that worker.
+# The whole downloader is bounded by script_threads times this, not by the number of sessions.
+#worker_memory_limit = 268435456
+# Stack ceiling for one script worker's runtime.
+#worker_stack_limit = 1048576
+# Threads that execute parser JavaScript, shared by every session. Each owns one script runtime,
+# and a work item stays on the thread whose runtime holds its realm. A script awaiting a request
+# leaves its thread free, so this bounds concurrent JavaScript, not concurrent downloads.
+#script_threads = 4
+# Bounds one uninterrupted run of JavaScript, excluding synchronous host callbacks such as
+# database operations. Time awaiting an HTTP request is also excluded.
+#script_burst_timeout_ms = 5000
+# Ceiling on a response body idhan.request materialises in memory. Imports stream and ignore it.
+#max_response_bytes = 33554432
+# Sent with every downloader request. Empty uses the built-in "Mozilla/5.0 (compatible; IDHAN Client)",
+# which mirrors the form Hydrus ships because that is what boorus are already configured to accept.
+#user_agent = ""
+# Existing tag domain used for parser-supplied tags.
+#tag_domain = "default"
+# Secrets exposed through idhan.secret() live in the downloader_secrets table, not in this file.
+# Set them by POSTing an object of string values to /downloader/secrets and read them back with
+# GET /downloader/secrets. The shipped gelbooru parser needs two, both from the site's account
+# options page:
+#   {"gelbooru.apiKey": "...", "gelbooru.userID": "..."}
+# Gelbooru accepts these only as query parameters, so they appear in downloader request logs and in
+# the debug panel's pending request URLs. Keep that in mind when sharing either.
+
+# Overrides for the flags a parser declares in its manifest. Keys are flag names, so they must be
+# quoted. Anything left out keeps the parser's own default.
+[downloader.flags]
+# Submit a gelbooru post's source URL back to the pipeline. On by default.
+"gelbooru.followSource" = true
 
 [parser.cbz]
 # Falls back to the .cbz extension when the archive's contents are inconclusive.

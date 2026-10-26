@@ -1,5 +1,6 @@
 #include "ModuleLoader.hpp"
 
+#include <folly/executors/GlobalExecutor.h>
 #include <sys/prctl.h>
 
 #include <algorithm>
@@ -17,9 +18,9 @@
 
 #include "Config.hpp"
 #include "MimeIDs.hpp"
-#include "crypto/simpleHasher.hpp"
-#include "drogon/HttpAppFramework.h"
+#include "idhan/SHA256.hpp"
 #include "fgl/defines.hpp"
+#include "idhan/runtime/Task.hpp"
 #include "logging/log.hpp"
 #include "mime/prescan.hpp"
 
@@ -109,8 +110,8 @@ template < typename T >
 		moduleSetting< std::size_t >( name, "liveness_grace_ms", 5000 )
 	};
 
-	const auto level_name { spdlog::level::to_string_view( spdlog::get_level() ) };
-	settings.log_level = std::string { level_name.data(), level_name.size() };
+	// The server logger accepts trace for its file sinks; workers write directly to the console.
+	settings.log_level = config::getSilentDefault< std::string >( "logging", "level", "info" );
 
 	return settings;
 }
@@ -430,7 +431,7 @@ using ExpectedInput = std::expected< std::shared_ptr< const CallInput >, std::st
 	return std::make_shared< const CallInput >( std::move( *input ) );
 }
 
-drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::Frame frame )
+runtime::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::Frame frame )
 {
 	const std::uint64_t callback_id { frame.body[ ipc::field::CALLBACK_ID ].asUInt64() };
 	const auto kind { ipc::fromWire< ipc::CallbackKind >( frame.body[ ipc::field::KIND ] ) };
@@ -558,9 +559,14 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 						break;
 					}
 
-					auto generated {
-						co_await generators.front()->generate( std::move( data ), crypto::fromHex( hex ) )
-					};
+					const auto hash { SHA256::fromHex( hex ) };
+					if ( !hash )
+					{
+						reply[ ipc::field::ERROR ] = hash.error();
+						break;
+					}
+
+					auto generated { co_await generators.front()->generate( std::move( data ), hash->data() ) };
 
 					if ( !generated )
 					{
@@ -584,21 +590,39 @@ drogon::Task< void > runCallback( std::shared_ptr< WorkerProcess > worker, ipc::
 
 void ModuleLoader::serviceCallback( std::shared_ptr< WorkerProcess > worker, ipc::Frame frame )
 {
-	static std::atomic< std::size_t > next_loop { 0 };
+	folly::coro::co_withExecutor(
+		folly::getGlobalCPUExecutor(), runCallback( std::move( worker ), std::move( frame ) ) )
+		.start();
+}
 
-	auto* const loop { drogon::app().getIOLoop( next_loop.fetch_add( 1 ) ) };
+std::vector< ModuleQueueSnapshot > ModuleLoader::queueSnapshots() const
+{
+	std::vector< WorkerPoolSnapshot > pools {};
+	pools.reserve( m_pools.size() );
+	for ( const auto& pool : m_pools ) pools.emplace_back( pool->snapshot() );
 
-	auto payload { std::make_shared< std::pair< std::shared_ptr< WorkerProcess >, ipc::Frame > >(
-		std::move( worker ), std::move( frame ) ) };
-
-	auto body = [ payload ]() mutable
+	std::vector< ModuleQueueSnapshot > snapshots {};
+	snapshots.reserve( m_descriptors.size() );
+	for ( const auto& descriptor : m_descriptors )
 	{
-		drogon::async_run(
-			[ payload ]() mutable -> drogon::Task< void >
-			{ co_await runCallback( std::move( payload->first ), std::move( payload->second ) ); } );
-	};
-
-	( loop != nullptr ? loop : drogon::app().getLoop() )->queueInLoop( std::move( body ) );
+		const auto& pool { pools[ descriptor.library_index ] };
+		const auto activity {
+			descriptor.module_index < pool.modules.size() ?
+				pool.modules[ descriptor.module_index ] :
+				ipc::ModuleActivity {}
+		};
+		snapshots.emplace_back(
+			ModuleQueueSnapshot {
+				.library_index = descriptor.library_index,
+				.module_index = descriptor.module_index,
+				.library = m_pools[ descriptor.library_index ]->library().filename().string(),
+				.name = descriptor.name,
+				.activity = activity,
+				.workers = pool.workers,
+				.reporting = pool.reporting,
+				.thread_safe = descriptor.thread_safe } );
+	}
+	return snapshots;
 }
 
 } // namespace idhan::modules

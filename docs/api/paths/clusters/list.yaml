@@ -3,53 +3,29 @@ get:
     - clusters
   summary: Returns all clusters with their info
   responses:
-    200:
+    '200':
       description: Every registered cluster
       content:
         application/json:
           schema:
             type: array
             items:
-              type: object
-              properties:
-                cluster_id:
-                  type: integer
-                readonly:
-                  type: boolean
-                name:
-                  type: string
-                size:
-                  type: object
-                  properties:
-                    used:
-                      type: integer
-                      format: int64
-                      description: Bytes used by files in this cluster.
-                    limit:
-                      type: integer
-                      format: int64
-                      description: Byte ceiling. 0 means no limit.
-                    available:
-                      type: integer
-                      format: int64
-                      description: Bytes left. int64 max when `limit` is 0.
-                file_count:
-                  type: integer
-                ratio_number:
-                  type: integer
-                  description: Relative weight when picking a cluster for new writes.
-                path:
-                  type: string
-            example:
-              - cluster_id: 1
-                readonly: false
-                name: "main"
-                size:
-                  used: 1073741824
-                  limit: 0
-                  available: 9223372036854775807
-                file_count: 1234
-                ratio_number: 1
-                path: "/data/clusters/1"
-    404:
-      description: A listed cluster's info could not be fetched
+              $ref: ../../schemas/ClusterInfo.yaml
+    '400':
+      description: Request rejected; the body is a plain-text error message.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string

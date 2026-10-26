@@ -1,0 +1,36 @@
+#pragma once
+
+#include <optional>
+#include <string_view>
+
+#include "core/search/SearchTypes.hpp"
+
+namespace idhan::httpapi
+{
+
+// Omitted sort keys are handled by callers; an unrecognized supplied name has no default.
+[[nodiscard]] inline std::optional< SortType > parseSortType( const std::string_view by )
+{
+	if ( by == "filesize" || by == "size" ) return SortType::FILESIZE;
+	// "creation_time" and "modified_time" predate the file/record split and are kept for old clients.
+	if ( by == "record_creation_time" || by == "record_time" || by == "creation_time" )
+		return SortType::RECORD_CREATION_TIME;
+	if ( by == "file_modified_time" || by == "file_mtime" || by == "modified_time" )
+		return SortType::FILE_MODIFIED_TIME;
+	if ( by == "file_created_time" || by == "file_ctime" ) return SortType::FILE_CREATED_TIME;
+	if ( by == "mime" || by == "filetype" ) return SortType::MIME;
+	if ( by == "import_time" ) return SortType::IMPORT_TIME;
+	if ( by == "hash" ) return SortType::HASH;
+	if ( by == "random" ) return SortType::RANDOM;
+	if ( by == "duration" ) return SortType::DURATION;
+	if ( by == "framerate" ) return SortType::FRAMERATE;
+	if ( by == "has_audio" ) return SortType::HAS_AUDIO;
+	if ( by == "width" ) return SortType::WIDTH;
+	if ( by == "height" ) return SortType::HEIGHT;
+	if ( by == "ratio" ) return SortType::RATIO;
+	if ( by == "num_pixels" ) return SortType::NUM_PIXELS;
+	if ( by == "num_tags" ) return SortType::NUM_TAGS;
+	return std::nullopt;
+}
+
+} // namespace idhan::httpapi

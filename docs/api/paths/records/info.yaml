@@ -2,54 +2,94 @@ get:
   tags:
     - records
   summary: Returns information about a record
-  description: |
-    The SHA-256 is always present. MIME type, size, extension, and type-specific
-    fields appear only if the file has been parsed.
+  description: Returns identity, tags, URLs, and archive memberships. Known file size and filesystem timestamps
+    are returned even when MIME is unknown. MIME and its registered extension appear when identified;
+    parsed metadata fields appear when available. Unknown optional fields are omitted.
   parameters:
-    - $ref: '../../parameters/record_id.yaml'
+    - $ref: ../../parameters/record_id.yaml
   responses:
-    200:
+    '200':
       description: Record information
       content:
         application/json:
           schema:
-            $ref: '../../schemas/RecordInfo.yaml'
+            $ref: ../../schemas/RecordInfo.yaml
           examples:
             parsed_image:
               summary: Parsed JPEG image record
               value:
                 record_id: 42
                 hashes:
-                  sha256: "a3f0c1d2e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1"
+                  sha256: a3f0c1d2e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1
                 size: 1048576
-                mime: "image/jpeg"
-                extension: "jpg"
+                mime: image/jpeg
+                extension: jpg
                 extra: { }
                 width: 1920
                 height: 1080
                 channels: 3
+                archive_ids: [ ]
+                tags: [ ]
+                urls: [ ]
             parsed_video:
               summary: Parsed video record
               value:
                 record_id: 99
                 hashes:
-                  sha256: "c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3"
+                  sha256: c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3
                 size: 52428800
-                mime: "video/mp4"
-                extension: "mp4"
+                mime: video/mp4
+                extension: mp4
                 extra: { }
                 width: 1280
                 height: 720
                 duration: 120.5
                 bitrate: 4000000
                 has_audio: true
+                archive_ids: [ ]
+                tags: [ ]
+                urls: [ ]
+            unknown_mime:
+              summary: File with known size and modification time before MIME classification
+              value:
+                record_id: 8
+                hashes:
+                  sha256: b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2
+                size: 1048576
+                file_mtime: 1700000000123456
+                archive_ids: [ ]
+                tags: [ ]
+                urls: [ ]
             unparsed:
               summary: Record that has not been scanned yet
               value:
                 record_id: 7
                 hashes:
-                  sha256: "b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2"
-    400:
-      description: Record not found
-    500:
+                  sha256: b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2
+                archive_ids: [ ]
+                tags: [ ]
+                urls: [ ]
+    '500':
       description: Internal error
+      content:
+        text/plain:
+          schema:
+            type: string
+    '404':
+      description: Record not found
+      content:
+        text/plain:
+          schema:
+            type: string
+    '400':
+      description: Request rejected; the body is a plain-text error message.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string

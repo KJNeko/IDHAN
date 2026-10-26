@@ -1,3 +1,7 @@
+description: Namespace text or an existing namespace ID; this schema is used only for a tag object's namespace.
 oneOf:
-  - $ref: 'TagID.yaml'
+  - type: integer
+    format: int32
+    minimum: 1
+    maximum: 2147483647
   - $ref: 'TagString.yaml'

@@ -1,9 +1,20 @@
-description: The two halves of a tag, each given as an ID or as text.
+description: A tag identified by its namespace and literal subtag text. Both fields are required;
+  only the namespace may be supplied as an ID.
 type: object
+required:
+  - namespace
+  - subtag
 properties:
   namespace:
-    $ref: 'TagComponent.yaml'
-    example: 1
+    $ref: TagComponent.yaml
+    description: Namespace text or an existing namespace ID. Use an empty string for an unnamespaced tag.
+    examples:
+      - 1
+      - character
+      - ''
   subtag:
-    $ref: 'TagComponent.yaml'
-    example: "toujou koneko"
+    type: string
+    description: Literal subtag text, never an ID. A numeric-looking tag such as "5" must be a string.
+    examples:
+      - toujou koneko
+      - '5'

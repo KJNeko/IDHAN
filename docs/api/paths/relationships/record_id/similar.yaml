@@ -1,0 +1,103 @@
+get:
+  tags:
+    - relationships
+  summary: Finds perceptually similar records
+  responses:
+    '200':
+      description: Finds perceptually similar records
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              record_id:
+                type: integer
+                format: int32
+                minimum: 1
+              distance:
+                type: integer
+              limit:
+                type: integer
+              include_unrelated:
+                type: boolean
+              include_related:
+                type: boolean
+              truncated:
+                type: boolean
+              results:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    record_id:
+                      type: integer
+                      format: int32
+                      minimum: 1
+                    distance:
+                      type: integer
+                    unrelated:
+                      type: boolean
+    '400':
+      description: Request rejected; the body is a plain-text error message.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '404':
+      description: Requested resource is unavailable.
+      content:
+        text/plain:
+          schema:
+            type: string
+  parameters:
+    - name: record_id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+    - name: distance
+      in: query
+      required: false
+      description: >-
+        Maximum Hamming distance between 64-bit perceptual hashes, measured in differing bits.
+        Defaults to 0, which matches equal perceptual hashes. Equal perceptual hashes do not
+        guarantee identical files. Supply a positive distance to include broader matches.
+      schema:
+        type: integer
+        minimum: 0
+        maximum: 64
+        default: 0
+    - name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        maximum: 1024
+        default: 128
+    - name: include_unrelated
+      in: query
+      required: false
+      schema:
+        type: boolean
+        default: false
+    - name: include_related
+      in: query
+      required: false
+      schema:
+        type: boolean
+        default: false

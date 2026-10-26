@@ -3,6 +3,8 @@
 
 #include <QWidget>
 
+#include "gui/hydrus/ImportServiceStatus.hpp"
+
 class UrlServiceWorker;
 
 namespace idhan::hydrus
@@ -27,11 +29,13 @@ class UrlServiceWidget : public QWidget
 	Ui::UrlServiceWidget* ui;
 	idhan::hydrus::HydrusImporter* m_importer;
 	UrlServiceWorker* m_worker { nullptr };
+	idhan::hydrus::ImportServiceStatus* m_status { nullptr };
+	bool m_preprocessed { false };
 	std::size_t m_max_urls { 0 };
 	std::size_t m_max_unique_urls { 0 };
 
   signals:
-	void preprocessingComplete();
+	void preprocessingComplete( bool success );
 
   public:
 
@@ -42,6 +46,8 @@ class UrlServiceWidget : public QWidget
 	void startPreImport();
 	void startImport();
 	void statusMessage( const QString& msg );
+	void preprocessingFinished( bool success );
+	void importFinished();
 	void processedMaxUrls( std::size_t count, std::size_t unique_count );
 	void processedUrls( std::size_t count, std::size_t unique_count );
 };

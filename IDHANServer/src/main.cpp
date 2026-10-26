@@ -1,3 +1,5 @@
+#include <folly/Singleton.h>
+
 #include <array>
 #include <cstdlib>
 #include <malloc.h>
@@ -24,7 +26,15 @@ static constexpr Option pg_host { "pg_host", "The host to connect to the databas
 
 static constexpr Option use_stdout { "use_stdout", "Use stdout for logging", "on/off", "true", "true" };
 
-static constexpr Option pg_schema { "pg_schema", "The PostgreSQL schema to use", "pg_schema", "public" };
+static constexpr Option
+	pg_schema { "pg_schema", "The PostgreSQL schema to use", "pg_schema", idhan::db::DEFAULT_SCHEMA };
+
+static constexpr Option pg_extension_schema {
+	"pg_extension_schema",
+	"The PostgreSQL schema for required extensions",
+	"schema",
+	idhan::db::EXTENSION_SCHEMA
+};
 
 static constexpr Option
 	config_location { "config", "The location for the config file", "config_location", "./config.toml" };
@@ -32,9 +42,8 @@ static constexpr Option
 static constexpr Option
 	force_start { "force_start", "Forces IDHAN to start even if it thinks it shouldn't", "on/off", "false", "true" };
 
-static constexpr auto options {
-	std::to_array< Option >( { log_level, pg_user, pg_host, use_stdout, pg_schema, config_location, force_start } )
-};
+static constexpr auto options { std::to_array< Option >(
+	{ log_level, pg_user, pg_host, use_stdout, pg_schema, pg_extension_schema, config_location, force_start } ) };
 
 void applyCLISettings(
 	const std::string_view group,
@@ -117,6 +126,10 @@ void checkSystemLocale()
 
 int main( int argc, char** argv )
 {
+	// Folly singletons (e.g. getGlobalCPUExecutor()) abort if requested before the vault
+	// considers registration finished; this project has no other folly::init() call.
+	folly::SingletonVault::singleton()->registrationComplete();
+
 	mallopt( M_ARENA_MAX, 2 );
 	mallopt( M_MMAP_THRESHOLD, 1024 * 1024 * 128 );
 	mallopt( M_MMAP_MAX, 0 );
@@ -142,6 +155,8 @@ int main( int argc, char** argv )
 	applyCLISettings( "database", "user", parser, pg_user );
 
 	applyCLISettings( "database", "schema", parser, pg_schema );
+
+	applyCLISettings( "database", "extension_schema", parser, pg_extension_schema );
 
 	applyCLISettings( "server", "use_stdout", parser, use_stdout );
 

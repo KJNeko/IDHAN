@@ -1,89 +1,207 @@
 type: object
-description: >
-  Only `record_id` and `hashes` are always present. Everything else appears
-  once the record's MIME type has been parsed, and then only for the MIME
-  categories noted on each field.
+description: Record identity and associations are always present. Known file size and filesystem timestamps
+  appear independently of MIME classification and metadata parsing. MIME and its registered extension
+  appear when identified. Parsed type-specific fields appear only when available; unknown optional fields
+  are omitted.
 required:
   - record_id
   - hashes
+  - archive_ids
+  - tags
+  - urls
 properties:
   record_id:
-    $ref: 'RecordID.yaml'
+    $ref: RecordID.yaml
   hashes:
     type: object
     required:
       - sha256
     properties:
       sha256:
-        $ref: 'SHA256.yaml'
+        $ref: SHA256.yaml
   size:
     type: integer
     format: int64
-    description: Bytes.
+    description: File size in bytes, when known, including before MIME classification. Zero is a known empty file.
   mime:
     type: string
-    example: "image/jpeg"
+    examples:
+      - image/jpeg
   extension:
     type: string
-    description: Best extension for the type.
-    example: "jpg"
+    description: Best extension registered for the stored MIME type.
+    examples:
+      - jpg
   extra:
-    type: object
-    description: Freeform metadata from the `metadata.json` column.
-    additionalProperties: true
+    description: Parser-specific JSON, emitted for parsed records.
   width:
     type: integer
     format: int32
-    description: Pixels. Images, videos, and image projects.
-    example: 1920
+    description: Pixels. Images, videos, animations, and image projects.
+    examples:
+      - 1920
   height:
     type: integer
     format: int32
-    description: Pixels. Images, videos, and image projects.
-    example: 1080
+    description: Pixels. Images, videos, animations, and image projects.
+    examples:
+      - 1080
   channels:
     type: integer
     format: int32
-    description: Colour channels. Images and image projects.
-    example: 3
+    description: Colour channels for images and image projects; audio channels for audio records.
+    examples:
+      - 3
   has_exif:
     type: boolean
-    description: >
-      Images. The file carries an EXIF block. Absent when the image was parsed
-      before embedded metadata was looked for, which is not the same as false.
-    example: true
+    description: Images. The file carries an EXIF block. Absent when the image was parsed before embedded
+      metadata was looked for, which is not the same as false.
+    examples:
+      - true
   has_gps:
     type: boolean
     description: Images. The EXIF block carries a GPS position.
-    example: false
+    examples:
+      - false
   has_xmp:
     type: boolean
     description: Images. The file carries an XMP packet.
-    example: false
+    examples:
+      - false
   has_iptc:
     type: boolean
     description: Images. The file carries an IPTC block.
-    example: false
+    examples:
+      - false
   has_icc_profile:
     type: boolean
     description: Images. The file carries an embedded ICC colour profile.
-    example: true
+    examples:
+      - true
+  lossless:
+    type: boolean
+    description: Images. The encoding threw no pixel data away. Absent when the format records nothing
+      that would answer it, such as TIFF or AVIF, and when the image was parsed before encoding settings
+      were looked for.
+    examples:
+      - false
+  quality:
+    type: integer
+    format: int32
+    minimum: 1
+    maximum: 100
+    description: 'Images. The IJG 1-100 quality whose scaled standard quantization tables sit closest
+      to the ones the file carries. JPEG only, and an estimate: an encoder that does not derive its tables
+      from the IJG ones reports the nearest match rather than the number it was given.'
+    examples:
+      - 85
+  chroma_subsampling:
+    type: string
+    enum:
+      - '4:4:4'
+      - '4:2:2'
+      - '4:4:0'
+      - '4:2:0'
+      - greyscale
+    description: Images. How the chroma planes were sampled against luma. JPEG only.
+    examples:
+      - '4:2:0'
+  progressive:
+    type: boolean
+    description: Images. The scan is progressive rather than baseline. JPEG only.
+    examples:
+      - false
+  comment:
+    type: string
+    maxLength: 255
+    description: Images. The text of a JPEG COM segment, which is usually the encoder naming itself. Sanitized
+      to printable UTF-8 and capped. An empty string means the file was read for one and carries none;
+      the field is absent entirely for a format that was never read for one, which is everything but JPEG.
+    examples:
+      - Paint Tool -SAI- JPEG Encoder v1.00
   duration:
     type: number
     format: double
-    description: Seconds. Videos.
-    example: 120.5
+    description: Seconds. Videos, audio, and animations.
+    examples:
+      - 120.5
   bitrate:
     type: integer
     format: int32
-    description: Bits per second. Videos.
-    example: 4000000
+    description: Bits per second. Videos and audio.
+    examples:
+      - 4000000
   has_audio:
     type: boolean
     description: Videos.
-    example: true
+    examples:
+      - true
   layers:
     type: integer
     format: int32
     description: Image projects, such as PSD.
-    example: 5
+    examples:
+      - 5
+  archive_ids:
+    type: array
+    items:
+      type: integer
+      format: int32
+      minimum: 1
+  tags:
+    type: array
+    items:
+      type: object
+      properties:
+        domain:
+          type: string
+          description: Tag domain name.
+        text:
+          type: string
+      required:
+        - domain
+        - text
+  urls:
+    type: array
+    items:
+      type: string
+  file_mtime:
+    type: integer
+    format: int64
+    description: File modification time as Unix microseconds, when known, independently of MIME classification.
+  file_ctime:
+    type: integer
+    format: int64
+    description: Filesystem birth time as Unix microseconds when available, independently of MIME classification.
+  parsed:
+    type: boolean
+  simple_type:
+    type: string
+    enum:
+      - image
+      - video
+      - animation
+      - audio
+      - archive
+      - image_project
+      - none
+  phash:
+    type: string
+    pattern: ^[0-9a-f]{16}$
+    description: 64-bit perceptual hash as hexadecimal.
+  framerate:
+    type: number
+  sample_rate:
+    type: integer
+  frame_count:
+    type: integer
+  loops:
+    type: boolean
+  archive_id:
+    type: integer
+  file_count:
+    type: integer
+    format: int64
+    minimum: 0
+  encrypted:
+    type: boolean

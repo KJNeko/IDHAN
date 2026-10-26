@@ -5,41 +5,65 @@ properties:
     readOnly: true
   readonly:
     type: boolean
-    default: true
-    description: IDHAN will not add, move, or rename files in this cluster.
+    description: IDHAN will not add, move, or rename media files in this cluster. Identity marker initialization and acknowledged recovery are permitted.
   name:
     type: string
   path:
     type: string
-    example: /mnt/media/idhan
+    examples:
+      - /mnt/media/idhan
   size:
     type: object
     properties:
       used:
         type: integer
         readOnly: true
+        format: int64
+        description: Bytes assigned through file_info; maintained by database triggers.
       limit:
         type: integer
         description: Byte ceiling. 0 means unlimited.
         default: 0
+        format: int64
       available:
         type: integer
         readOnly: true
+        format: int64
+        description: Configured limit minus assigned bytes, or int64 maximum when unlimited. May be negative.
   file_count:
     type: integer
     readOnly: true
-  ratio:
-    description: >
-      Weight used when picking a cluster for new files: this cluster's ratio
-      over the sum of all ratios. Reads return it as `ratio_number`.
-    type: integer
-    example: 1
-    default: 1
-    writeOnly: true
   ratio_number:
     description: The stored `ratio`.
     type: integer
     readOnly: true
+  by_mime:
+    type: array
+    items:
+      type: object
+      properties:
+        mime:
+          type:
+            - string
+            - 'null'
+        count:
+          type: integer
+          format: int64
+          minimum: 0
+        bytes:
+          type: integer
+          format: int64
+          minimum: 0
+      required:
+        - mime
+        - count
+        - bytes
 required:
+  - cluster_id
+  - readonly
   - name
   - path
+  - size
+  - file_count
+  - ratio_number
+  - by_mime

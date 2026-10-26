@@ -1,212 +1,89 @@
 #include "ClusterManager.hpp"
 
-#include <fstream>
-#include <optional>
+#include <boost/uuid/string_generator.hpp>
 
-#include "api/helpers/createBadRequest.hpp"
-#include "core/files/mime.hpp"
-#include "core/record/getRecordSHA256.hpp"
-#include "crypto/SHA256.hpp"
+#include <fcntl.h>
+
+#include "ClusterMarker.hpp"
+#include "ClusterWrite.hpp"
+#include "clusterIdentity.hpp"
 #include "fgl/defines.hpp"
-#include "filesystem/filesystem.hpp"
+#include "idhan/db/DBContext.hpp"
 #include "logging/log.hpp"
 
 namespace idhan::filesystem
 {
 
-//! Queried on each call rather than cached, so a cluster's free space does not go stale.
-//! An unreadable path reports zero instead of throwing.
-std::filesystem::space_info spaceInfo( const std::filesystem::path& path )
+template < typename Database >
+[[nodiscard]] runtime::Task< std::shared_ptr< const ClusterManager::Configuration > > readClusterConfiguration(
+	Database& db )
 {
-	std::error_code code {};
-	std::filesystem::space_info info { std::filesystem::space( path, code ) };
-	if ( code ) info = { 0, 0, 0 };
-	return info;
+	const auto rows {
+		co_await db
+			.query(
+				"SELECT cluster_id, folder_path, cluster_uuid::text, read_only, cluster_name, ratio_number, size_limit FROM file_clusters" )
+			.template rows<
+				ClusterID,
+				std::string,
+				std::string,
+				bool,
+				std::optional< std::string >,
+				std::int16_t,
+				std::int64_t >()
+	};
+	auto configuration { std::make_shared< ClusterManager::Configuration >() };
+	for ( const auto& [ id, path, uuid, readonly, name, ratio, limit ] : rows )
+		configuration->emplace(
+			id, ClusterInfo { id, path, boost::uuids::string_generator {}( uuid ), readonly, name, ratio, limit } );
+	co_return configuration;
 }
 
-std::size_t getFilesystemCapacity( const std::filesystem::path& path )
-{
-	return static_cast< std::size_t >( spaceInfo( path ).available );
-}
-
-std::size_t ClusterManager::ClusterInfo::capacity() const
-{
-	return static_cast< std::size_t >( spaceInfo( m_path ).capacity );
-}
-
-std::size_t ClusterManager::ClusterInfo::free() const
-{
-	return static_cast< std::size_t >( spaceInfo( m_path ).available );
-}
-
-ClusterManager::ClusterInfo::ClusterInfo( const std::filesystem::path& path, const ClusterID id ) :
-  m_id( id ),
-  m_path( path ),
-  m_flags( ClusterFlags::STORES_DEFAULT ),
-  m_max_capacity( std::numeric_limits< std::size_t >::max() )
+ClusterWrite::ClusterWrite(
+	ClusterManager& manager,
+	std::unique_lock< folly::coro::Mutex > lock,
+	db::DBTransaction transaction ) :
+  m_manager( manager ),
+  m_lock( std::move( lock ) ),
+  m_transaction( std::move( transaction ) )
 {}
 
-ClusterManager::ClusterInfo::ClusterInfo( const drogon::orm::Row& row ) :
-  m_id( row[ "cluster_id" ].as< ClusterID >() ),
-  m_path( row[ "folder_path" ].as< std::string >() ),
-  m_flags( ClusterFlags::STORES_DEFAULT ),
-  m_read_only( row[ "read_only" ].as< bool >() ),
-  m_max_capacity( std::numeric_limits< std::size_t >::max() )
-{}
-
-std::expected< void, drogon::HttpResponsePtr > ClusterManager::ClusterInfo::storeFile(
-	const SHA256& sha256,
-	const std::byte* data,
-	const std::size_t length,
-	std::string_view extension ) const
+runtime::Task<> ClusterWrite::commit()
 {
-	if ( m_read_only )
-		return std::unexpected( createInternalError( "Refusing to write into read-only cluster {}", m_id ) );
-
-	const auto path { std::filesystem::absolute( m_path ) / getClusterRelativePath( sha256, extension ) };
-
-	if ( !std::filesystem::exists( path.parent_path() ) ) std::filesystem::create_directories( path.parent_path() );
-
-	// TODO: IOuring write wrapper
-
-	if ( std::ofstream ofs( path, std::ios::binary ); ofs )
-	{
-		ofs.write( reinterpret_cast< const std::ostream::char_type* >( data ), length );
-
-		ofs.flush();
-		// TODO: Add flag for 'ensure write' to ensure we've always written the data fully to at least some media
-	}
-	else
-		return std::unexpected(
-			createInternalError( "Failed to open file {} for writing!", std::filesystem::absolute( path ).string() ) );
-
-	return {};
+	// Allocate and decode before committing so failures leave both database and cache unchanged.
+	auto configuration { co_await readClusterConfiguration( m_transaction ) };
+	co_await m_transaction.commit();
+	m_manager.m_clusters.store( std::move( configuration ) );
+	m_lock.unlock();
 }
 
-drogon::Task< std::expected< ClusterID, drogon::HttpResponsePtr > > ClusterManager::findBestFolder(
-	const RecordID record_id,
-	[[maybe_unused]] const std::size_t file_size,
-	DbClientPtr db )
+runtime::Task<> ClusterWrite::rollback()
 {
-	const auto cluster_check { co_await db->execSqlCoro(
-		"SELECT file_info.cluster_id, file_info.cluster_delete_time, file_clusters.read_only "
-		"FROM file_info LEFT JOIN file_clusters ON file_clusters.cluster_id = file_info.cluster_id "
-		"WHERE file_info.record_id = $1 LIMIT 1",
-		record_id ) };
-
-	if ( !cluster_check.empty() )
-	{
-		const auto& row { cluster_check[ 0 ] };
-
-		const bool has_cluster { !row[ "cluster_id" ].isNull() };
-		const bool file_deleted { !row[ "cluster_delete_time" ].isNull() };
-		// null when the record has no cluster at all, since the join then matches nothing
-		const bool writable { !row[ "read_only" ].isNull() && !row[ "read_only" ].as< bool >() };
-
-		if ( has_cluster && !file_deleted && writable )
-		{
-			// We might still have the file, So we'll return the cluster it should be in.
-			co_return row[ "cluster_id" ].as< ClusterID >();
-		}
-	}
-
-	const auto clusters { co_await db->execSqlCoro( "SELECT * FROM file_clusters WHERE read_only = FALSE" ) };
-
-	if ( clusters.empty() )
-	{
-		const auto total { co_await db->execSqlCoro( "SELECT count(*) FROM file_clusters" ) };
-
-		if ( total[ 0 ][ 0 ].as< std::int64_t >() == 0 )
-			co_return std::unexpected(
-				createBadRequest( "No clusters available, You must create one before importing files" ) );
-
-		co_return std::unexpected(
-			createBadRequest( "All clusters are read-only, You must mark one as writable before importing files" ) );
-	}
-
-	const auto rankCluster = []( const drogon::orm::Row& row ) -> double
-	{
-		const auto size_used { row[ "size_used" ].as< std::int64_t >() };
-		const auto size_limit { row[ "size_limit" ].as< std::int64_t >() };
-		// TODO: Add free capacity to the ranking
-		if ( size_limit <= 0 ) return 0.0;
-		return static_cast< double >( size_used ) / static_cast< double >( size_limit );
-	};
-
-	std::vector< std::pair< double, ClusterID > > cluster_scores {};
-
-	for ( const auto& row : clusters )
-	{
-		cluster_scores.emplace_back( rankCluster( row ), row[ "cluster_id" ].as< ClusterID >() );
-	}
-
-	std::ranges::sort(
-		cluster_scores, []( const auto& a, const auto& b ) noexcept -> bool { return a.first < b.first; } );
-
-	co_return cluster_scores[ 0 ].second;
+	co_await m_transaction.rollback();
+	m_lock.unlock();
 }
 
-drogon::Task< std::expected< void, drogon::HttpResponsePtr > > ClusterManager::storeFile(
-	const RecordID record,
-	const std::byte* data,
-	const std::size_t length,
-	const DbClientPtr db )
+runtime::Task< ClusterWrite > ClusterManager::beginWrite( db::DBContext& db )
 {
-	const auto sha256_e { co_await getRecordSHA256( record, db ) };
-	if ( !sha256_e ) co_return std::unexpected( sha256_e.error() );
-	const auto& sha256 { sha256_e.value() };
+	auto lock { co_await m_write_mutex.co_scoped_lock() };
+	auto transaction { co_await db.transaction() };
+	co_return ClusterWrite { *this, std::move( lock ), std::move( transaction ) };
+}
 
-	const auto current_cluster { co_await db->execSqlCoro(
-		"SELECT file_clusters.read_only FROM file_info "
-		"JOIN file_clusters ON file_clusters.cluster_id = file_info.cluster_id "
-		"WHERE file_info.record_id = $1",
-		record ) };
+std::optional< ClusterInfo > ClusterManager::find( const ClusterID id ) const
+{
+	const auto configuration { m_clusters.load() };
+	const auto found { configuration->find( id ) };
+	if ( found == configuration->end() ) return std::nullopt;
+	return found->second;
+}
 
-	if ( !current_cluster.empty() && current_cluster[ 0 ][ "read_only" ].as< bool >() )
-	{
-		const auto state { co_await validateFile( record, db ) };
-		return_unexpected_error( state );
-
-		if ( state.value() == FileState::FileValid )
-		{
-			log::debug( "Record {} is already stored in a read-only cluster, not storing it again", record );
-			co_return {};
-		}
-
-		log::warn(
-			"Record {} is stored in a read-only cluster but the file there is {}. Storing it again elsewhere",
-			record,
-			state.value() == FileState::FileNotFound ? "missing" : "corrupt" );
-	}
-
-	const auto& target_id { co_await findBestFolder( record, length, db ) };
-	return_unexpected_error( target_id );
-
-	std::optional< ClusterInfo > target_cluster_copy {};
-	{
-		std::lock_guard lock { m_mutex };
-		const auto itter { m_clusters.find( *target_id ) };
-		if ( itter == m_clusters.end() )
-			co_return std::unexpected( createInternalError( "Failed to find cluster with id {}", *target_id ) );
-		target_cluster_copy = itter->second;
-	}
-	const auto& target_cluster { *target_cluster_copy };
-
-	log::debug( "Storing file for record {} in cluster {}", record, *target_id );
-	const auto record_mime { co_await mime::getRecordMime( record, db ) };
-	return_unexpected_error( record_mime );
-
-	const auto result { target_cluster.storeFile( sha256, data, length, record_mime.value().extension ) };
-
-	if ( !result ) co_return result;
-
-	constexpr auto query {
-		"UPDATE file_info SET cluster_store_time = now(), cluster_id = $2, cluster_delete_time = NULL WHERE record_id = $1"
-	};
-
-	co_await db->execSqlCoro( query, record, target_cluster.m_id );
-
-	co_return {};
+std::vector< ClusterInfo > ClusterManager::list() const
+{
+	const auto configuration { m_clusters.load() };
+	std::vector< ClusterInfo > result;
+	result.reserve( configuration->size() );
+	for ( const auto& [ id, cluster ] : *configuration ) result.push_back( cluster );
+	return result;
 }
 
 ClusterManager::ClusterManager()
@@ -215,30 +92,48 @@ ClusterManager::ClusterManager()
 	m_instance = this;
 }
 
-drogon::Task< void > ClusterManager::reloadClusters( DbClientPtr db )
+runtime::Task< void > ClusterManager::reloadClusters( db::DBContext& db, const bool recreate_missing_markers )
 {
 	log::info( "Reloading clusters" );
-	const auto clusters { co_await db->execSqlCoro( "SELECT * FROM file_clusters" ) };
+	auto lock { co_await m_write_mutex.co_scoped_lock() };
+	const auto clusters { co_await readClusterConfiguration( db ) };
 
-	std::lock_guard lock { m_mutex };
-	m_clusters.clear();
-
-	for ( const auto& cluster : clusters )
+	std::string failures;
+	for ( const auto& [ cluster_id, info ] : *clusters )
 	{
-		log::info( "Found cluster {}", cluster[ "folder_path" ].as< std::string >() );
-		const auto cluster_id { cluster[ "cluster_id" ].as< ClusterID >() };
-		m_clusters.emplace( cluster_id, cluster );
+		const auto& folder_path { info.path };
+		const auto read_only { info.read_only };
+		const auto uuid { info.uuid };
+		if ( recreate_missing_markers )
+		{
+			std::error_code error;
+			std::filesystem::create_directories( folder_path, error );
+			if ( error )
+			{
+				failures += std::format(
+					"\nCluster {}: cannot restore directory {}: {}",
+					cluster_id,
+					folder_path.string(),
+					error.message() );
+				continue;
+			}
+			auto root { folly::File::makeFile( folder_path.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC ) };
+			if ( root )
+			{
+				const auto marker { initializeClusterMarker( root->fd(), uuid ) };
+				if ( !marker ) failures += std::format( "\nCluster {}: {}", cluster_id, marker.error() );
+			}
+		}
+		const auto access { ClusterAccess::open( folder_path, uuid, read_only ) };
+		if ( !access )
+			failures += std::format( "\nCluster {} at {}: {}", cluster_id, folder_path.string(), access.error() );
 	}
-}
+	if ( !failures.empty() )
+		throw std::runtime_error(
+			"Cluster verification failed. Restore the expected markers, or acknowledge missing-marker recovery in TOML with [cluster] recreate_missing_markers = true (self-resetting). Conflicting markers are never overwritten."
+			+ failures );
 
-ExpectedTask< std::filesystem::path > ClusterManager::getClusterPath( const ClusterID cluster_id )
-{
-	std::lock_guard lock { m_mutex };
-	const auto itter { m_clusters.find( cluster_id ) };
-	if ( itter == m_clusters.end() )
-		co_return std::unexpected( createBadRequest( "Invalid cluster id {}", cluster_id ) );
-
-	co_return std::filesystem::absolute( itter->second.m_path );
+	m_clusters.store( clusters );
 }
 
 ClusterManager& ClusterManager::getInstance()

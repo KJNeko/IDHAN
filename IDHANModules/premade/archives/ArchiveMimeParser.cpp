@@ -169,7 +169,7 @@ std::expected< idhan::MimeID, idhan::ModuleError > ArchiveMimeParser::parseMime(
 {
 	if ( isComicBookZip( data ) )
 	{
-		spdlog::debug( "Archive filename identifies a comic book zip" );
+		spdlog::trace( "Archive filename identifies a comic book zip" );
 		return idhan::mime_ids::COMICBOOK_ZIP;
 	}
 
@@ -202,7 +202,7 @@ std::expected< idhan::MimeID, idhan::ModuleError > ArchiveMimeParser::parseMime(
 
 			if ( path != nullptr && isUgoiraManifest( path ) )
 			{
-				spdlog::debug( "Archive carries {}, specializing it to a Pixiv Ugoira", UGOIRA_MANIFEST );
+				spdlog::trace( "Archive carries {}, specializing it to a Pixiv Ugoira", UGOIRA_MANIFEST );
 				return idhan::mime_ids::PIXIV_UGOIRA;
 			}
 		}
@@ -218,7 +218,7 @@ std::expected< idhan::MimeID, idhan::ModuleError > ArchiveMimeParser::parseMime(
 
 	if ( frame_test.passes() )
 	{
-		spdlog::debug( "Archive is a numbered image sequence at its root, specializing it to a Pixiv Ugoira" );
+		spdlog::trace( "Archive is a numbered image sequence at its root, specializing it to a Pixiv Ugoira" );
 		return idhan::mime_ids::PIXIV_UGOIRA;
 	}
 

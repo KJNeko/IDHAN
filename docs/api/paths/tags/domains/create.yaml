@@ -13,21 +13,36 @@ post:
           properties:
             name:
               type: string
-              example: "my domain"
+              examples:
+                - my domain
   responses:
-    "200":
+    '200':
       description: The new domain
       content:
         application/json:
           schema:
-            $ref: '../../../schemas/TagDomainInfo.yaml'
-    "400":
+            $ref: ../../../schemas/TagDomainInfo.yaml
+    '400':
       description: Missing body, invalid JSON, or `name` absent or not a string
-    "409":
-      description: Name already taken. The existing domain is returned.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '409':
+      description: Name already exists; returns that domain.
       content:
         application/json:
           schema:
-            $ref: '../../../schemas/TagDomainInfo.yaml'
-    "500":
+            $ref: ../../../schemas/TagDomainInfo.yaml
+    '500':
       description: Internal server error
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string

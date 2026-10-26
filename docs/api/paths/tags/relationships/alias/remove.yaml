@@ -7,7 +7,7 @@ post:
       in: query
       required: true
       schema:
-        $ref: '../../../../schemas/TagDomainID.yaml'
+        $ref: ../../../../schemas/TagDomainID.yaml
   requestBody:
     required: true
     content:
@@ -21,9 +21,9 @@ post:
               - alias_id
             properties:
               aliased_id:
-                $ref: '../../../../schemas/TagID.yaml'
+                $ref: ../../../../schemas/TagID.yaml
               alias_id:
-                $ref: '../../../../schemas/TagID.yaml'
+                $ref: ../../../../schemas/TagID.yaml
         examples:
           remove_alias:
             summary: Remove alias from tag 10 to tag 20
@@ -31,9 +31,28 @@ post:
               - aliased_id: 10
                 alias_id: 20
   responses:
-    200:
-      description: Aliases removed
-    400:
+    '200':
+      description: Success
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+    '400':
       description: Missing or invalid `tag_domain_id`, body is not an array, or a non-integer ID
-    500:
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
       description: Internal server error
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string

@@ -7,7 +7,7 @@ patch:
     content:
       application/json:
         schema:
-          $ref: '../../schemas/ClusterInfo.yaml'
+          $ref: ../../schemas/ClusterUpdate.yaml
   parameters:
     - in: path
       name: cluster_id
@@ -15,13 +15,48 @@ patch:
       schema:
         type: integer
   responses:
-    200:
+    '503':
+      description: Cluster identity could not be verified; configuration was not modified.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '200':
       description: The updated cluster
       content:
         application/json:
           schema:
-            $ref: '../../schemas/ClusterInfo.yaml'
-    404:
+            $ref: ../../schemas/ClusterInfo.yaml
+    '404':
       description: Cluster not found
-    500:
-      description: Missing or invalid JSON body
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal failure.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '400':
+      description: Missing or invalid JSON, invalid cluster ID, ratio, or limit.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '409':
+      description: >-
+        Another cluster already uses the new name, including a conflict with a
+        concurrent rename. Names use exact, case-sensitive comparison. Keeping
+        this cluster's own name is allowed. Path changes remain ignored.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string

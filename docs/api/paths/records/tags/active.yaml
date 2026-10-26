@@ -3,17 +3,18 @@ get:
     - tags
     - records
   summary: Returns a record's resolved tags
-  description: |
-    Tags after alias resolution, parent inheritance, and sibling resolution.
+  description: |-
+    Tags after alias resolution and parent inheritance. Sibling resolution is
+    stubbed out pending a full rewrite and redesign.
     For the raw stored tags use `/records/{record_id}/tags`.
   parameters:
     - name: record_id
       in: path
       required: true
       schema:
-        $ref: '../../../schemas/RecordID.yaml'
+        $ref: ../../../schemas/RecordID.yaml
   responses:
-    200:
+    '200':
       description: Resolved tag IDs grouped by domain
       content:
         application/json:
@@ -26,14 +27,41 @@ get:
                 - tag_ids
               properties:
                 tag_domain_id:
-                  $ref: '../../../schemas/TagDomainID.yaml'
+                  $ref: ../../../schemas/TagDomainID.yaml
                 tag_ids:
                   type: array
                   items:
-                    $ref: '../../../schemas/TagID.yaml'
+                    $ref: ../../../schemas/TagID.yaml
           examples:
             active_tags:
               summary: Resolved tags grouped by domain
               value:
                 - tag_domain_id: 1
-                  tag_ids: [ 10, 20, 30 ]
+                  tag_ids:
+                    - 10
+                    - 20
+                    - 30
+    '400':
+      description: Request rejected; the body is a plain-text error message.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '404':
+      description: Record does not exist or is unavailable.
+      content:
+        text/plain:
+          schema:
+            type: string

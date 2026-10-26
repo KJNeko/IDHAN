@@ -1,0 +1,124 @@
+post:
+  tags:
+    - downloader
+  summary: Queues one URL in an existing session
+  responses:
+    '201':
+      description: Queues one URL in an existing session
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              id:
+                type: integer
+                format: int64
+              url:
+                type: string
+              state:
+                type: string
+            required:
+              - id
+              - url
+              - state
+    '400':
+      description: Request rejected; the body is a plain-text error message.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '404':
+      description: Requested resource is unavailable.
+      content:
+        text/plain:
+          schema:
+            type: string
+  parameters:
+    - name: session_id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            url:
+              type: string
+              minLength: 1
+              maxLength: 8192
+          required:
+            - url
+get:
+  tags:
+    - downloader
+  summary: Returns the session URL tree
+  responses:
+    '200':
+      description: Returns the session URL tree
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              oneOf:
+                - $ref: ../../../schemas/DownloadUrlNode.yaml
+                - $ref: ../../../schemas/DownloadUrlFlat.yaml
+    '400':
+      description: Request rejected; the body is a plain-text error message.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '404':
+      description: Requested resource is unavailable.
+      content:
+        text/plain:
+          schema:
+            type: string
+  parameters:
+    - name: session_id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+    - name: flatten
+      in: query
+      required: false
+      schema:
+        type: boolean
+        default: false
+  description: By default returns root URLs with recursive children. flatten=true returns root URLs with
+    urls containing all descendants and record_ids for imported descendants. Roots are ordered newest
+    first; flattened record IDs use import order.

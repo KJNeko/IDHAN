@@ -4,7 +4,7 @@ get:
     - notes
   summary: Returns a record's notes
   parameters:
-    - $ref: '../../../parameters/record_id.yaml'
+    - $ref: ../../../parameters/record_id.yaml
   responses:
     '200':
       description: The record's notes
@@ -14,7 +14,9 @@ get:
             type: array
             items:
               type: object
-              required: [ note_id, text ]
+              required:
+                - note_id
+                - text
               properties:
                 note_id:
                   type: integer
@@ -26,13 +28,33 @@ get:
               summary: Record with two notes
               value:
                 - note_id: 1
-                  text: "This image is from episode 3."
+                  text: This image is from episode 3.
                 - note_id: 2
-                  text: "Original source unknown."
+                  text: Original source unknown.
             no_notes:
               summary: Record with no notes
               value: [ ]
     '400':
       description: Invalid `record_id`
+      content:
+        text/plain:
+          schema:
+            type: string
     '500':
       description: Internal server error
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '404':
+      description: Record does not exist or is unavailable.
+      content:
+        text/plain:
+          schema:
+            type: string

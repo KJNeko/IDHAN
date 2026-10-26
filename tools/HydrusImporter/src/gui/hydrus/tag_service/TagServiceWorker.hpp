@@ -1,5 +1,7 @@
 #pragma once
 
+#include <chrono>
+
 #include "HydrusImporter.hpp"
 
 namespace idhan::hydrus
@@ -19,6 +21,15 @@ class TagServiceWorker final : public QObject, public QRunnable
 	idhan::TagDomainID tag_domain_id { 0 };
 
   public:
+
+	enum class Phase
+	{
+		Mappings,
+		PreparingRelationships,
+		Aliases,
+		Parents
+	};
+	Q_ENUM( Phase )
 
 	bool m_ptr { false };
 
@@ -51,9 +62,10 @@ class TagServiceWorker final : public QObject, public QRunnable
 		int tag_id;
 	};
 
-	void processPairs( const std::vector< MappingPair >& pairs ) const;
-	void processParents( const std::vector< std::pair< idhan::TagID, idhan::TagID > >& pairs ) const;
-	void processSiblings( const std::vector< std::pair< idhan::TagID, idhan::TagID > >& pairs ) const;
+	void processPairs( const std::vector< MappingPair >& pairs );
+	void processParents( const std::vector< std::pair< idhan::TagID, idhan::TagID > >& pairs );
+	void processSiblings( const std::vector< std::pair< idhan::TagID, idhan::TagID > >& pairs );
+	void reportProgress( std::size_t count );
 
 	void processMappingsBatch(
 		const idhan::hydrus::TransactionBaseCoro& mappings_tr,
@@ -62,7 +74,12 @@ class TagServiceWorker final : public QObject, public QRunnable
   public:
 
   signals:
+	void phaseStarted( TagServiceWorker::Phase phase, std::chrono::steady_clock::time_point started );
+	void phaseProgress( std::size_t count, std::chrono::steady_clock::time_point completed );
+	void preprocessingFinished( bool success );
 	void finished();
+	void statusMessage( const QString& message );
+	void warningOccurred( const QString& message );
 	void errorOccurred( const QString& message );
 	void processedMappings( std::size_t count, std::size_t record_count );
 	void processedParents( std::size_t count );
@@ -71,3 +88,5 @@ class TagServiceWorker final : public QObject, public QRunnable
 	void processedMaxParents( std::size_t count );
 	void processedMaxAliases( std::size_t count );
 };
+
+Q_DECLARE_METATYPE( std::chrono::steady_clock::time_point )

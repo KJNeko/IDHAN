@@ -11,6 +11,7 @@
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <thread>
 #include <unordered_map>
@@ -19,13 +20,9 @@
 #include "CallInput.hpp"
 #include "ipc/Blob.hpp"
 #include "ipc/Frame.hpp"
+#include "ipc/ModuleActivity.hpp"
 #include "ipc/Protocol.hpp"
 #include "threading/IDHANTask.hpp"
-
-namespace trantor
-{
-class EventLoop;
-}
 
 namespace idhan::modules
 {
@@ -82,7 +79,6 @@ class WorkerProcess : public std::enable_shared_from_this< WorkerProcess >
 	struct PendingCall
 	{
 		std::coroutine_handle<> continuation {};
-		trantor::EventLoop* loop { nullptr };
 		std::shared_ptr< CallOutcome > outcome {};
 	};
 
@@ -100,6 +96,7 @@ class WorkerProcess : public std::enable_shared_from_this< WorkerProcess >
 
 	std::mutex m_calls_mutex {};
 	std::unordered_map< std::uint64_t, PendingCall > m_calls {};
+	std::optional< std::vector< ipc::ModuleActivity > > m_module_activity {};
 	//! The input of every in-flight call, so a module passing its own input back through a callback is
 	//! answered by reusing it.
 	std::unordered_map< std::uint64_t, InFlightInput > m_call_inputs {};
@@ -154,6 +151,9 @@ class WorkerProcess : public std::enable_shared_from_this< WorkerProcess >
 	[[nodiscard]] std::size_t rssKb() const { return m_rss_kb.load(); }
 
 	[[nodiscard]] std::size_t activeCalls() const { return m_active_calls.load(); }
+
+	//! The last heartbeat's counters, in manifest order; absent before the first report.
+	[[nodiscard]] std::optional< std::vector< ipc::ModuleActivity > > moduleActivity();
 
 	[[nodiscard]] std::chrono::steady_clock::time_point lastActivity();
 

@@ -12,6 +12,7 @@ FileRelationshipsWidget::FileRelationshipsWidget( idhan::hydrus::HydrusImporter*
   ui( new Ui::FileRelationshipsWidget() )
 {
 	ui->setupUi( this );
+	m_status = new idhan::hydrus::ImportServiceStatus( ui->statusLabel, ui->timingLabel, this );
 
 	connect(
 		m_worker,
@@ -33,8 +34,24 @@ FileRelationshipsWidget::FileRelationshipsWidget( idhan::hydrus::HydrusImporter*
 		&FileRelationshipsWidget::processedAlternatives );
 
 	connect( m_worker, &FileRelationshipsWorker::statusMessage, this, &FileRelationshipsWidget::statusMessage );
-	connect( m_worker, &FileRelationshipsWorker::errorOccurred, this, &FileRelationshipsWidget::statusMessage );
-	connect( m_worker, &FileRelationshipsWorker::finished, this, &FileRelationshipsWidget::preprocessingComplete );
+	connect(
+		m_worker,
+		&FileRelationshipsWorker::errorOccurred,
+		m_status,
+		&idhan::hydrus::ImportServiceStatus::fail,
+		Qt::QueuedConnection );
+	connect(
+		m_worker,
+		&FileRelationshipsWorker::warningOccurred,
+		m_status,
+		&idhan::hydrus::ImportServiceStatus::warning,
+		Qt::QueuedConnection );
+	connect(
+		m_worker,
+		&FileRelationshipsWorker::preprocessingFinished,
+		this,
+		&FileRelationshipsWidget::preprocessingFinished );
+	connect( m_worker, &FileRelationshipsWorker::finished, this, &FileRelationshipsWidget::importFinished );
 }
 
 void FileRelationshipsWidget::updateText()
@@ -64,21 +81,44 @@ void FileRelationshipsWidget::updateText()
 
 void FileRelationshipsWidget::startImport()
 {
-	if ( ui->cbShouldImport->isChecked() ) QThreadPool::globalInstance()->start( m_worker );
+	if ( !ui->cbShouldImport->isChecked() )
+	{
+		m_status->finish( "Skipped" );
+		return;
+	}
+
+	if ( !m_preprocessed ) return;
+
+	m_status->begin( "Queued for import" );
+	QThreadPool::globalInstance()->start( m_worker );
 }
 
 void FileRelationshipsWidget::startPreImport()
 {
+	m_status->begin( "Queued for preprocessing" );
 	QThreadPool::globalInstance()->start( m_worker );
 }
 
 void FileRelationshipsWidget::statusMessage( const QString& msg )
 {
-	ui->statusLabel->setText( msg );
+	m_status->setOperation( msg );
+}
+
+void FileRelationshipsWidget::preprocessingFinished( const bool success )
+{
+	m_preprocessed = success;
+	if ( success ) m_status->finish( "Ready to import" );
+	emit preprocessingComplete( success );
+}
+
+void FileRelationshipsWidget::importFinished()
+{
+	m_status->finish( "Finished" );
 }
 
 void FileRelationshipsWidget::processedDuplicates( const std::size_t count )
 {
+	if ( count > duplicates_processed ) m_status->recordProgress();
 	duplicates_processed = count;
 	updateText();
 }
@@ -91,6 +131,7 @@ void FileRelationshipsWidget::processedMaxDuplicates( const std::size_t count )
 
 void FileRelationshipsWidget::processedAlternatives( const std::size_t count )
 {
+	if ( count > alternatives_processed ) m_status->recordProgress();
 	alternatives_processed = count;
 	updateText();
 }

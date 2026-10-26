@@ -6,6 +6,29 @@ Images are available at `ghcr.io/kjneko/idhan`:
 - `dev`: bleeding edge, built from the `dev` branch
 - `vX.Y.0`: built from each matching release tag
 
+## Building locally
+
+Initialize submodules before building; this includes the pinned simdjson release and
+Proxygen. CMake fetches Proxygen's pinned Folly, Fizz, Wangle, and mvfst dependencies,
+so the first build needs network access.
+
+```sh
+git submodule update --init --recursive
+docker build --build-arg BUILD_JOBS=4 -t idhan:local .
+```
+
+The build and runtime stages use Ubuntu 26.04. The server builds with GCC 15 and
+C++26. `BUILD_JOBS` defaults to 4 to limit memory use while compiling the HTTP stack;
+raise it on machines with sufficient RAM. Builds must run on the target architecture.
+
+The image defaults to plain HTTP, matching the Compose health checks. For native TLS,
+mount a certificate and key, set `IDHAN_HOST_USE_TLS=true`, configure
+`IDHAN_HOST_SERVER_CERT_PATH` and `IDHAN_HOST_SERVER_KEY_PATH`, and update the health
+check to use HTTPS with the appropriate CA trust.
+
+Uploads larger than 8 MiB spill into `IDHAN_SERVER_TEMP_PATH` (default `/tmp/idhan`).
+Provide enough disk space there for concurrent uploads; it can be a separate volume.
+
 # Performance notes
 
 ## secomp and io_uring
@@ -79,7 +102,7 @@ is equivalent to `IDHAN_SERVER_IO_THREADS=4`.
 ```yaml
 services:
   idhan_postgres:
-    image: postgres:18
+    image: pgvector/pgvector:pg18-trixie
     container_name: idhan-postgres
     # See "Performance note: Postgres shared memory" above.
     shm_size: 1gb
