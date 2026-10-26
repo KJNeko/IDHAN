@@ -1,0 +1,91 @@
+get:
+  tags:
+    - downloader
+  summary: Returns downloader runtime diagnostics
+  responses:
+    '200':
+      description: Returns downloader runtime diagnostics
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      description: Request rejected; the body is a plain-text error message.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string
+  parameters:
+    - name: event_cursors
+      in: query
+      required: false
+      schema:
+        type: string
+      example: '12:100,15:40'
+      description: >-
+        Per-session last-seen event sequences, formatted as a comma-separated list
+        of session_id:event_sequence pairs. These are counters, not timestamps.
+        For example, 12:100,15:40 requests events with sequence greater than 100
+        for session 12 and greater than 40 for session 15. Omit or use an empty
+        string for all retained events. Sessions without an entry also return
+        their retained events. Supply this parameter at most once and do not
+        combine it with since; either violation returns 400.
+    - name: since
+      in: query
+      required: false
+      deprecated: true
+      schema:
+        type: string
+      example: '12:100,15:40'
+      description: >-
+        Deprecated alias for event_cursors with the same format and behavior.
+        Supply at most once and only when event_cursors is absent. Despite its
+        name, this is not a timestamp filter.
+  description: |
+    Includes current session work, in-flight requests, lane snapshots, module queues, counters,
+    and retained events. Diagnostic fields may evolve; unknown fields should be ignored.
+
+    `modules` lists every loaded module, identified by `library_index` and `module_index`,
+    with its `name`, `library` filename, `thread_safe` flag, `queued` and `running`
+    call counts, and live library `workers`. Worker counts are shared by modules in
+    the same library; do not sum them across module rows. Activity is sampled at
+    the configured worker heartbeat interval and includes persistent, single-run,
+    and isolated callback workers. Queued calls include calls waiting for a worker
+    thread or a module serialization lock. Running calls include module code
+    waiting for callbacks. `reporting` is false while any live worker lacks an
+    activity report; treat counts as incomplete until reporting becomes true.
+    A library with no live workers reports zero queued and running calls.
+
+    Use `event_cursors=12:100,15:40` to poll for newer events. Each event sequence
+    is a monotonically increasing counter scoped to its runtime session, starting
+    at 1. Save each session's returned `event_sequence` for the next poll.
+    Only events strictly greater than that session's cursor are included.
+    Cursors filter event arrays, not the sessions returned or their current state.
+    Unknown session IDs in the cursor do not select sessions or cause 404.
+
+    Each runtime session retains at most 256 diagnostic events. For a nonzero
+    cursor older than retained history, `events_dropped` reports the missed gap.
+    Zero requests all retained events without reporting a historical gap. A cursor
+    at or beyond the newest sequence returns an empty event array for that session.
+    These cursors have no persistence or SSE replay guarantee; restart polling
+    without saved cursors when the runtime session is recreated.
+
+    Malformed pairs, missing numbers, whitespace, and numeric overflow return 400.
+    Session IDs are parsed as signed int64 and event sequences as unsigned uint64.
+    Duplicate session entries within one value use the last pair; an empty value
+    and a single trailing comma are accepted. A bare sequence such as
+    `event_cursors=100` is invalid. Repeating either parameter or supplying both
+    `event_cursors` and its deprecated `since` alias also returns 400.

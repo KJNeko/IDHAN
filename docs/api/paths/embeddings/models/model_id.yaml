@@ -1,0 +1,58 @@
+delete:
+  tags:
+    - embeddings
+  summary: Deletes an embedding model and its stored vectors
+  responses:
+    '200':
+      description: Deletes an embedding model and its stored vectors
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              model_id:
+                type: integer
+                format: int32
+                minimum: 1
+              model_name:
+                type: string
+              deleted:
+                type: boolean
+    '400':
+      description: Request rejected; the body is a plain-text error message.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '404':
+      description: Requested resource is unavailable.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '409':
+      description: The request conflicts with existing state.
+      content:
+        text/plain:
+          schema:
+            type: string
+  parameters:
+    - name: model_id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int32
+        minimum: 1

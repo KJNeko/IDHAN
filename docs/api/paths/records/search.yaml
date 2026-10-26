@@ -7,9 +7,9 @@ get:
       in: query
       required: true
       schema:
-        $ref: '../../schemas/SHA256.yaml'
+        $ref: ../../schemas/SHA256.yaml
   responses:
-    200:
+    '200':
       description: Lookup result
       content:
         application/json:
@@ -23,5 +23,21 @@ get:
               record_id:
                 type: integer
                 description: Present only when `found` is true.
-    400:
+    '400':
       description: Missing or malformed `sha256`
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string

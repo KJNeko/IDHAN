@@ -1,6 +1,8 @@
-#include <algorithm>
-
 #include <catch2/catch_test_macros.hpp>
+
+#include <algorithm>
+#include <chrono>
+#include <thread>
 
 #include "ServerFixture.hpp"
 
@@ -19,7 +21,10 @@ static void attachFile( pqxx::connection& connection, const RecordID record_id )
 }
 
 //! What the resolution layer settled on for the record, which is what a search reads.
-static std::vector< TagID > finalTags( pqxx::connection& connection, const RecordID record_id, const TagDomainID tag_domain_id )
+static std::vector< TagID > finalTags(
+	pqxx::connection& connection,
+	const RecordID record_id,
+	const TagDomainID tag_domain_id )
 {
 	pqxx::nontransaction tx { connection };
 
@@ -54,7 +59,7 @@ SCENARIO_METHOD( ServerFixture, "Relationships reaching record mappings", "[api]
 
 		WHEN( "a tag with no relationships is added" )
 		{
-			REQUIRE( api().addTags( domain, { record }, { samus } ).status == drogon::k200OK );
+			REQUIRE( api().addTags( domain, { record }, { samus } ).status == 200 );
 
 			THEN( "a search for it finds the record" )
 			{
@@ -64,7 +69,7 @@ SCENARIO_METHOD( ServerFixture, "Relationships reaching record mappings", "[api]
 
 			AND_WHEN( "the tag is removed again" )
 			{
-				REQUIRE( api().removeTags( domain, { record }, { samus } ).status == drogon::k200OK );
+				REQUIRE( api().removeTags( domain, { record }, { samus } ).status == 200 );
 
 				THEN( "the search no longer finds it" )
 				{
@@ -76,8 +81,8 @@ SCENARIO_METHOD( ServerFixture, "Relationships reaching record mappings", "[api]
 
 		WHEN( "a parent is declared and the child is then added" )
 		{
-			REQUIRE( api().createParents( domain, { { metroid, samus } } ).status == drogon::k200OK );
-			REQUIRE( api().addTags( domain, { record }, { samus } ).status == drogon::k200OK );
+			REQUIRE( api().createParents( domain, { { metroid, samus } } ).status == 200 );
+			REQUIRE( api().addTags( domain, { record }, { samus } ).status == 200 );
 
 			THEN( "a search for the parent finds the record" )
 			{
@@ -88,8 +93,8 @@ SCENARIO_METHOD( ServerFixture, "Relationships reaching record mappings", "[api]
 
 		WHEN( "a tag is added and a parent is declared over it afterwards" )
 		{
-			REQUIRE( api().addTags( domain, { record }, { samus } ).status == drogon::k200OK );
-			REQUIRE( api().createParents( domain, { { metroid, samus } } ).status == drogon::k200OK );
+			REQUIRE( api().addTags( domain, { record }, { samus } ).status == 200 );
+			REQUIRE( api().createParents( domain, { { metroid, samus } } ).status == 200 );
 
 			THEN( "a search for the parent finds the record" )
 			{
@@ -100,8 +105,8 @@ SCENARIO_METHOD( ServerFixture, "Relationships reaching record mappings", "[api]
 
 		WHEN( "an alias is created and the aliased tag is then added" )
 		{
-			REQUIRE( api().createAliases( domain, { { samus, samus_aran } } ).status == drogon::k200OK );
-			REQUIRE( api().addTags( domain, { record }, { samus } ).status == drogon::k200OK );
+			REQUIRE( api().createAliases( domain, { { samus, samus_aran } } ).status == 200 );
+			REQUIRE( api().addTags( domain, { record }, { samus } ).status == 200 );
 
 			THEN( "a search for the alias target finds the record" )
 			{
@@ -117,8 +122,8 @@ SCENARIO_METHOD( ServerFixture, "Relationships reaching record mappings", "[api]
 
 		WHEN( "a tag is added and aliased onward afterwards" )
 		{
-			REQUIRE( api().addTags( domain, { record }, { samus } ).status == drogon::k200OK );
-			REQUIRE( api().createAliases( domain, { { samus, samus_aran } } ).status == drogon::k200OK );
+			REQUIRE( api().addTags( domain, { record }, { samus } ).status == 200 );
+			REQUIRE( api().createAliases( domain, { { samus, samus_aran } } ).status == 200 );
 
 			THEN( "a search for the alias target finds the record" )
 			{
@@ -127,6 +132,43 @@ SCENARIO_METHOD( ServerFixture, "Relationships reaching record mappings", "[api]
 			}
 		}
 	}
+}
+
+TEST_CASE_METHOD(
+	ServerFixture,
+	"Queued counts survive restart while alias search stays current",
+	"[api][tags][counts][queued]" )
+{
+	const auto domain { api().createDomain( "queued counts" ) };
+	const auto source { api().createTag( "", "source" ) };
+	const auto target { api().createTag( "", "target" ) };
+	const auto record { api().createRecord( 1 ) };
+	attachFile( db(), record );
+	REQUIRE( api().createAliases( domain, { { source, target } } ).status == 200 );
+	{
+		pqxx::work pause_consumer { db() };
+		pause_consumer.exec( "SELECT pg_advisory_xact_lock('tag_count_delta'::regclass::oid::bigint)" );
+		REQUIRE( api().addTags( domain, { record }, { source } ).status == 200 );
+		CHECK( api().search( domain, { target } ) == std::vector { record } );
+		CHECK( pause_consumer.query_value< int >( "SELECT COUNT(*) FROM tag_counts" ) == 0 );
+		CHECK( pause_consumer.query_value< int >( "SELECT COUNT(*) FROM tag_count_delta" ) == 2 );
+		pause_consumer.commit();
+	}
+	// Startup runs the real maintenance job immediately, including work left by a crashed server.
+	testServer().restart( true );
+	bool drained {};
+	const auto deadline { std::chrono::steady_clock::now() + std::chrono::seconds { 5 } };
+	while ( !drained && std::chrono::steady_clock::now() < deadline )
+	{
+		pqxx::nontransaction read { db() };
+		drained = read.query_value< int >( "SELECT COUNT(*) FROM tag_count_delta" ) == 0;
+		if ( !drained ) std::this_thread::sleep_for( std::chrono::milliseconds { 10 } );
+	}
+	REQUIRE( drained );
+	CHECK( api().search( domain, { target } ) == std::vector { record } );
+	const auto info { api().get( "/tags/" + std::to_string( target ) + "/info" ) };
+	REQUIRE( info.status == 200 );
+	CHECK( info.json[ "display_count" ].asInt64() == 1 );
 }
 
 } // namespace idhan::test

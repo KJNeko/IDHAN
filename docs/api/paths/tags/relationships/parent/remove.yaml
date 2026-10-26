@@ -7,7 +7,7 @@ post:
       in: query
       required: true
       schema:
-        $ref: '../../../../schemas/TagDomainID.yaml'
+        $ref: ../../../../schemas/TagDomainID.yaml
   requestBody:
     required: true
     content:
@@ -21,9 +21,9 @@ post:
               - child_id
             properties:
               parent_id:
-                $ref: '../../../../schemas/TagID.yaml'
+                $ref: ../../../../schemas/TagID.yaml
               child_id:
-                $ref: '../../../../schemas/TagID.yaml'
+                $ref: ../../../../schemas/TagID.yaml
         examples:
           remove_parent:
             summary: Remove parent/child relationship
@@ -31,9 +31,28 @@ post:
               - parent_id: 10
                 child_id: 20
   responses:
-    200:
-      description: Relationships removed
-    400:
+    '200':
+      description: Success
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+    '400':
       description: Invalid request body
-    500:
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
       description: Internal server error
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string

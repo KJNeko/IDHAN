@@ -25,10 +25,13 @@ struct ConnectionArguments
 	std::string user { config::get< std::string >( "database", "user", "idhan" ) };
 	std::string password { config::get< std::string >( "database", "password", "idhan" ) };
 	std::string schema { config::get< std::string >( "database", "schema", std::string { db::DEFAULT_SCHEMA } ) };
+	std::string extension_schema {
+		config::get< std::string >( "database", "extension_schema", std::string { db::EXTENSION_SCHEMA } )
+	};
 	bool use_stdout { config::get< bool >( "server", "use_stdout", true ) };
 	spdlog::level::level_enum log_level { spdlog::level::info };
 
-	[[nodiscard]] std::string searchPath() const { return db::makeSearchPath( schema ); }
+	[[nodiscard]] std::string searchPath() const { return db::makeSearchPath( schema, extension_schema ); }
 
 	std::string format() const;
 };

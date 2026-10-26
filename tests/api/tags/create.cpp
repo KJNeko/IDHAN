@@ -17,7 +17,7 @@ SCENARIO_METHOD( ServerFixture, "Tag creation", "[api][tags][create]" )
 
 			THEN( "one id comes back per pair, in order" )
 			{
-				REQUIRE( created.status == drogon::k200OK );
+				REQUIRE( created.status == 200 );
 				REQUIRE( created.json.isArray() );
 				REQUIRE( created.json.size() == 3 );
 
@@ -46,7 +46,7 @@ SCENARIO_METHOD( ServerFixture, "Tag creation", "[api][tags][create]" )
 
 				THEN( "it returns the tags the first post created" )
 				{
-					REQUIRE( again.status == drogon::k200OK );
+					REQUIRE( again.status == 200 );
 					CHECK( again.json == created.json );
 
 					pqxx::nontransaction tx { db() };
@@ -62,7 +62,7 @@ SCENARIO_METHOD( ServerFixture, "Tag creation", "[api][tags][create]" )
 
 			THEN( "both entries name the same tag" )
 			{
-				REQUIRE( created.status == drogon::k200OK );
+				REQUIRE( created.status == 200 );
 				REQUIRE( created.json.size() == 2 );
 				CHECK( created.json[ 0 ][ "tag_id" ] == created.json[ 1 ][ "tag_id" ] );
 			}
@@ -74,7 +74,7 @@ SCENARIO_METHOD( ServerFixture, "Tag creation", "[api][tags][create]" )
 
 			THEN( "the request is rejected" )
 			{
-				CHECK( created.status == drogon::k400BadRequest );
+				CHECK( created.status == 400 );
 			}
 		}
 
@@ -84,7 +84,7 @@ SCENARIO_METHOD( ServerFixture, "Tag creation", "[api][tags][create]" )
 
 			THEN( "the request is rejected" )
 			{
-				CHECK( created.status == drogon::k400BadRequest );
+				CHECK( created.status == 400 );
 			}
 		}
 
@@ -101,7 +101,7 @@ SCENARIO_METHOD( ServerFixture, "Tag creation", "[api][tags][create]" )
 
 			THEN( "the request is rejected" )
 			{
-				CHECK( created.status == drogon::k400BadRequest );
+				CHECK( created.status == 400 );
 			}
 		}
 
@@ -117,7 +117,7 @@ SCENARIO_METHOD( ServerFixture, "Tag creation", "[api][tags][create]" )
 
 			THEN( "the request is rejected" )
 			{
-				CHECK( created.status == drogon::k400BadRequest );
+				CHECK( created.status == 400 );
 			}
 		}
 	}
@@ -132,7 +132,7 @@ SCENARIO_METHOD( ServerFixture, "Tag creation", "[api][tags][create]" )
 
 			THEN( "it folds onto the tag that exists" )
 			{
-				REQUIRE( created.status == drogon::k200OK );
+				REQUIRE( created.status == 200 );
 				REQUIRE( created.json.size() == 1 );
 				CHECK( created.json[ 0 ][ "tag_id" ].asInt() == existing );
 

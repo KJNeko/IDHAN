@@ -22,7 +22,8 @@ using PerceptualHash = std::array< std::byte, 8 >;
 //! The number of differing bits between two 64-bit perceptual hashes, in the inclusive range 0-64.
 [[nodiscard]] std::uint8_t perceptualHashDistance( const PerceptualHash& left, const PerceptualHash& right );
 
-//! Generates Hydrus's 64-bit shape pHash. A successful empty result is a hash rejected as blank.
+//! Generates Hydrus's 64-bit shape pHash, except that EXIF orientation is honoured on every format.
+//! A successful empty result is a hash rejected as blank.
 [[nodiscard]] std::expected< std::optional< PerceptualHash >, ModuleError > generatePerceptualHash( VipsImage* image );
 
 } // namespace idhan

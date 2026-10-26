@@ -1,6 +1,6 @@
 /**
  * Embeddings: lists registered embedding models (GET /embeddings/models) and drives a resumable
- * backfill per model (POST /embeddings/generate), polling GET /jobs/{job_id}/status for progress.
+ * backfill per model (POST /embeddings/generate), receiving job progress through SSE.
  * Generation only: no search over the vectors, per the design spec's scope cut.
  */
 
@@ -43,8 +43,6 @@ interface ActiveJob {
     data: JobStatusResponse | null;
 }
 
-const POLL_MS = 1000;
-
 function jobFailed(data: JobStatusResponse | null): boolean {
     return data?.status === 'failed' || Boolean(data?.response?.error);
 }
@@ -78,7 +76,7 @@ function EmbeddingsPanel({host}: PanelProps) {
     const [jobs, setJobs] = useState<Record<string, ActiveJob>>({});
     /** Which model the delete button has been pressed for once. Deleting is irreversible. */
     const [confirming, setConfirming] = useState<number | null>(null);
-    const timers = useRef<Record<string, number>>({});
+    const subscriptions = useRef<Record<string, () => void>>({});
 
     const refreshModels = useCallback(
         async (signal?: AbortSignal) => {
@@ -106,59 +104,33 @@ function EmbeddingsPanel({host}: PanelProps) {
         return () => controller.abort();
     }, [refreshModels]);
 
-    // Stop every poller on unmount; a running backfill itself is untouched, only this panel's polling.
+    // Stop subscriptions on unmount; running backfills continue on the server.
     useEffect(
         () => () => {
-            for (const id of Object.values(timers.current)) window.clearInterval(id);
-            timers.current = {};
+            for (const close of Object.values(subscriptions.current)) close();
+            subscriptions.current = {};
         },
         [],
     );
 
-    const pollJob = useCallback(
+    const watchBackfill = useCallback(
         (modelName: string, jobId: number) => {
-            const existing = timers.current[modelName];
-            if (existing !== undefined) window.clearInterval(existing);
-
-            const tick = async () => {
-                try {
-                    const res = await host.http.fetch(`/jobs/${jobId}/status`);
-                    if (!res.ok) throw new Error(`/jobs/${jobId}/status → ${res.status}`);
-                    const data = (await res.json()) as JobStatusResponse;
-                    setJobs((prev) => ({...prev, [modelName]: {jobId, data}}));
-
-                    if (data.completed) {
-                        const timerId = timers.current[modelName];
-                        if (timerId !== undefined) {
-                            window.clearInterval(timerId);
-                            delete timers.current[modelName];
-                        }
-                        if (jobFailed(data)) {
-                            host.ui.toast(`Embedding backfill for "${modelName}" failed: ${jobFailureMessage(data)}`, {kind: 'error'});
-                        } else {
-                            const r = data.response;
-                            host.ui.toast(
-                                r
-                                    ? `Embedding backfill for "${modelName}" finished: ${r.embedded} embedded, ${r.failed} failed, ${r.skipped} skipped.`
-                                    : `Embedding backfill for "${modelName}" finished.`,
-                                {kind: 'success'},
-                            );
-                        }
-                    }
-                } catch (err) {
-                    host.ui.toast(`Lost track of the backfill for "${modelName}": ${err instanceof Error ? err.message : String(err)}`, {
-                        kind: 'error',
-                    });
-                    const timerId = timers.current[modelName];
-                    if (timerId !== undefined) {
-                        window.clearInterval(timerId);
-                        delete timers.current[modelName];
-                    }
+            subscriptions.current[modelName]?.();
+            const subscription = host.jobs.watch(jobId, (status) => {
+                const data = status as JobStatusResponse;
+                setJobs((prev) => ({...prev, [modelName]: {jobId, data}}));
+                if (!data.completed) return;
+                delete subscriptions.current[modelName];
+                if (jobFailed(data)) {
+                    host.ui.toast(`Embedding backfill for "${modelName}" failed: ${jobFailureMessage(data)}`, {kind: 'error'});
+                } else {
+                    const r = data.response;
+                    host.ui.toast(r
+                        ? `Embedding backfill for "${modelName}" finished: ${r.embedded} embedded, ${r.failed} failed, ${r.skipped} skipped.`
+                        : `Embedding backfill for "${modelName}" finished.`, {kind: 'success'});
                 }
-            };
-
-            void tick();
-            timers.current[modelName] = window.setInterval(() => void tick(), POLL_MS);
+            });
+            subscriptions.current[modelName] = subscription.cancel;
         },
         [host],
     );
@@ -177,12 +149,12 @@ function EmbeddingsPanel({host}: PanelProps) {
                 }
                 host.ui.toast(`Backfill started for "${model.model_name}".`, {kind: 'info'});
                 setJobs((prev) => ({...prev, [model.model_name]: {jobId: body.job_id!, data: null}}));
-                pollJob(model.model_name, body.job_id);
+                watchBackfill(model.model_name, body.job_id);
             } catch (err) {
                 host.ui.toast(`Failed to start backfill: ${err instanceof Error ? err.message : String(err)}`, {kind: 'error'});
             }
         },
-        [host, pollJob],
+        [host, watchBackfill],
     );
 
     const deleteModel = useCallback(

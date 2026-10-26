@@ -102,7 +102,24 @@
       </widget>
      </item>
      <item>
-         <layout class="QVBoxLayout" name="tagServicesLayout"/>
+         <widget class="QScrollArea" name="servicesScrollArea">
+             <property name="widgetResizable">
+                 <bool>true</bool>
+             </property>
+             <property name="horizontalScrollBarPolicy">
+                 <enum>Qt::ScrollBarAlwaysOff</enum>
+             </property>
+             <property name="verticalScrollBarPolicy">
+                 <enum>Qt::ScrollBarAlwaysOn</enum>
+             </property>
+             <widget class="QWidget" name="servicesContents">
+                 <layout class="QVBoxLayout" name="tagServicesLayout">
+                     <property name="alignment">
+                         <set>Qt::AlignTop</set>
+                     </property>
+                 </layout>
+             </widget>
+         </widget>
      </item>
     </layout>
    </item>

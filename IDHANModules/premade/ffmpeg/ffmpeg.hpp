@@ -1,8 +1,9 @@
 #pragma once
 
-#include "MimeIDs.hpp"
 #include <libavutil/error.h>
 #include <spdlog/spdlog.h>
+
+#include "MimeIDs.hpp"
 
 extern "C" {
 #include <libavformat/avio.h>

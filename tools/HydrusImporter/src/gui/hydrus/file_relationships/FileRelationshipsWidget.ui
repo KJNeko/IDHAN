@@ -26,7 +26,7 @@
       <number>0</number>
      </property>
      <item>
-      <layout class="QHBoxLayout" name="horizontalLayout">
+         <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,1">
        <property name="spacing">
         <number>0</number>
        </property>
@@ -47,14 +47,8 @@
          <property name="bottomMargin">
           <number>0</number>
          </property>
-         <item alignment="Qt::AlignmentFlag::AlignTop">
-          <widget class="QLabel" name="name">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
+            <item>
+                <widget class="idhan::hydrus::ImportServiceLabel" name="name">
            <property name="minimumSize">
             <size>
              <width>0</width>
@@ -65,18 +59,8 @@
             <string>Name: Duplicate &amp; Alternative relationships
 Type: File Relationships</string>
            </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLabel" name="statusLabel">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="text">
-            <string/>
+                    <property name="minimumLines" stdset="0">
+                        <number>2</number>
            </property>
           </widget>
          </item>
@@ -87,17 +71,23 @@ Type: File Relationships</string>
          <property name="spacing">
           <number>0</number>
          </property>
-         <item alignment="Qt::AlignmentFlag::AlignVCenter">
-          <widget class="QLabel" name="alternativesCount">
+            <item>
+                <widget class="idhan::hydrus::ImportServiceLabel" name="alternativesCount">
            <property name="text">
             <string>Alternative Groups: 0</string>
            </property>
+                    <property name="minimumLines" stdset="0">
+                        <number>1</number>
+           </property>
           </widget>
          </item>
-         <item alignment="Qt::AlignmentFlag::AlignVCenter">
-          <widget class="QLabel" name="duplicatesCount">
+            <item>
+                <widget class="idhan::hydrus::ImportServiceLabel" name="duplicatesCount">
            <property name="text">
             <string>Duplicate Pairs: 0</string>
+           </property>
+                    <property name="minimumLines" stdset="0">
+                        <number>1</number>
            </property>
           </widget>
          </item>
@@ -119,6 +109,23 @@ Type: File Relationships</string>
       </layout>
      </item>
      <item>
+         <widget class="idhan::hydrus::ImportServiceLabel" name="statusLabel">
+             <property name="text">
+                 <string/>
+             </property>
+             <property name="minimumLines" stdset="0">
+                 <number>1</number>
+             </property>
+         </widget>
+     </item>
+        <item>
+            <widget class="idhan::hydrus::ImportServiceLabel" name="timingLabel">
+                <property name="minimumLines" stdset="0">
+                    <number>1</number>
+                </property>
+            </widget>
+        </item>
+        <item>
       <layout class="QVBoxLayout" name="verticalLayout_3">
        <property name="spacing">
         <number>0</number>
@@ -174,6 +181,13 @@ Type: File Relationships</string>
    </item>
   </layout>
  </widget>
- <resources/>
- <connections/>
+    <customwidgets>
+        <customwidget>
+            <class>idhan::hydrus::ImportServiceLabel</class>
+            <extends>QLabel</extends>
+            <header>gui/hydrus/ImportServiceLabel.hpp</header>
+        </customwidget>
+    </customwidgets>
+    <resources/>
+    <connections/>
 </ui>

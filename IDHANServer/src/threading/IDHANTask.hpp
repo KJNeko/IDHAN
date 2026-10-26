@@ -1,10 +1,42 @@
 #pragma once
-#include <drogon/utils/coroutine.h>
-
+#include <cassert>
 #include <coroutine>
+#include <exception>
+#include <memory>
+#include <optional>
+#include <utility>
 
 namespace idhan
 {
+
+template < typename Promise >
+struct IDHANTaskFinalAwaiter
+{
+	bool await_ready() const noexcept { return false; }
+
+	void await_suspend( std::coroutine_handle< Promise > handle ) const noexcept
+	{
+		handle.promise().continuation_.resume();
+	}
+
+	void await_resume() const noexcept {}
+};
+
+template < typename Promise >
+struct IDHANTaskAwaiter
+{
+	std::coroutine_handle< Promise > handle;
+
+	bool await_ready() const noexcept { return handle.done(); }
+
+	void await_suspend( const std::coroutine_handle<> continuation ) const
+	{
+		handle.promise().setContinuation( continuation );
+		handle.resume();
+	}
+
+	decltype( auto ) await_resume() const { return std::move( handle.promise() ).result(); }
+};
 
 //! Lazy coroutine task. Do not store capturing-lambda coroutines to await later; the closure can die
 //! before the body runs.
@@ -51,7 +83,7 @@ struct [[nodiscard]] IDHANTask
 
 		void return_value( T&& v ) { value = std::move( v ); }
 
-		static auto final_suspend() noexcept { return drogon::final_awaiter {}; }
+		static auto final_suspend() noexcept { return IDHANTaskFinalAwaiter< promise_type > {}; }
 
 		void unhandled_exception() { exception_ = std::current_exception(); }
 
@@ -76,7 +108,7 @@ struct [[nodiscard]] IDHANTask
 		std::coroutine_handle<> continuation_ { std::noop_coroutine() };
 	};
 
-	auto operator co_await() const noexcept { return drogon::task_awaiter< promise_type >( coro_ ); }
+	auto operator co_await() const noexcept { return IDHANTaskAwaiter< promise_type > { coro_ }; }
 
 	handle_type coro_;
 };
@@ -118,7 +150,7 @@ struct [[nodiscard]] IDHANTask< void >
 
 		void return_void() {}
 
-		static auto final_suspend() noexcept { return drogon::final_awaiter {}; }
+		static auto final_suspend() noexcept { return IDHANTaskFinalAwaiter< promise_type > {}; }
 
 		void unhandled_exception() { exception_ = std::current_exception(); }
 
@@ -133,7 +165,7 @@ struct [[nodiscard]] IDHANTask< void >
 		std::coroutine_handle<> continuation_ { std::noop_coroutine() };
 	};
 
-	auto operator co_await() const noexcept { return drogon::task_awaiter< promise_type >( coro_ ); }
+	auto operator co_await() const noexcept { return IDHANTaskAwaiter< promise_type > { coro_ }; }
 
 	handle_type coro_;
 };

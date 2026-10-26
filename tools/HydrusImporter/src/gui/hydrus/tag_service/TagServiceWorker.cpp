@@ -19,12 +19,21 @@ TagServiceWorker::TagServiceWorker( QObject* parent, idhan::hydrus::HydrusImport
 {
 	FGL_ASSERT( importer, "Importer was null!" );
 	this->setAutoDelete( false );
+	qRegisterMetaType< Phase >();
+	qRegisterMetaType< std::chrono::steady_clock::time_point >();
 }
 
 void TagServiceWorker::setService( const idhan::hydrus::ServiceInfo& info )
 {
 	m_service = info;
 	if ( m_service.name == "public tag repository" ) m_ptr = true;
+}
+
+void TagServiceWorker::reportProgress( const std::size_t count )
+{
+	if ( count == 0 ) return;
+
+	emit phaseProgress( count, std::chrono::steady_clock::now() );
 }
 
 void TagServiceWorker::preprocess()
@@ -39,6 +48,7 @@ void TagServiceWorker::preprocess()
 	std::size_t sibling_counter { 0 };
 
 	// Batched COUNT(*) queries instead of full table scans
+	emit statusMessage( "Counting tag mappings in Hydrus" );
 	{
 		idhan::hydrus::Query< std::size_t > count_query {
 			mappings_tr, std::format( "SELECT COUNT(*) FROM {}", current_mappings_name )
@@ -54,6 +64,7 @@ void TagServiceWorker::preprocess()
 
 	const auto current_parents_name { std::format( "current_tag_parents_{}", id ) };
 
+	emit statusMessage( "Counting parent relationships in Hydrus" );
 	{
 		idhan::hydrus::TransactionBase client_tr { m_importer->client_db };
 		client_tr << std::format( "SELECT COUNT(*) FROM {}", current_parents_name ) >> [ & ]( std::size_t count )
@@ -62,6 +73,7 @@ void TagServiceWorker::preprocess()
 	emit processedMaxParents( parent_counter );
 
 	const auto current_siblings_name { std::format( "current_tag_siblings_{}", id ) };
+	emit statusMessage( "Counting aliases in Hydrus" );
 	{
 		idhan::hydrus::TransactionBase client_tr { m_importer->client_db };
 		client_tr << std::format( "SELECT COUNT(*) FROM {}", current_siblings_name ) >> [ & ]( std::size_t count )
@@ -69,13 +81,14 @@ void TagServiceWorker::preprocess()
 	}
 
 	emit processedMaxAliases( sibling_counter );
-
-	emit finished();
 }
 
-void TagServiceWorker::processPairs( const std::vector< MappingPair >& pairs ) const
+void TagServiceWorker::processPairs( const std::vector< MappingPair >& pairs )
 {
+	if ( pairs.empty() ) return;
+
 	FGL_ASSERT( m_importer, "Importer was null!" );
+	emit statusMessage( QString( "Reading tag names for %L1 mappings from Hydrus" ).arg( pairs.size() ) );
 
 	using HyHashID = int;
 	using HyTagID = int;
@@ -135,6 +148,7 @@ void TagServiceWorker::processPairs( const std::vector< MappingPair >& pairs ) c
 	}
 
 	// --- Batch query hashes ---
+	emit statusMessage( QString( "Reading %L1 file hashes from Hydrus" ).arg( hy_hash_id_set.size() ) );
 	std::unordered_map< HyHashID, std::string > hash_map {};
 	{
 		std::vector< HyHashID > hash_ids_vec( hy_hash_id_set.begin(), hy_hash_id_set.end() );
@@ -170,10 +184,14 @@ void TagServiceWorker::processPairs( const std::vector< MappingPair >& pairs ) c
 		}
 	}
 
-	// Build hashes and tag_sets vectors from the batched maps
+	emit statusMessage( "Preparing tag mapping batch" );
+	std::vector< TagPair > tags {};
+	std::unordered_map< HyTagID, std::size_t > tag_indices {};
+	tags.reserve( hy_tag_map.size() );
+
 	std::vector< std::string > hashes {};
 	hashes.reserve( hy_hash_id_set.size() );
-	std::vector< std::vector< TagPair > > tag_sets {};
+	std::vector< std::vector< idhan::TagID > > tag_sets {};
 	tag_sets.reserve( hy_hash_id_set.size() );
 
 	for ( const auto& hash_id : hy_hash_id_set )
@@ -182,25 +200,48 @@ void TagServiceWorker::processPairs( const std::vector< MappingPair >& pairs ) c
 		if ( hash_it == hash_map.end() ) continue;
 
 		hashes.emplace_back( hash_it->second );
-
-		std::vector< TagPair > tag_pairs {};
-		tag_pairs.reserve( hy_hash_tag_map[ hash_id ].size() );
-		for ( const auto& tag_id : hy_hash_tag_map[ hash_id ] )
+		for ( const auto tag_id : hy_hash_tag_map.at( hash_id ) )
 		{
-			tag_pairs.emplace_back( hy_tag_map.at( tag_id ) );
+			const auto [ tag_it, inserted ] = tag_indices.try_emplace( tag_id, tags.size() );
+			if ( inserted ) tags.emplace_back( hy_tag_map.at( tag_id ) );
 		}
-		tag_sets.emplace_back( std::move( tag_pairs ) );
 	}
+
+	if ( hashes.empty() ) return;
 
 	try
 	{
 		auto& client = idhan::IDHANClient::instance();
+		emit statusMessage( QString( "Waiting for server to create or find %L1 records" ).arg( hashes.size() ) );
 		auto record_future = client.createRecords( hashes );
 
 		record_future.waitForFinished();
 		auto records = record_future.result();
 		FGL_ASSERT( records.size() == hashes.size(), "Records size was different from hashes size!" );
+		emit statusMessage( QString( "Waiting for server to create or find %L1 tags" ).arg( tags.size() ) );
+		auto tag_ids_future = client.createTags( tags );
+		tag_ids_future.waitForFinished();
+		const auto tag_ids = tag_ids_future.result();
+		FGL_ASSERT( tag_ids.size() == tags.size(), "Tag IDs size was different from tag names size!" );
+
+		emit statusMessage( "Preparing resolved tag mappings" );
+		for ( const auto& hash_id : hy_hash_id_set )
+		{
+			if ( !hash_map.contains( hash_id ) ) continue;
+
+			std::vector< idhan::TagID > record_tags {};
+			record_tags.reserve( hy_hash_tag_map.at( hash_id ).size() );
+			for ( const auto tag_id : hy_hash_tag_map.at( hash_id ) )
+			{
+				record_tags.emplace_back( tag_ids.at( tag_indices.at( tag_id ) ) );
+			}
+			tag_sets.emplace_back( std::move( record_tags ) );
+		}
+
 		FGL_ASSERT( records.size() == tag_sets.size(), "Records size was different from tag sets size!" );
+		emit statusMessage( QString( "Waiting for server to add %L1 tag mappings to %L2 records" )
+		                        .arg( pairs.size() )
+		                        .arg( records.size() ) );
 		auto tag_future = client.addTags( std::move( records ), tag_domain_id, std::move( tag_sets ) );
 
 		tag_future.waitForFinished();
@@ -212,16 +253,22 @@ void TagServiceWorker::processPairs( const std::vector< MappingPair >& pairs ) c
 	}
 }
 
-void TagServiceWorker::processParents( const std::vector< std::pair< idhan::TagID, idhan::TagID > >& pairs ) const
+void TagServiceWorker::processParents( const std::vector< std::pair< idhan::TagID, idhan::TagID > >& pairs )
 {
+	if ( pairs.empty() ) return;
+
+	emit statusMessage( QString( "Waiting for server to add %L1 parent relationships" ).arg( pairs.size() ) );
 	auto& client = idhan::IDHANClient::instance();
 
 	auto future = client.createParentRelationship( tag_domain_id, pairs );
 	future.waitForFinished();
 }
 
-void TagServiceWorker::processSiblings( const std::vector< std::pair< idhan::TagID, idhan::TagID > >& pairs ) const
+void TagServiceWorker::processSiblings( const std::vector< std::pair< idhan::TagID, idhan::TagID > >& pairs )
 {
+	if ( pairs.empty() ) return;
+
+	emit statusMessage( QString( "Waiting for server to add %L1 aliases" ).arg( pairs.size() ) );
 	auto& client = idhan::IDHANClient::instance();
 
 	auto future = client.createAliasRelationship( tag_domain_id, pairs );
@@ -237,6 +284,7 @@ void TagServiceWorker::processMappingsBatch(
 
 	pairs.reserve( hash_limit * 64 );
 
+	emit statusMessage( "Reading and ordering tag mappings from Hydrus" );
 	idhan::hydrus::Query< int, int > query {
 		mappings_tr, std::format( "SELECT tag_id, hash_id FROM {} ORDER BY hash_id, tag_id", current_mappings_name )
 	};
@@ -254,7 +302,9 @@ void TagServiceWorker::processMappingsBatch(
 		processPairs( pairs );
 		pairs.clear();
 		emit processedMappings( mappings_counter, record_count );
+		reportProgress( mappings_counter );
 		mappings_counter = 0;
+		emit statusMessage( "Reading next tag mapping batch from Hydrus" );
 	};
 
 	for ( const auto& [ tag_id, hash_id ] : query )
@@ -287,6 +337,7 @@ void TagServiceWorker::importMappings()
 
 	const std::string service_name { m_service.name.toStdString() };
 
+	emit statusMessage( "Waiting for server to find the tag domain" );
 	auto tag_domain_search_f { client.getTagDomain( service_name ) };
 	tag_domain_search_f.waitForFinished();
 	if ( auto result = tag_domain_search_f.result(); result.has_value() )
@@ -295,6 +346,7 @@ void TagServiceWorker::importMappings()
 	}
 	else
 	{
+		emit statusMessage( "Waiting for server to create the tag domain" );
 		auto tag_domain_f { client.createTagDomain( service_name ) };
 
 		//TODO: Add handling for conflicting tag domains
@@ -307,7 +359,7 @@ void TagServiceWorker::importMappings()
 		{
 			idhan::logging::error(
 				"Got exception: {} when trying to create tag domain for {}", e.what(), service_name );
-			return;
+			throw;
 		}
 	}
 
@@ -333,6 +385,8 @@ void TagServiceWorker::processSiblings(
 		{
 			idhan::logging::warn(
 				"Found alias that references itself ({}, {}), {}", hy_bad_id, hy_good_id, tag_pairs.at( hy_bad_id ) );
+			emit warningOccurred( QString( "Skipped self-referencing alias %1" ).arg( hy_bad_id ) );
+			reportProgress( 1 );
 			continue;
 		}
 
@@ -352,11 +406,15 @@ void TagServiceWorker::processSiblings(
 			{
 				processSiblings( siblings );
 				emit processedAliases( siblings.size() );
+				reportProgress( siblings.size() );
 				siblings.clear();
 			}
 		}
 		catch ( std::exception& e )
 		{
+			reportProgress( std::max( std::size_t( 1 ), siblings.size() ) );
+			emit warningOccurred(
+				QString( "Could not import alias %1 to %2: %3" ).arg( hy_bad_id ).arg( hy_good_id ).arg( e.what() ) );
 			idhan::logging::error(
 				"Hydrus set (bad_id, good_id) ({}, {}) caused an error while importing: {}",
 				hy_bad_id,
@@ -391,6 +449,7 @@ void TagServiceWorker::processSiblings(
 	}
 	processSiblings( siblings );
 	emit processedAliases( siblings.size() );
+	reportProgress( siblings.size() );
 }
 
 void TagServiceWorker::processParents(
@@ -414,11 +473,17 @@ void TagServiceWorker::processParents(
 			{
 				processParents( parents );
 				emit processedParents( parents.size() );
+				reportProgress( parents.size() );
 				parents.clear();
 			}
 		}
 		catch ( std::exception& e )
 		{
+			reportProgress( std::max( std::size_t( 1 ), parents.size() ) );
+			emit warningOccurred( QString( "Could not import parent %1 of %2: %3" )
+			                          .arg( hy_parent_id )
+			                          .arg( hy_child_id )
+			                          .arg( e.what() ) );
 			idhan::logging::error(
 				"Hydrus parent set (child_id, parent_id) ({}, {}) caused an error while importing: {}",
 				hy_child_id,
@@ -432,10 +497,12 @@ void TagServiceWorker::processParents(
 
 	processParents( parents );
 	emit processedParents( parents.size() );
+	reportProgress( parents.size() );
 }
 
 void TagServiceWorker::processRelationships()
 {
+	emit phaseStarted( Phase::PreparingRelationships, std::chrono::steady_clock::now() );
 	using namespace idhan::hydrus;
 
 	const auto id { m_service.service_id };
@@ -454,6 +521,7 @@ void TagServiceWorker::processRelationships()
 	std::set< HyTagID > tag_set {};
 
 	std::vector< std::pair< ChildID, ParentID > > hy_parents {};
+	emit statusMessage( "Reading parent relationships from Hydrus" );
 	// Get all parent mappings, insert into the tag_set set to get a list of unique ids
 	{
 		Query< ParentID, ChildID > query {
@@ -469,6 +537,7 @@ void TagServiceWorker::processRelationships()
 	}
 
 	std::vector< std::pair< BadTagID, GoodTagID > > hy_siblings {};
+	emit statusMessage( "Reading aliases from Hydrus" );
 	// Get all the sibling, insert into the tag_set set to get a list of unique ids
 	{
 		Query< int, int > query {
@@ -484,6 +553,7 @@ void TagServiceWorker::processRelationships()
 	}
 
 	std::unordered_map< int, std::pair< std::string, std::string > > tag_pairs {};
+	emit statusMessage( QString( "Reading %L1 relationship tag names from Hydrus" ).arg( tag_set.size() ) );
 	// Batch query all unique tag names in one go instead of N+1 individual queries
 	{
 		std::vector< HyTagID > tag_ids_vec( tag_set.begin(), tag_set.end() );
@@ -523,6 +593,8 @@ void TagServiceWorker::processRelationships()
 
 	auto flushTags = [ & ]()
 	{
+		emit statusMessage(
+			QString( "Waiting for server to create or find %L1 relationship tags" ).arg( tags.size() ) );
 		auto tag_f { client.createTags( tags ) };
 		tag_f.waitForFinished();
 		const auto result { tag_f.result() };
@@ -558,9 +630,11 @@ void TagServiceWorker::processRelationships()
 	// For now we are limiting to 1 set until we can make a better rollback system
 	constexpr std::size_t set_limit { 1 };
 
+	emit phaseStarted( Phase::Aliases, std::chrono::steady_clock::now() );
 	processSiblings( hy_siblings, tag_pairs, tag_translation_map, set_limit );
 
 	// Process parents
+	emit phaseStarted( Phase::Parents, std::chrono::steady_clock::now() );
 	processParents( hy_parents, tag_translation_map, set_limit );
 }
 
@@ -570,11 +644,13 @@ void TagServiceWorker::run()
 	{
 		if ( !m_preprocessed )
 		{
-			m_preprocessed = true;
 			preprocess();
+			m_preprocessed = true;
+			emit preprocessingFinished( true );
 		}
 		else
 		{
+			emit phaseStarted( Phase::Mappings, std::chrono::steady_clock::now() );
 			importMappings();
 			emit finished();
 		}
@@ -583,13 +659,13 @@ void TagServiceWorker::run()
 	{
 		idhan::logging::error( e.what() );
 		emit errorOccurred( QString::fromStdString( e.what() ) );
-		emit finished();
+		if ( !m_preprocessed ) emit preprocessingFinished( false );
 	}
 	catch ( ... )
 	{
 		idhan::logging::error( "Unknown exception" );
 		emit errorOccurred( "Unknown exception during import" );
-		emit finished();
+		if ( !m_preprocessed ) emit preprocessingFinished( false );
 	}
 
 	return;

@@ -3,14 +3,13 @@ post:
     - tags
     - records
   summary: Removes tags from multiple records
-  description: |
-    Both arrays must be the same length.
+  description: Both arrays must be the same length. The records array must not be empty; empty batches return 400.
   parameters:
     - name: tag_domain_id
       in: query
       required: true
       schema:
-        $ref: '../../../schemas/TagDomainID.yaml'
+        $ref: ../../../schemas/TagDomainID.yaml
   requestBody:
     required: true
     content:
@@ -23,27 +22,33 @@ post:
           properties:
             records:
               type: array
+              minItems: 1
               items:
-                $ref: '../../../schemas/RecordID.yaml'
+                $ref: ../../../schemas/RecordID.yaml
             sets:
               type: array
               items:
                 type: array
                 items:
-                  $ref: '../../../schemas/TagID.yaml'
+                  $ref: ../../../schemas/TagID.yaml
               description: One set of tag IDs per record, in order.
         examples:
           bulk_remove:
             summary: Remove different tags from each record
             value:
-              records: [ 1, 2, 3 ]
+              records:
+                - 1
+                - 2
+                - 3
               sets:
-                - [ 101, 102 ]
-                - [ 103 ]
-                - [ 104, 105 ]
+                - - 101
+                  - 102
+                - - 103
+                - - 104
+                  - 105
   responses:
-    200:
-      description: Tags removed
+    '200':
+      description: Tags removed.
       content:
         application/json:
           schema:
@@ -51,8 +56,22 @@ post:
             properties:
               status:
                 type: integer
-                example: 200
-    400:
+                const: 200
+    '400':
       description: Invalid request
-    500:
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
       description: Internal server error
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string

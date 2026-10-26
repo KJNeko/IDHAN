@@ -43,8 +43,7 @@ static RecordIDs search( ApiClient& api, const std::string& predicate )
 
 	const auto response { api.post( "/search", body ) };
 
-	if ( response.status != drogon::k200OK )
-		throw std::runtime_error( std::format( "Search failed: {}", response.body ) );
+	if ( response.status != 200 ) throw std::runtime_error( std::format( "Search failed: {}", response.body ) );
 
 	RecordIDs ids {};
 	for ( const auto& id : response.json[ "record_ids" ] ) ids.emplace_back( id.asInt() );

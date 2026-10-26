@@ -2,37 +2,39 @@ get:
   tags:
     - relationships
   summary: Next duplicate pair awaiting a decision
-  description: |
-    Returns the closest pair of records that are perceptually similar and hold no
-    relationship yet, nearest first. Backs the "next unresolved" button in the file
-    relationships UI: every decision available there takes the pair out of this
-    queue, so calling it repeatedly walks forward.
+  description: |-
+    Returns pairs of records that are perceptually similar and hold no relationship yet,
+    walked one record at a time and closest first within each, so a run of calls works
+    through everything one file could be. Backs the "next unresolved" button in the UI:
+    every decision available there takes the pair out of this queue, so calling it
+    repeatedly walks forward.
 
-    Reads `undecided_hamming_distance`, which already drops pairs that are
-    alternatives of each other or that resolve onto the same duplicate. Pairs marked
-    coincidental lookalikes are dropped here instead, so `include_unrelated` can put
-    them back.
+    Reads `hamming_distance`, which is the queue itself: ruling a pair a duplicate, an
+    alternative or a coincidental lookalike discards the distance between them, and
+    clearing that ruling has both records measured again.
   parameters:
     - name: distance
       in: query
       required: false
-      description: >
-        Largest perceptual-hash distance to consider, in differing bits. Defaults to
-        8, which is also the furthest apart any stored pair can be.
+      description: Largest perceptual-hash distance to consider, in differing bits. Defaults to 8, which
+        is also the furthest apart any stored pair can be.
       schema:
         type: integer
         minimum: 0
         maximum: 8
         default: 8
-    - name: include_unrelated
+    - name: limit
       in: query
       required: false
-      description: Consider pairs already marked coincidental lookalikes.
+      description: How many pairs to return, in the order they come up. The default of 1 answers "what
+        do I rule on next"; a client that reads the images ahead of the user asks for more.
       schema:
-        type: boolean
-        default: false
+        type: integer
+        minimum: 0
+        maximum: 32
+        default: 1
   responses:
-    200:
+    '200':
       description: The next pair, or none left within the distance
       content:
         application/json:
@@ -40,47 +42,83 @@ get:
             type: object
             required:
               - distance
-              - include_unrelated
               - pair
+              - pairs
             properties:
               distance:
                 type: integer
                 description: The maximum distance that was searched, echoed back.
-              include_unrelated:
-                type: boolean
               pair:
-                nullable: true
-                description: Null once every pair within the distance has been ruled on.
-                type: object
+                description: The head of `pairs`, repeated for callers ruling one pair at a time. Null
+                  once every pair within the distance has been ruled on.
+                type:
+                  - object
+                  - 'null'
                 required:
                   - record_id_a
                   - record_id_b
                   - distance
                 properties:
                   record_id_a:
-                    $ref: '../../../schemas/RecordID.yaml'
+                    $ref: ../../../schemas/RecordID.yaml
                   record_id_b:
-                    $ref: '../../../schemas/RecordID.yaml'
+                    $ref: ../../../schemas/RecordID.yaml
                   distance:
                     type: integer
                     description: Differing bits between the two perceptual hashes.
+              pairs:
+                type: array
+                description: At most `limit` pairs, ordered by the lower record id and then by distance.
+                  Empty once none are left.
+                items:
+                  type: object
+                  required:
+                    - record_id_a
+                    - record_id_b
+                    - distance
+                  properties:
+                    record_id_a:
+                      $ref: ../../../schemas/RecordID.yaml
+                    record_id_b:
+                      $ref: ../../../schemas/RecordID.yaml
+                    distance:
+                      type: integer
+                      description: Differing bits between the two perceptual hashes.
           examples:
             pending:
               summary: A pair to rule on
               value:
                 distance: 8
-                include_unrelated: false
                 pair:
                   record_id_a: 12
                   record_id_b: 40
                   distance: 2
+                pairs:
+                  - record_id_a: 12
+                    record_id_b: 40
+                    distance: 2
             exhausted:
               summary: Nothing left within the distance
               value:
                 distance: 8
-                include_unrelated: false
                 pair: null
-    400:
-      description: distance was not an unsigned integer, or was greater than 8
-    500:
+                pairs: []
+    '400':
+      description: distance was not an unsigned integer, or was greater than 8; or limit was not an unsigned
+        integer, or was greater than 32
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
       description: Internal server error
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string

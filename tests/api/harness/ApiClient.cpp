@@ -1,7 +1,14 @@
 #include "ApiClient.hpp"
 
+#include <curl/curl.h>
+
 #include <algorithm>
+#include <array>
+#include <cctype>
+#include <exception>
 #include <format>
+#include <limits>
+#include <memory>
 #include <stdexcept>
 
 namespace idhan::test
@@ -105,56 +112,191 @@ TagDomainID domainOf( const ApiResponse& response )
 	return static_cast< TagDomainID >( response.json[ "tag_domain_id" ].asInt() );
 }
 
-//! The client has to be handed a loop that is already running, since the tests block on its responses.
-static drogon::HttpClientPtr makeClient( trantor::EventLoopThread& loop_thread, const std::uint16_t port )
+class CurlRuntime
 {
-	loop_thread.run();
-	return drogon::HttpClient::newHttpClient( "127.0.0.1", port, false, loop_thread.getLoop() );
+  public:
+
+	CurlRuntime()
+	{
+		const auto result { curl_global_init( CURL_GLOBAL_DEFAULT ) };
+		if ( result != CURLE_OK ) throw std::runtime_error( curl_easy_strerror( result ) );
+	}
+
+	~CurlRuntime() { curl_global_cleanup(); }
+};
+
+struct CurlResponse
+{
+	ApiResponse response;
+	std::exception_ptr failure;
+};
+
+static std::size_t appendBody( char* data, const std::size_t size, const std::size_t count, void* userdata ) noexcept
+{
+	auto& transfer { *static_cast< CurlResponse* >( userdata ) };
+	try
+	{
+		transfer.response.body.append( data, size * count );
+		return size * count;
+	}
+	catch ( ... )
+	{
+		transfer.failure = std::current_exception();
+		return 0;
+	}
 }
 
-ApiClient::ApiClient( const std::uint16_t port ) : m_client( makeClient( m_loop_thread, port ) )
-{}
+static std::size_t appendHeader( char* data, const std::size_t size, const std::size_t count, void* userdata ) noexcept
+{
+	auto& transfer { *static_cast< CurlResponse* >( userdata ) };
+	try
+	{
+		const std::string_view line { data, size * count };
+		if ( line.starts_with( "HTTP/" ) ) transfer.response.headers.clear();
+		const auto separator { line.find( ':' ) };
+		if ( separator == std::string_view::npos ) return size * count;
+
+		std::string name { line.substr( 0, separator ) };
+		std::ranges::transform(
+			name, name.begin(), []( const unsigned char character ) { return std::tolower( character ); } );
+		auto value { line.substr( separator + 1 ) };
+		while ( !value.empty() && ( value.front() == ' ' || value.front() == '\t' ) ) value.remove_prefix( 1 );
+		while ( !value.empty()
+		        && ( value.back() == '\r' || value.back() == '\n' || value.back() == ' ' || value.back() == '\t' ) )
+			value.remove_suffix( 1 );
+		transfer.response.headers.insert_or_assign( std::move( name ), std::string { value } );
+		return size * count;
+	}
+	catch ( ... )
+	{
+		transfer.failure = std::current_exception();
+		return 0;
+	}
+}
+
+template < typename T >
+static void setCurlOption( CURL* handle, const CURLoption option, const T value )
+{
+	const auto result { curl_easy_setopt( handle, option, value ) };
+	if ( result != CURLE_OK ) throw std::runtime_error( curl_easy_strerror( result ) );
+}
+
+static std::string encodeQueryValue( CURL* handle, const std::string& value )
+{
+	if ( value.size() > static_cast< std::size_t >( std::numeric_limits< int >::max() ) )
+		throw std::runtime_error( "Query parameter is too large for curl_easy_escape" );
+
+	const std::unique_ptr< char, decltype( &curl_free ) > encoded {
+		curl_easy_escape( handle, value.data(), static_cast< int >( value.size() ) ), &curl_free
+	};
+	if ( !encoded ) throw std::runtime_error( "Could not encode query parameter" );
+
+	return encoded.get();
+}
+
+ApiClient::ApiClient( const std::uint16_t port, const long timeout_seconds, const long upload_timeout_seconds ) :
+  m_base_url( std::format( "http://127.0.0.1:{}", port ) ),
+  m_timeout_seconds( timeout_seconds ),
+  m_upload_timeout_seconds( upload_timeout_seconds )
+{
+	if ( timeout_seconds <= 0 ) throw std::invalid_argument( "Request timeout must be positive" );
+
+	if ( upload_timeout_seconds <= 0 ) throw std::invalid_argument( "Upload timeout must be positive" );
+
+	static const CurlRuntime runtime;
+}
+
+ApiResponse ApiClient::sendRaw(
+	const char* method,
+	const std::string& path,
+	const QueryParams& query,
+	const std::string_view body,
+	const char* content_type,
+	const std::string& key,
+	const long timeout_seconds )
+{
+	const std::unique_ptr< CURL, decltype( &curl_easy_cleanup ) > handle { curl_easy_init(), &curl_easy_cleanup };
+	if ( !handle ) throw std::runtime_error( "Could not initialize HTTP request" );
+
+	std::string url { m_base_url + path };
+	bool first { !url.contains( '?' ) };
+	for ( const auto& [ name, value ] : query )
+	{
+		url += first ? '?' : '&';
+		first = false;
+		url += encodeQueryValue( handle.get(), name ) + "=" + encodeQueryValue( handle.get(), value );
+	}
+
+	CurlResponse transfer;
+	std::array< char, CURL_ERROR_SIZE > error {};
+	setCurlOption( handle.get(), CURLOPT_URL, url.c_str() );
+	setCurlOption( handle.get(), CURLOPT_CUSTOMREQUEST, method );
+	setCurlOption( handle.get(), CURLOPT_HTTP_VERSION, static_cast< long >( CURL_HTTP_VERSION_1_1 ) );
+	setCurlOption( handle.get(), CURLOPT_NOSIGNAL, 1L );
+	setCurlOption( handle.get(), CURLOPT_TIMEOUT, timeout_seconds );
+	// Loopback tests must connect directly even when the caller exports proxy settings.
+	setCurlOption( handle.get(), CURLOPT_PROXY, "" );
+	setCurlOption( handle.get(), CURLOPT_WRITEFUNCTION, &appendBody );
+	setCurlOption( handle.get(), CURLOPT_WRITEDATA, &transfer );
+	setCurlOption( handle.get(), CURLOPT_HEADERFUNCTION, &appendHeader );
+	setCurlOption( handle.get(), CURLOPT_HEADERDATA, &transfer );
+	setCurlOption( handle.get(), CURLOPT_ERRORBUFFER, error.data() );
+
+	std::unique_ptr< curl_slist, decltype( &curl_slist_free_all ) > headers { nullptr, &curl_slist_free_all };
+	for ( const auto& header :
+	      { key.empty() ? std::string {} : "X-API-Key: " + key,
+	        content_type ? std::string { "Content-Type: " } + content_type : std::string {} } )
+	{
+		if ( header.empty() ) continue;
+		auto* appended { curl_slist_append( headers.get(), header.c_str() ) };
+		if ( !appended ) throw std::runtime_error( "Could not allocate HTTP headers" );
+		(void)headers.release();
+		headers.reset( appended );
+	}
+	setCurlOption( handle.get(), CURLOPT_HTTPHEADER, headers.get() );
+	if ( content_type )
+	{
+		setCurlOption( handle.get(), CURLOPT_POSTFIELDS, body.empty() ? "" : body.data() );
+		setCurlOption( handle.get(), CURLOPT_POSTFIELDSIZE_LARGE, static_cast< curl_off_t >( body.size() ) );
+	}
+
+	const auto result { curl_easy_perform( handle.get() ) };
+	if ( transfer.failure ) std::rethrow_exception( transfer.failure );
+	if ( result != CURLE_OK )
+		throw std::runtime_error(
+			std::format( "Request to {} failed: {}", path, error[ 0 ] ? error.data() : curl_easy_strerror( result ) ) );
+
+	const auto status_result { curl_easy_getinfo( handle.get(), CURLINFO_RESPONSE_CODE, &transfer.response.status ) };
+	if ( status_result != CURLE_OK ) throw std::runtime_error( curl_easy_strerror( status_result ) );
+
+	Json::CharReaderBuilder builder;
+	const std::unique_ptr< Json::CharReader > reader { builder.newCharReader() };
+	const auto& text { transfer.response.body };
+	Json::Value parsed;
+	std::string errors;
+	if ( reader->parse( text.data(), text.data() + text.size(), &parsed, &errors ) )
+		transfer.response.json = std::move( parsed );
+	return std::move( transfer.response );
+}
 
 ApiResponse ApiClient::send(
-	const drogon::HttpMethod method,
+	const char* method,
 	const std::string& path,
 	const QueryParams& query,
 	const Json::Value* const body,
 	const std::string& key )
 {
-	auto request {
-		body == nullptr ? drogon::HttpRequest::newHttpRequest() : drogon::HttpRequest::newHttpJsonRequest( *body )
-	};
-
-	request->setMethod( method );
-	request->setPath( path );
-
-	for ( const auto& [ name, value ] : query ) request->setQueryParameter( name, value );
-
-	if ( !key.empty() ) request->addHeader( "X-API-Key", key );
-
-	const auto [ result, response ] { m_client->sendRequest( request, 30.0 ) };
-
-	if ( result != drogon::ReqResult::Ok || response == nullptr )
-		throw std::runtime_error( std::format( "Request to {} failed: {}", path, drogon::to_string_view( result ) ) );
-
-	ApiResponse out {
-		.status = response->statusCode(),
-		.json = {},
-		.body = std::string( response->body() ),
-		.headers = response->headers()
-	};
-
-	if ( const auto json { response->getJsonObject() }; json != nullptr ) out.json = *json;
-
-	return out;
+	Json::StreamWriterBuilder writer;
+	writer[ "indentation" ] = "";
+	const auto text { body ? Json::writeString( writer, *body ) : std::string {} };
+	return sendRaw( method, path, query, text, body ? "application/json" : nullptr, key, m_timeout_seconds );
 }
 
 void ApiClient::authenticate()
 {
-	const auto response { send( drogon::Get, "/generate_api_key", {}, nullptr, {} ) };
+	const auto response { send( "GET", "/generate_api_key", {}, nullptr, {} ) };
 
-	if ( response.status != drogon::k200OK )
+	if ( response.status != 200 )
 		throw std::runtime_error(
 			std::format(
 				"Could not mint an API key, the server answered {}: {}",
@@ -168,63 +310,49 @@ void ApiClient::authenticate()
 
 ApiResponse ApiClient::get( const std::string& path, const QueryParams& query )
 {
-	return send( drogon::Get, path, query, nullptr, m_key );
+	return send( "GET", path, query, nullptr, m_key );
 }
 
 ApiResponse ApiClient::post( const std::string& path, const Json::Value& body, const QueryParams& query )
 {
-	return send( drogon::Post, path, query, &body, m_key );
+	return send( "POST", path, query, &body, m_key );
+}
+
+ApiResponse ApiClient::patch( const std::string& path, const Json::Value& body )
+{
+	return send( "PATCH", path, {}, &body, m_key );
 }
 
 ApiResponse ApiClient::postWithoutBody( const std::string& path, const QueryParams& query )
 {
-	return send( drogon::Post, path, query, nullptr, m_key );
+	return send( "POST", path, query, nullptr, m_key );
 }
 
 ApiResponse ApiClient::del( const std::string& path, const QueryParams& query )
 {
-	return send( drogon::Delete, path, query, nullptr, m_key );
+	return send( "DELETE", path, query, nullptr, m_key );
 }
 
 ApiResponse ApiClient::getWithKey( const std::string& path, const std::string& key )
 {
-	return send( drogon::Get, path, {}, nullptr, key );
+	return send( "GET", path, {}, nullptr, key );
+}
+
+ApiResponse ApiClient::postWithKey( const std::string& path, const Json::Value& body, const std::string& key )
+{
+	return send( "POST", path, {}, &body, key );
 }
 
 ApiResponse ApiClient::postOctets( const std::string& path, const std::string_view body, const QueryParams& query )
 {
-	const auto request { drogon::HttpRequest::newHttpRequest() };
-
-	request->setMethod( drogon::Post );
-	request->setPath( path );
-	request->setContentTypeCode( drogon::CT_APPLICATION_OCTET_STREAM );
-	request->setBody( std::string { body } );
-	for ( const auto& [ name, value ] : query ) request->setQueryParameter( name, value );
-
-	if ( !m_key.empty() ) request->addHeader( "X-API-Key", m_key );
-
-	const auto [ result, response ] { m_client->sendRequest( request, 60.0 ) };
-
-	if ( result != drogon::ReqResult::Ok || response == nullptr )
-		throw std::runtime_error( std::format( "Request to {} failed: {}", path, drogon::to_string_view( result ) ) );
-
-	ApiResponse out {
-		.status = response->statusCode(),
-		.json = {},
-		.body = std::string( response->body() ),
-		.headers = response->headers()
-	};
-
-	if ( const auto json { response->getJsonObject() }; json != nullptr ) out.json = *json;
-
-	return out;
+	return sendRaw( "POST", path, query, body, "application/octet-stream", m_key, m_upload_timeout_seconds );
 }
 
 TagDomainID ApiClient::createDomain( const std::string& name )
 {
 	const auto response { post( "/tags/domain/create", domainBody( name ) ) };
 
-	if ( response.status != drogon::k200OK )
+	if ( response.status != 200 )
 		throw std::runtime_error( std::format( "Could not create tag domain '{}': {}", name, response.body ) );
 
 	return domainOf( response );
@@ -234,8 +362,7 @@ std::vector< TagID > ApiClient::createTags( const TagPairs& pairs )
 {
 	const auto response { post( "/tags/create", tagBody( pairs ) ) };
 
-	if ( response.status != drogon::k200OK )
-		throw std::runtime_error( std::format( "Could not create tags: {}", response.body ) );
+	if ( response.status != 200 ) throw std::runtime_error( std::format( "Could not create tags: {}", response.body ) );
 
 	std::vector< TagID > ids {};
 	ids.reserve( response.json.size() );
@@ -288,7 +415,7 @@ RecordIDs ApiClient::createRecords( const std::vector< int >& seeds )
 
 	const auto response { post( "/records/create", body ) };
 
-	if ( response.status != drogon::k200OK )
+	if ( response.status != 200 )
 		throw std::runtime_error( std::format( "Could not create records: {}", response.body ) );
 
 	RecordIDs ids {};
@@ -327,8 +454,7 @@ RecordIDs ApiClient::search( const TagDomainID tag_domain_id, const TagIDs& tag_
 
 	const auto response { get( "/search", query ) };
 
-	if ( response.status != drogon::k200OK )
-		throw std::runtime_error( std::format( "Search failed: {}", response.body ) );
+	if ( response.status != 200 ) throw std::runtime_error( std::format( "Search failed: {}", response.body ) );
 
 	RecordIDs ids {};
 	ids.reserve( response.json.size() );
