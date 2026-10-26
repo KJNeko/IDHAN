@@ -10,13 +10,54 @@ vi.mock('../api/client', () => ({
   api: { recordsMetadata: (body: { record_ids: number[] }) => recordsMetadata(body) },
 }));
 
-const { getMetadata, peekMetadata } = await import('./metadataCache');
+const {forgetMetadata, getMetadata, peekMetadata} = await import('./metadataCache');
 
 beforeEach(() => {
   recordsMetadata.mockClear();
 });
 
 describe('metadata coalescing cache', () => {
+    it('does not let an invalidated in-flight response replace refreshed metadata', async () => {
+        const stale = {record_id: 401, tags: [{domain: 'gelbooru', text: 'old'}]};
+        const fresh = {record_id: 401, tags: [{domain: 'pixiv', text: 'new'}]};
+        let finishOld!: (response: { records: { record_id: number }[]; missing: number[] }) => void;
+        recordsMetadata.mockImplementationOnce(() => new Promise((resolve) => {
+            finishOld = resolve;
+        }));
+        const oldRequest = getMetadata([401]);
+        await Promise.resolve();
+
+        forgetMetadata([401]);
+        recordsMetadata.mockResolvedValueOnce({records: [fresh], missing: []});
+        expect((await getMetadata([401])).records).toEqual([fresh]);
+
+        finishOld({records: [stale], missing: []});
+        await oldRequest;
+        expect(peekMetadata(401)).toEqual(fresh);
+        expect((await getMetadata([401])).records).toEqual([fresh]);
+        expect(recordsMetadata).toHaveBeenCalledTimes(2);
+    });
+
+    it('allows overlapping requests to finish without losing metadata for either caller', async () => {
+        let finishFirst!: (response: { records: { record_id: number }[]; missing: number[] }) => void;
+        let finishSecond!: (response: { records: { record_id: number }[]; missing: number[] }) => void;
+        recordsMetadata.mockImplementationOnce(() => new Promise((resolve) => {
+            finishFirst = resolve;
+        }));
+        recordsMetadata.mockImplementationOnce(() => new Promise((resolve) => {
+            finishSecond = resolve;
+        }));
+        const first = getMetadata([402]);
+        await Promise.resolve();
+        const second = getMetadata([402]);
+        await Promise.resolve();
+
+        finishFirst({records: [{record_id: 402}], missing: []});
+        expect((await first).records).toEqual([{record_id: 402}]);
+        finishSecond({records: [{record_id: 402}], missing: []});
+        expect((await second).records).toEqual([{record_id: 402}]);
+    });
+
   it('merges concurrent requests into one batched call', async () => {
     const [a, b] = await Promise.all([getMetadata([101, 102]), getMetadata([102, 103])]);
 
