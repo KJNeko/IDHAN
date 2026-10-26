@@ -46,6 +46,8 @@ static std::optional< http::ValidatedJson > serialize( const LaneSnapshot& snaps
 	builder.append_comma();
 	builder.append_key_value( "shards", static_cast< std::uint64_t >( snapshot.shards ) );
 	builder.append_comma();
+	builder.append_key_value( "download_bytes_per_second", snapshot.download_bytes_per_second );
+	builder.append_comma();
 	builder.append_key_value( "bytes_per_second", static_cast< std::uint64_t >( snapshot.bytes_per_second ) );
 	builder.append_comma();
 	builder.append_key_value( "active", snapshot.active );
@@ -111,6 +113,9 @@ static LaneSnapshot currentSnapshot( LaneSnapshot snapshot, const SteadyClock::t
 {
 	const auto elapsed { std::max( SteadyClock::duration::zero(), SteadyClock::now() - captured_at ) };
 	snapshot.remaining = std::max( SteadyClock::duration::zero(), snapshot.remaining - elapsed );
+
+	if ( elapsed >= std::chrono::seconds { 1 } ) snapshot.download_bytes_per_second = 0;
+
 	return snapshot;
 }
 

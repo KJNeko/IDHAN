@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <cstddef>
@@ -35,6 +36,12 @@ class Lane : public std::enable_shared_from_this< Lane >
 
   private:
 
+	struct DownloadSample
+	{
+		std::chrono::steady_clock::time_point bucket {};
+		std::uint64_t bytes {};
+	};
+
 	struct Pending
 	{
 		TransferRequest request {};
@@ -62,6 +69,7 @@ class Lane : public std::enable_shared_from_this< Lane >
 	std::size_t m_in_flight {};
 	std::chrono::steady_clock::time_point m_last_enqueued { std::chrono::steady_clock::now() };
 	Gate m_gate {};
+	std::array< DownloadSample, 10 > m_download_samples {};
 	bool m_stopped {};
 
 	static void pump( const std::shared_ptr< Lane >& lane );
@@ -84,12 +92,16 @@ class Lane : public std::enable_shared_from_this< Lane >
 	//! Recalculates an armed wakeup after an external policy change.
 	void wake();
 	void onTransferFinished();
+	void onBytesReceived(
+		std::size_t bytes,
+		std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now() );
 
 	[[nodiscard]] bool retirable(
 		std::chrono::steady_clock::duration keep_alive,
 		std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now() ) const;
 
-	void fill( LaneSnapshot& snapshot ) const;
+	void fill( LaneSnapshot& snapshot, std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now() )
+		const;
 
 	//! Fails all transfers and releases shards on their IO threads.
 	void shutdown();

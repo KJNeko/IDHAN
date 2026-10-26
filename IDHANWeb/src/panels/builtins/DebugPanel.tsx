@@ -437,6 +437,9 @@ function Lanes({lanes, receivedAt, now}: { lanes: readonly DebugLane[]; received
                 <th scope="col" className="debug-col-num" title="Transfers this lane has running">
                     In flight
                 </th>
+                <th scope="col" className="debug-col-num" title="Received body bytes per second across all transfers">
+                    Download speed
+                </th>
                 <th scope="col" className="debug-col-num" title="Connection pools backing this lane">
                     Shards
                 </th>
@@ -461,6 +464,7 @@ function Lanes({lanes, receivedAt, now}: { lanes: readonly DebugLane[]; received
                         </td>
                         <td className="debug-num">{lane.queued.toLocaleString()}</td>
                         <td className="debug-num">{lane.in_flight}</td>
+                        <td className="debug-num">{formatBytes(lane.download_bytes_per_second ?? 0)}/s</td>
                         <td className="debug-num">{lane.shards}</td>
                         <td className={`debug-num ${lane.backed_off ? 'debug-lane-backoff' : ''}`}
                             title={lane.backed_off ? `Backed off after ${lane.consecutive_limits} failures` : undefined}>

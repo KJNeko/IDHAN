@@ -202,6 +202,19 @@ TEST_CASE( "A normal dispatch publishes its lane state", "[downloader][transport
 	CHECK( lane.rate_requests == 1 );
 	CHECK( lane.rate_seconds == 5 );
 	CHECK( lane.shards == 1 );
+
+	REQUIRE( waitUntil(
+		[ & ]
+		{
+			const auto current { harness.context->laneSnapshots() };
+			return !current.empty() && current.front().download_bytes_per_second > 0;
+		} ) );
+	REQUIRE( waitUntil(
+		[ & ]
+		{
+			const auto current { harness.lane_observer.snapshots() };
+			return !current.empty() && current.back().download_bytes_per_second == 0 && current.back().in_flight == 0;
+		} ) );
 }
 
 TEST_CASE( "A 429 retries after Retry-After without settling the request", "[downloader][transport]" )

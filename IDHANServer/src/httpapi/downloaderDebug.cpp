@@ -220,6 +220,8 @@ static void appendLane( simdjson::builder::string_builder& builder, const downlo
 	builder.append_comma();
 	builder.append_key_value( "shards", static_cast< std::uint64_t >( lane.shards ) );
 	builder.append_comma();
+	builder.append_key_value( "download_bytes_per_second", lane.download_bytes_per_second );
+	builder.append_comma();
 	builder.append_key_value( "bytes_per_second", lane.bytes_per_second );
 	builder.append_comma();
 	builder.append_key_value( "active", lane.active );

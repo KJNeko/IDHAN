@@ -203,13 +203,32 @@ bool Lane::retirable(
 	return m_queue.empty() && m_in_flight == 0 && now - m_last_enqueued >= keep_alive;
 }
 
-void Lane::fill( LaneSnapshot& snapshot ) const
+void Lane::onBytesReceived( const std::size_t bytes, const std::chrono::steady_clock::time_point now )
+{
+	const auto bucket { std::chrono::floor< std::chrono::milliseconds >( now ).time_since_epoch().count() / 100 };
+	const auto timestamp { std::chrono::steady_clock::time_point { std::chrono::milliseconds { bucket * 100 } } };
+	const std::scoped_lock lock { m_mutex };
+	auto& sample { m_download_samples[ static_cast< std::size_t >( bucket ) % m_download_samples.size() ] };
+
+	if ( sample.bucket != timestamp ) sample = DownloadSample { .bucket = timestamp };
+
+	sample.bytes += bytes;
+}
+
+void Lane::fill( LaneSnapshot& snapshot, const std::chrono::steady_clock::time_point now ) const
 {
 	const std::scoped_lock lock { m_mutex };
 	snapshot.in_flight = m_in_flight;
 	snapshot.queued = m_queue.size();
 	snapshot.shards = m_shards.size();
 	snapshot.active = true;
+	snapshot.download_bytes_per_second = 0;
+
+	for ( const auto& sample : m_download_samples )
+	{
+		if ( now >= sample.bucket && now - sample.bucket < std::chrono::seconds { 1 } )
+			snapshot.download_bytes_per_second += sample.bytes;
+	}
 }
 
 void Lane::shutdown()

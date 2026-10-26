@@ -470,12 +470,14 @@ void LanePool::armSweep()
 		m_sweep_armed = true;
 	}
 
-	m_pool.leastLoaded().postAfter( m_config.keep_alive / 2, [ this ] { sweep(); } );
+	const auto interval { std::min( m_config.keep_alive / 2, std::chrono::seconds { 1 } ) };
+	m_pool.leastLoaded().postAfter( interval, [ this ] { sweep(); } );
 }
 
 void LanePool::sweep()
 {
 	std::vector< std::shared_ptr< Lane > > retired {};
+	std::vector< std::string > keys {};
 
 	{
 		const std::scoped_lock lock { m_mutex };
@@ -485,6 +487,8 @@ void LanePool::sweep()
 
 		for ( auto lane = m_lanes.begin(); lane != m_lanes.end(); )
 		{
+			keys.emplace_back( lane->first );
+
 			if ( !lane->second->retirable( m_config.keep_alive ) )
 			{
 				++lane;
@@ -501,6 +505,8 @@ void LanePool::sweep()
 		spdlog::debug( "downloader http: retiring lane {}", lane->key() );
 		lane->shutdown();
 	}
+
+	for ( const auto& key : keys ) publish( key );
 
 	armSweep();
 }
