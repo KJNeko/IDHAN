@@ -59,11 +59,11 @@ function postId(value) {
 }
 
 function postUrl(id) {
-    return `https://e621.net/posts/${id}`;
+    return new URL(`/posts/${id}`, "https://e621.net");
 }
 
 function postDataUrl(id) {
-    return `https://e621.net/posts/${id}.json`;
+    return new URL(`/posts/${id}.json`, "https://e621.net");
 }
 
 function postTags(post) {
@@ -90,7 +90,7 @@ function followSiblings(idhan, post, id) {
 
         if (parentId !== id) {
             idhan.follow({
-                url: postUrl(parentId),
+                url: postUrl(parentId).href,
                 type: "post",
             });
         }
@@ -102,7 +102,7 @@ function followSiblings(idhan, post, id) {
         }
 
         idhan.follow({
-            url: postUrl(childId),
+            url: postUrl(childId).href,
             type: "post",
         });
     }
@@ -150,7 +150,7 @@ export async function gallery(input, idhan) {
         }
 
         for (const post of posts) {
-            idhan.follow({url: postUrl(post.id), type: "post"});
+            idhan.follow({url: postUrl(post.id).href, type: "post"});
         }
 
         if (posts.length < pageSize) {
@@ -172,8 +172,8 @@ export async function post(input, idhan) {
     const id = postId(input.url);
     const sourceUrl = postUrl(id);
     const response = await idhan.request({
-        url: postDataUrl(id),
-        referer: sourceUrl,
+        url: postDataUrl(id).href,
+        referer: sourceUrl.href,
         responseType: "text",
     });
     const {post} = parseJsonResponse(postResponseSchema, response, "e621 post API");
@@ -183,13 +183,13 @@ export async function post(input, idhan) {
     }
 
     const file = post.file;
-    const fileUrl = file.url;
+    const fileUrl = file.url ? new URL(file.url) : null;
 
-    if (!fileUrl) {
+    if (fileUrl === null) {
         throw new Error(`e621 post ${id} has no downloadable file`);
     }
 
-    const filename = new URL(fileUrl).pathname.split("/").pop();
+    const filename = fileUrl.pathname.split("/").pop();
 
     if (input.flags["e621.followSiblings"]) {
         followSiblings(idhan, post, id);
@@ -197,13 +197,13 @@ export async function post(input, idhan) {
 
     idhan.import({
         request: {
-            url: fileUrl,
-            referer: sourceUrl,
+            url: fileUrl.href,
+            referer: sourceUrl.href,
         },
         filename,
         urls: [
-            {url: sourceUrl, type: "post"},
-            {url: fileUrl, type: "file"},
+            {url: sourceUrl.href, type: "post"},
+            {url: fileUrl.href, type: "file"},
         ],
         discoveredUrls: sourceUrls(post.sources),
         tags: postTags(post),

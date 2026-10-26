@@ -1,8 +1,8 @@
 import {ApiClient, PostsApi} from "pawchive-api";
 import {parseResponse, z} from "validation";
 
-const site = "https://pawchive.pw";
-const cdn = "https://file.pawchive.pw"
+const site = new URL("https://pawchive.pw/");
+const cdn = new URL("https://file.pawchive.pw/");
 const pageSize = 50;
 const fileSchema = z.object({
     name: z.string().min(1),
@@ -33,7 +33,7 @@ export const manifest = {
 };
 
 function api() {
-    const client = new ApiClient(`${site}/api/v1`);
+    const client = new ApiClient(new URL("/api/v1", site).href);
     delete client.defaultHeaders["User-Agent"];
 
     return new PostsApi(client);
@@ -64,11 +64,16 @@ function target(value) {
 }
 
 function postUrl(service, creator, post) {
-    return `${site}/${service}/user/${creator}/post/${post}`;
+    return new URL(
+        `/${encodeURIComponent(service)}/user/${encodeURIComponent(creator)}/post/${encodeURIComponent(post)}`,
+        site,
+    );
 }
 
 function fileUrl(file) {
-    return `${cdn}/data${file.path}?f=${encodeURIComponent(file.name)}`;
+    const url = new URL(`/data${file.path}`, cdn);
+    url.searchParams.set("f", file.name);
+    return url;
 }
 
 // Preserve useful errors from the generated client's plain-object rejections.
@@ -94,11 +99,11 @@ function importFile(idhan, file, source, metadata) {
     const url = fileUrl(file);
 
     idhan.import({
-        request: {url, referer: source},
+        request: {url: url.href, referer: source.href},
         filename: file.name,
         urls: [
-            {url: source, type: "post"},
-            {url, type: "file"},
+            {url: source.href, type: "post"},
+            {url: url.href, type: "file"},
         ],
         tags: [`service:${metadata.service}`, `creator:${metadata.creatorId}`],
         metadata,
@@ -117,7 +122,7 @@ async function creator(input, idhan, route) {
         );
 
         for (const post of page) {
-            idhan.follow({url: postUrl(route.service, route.creator, post.id), type: "post"});
+            idhan.follow({url: postUrl(route.service, route.creator, post.id).href, type: "post"});
         }
 
         if (page.length < pageSize) {
