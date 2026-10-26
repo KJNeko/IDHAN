@@ -38,6 +38,11 @@ class DownloaderContext::Impl
 DownloaderContext::DownloaderContext( std::unique_ptr< Impl > impl ) : m_impl( std::move( impl ) )
 {}
 
+std::string DownloaderContext::classStorageUrl( const std::string_view url ) const
+{
+	return m_impl->registry->storageUrl( url, true );
+}
+
 DownloaderContext::~DownloaderContext()
 {
 	shutdown();

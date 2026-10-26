@@ -440,3 +440,29 @@ TEST_CASE( "Storage sorting uses the matched class and redirect destination", "[
 	REQUIRE( imports.metadata.size() == 1 );
 	CHECK( imports.metadata.front().final_url == expected );
 }
+
+TEST_CASE( "Maintenance sorting requires an accepting URL class", "[downloader][url-storage]" )
+{
+	idhan::test::ParserFixture fixture {};
+	fixture.write( "url-classes.json", R"JSON({"urlClasses":[
+		{"name":"sorted","script":"test.js","hosts":["example.com"],
+		 "routes":[{"export":"page","path":"/post","query":{"mode":"view"}}],"sortQueryParameters":true},
+		{"name":"raw","script":"test.js","hosts":["example.com"],
+		 "routes":[{"export":"page","path":"/raw"}],"sortQueryParameters":false}
+	]})JSON" );
+	const auto registry_e { ScriptRegistry::create( fixture.urlClassesPath(), fixture.root() ) };
+	REQUIRE( registry_e.has_value() );
+	const auto& registry { registry_e.value() };
+	CHECK(
+		registry->storageUrl( "https://example.com/post?z=2&mode=view&a=1", true )
+	    == "https://example.com/post?a=1&mode=view&z=2" );
+	for ( const std::string url :
+	      { "https://example.com/post?z=2&mode=edit&a=1",
+	        "https://example.com/other?z=2&a=1",
+	        "https://example.com/raw?z=2&a=1",
+	        "https://unconfigured.example/post?z=2&mode=view&a=1",
+	        "invalid?z=2&a=1" } )
+	{
+		CHECK( registry->storageUrl( url, true ) == url );
+	}
+}

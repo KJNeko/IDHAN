@@ -504,7 +504,7 @@ std::vector< std::string > ScriptRegistry::ephemeralQuery( const std::string_vie
 	return names;
 }
 
-std::string ScriptRegistry::storageUrl( const std::string_view url ) const
+std::string ScriptRegistry::storageUrl( const std::string_view url, const bool require_class ) const
 {
 	const auto parsed { ada::parse< ada::url_aggregator >( url ) };
 	if ( !parsed ) return std::string { url };
@@ -516,6 +516,8 @@ std::string ScriptRegistry::storageUrl( const std::string_view url ) const
 			if ( url_class.name == ( **matched ).url_class )
 				return url_class.sort_query_parameters ? sortUrlQueryParameters( url ) : std::string { url };
 	}
+
+	if ( require_class ) return std::string { url };
 
 	// Automatic file inspection has no parser class. A configured host opt-out wins.
 	for ( const auto& url_class : m_classes )

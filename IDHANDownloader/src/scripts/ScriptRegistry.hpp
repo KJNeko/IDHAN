@@ -70,7 +70,8 @@ class ScriptRegistry
 
 	[[nodiscard]] std::vector< std::string > ephemeralQuery( std::string_view url ) const;
 
-	[[nodiscard]] std::string storageUrl( std::string_view url ) const;
+	// require_class disables automatic-file fallback sorting for stored-URL maintenance.
+	[[nodiscard]] std::string storageUrl( std::string_view url, bool require_class = false ) const;
 
 	[[nodiscard]] Json::Value storageOptions( Json::Value options ) const;
 

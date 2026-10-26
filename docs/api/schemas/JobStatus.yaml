@@ -45,12 +45,13 @@ properties:
       Optional operation-specific result accepting any JSON value, including
       null, scalars, arrays, and objects. Presence does not by itself mean the job
       is complete. Known producer contracts are documented separately as
-      ClusterScanResult and RescanMetadataResult; this generic envelope does not
+      ClusterScanResult, RescanMetadataResult, and ReorganizeUrlsResult; this generic envelope does not
       validate a result against either shape or select a type from job_name.
   progress:
     description: >-
       Optional operation-specific live progress snapshot. Cluster scans publish
-      ClusterScanProgress; automatically started services publish BackgroundJobProgress.
+      ClusterScanProgress; URL reorganization publishes UrlReorganizationProgress;
+      automatically started services publish BackgroundJobProgress.
       Progress is separate from the final response. Snapshots
       remain available until the job is cleaned up; they are not persisted.
 required:

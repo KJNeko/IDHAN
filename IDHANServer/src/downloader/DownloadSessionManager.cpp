@@ -41,6 +41,19 @@ DownloadSessionUrlID DownloadSessionManager::addRow(
 	return *result;
 }
 
+std::expected< std::vector< std::string >, std::string > DownloadSessionManager::classStorageUrls(
+	std::vector< std::string > urls )
+{
+	const auto initialized_e { initialize() };
+	if ( !initialized_e.has_value() ) return std::unexpected( initialized_e.error() );
+
+	const std::scoped_lock lock { m_mutex };
+	if ( m_stopped.load() ) return std::unexpected( "The downloader is shutting down" );
+
+	for ( auto& url : urls ) url = m_downloader->classStorageUrl( url );
+	return urls;
+}
+
 void DownloadSessionManager::markRow(
 	const DownloadSessionID session_id,
 	const DownloadSessionUrlID row_id,
