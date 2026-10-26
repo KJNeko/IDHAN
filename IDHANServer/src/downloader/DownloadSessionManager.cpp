@@ -138,10 +138,8 @@ std::expected< void, std::string > DownloadSessionManager::initialize()
 
 	for ( const auto& [ name, enabled ] : configuration.flags ) log::info( "Downloader flag {} = {}", name, enabled );
 
-	m_tag_domain = config::get< std::string >( "downloader", "tag_domain", "default" );
-
 	m_secrets = std::make_unique< DatabaseSecrets >();
-	m_imports = std::make_unique< DownloadImports >( m_tag_domain );
+	m_imports = std::make_unique< DownloadImports >();
 	m_cookies = std::make_unique< DatabaseCookies >();
 
 	auto downloader { DownloaderContext::create(

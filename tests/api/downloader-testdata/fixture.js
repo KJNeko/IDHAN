@@ -13,12 +13,15 @@ export async function gallery(input, idhan) {
 }
 
 export function post(input, idhan) {
+    const query = new URL(input.url).searchParams;
     idhan.import({
         request: {url: new URL("/file.gif", input.url).href},
         filename: "fixture.gif",
         urls: [{url: input.url, type: "post"}],
         discoveredUrls: [new URL("/source", input.url).href],
-        tags: ["fixture"],
+        tags: query.has("multipleDomains")
+            ? {"fixture-first": ["multi:first"], "fixture-second": ["multi:second"]}
+            : query.has("domain") ? {[query.get("domain")]: ["fixture"]} : ["fixture"],
     });
 }
 

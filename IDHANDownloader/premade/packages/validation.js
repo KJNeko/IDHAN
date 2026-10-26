@@ -2,6 +2,8 @@ import * as z from "zod";
 
 export {z};
 
+export const idSchema = z.union([z.string(), z.number()]);
+
 const BODY_EXCERPT = 512;
 
 // Runs of whitespace, which an HTML error page is full of: "<html>\n  <body>" -> "<html> <body>"
@@ -63,4 +65,28 @@ export function parseJsonResponse(schema, response, description) {
     }
 
     return parseResponse(schema, parsed, description);
+}
+
+/** Requests text so HTTP and JSON failures retain the API's response body for diagnostics. */
+export async function requestJson(idhan, schema, description, options) {
+    const response = await idhan.request({...options, responseType: "text"});
+    return parseJsonResponse(schema, response, description);
+}
+
+/** Normalizes APIs that return a bare array, a wrapped singleton/array, or no records. */
+export function recordsSchema(member, entrySchema) {
+    const entriesSchema = z.union([entrySchema, z.array(entrySchema)]).nullish();
+
+    return z.union([
+        z.array(entrySchema),
+        z.object({[member]: entriesSchema}),
+        z.null(),
+    ]).transform((body) => {
+        if (Array.isArray(body)) return body;
+
+        const records = body?.[member];
+        if (records === undefined || records === null) return [];
+
+        return Array.isArray(records) ? records : [records];
+    });
 }

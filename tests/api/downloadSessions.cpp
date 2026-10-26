@@ -16,6 +16,8 @@
 #include <string_view>
 #include <system_error>
 #include <thread>
+#include <utility>
+#include <vector>
 #include <unistd.h>
 
 #include "JobEventStream.hpp"
@@ -33,6 +35,7 @@ class DownloadSessionHttpFixture
 	mutable std::mutex m_cookie_mutex {};
 	std::string m_cookie_header {};
 	std::atomic_bool m_hold_files {};
+	std::atomic_size_t m_file_requests {};
 
 	void captureCookieHeader( const std::string_view request )
 	{
@@ -104,6 +107,8 @@ class DownloadSessionHttpFixture
 
 			while ( path == "/file.gif" && m_hold_files.load() ) std::this_thread::sleep_for( 5ms );
 
+			if ( path == "/file.gif" ) ++m_file_requests;
+
 			const std::string body { responseBody( path ) };
 			const std::string response { std::format(
 				"HTTP/1.1 {}\r\nContent-Type: {}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
@@ -117,6 +122,8 @@ class DownloadSessionHttpFixture
 	}
 
   public:
+
+	[[nodiscard]] std::size_t fileRequests() const { return m_file_requests.load(); }
 
 	DownloadSessionHttpFixture()
 	{
@@ -328,6 +335,101 @@ TEST_CASE_METHOD(
 	CHECK( removed );
 }
 
+Json::Value waitForImportedDownload(
+	ApiClient& api,
+	const DownloadSessionID session_id,
+	const DownloadSessionUrlID job_id )
+{
+	const auto deadline { std::chrono::steady_clock::now() + wait_deadline };
+	while ( std::chrono::steady_clock::now() < deadline )
+	{
+		const auto listed { api.get( std::format( "/download_sessions/{}/urls?flatten=true", session_id ) ) };
+		if ( listed.status != 200 ) throw std::runtime_error( "Could not list download jobs: " + listed.body );
+
+		for ( const auto& root : listed.json )
+		{
+			if ( root[ "id" ].as< DownloadSessionUrlID >() != job_id ) continue;
+
+			for ( const auto& child : root[ "urls" ] )
+			{
+				if ( child[ "state" ].asString() == "failed" )
+					throw std::runtime_error( "Import failed: " + child[ "error" ].asString() );
+
+				if ( child[ "record_id" ].isIntegral() ) return child;
+			}
+		}
+		std::this_thread::sleep_for( 25ms );
+	}
+	throw std::runtime_error( "Timed out waiting for a downloaded record" );
+}
+
+TEST_CASE_METHOD(
+	ServerFixture,
+	"Parser tag domains are created for downloaded and reused files",
+	"[api][download-sessions][tag-domain]" )
+{
+	DownloadSessionHttpFixture fixture {};
+	ImportCluster cluster { db(), std::filesystem::temp_directory_path() / "idhan-download-domain-cluster" };
+	cluster.registerWith( api() );
+
+	Json::Value create_body {};
+	create_body[ "name" ] = "parser tag domains";
+	const auto created { api().post( "/download_sessions", create_body ) };
+	REQUIRE( created.status == 201 );
+	const auto session_id { created.json[ "id" ].as< DownloadSessionID >() };
+
+	Json::Value url_body {};
+	url_body[ "url" ] = fixture.url( "/post" );
+	const auto submitted { api().post( std::format( "/download_sessions/{}/urls", session_id ), url_body ) };
+	REQUIRE( submitted.status == 201 );
+	const auto imported {
+		waitForImportedDownload( api(), session_id, submitted.json[ "id" ].as< DownloadSessionUrlID >() )
+	};
+	const auto record_id { imported[ "record_id" ].as< RecordID >() };
+	CHECK( fixture.fileRequests() == 1 );
+
+	url_body[ "url" ] = fixture.url( "/post?domain=fixture-override" );
+	const auto repeated { api().post( std::format( "/download_sessions/{}/urls", session_id ), url_body ) };
+	REQUIRE( repeated.status == 201 );
+	const auto reused {
+		waitForImportedDownload( api(), session_id, repeated.json[ "id" ].as< DownloadSessionUrlID >() )
+	};
+	CHECK( reused[ "record_id" ].as< RecordID >() == record_id );
+	CHECK( fixture.fileRequests() == 1 );
+
+	url_body[ "url" ] = fixture.url( "/post?multipleDomains=1" );
+	const auto multi { api().post( std::format( "/download_sessions/{}/urls", session_id ), url_body ) };
+	REQUIRE( multi.status == 201 );
+	const auto grouped {
+		waitForImportedDownload( api(), session_id, multi.json[ "id" ].as< DownloadSessionUrlID >() )
+	};
+	CHECK( grouped[ "record_id" ].as< RecordID >() == record_id );
+	CHECK( fixture.fileRequests() == 1 );
+
+	const std::vector< std::pair< std::string, std::string > > expected_tags {
+		{ "downloader tags", "fixture" },
+		{ "fixture-override", "fixture" },
+		{ "fixture-first", "first" },
+		{ "fixture-second", "second" },
+	};
+	for ( const auto& [ name, subtag ] : expected_tags )
+	{
+		pqxx::nontransaction tx { db() };
+		const auto domain_id { tx.query_value< TagDomainID >(
+			"SELECT tag_domain_id FROM tag_domains WHERE domain_name = $1", pqxx::params { name } ) };
+		CHECK(
+			tx.query_value< int >(
+				"SELECT COUNT(*) FROM tag_mappings WHERE record_id = $1 AND tag_domain_id = $2",
+				pqxx::params { record_id, domain_id } )
+		    == 1 );
+		CHECK(
+			tx.query_value< std::string >(
+				"SELECT subtag_text FROM tag_mappings JOIN tags USING (tag_id) WHERE record_id = $1 AND tag_domain_id = $2",
+				pqxx::params { record_id, domain_id } )
+		    == subtag );
+	}
+}
+
 SCENARIO_METHOD(
 	ServerFixture,
 	"Download sessions execute and persist independent URL jobs",
@@ -368,6 +470,13 @@ SCENARIO_METHOD(
 	}
 	CHECK( imported_urls == 2 );
 	CHECK( session_duplicates == 1 );
+	{
+		pqxx::nontransaction tx { db() };
+		CHECK( tx.query_value< int >( "SELECT COUNT(*) FROM tag_domains WHERE domain_name = 'downloader tags'" ) == 1 );
+		CHECK( tx.query_value< bool >(
+			"SELECT (SELECT COUNT(*) FROM pg_inherits WHERE inhparent = 'tag_mappings'::regclass) "
+			"= (SELECT COUNT(*) FROM tag_domains)" ) );
+	}
 
 	const auto records { api().get( std::format( "/download_sessions/{}/records", session_id ) ) };
 	REQUIRE( records.status == 200 );

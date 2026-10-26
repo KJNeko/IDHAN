@@ -1,4 +1,5 @@
-import {parseJsonResponse, z} from "validation";
+import {filenameFromUrl} from "parser";
+import {idSchema, requestJson, z} from "validation";
 
 export const manifest = {
     id: "net.pixiv",
@@ -13,7 +14,6 @@ const userPath = /^\/(?:[a-z]{2}\/)?users\/(\d+)(?:\/illustrations)?\/?$/;
 const filenameArtworkId = /^(\d+)/;
 // Matches the first-page suffix in an image URL such as https://i.pximg.net/img-original/12345_p0.jpg.
 const firstPageSuffix = /_p0(\.[a-zA-Z0-9]+)$/;
-const idSchema = z.union([z.string(), z.number()]);
 const workCollectionSchema = z.union([
     z.array(idSchema),
     z.record(z.string(), z.unknown()),
@@ -70,7 +70,7 @@ function artworkId(value) {
 
 function imageArtworkId(value) {
     const url = new URL(value);
-    const filename = url.pathname.slice(url.pathname.lastIndexOf("/") + 1);
+    const filename = filenameFromUrl(url);
     const match = filenameArtworkId.exec(filename);
 
     if (url.hostname !== "i.pximg.net" || match === null) {
@@ -109,11 +109,6 @@ function artistProfileUrl(id) {
     return new URL(`/ajax/user/${id}/profile/all`, "https://www.pixiv.net");
 }
 
-function filenameFromUrl(url) {
-    const pathname = url.pathname;
-    return pathname.slice(pathname.lastIndexOf("/") + 1);
-}
-
 function pageUrl(originalUrl, page) {
     const url = new URL(originalUrl);
     const match = firstPageSuffix.exec(url.pathname);
@@ -144,12 +139,10 @@ export function image(input, idhan) {
 export async function user(input, idhan) {
     const id = artistId(input.url);
     const sourceUrl = artistUrl(id);
-    const response = await idhan.request({
+    const result = await requestJson(idhan, artistResponseSchema, "Pixiv artist API", {
         url: artistProfileUrl(id).href,
         referer: sourceUrl.href,
-        responseType: "text",
     });
-    const result = parseJsonResponse(artistResponseSchema, response, "Pixiv artist API");
 
     if (result.error !== false) {
         throw new Error(`Pixiv rejected artist ${id}: ${result.message ?? "unknown error"}`);
@@ -171,12 +164,10 @@ export async function user(input, idhan) {
 export async function post(input, idhan) {
     const id = artworkId(input.url);
     const sourceUrl = postUrl(id);
-    const response = await idhan.request({
+    const result = await requestJson(idhan, artworkResponseSchema, "Pixiv artwork API", {
         url: detailsUrl(id).href,
         referer: sourceUrl.href,
-        responseType: "text",
     });
-    const result = parseJsonResponse(artworkResponseSchema, response, "Pixiv artwork API");
 
     if (result.error !== false) {
         throw new Error(`Pixiv rejected artwork ${id}: ${result.message ?? "unknown error"}`);
@@ -214,17 +205,14 @@ export async function post(input, idhan) {
     for (let page = 0; page < pageCount; ++page) {
         const fileUrl = page === 0 ? firstPageUrl : pageUrl(originalUrl, page);
         idhan.import({
-            request: {
-                url: fileUrl.href,
-                referer: sourceUrl.href,
-            },
+            request: {url: fileUrl.href, referer: sourceUrl.href},
             filename: filenameFromUrl(fileUrl),
             urls: [
                 {url: sourceUrl.href, type: "post"},
                 {url: fileUrl.href, type: "file"},
             ],
             discoveredUrls: [],
-            tags,
+            tags: {pixiv: tags},
             metadata: {
                 site: "pixiv",
                 postId: id,
