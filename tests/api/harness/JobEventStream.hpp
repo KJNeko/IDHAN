@@ -11,6 +11,7 @@
 #include <memory>
 #include <mutex>
 #include <sstream>
+#include <string_view>
 #include <thread>
 
 #include "IDHANTypes.hpp"
@@ -23,10 +24,41 @@ class JobEventStream
 	std::condition_variable m_readable {};
 	std::vector< std::pair< std::string, Json::Value > > m_events {};
 	std::string m_pending {};
+	std::string m_content_encoding {};
 	std::atomic< bool > m_stop {};
 	const std::string m_url;
 	const std::string m_auth;
+	const std::string m_accept_encoding;
 	std::jthread m_thread;
+
+	static std::size_t receiveHeader(
+		char* data,
+		const std::size_t size,
+		const std::size_t count,
+		void* context ) noexcept
+	{
+		try
+		{
+			const std::string_view header { data, size * count };
+			constexpr std::string_view name { "Content-Encoding:" };
+			if ( header.size() < name.size() ) return header.size();
+
+			if ( !curl_strnequal( data, name.data(), name.size() ) ) return header.size();
+
+			const auto value { header.substr( name.size() ) };
+			const auto first { value.find_first_not_of( " \t\r\n" ) };
+			if ( first == std::string_view::npos ) return header.size();
+
+			auto& stream { *static_cast< JobEventStream* >( context ) };
+			std::lock_guard lock { stream.m_mutex };
+			stream.m_content_encoding = value.substr( first, value.find_last_not_of( " \t\r\n" ) - first + 1 );
+			return header.size();
+		}
+		catch ( ... )
+		{
+			return 0;
+		}
+	}
 
 	static std::size_t receive( char* data, const std::size_t size, const std::size_t count, void* context ) noexcept
 	{
@@ -76,6 +108,9 @@ class JobEventStream
 		};
 		curl_easy_setopt( curl.get(), CURLOPT_URL, m_url.c_str() );
 		curl_easy_setopt( curl.get(), CURLOPT_HTTPHEADER, headers.get() );
+		curl_easy_setopt( curl.get(), CURLOPT_ACCEPT_ENCODING, m_accept_encoding.c_str() );
+		curl_easy_setopt( curl.get(), CURLOPT_HEADERFUNCTION, receiveHeader );
+		curl_easy_setopt( curl.get(), CURLOPT_HEADERDATA, this );
 		curl_easy_setopt( curl.get(), CURLOPT_WRITEFUNCTION, receive );
 		curl_easy_setopt( curl.get(), CURLOPT_WRITEDATA, this );
 		curl_easy_setopt( curl.get(), CURLOPT_NOPROGRESS, 0L );
@@ -87,9 +122,14 @@ class JobEventStream
 
   public:
 
-	JobEventStream( const std::uint16_t port, const std::string& key, const std::string_view path = "/jobs/events" ) :
+	JobEventStream(
+		const std::uint16_t port,
+		const std::string& key,
+		const std::string_view path = "/jobs/events",
+		std::string accept_encoding = "identity" ) :
 	  m_url( std::format( "http://127.0.0.1:{}{}", port, path ) ),
 	  m_auth( "X-API-Key: " + key ),
+	  m_accept_encoding( std::move( accept_encoding ) ),
 	  m_thread( [ this ] { run(); } )
 	{}
 
@@ -97,6 +137,12 @@ class JobEventStream
 	{
 		m_stop = true;
 		m_thread.join();
+	}
+
+	[[nodiscard]] std::string contentEncoding()
+	{
+		std::lock_guard lock { m_mutex };
+		return m_content_encoding;
 	}
 
 	Json::Value waitFor(

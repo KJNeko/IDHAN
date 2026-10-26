@@ -4105,24 +4105,21 @@ body {
     width: 4.5rem;
 }
 
-.debug-lane-table th:nth-child(2), .debug-lane-table td:nth-child(2) {
-    width: 6rem;
+.debug-lane-scroll {
+    min-width: 0;
+    overflow-x: auto;
 }
 
-.debug-lane-table th:nth-child(3), .debug-lane-table td:nth-child(3) {
-    width: 4.5rem;
+/* Keep every lane value readable; the scroll container handles narrow panels. */
+.debug-lane-table {
+    width: max-content;
+    min-width: 100%;
+    table-layout: auto;
 }
 
-.debug-lane-table th:nth-child(4), .debug-lane-table td:nth-child(4) {
-    width: 4.5rem;
-}
-
-.debug-lane-table th:nth-child(5), .debug-lane-table td:nth-child(5) {
-    width: 4rem;
-}
-
-.debug-lane-table th:nth-child(6), .debug-lane-table td:nth-child(6) {
-    width: 5rem;
+.debug-lane-table td {
+    overflow: visible;
+    text-overflow: clip;
 }
 
 .debug-lane-backoff {
@@ -4180,10 +4177,7 @@ body {
     .debug-work-table :is(th, td):nth-child(4),
     .debug-work-table :is(th, td):nth-child(5),
     .debug-pending-table :is(th, td):nth-child(2),
-    .debug-pending-table :is(th, td):nth-child(4),
-    .debug-lane-table :is(th, td):nth-child(2),
-    .debug-lane-table :is(th, td):nth-child(4),
-    .debug-lane-table :is(th, td):nth-child(5) {
+    .debug-pending-table :is(th, td):nth-child(4) {
         display: none;
     }
 

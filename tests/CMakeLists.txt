@@ -6,6 +6,10 @@ enable_testing()
 include(CTest)
 include(Catch)
 
+AddFGLExecutable(IDHANHttpTests ${CMAKE_CURRENT_SOURCE_DIR}/http)
+target_link_libraries(IDHANHttpTests PRIVATE Catch2::Catch2WithMain IDHANHttp IDHAN CURL::libcurl)
+catch_discover_tests(IDHANHttpTests)
+
 AddFGLExecutable(IDHANSharedTests ${CMAKE_CURRENT_SOURCE_DIR}/shared)
 target_link_libraries(IDHANSharedTests PRIVATE Catch2::Catch2WithMain IDHAN)
 catch_discover_tests(IDHANSharedTests)
