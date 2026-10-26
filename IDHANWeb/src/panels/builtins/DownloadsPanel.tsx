@@ -10,6 +10,7 @@ import type {
     DownloadSessionUrlState,
 } from '../../api/types';
 import type {PanelProps, RecordId} from '../../host/types';
+import {forgetMetadata} from '../../host/metadataCache';
 import {RecordInfoView, type RecordInfo} from './RecordInfoView';
 import {useRecordMenu} from './recordActions';
 
@@ -507,6 +508,7 @@ function DownloadsPanel({host}: PanelProps) {
             setError(null);
         },
         onSession: (session, urls) => {
+            forgetMetadata(sessionRecords(urls));
             setSessions((previous) => {
                 const rest = previous.filter((entry) => entry.id !== session.id);
                 return [session, ...rest].sort((a, b) => b.last_used_at - a.last_used_at || b.id - a.id);
@@ -679,18 +681,18 @@ function DownloadsPanel({host}: PanelProps) {
     }, [host]);
 
     useEffect(() => {
-        const wanted: number[] = [];
+        const wanted = new Set<number>();
         const walk = (node: DownloadSessionUrlNode) => {
-            if (expanded.has(node.id) && node.record_id !== null && info[node.record_id] === undefined) {
-                wanted.push(node.record_id);
+            if (expanded.has(node.id) && node.record_id !== null) {
+                wanted.add(node.record_id);
             }
             for (const child of node.children) walk(child);
         };
         for (const roots of Object.values(trees)) for (const root of roots) walk(root);
-        if (wanted.length === 0) return;
+        if (wanted.size === 0) return;
 
         let cancelled = false;
-        void host.records.getMetadata(wanted).then((loaded) => {
+        void host.records.getMetadata([...wanted]).then((loaded) => {
             if (cancelled) return;
             setInfo((previous) => {
                 const next = {...previous};
@@ -703,7 +705,7 @@ function DownloadsPanel({host}: PanelProps) {
         return () => {
             cancelled = true;
         };
-    }, [expanded, trees, info, host]);
+    }, [expanded, trees, host]);
 
     const select = useCallback((node: DownloadSessionUrlNode) => {
         selectedSessionIdRef.current = null;

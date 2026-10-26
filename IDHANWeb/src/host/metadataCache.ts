@@ -21,6 +21,8 @@ const MISSING_LIMIT = 20_000;
 // Map iteration order is insertion order, so re-inserting on hit gives a simple LRU.
 const cache = new Map<RecordId, Meta>();
 const missingIds = new Set<RecordId>();
+// Invalidated requests must not repopulate the cache with an older snapshot.
+const inFlight = new Map<RecordId, Set<object>>();
 
 function remember(id: RecordId, meta: Meta): void {
   cache.delete(id);
@@ -65,25 +67,42 @@ async function flush(batch: Batch): Promise<void> {
   const ids = [...batch.ids];
   for (let i = 0; i < ids.length; i += MAX_BATCH) {
     const chunk = ids.slice(i, i + MAX_BATCH);
+      const request = {};
+      for (const id of chunk) {
+          const requests = inFlight.get(id) ?? new Set<object>();
+          requests.add(request);
+          inFlight.set(id, requests);
+      }
     try {
       const res = await api.recordsMetadata({ record_ids: chunk });
-      for (const record of res.records) remember(record.record_id, record);
-      for (const id of res.missing) rememberMissing(id);
+        for (const record of res.records) {
+            if (inFlight.get(record.record_id)?.has(request)) remember(record.record_id, record);
+        }
+        for (const id of res.missing) {
+            if (inFlight.get(id)?.has(request)) rememberMissing(id);
+        }
     } catch {
       // Transient failure: leave these uncached so a later call retries. Callers just see them missing.
+    } finally {
+        for (const id of chunk) {
+            const requests = inFlight.get(id);
+            requests?.delete(request);
+            if (requests?.size === 0) inFlight.delete(id);
+        }
     }
   }
   batch.resolve();
 }
 
 /**
- * Drops cached entries so the next getMetadata refetches them. Callers that change a record's
- * metadata server-side (a reparse, say) use this; nothing else invalidates.
+ * Drops cached entries and detaches older in-flight responses so the next getMetadata reads fresh
+ * values. Use after metadata changes or a download session reports updated records.
  */
 export function forgetMetadata(ids: readonly RecordId[]): void {
     for (const id of ids) {
         cache.delete(id);
         missingIds.delete(id);
+        inFlight.delete(id);
     }
 }
 
