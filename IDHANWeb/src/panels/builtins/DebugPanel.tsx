@@ -366,6 +366,7 @@ function SessionCard(
                     {session.requests.length === 0 ? (
                         <p className="muted">Nothing is waiting on the network.</p>
                     ) : (
+                        <div className="debug-pending-scroll">
                         <table className="debug-table debug-pending-table">
                             <thead>
                             <tr>
@@ -377,7 +378,9 @@ function SessionCard(
                             </tr>
                             </thead>
                             <tbody>
-                            {session.requests.map((pending, index) => (
+                            {[...session.requests]
+                                .sort((a, b) => b.age_ms - a.age_ms)
+                                .map((pending, index) => (
                                 <tr key={`${pending.work_id}:${pending.url}:${index}`}>
                                     <td className="debug-num">#{pending.work_id}</td>
                                     <td className="debug-ellipsis" title={pending.lane}>
@@ -392,6 +395,7 @@ function SessionCard(
                             ))}
                             </tbody>
                         </table>
+                        </div>
                     )}
 
                     <h4 className="debug-subsection muted">

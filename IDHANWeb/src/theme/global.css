@@ -4140,6 +4140,11 @@ body {
     overflow-y: auto;
 }
 
+.debug-pending-scroll {
+    max-height: 18rem;
+    overflow-y: auto;
+}
+
 .debug-event {
     display: grid;
     grid-template-columns: 7rem 6.5rem 3.5rem minmax(0, 1fr);
