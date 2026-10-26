@@ -43,7 +43,7 @@ describe('buildSortJobs', () => {
 describe('rate limit helpers', () => {
     const lane = (scheduling_key: string, remaining_ms = 5000): RateLimitLane => ({
         scheduling_key, throttled: true, requests: 1, seconds: 5, effective_interval_ms: 5000,
-        remaining_ms, consecutive_limits: 0, active: remaining_ms > 0,
+        remaining_ms, consecutive_limits: 0, active: remaining_ms > 0, download_bytes_per_second: 0,
     });
 
     it('replaces opening state, upserts updates, and orders lanes by key', () => {

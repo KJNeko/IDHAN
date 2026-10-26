@@ -48,6 +48,11 @@ get:
                   type: integer
                   format: int64
                   minimum: 0
+                download_bytes_per_second:
+                  type: integer
+                  format: int64
+                  minimum: 0
+                  description: Received body bytes over the last second across all lane transfers, sampled in 100 ms buckets. Includes decoded error and redirect bodies; excludes headers.
                 active:
                   type: boolean
     '400':

@@ -57,6 +57,8 @@ static http::HTTPTask< http::Response > list( [[maybe_unused]] http::RequestCont
 		builder.append_comma();
 		builder.append_key_value( "shards", static_cast< std::uint64_t >( lane.shards ) );
 		builder.append_comma();
+		builder.append_key_value( "download_bytes_per_second", lane.download_bytes_per_second );
+		builder.append_comma();
 		builder.append_key_value( "active", lane.active );
 		builder.end_object();
 	}

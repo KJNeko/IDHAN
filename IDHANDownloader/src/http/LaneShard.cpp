@@ -134,6 +134,9 @@ std::size_t LaneShard::writeCallback( char* data, const std::size_t size, const 
 	const std::size_t total { size * count };
 	auto* active { static_cast< Active* >( user ) };
 	active->response.bytes += total;
+	const auto lane { active->shard->m_lane.lock() };
+
+	if ( lane ) lane->onBytesReceived( total );
 
 	if ( active->request.sink && active->preview.size() < HTTP_BODY_LOG_LIMIT )
 		active->preview.append( data, std::min( total, HTTP_BODY_LOG_LIMIT - active->preview.size() ) );

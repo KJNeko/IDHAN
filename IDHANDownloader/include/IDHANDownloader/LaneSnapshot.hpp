@@ -24,6 +24,9 @@ struct LaneSnapshot
 	std::size_t queued {};
 	std::size_t shards {};
 	std::uint64_t bytes_per_second {};
+	// Received body bytes over the last second, sampled in 100 ms buckets across all shards.
+	// Includes decoded bodies from failed and redirected responses; excludes HTTP headers.
+	std::uint64_t download_bytes_per_second {};
 	//! Last advertised Retry-After and rate-limit headers.
 	std::string advertised_limits {};
 	bool active {};

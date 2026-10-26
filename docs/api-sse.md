@@ -19,7 +19,7 @@ notifications. An omitted filter subscribes to all sessions, including new ones.
 
 Rate-limit events use `scheduling_key` and `consecutive_limits` in place of the
 REST response's `lane` and `consecutive_failures`, and additionally include
-`bytes_per_second`. Preserve these wire names. All fourteen lane-state fields
+`bytes_per_second`. Preserve these wire names. All fifteen lane-state fields
 are emitted, including an empty `group` string when no group is configured and
 `active: false` for an inactive lane. Delays are nonnegative milliseconds rounded
 up, `seconds` is an integer rate window, and zero `bytes_per_second` means no
@@ -92,3 +92,8 @@ to reconnect after shutdown or a dropped connection. Call `close()` when the
 application intends to stop; reconnecting while shutdown is already in progress
 can produce another shutdown event without an opening snapshot. Closing or
 disconnecting releases the server subscription.
+
+Lane snapshots and updates include `download_bytes_per_second`: received body bytes
+over the last second across all shards, sampled in 100 ms buckets. This includes
+decoded error and redirect bodies and excludes headers. Idle lanes report zero
+after a second. Active lane snapshots refresh once per second.

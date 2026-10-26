@@ -30,7 +30,7 @@ examples:
   - event: snapshot
     data: '{"limits":[]}'
   - event: update
-    data: '{"scheduling_key":"example.com","group":"","requests":2,"seconds":1,"throttled":true,"effective_interval_ms":500,"remaining_ms":250,"consecutive_limits":0,"backed_off":false,"in_flight":1,"queued":3,"shards":1,"bytes_per_second":0,"active":true}'
+    data: '{"scheduling_key":"example.com","group":"","requests":2,"seconds":1,"throttled":true,"effective_interval_ms":500,"remaining_ms":250,"consecutive_limits":0,"backed_off":false,"in_flight":1,"queued":3,"shards":1,"bytes_per_second":0,"download_bytes_per_second":0,"active":true}'
   - event: shutdown
     data: ''
 $defs:
@@ -64,6 +64,7 @@ $defs:
       - in_flight
       - queued
       - shards
+      - download_bytes_per_second
       - bytes_per_second
       - active
     properties:
@@ -114,6 +115,11 @@ $defs:
         type: integer
         minimum: 0
         description: Current number of lane worker shards.
+      download_bytes_per_second:
+        type: integer
+        format: int64
+        minimum: 0
+        description: Received body bytes over the last second across all lane transfers, sampled in 100 ms buckets. Includes decoded error and redirect bodies; excludes headers. Zero after a second without received bytes.
       bytes_per_second:
         type: integer
         minimum: 0
@@ -135,4 +141,5 @@ $defs:
         queued: 3
         shards: 1
         bytes_per_second: 0
+        download_bytes_per_second: 0
         active: true

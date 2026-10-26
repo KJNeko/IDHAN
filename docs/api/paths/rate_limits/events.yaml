@@ -18,11 +18,11 @@ get:
 
                 event: snapshot
                 timestamp: 1792440000
-                data: {"limits":[{"scheduling_key":"example.com","group":"","requests":2,"seconds":1,"throttled":true,"effective_interval_ms":500,"remaining_ms":250,"consecutive_limits":0,"backed_off":false,"in_flight":1,"queued":3,"shards":1,"bytes_per_second":0,"active":true}]}
+                data: {"limits":[{"scheduling_key":"example.com","group":"","requests":2,"seconds":1,"throttled":true,"effective_interval_ms":500,"remaining_ms":250,"consecutive_limits":0,"backed_off":false,"in_flight":1,"queued":3,"shards":1,"bytes_per_second":0,"download_bytes_per_second":0,"active":true}]}
 
                 event: update
                 timestamp: 1792440001
-                data: {"scheduling_key":"example.com","group":"","requests":2,"seconds":1,"throttled":true,"effective_interval_ms":500,"remaining_ms":250,"consecutive_limits":0,"backed_off":false,"in_flight":1,"queued":3,"shards":1,"bytes_per_second":0,"active":true}
+                data: {"scheduling_key":"example.com","group":"","requests":2,"seconds":1,"throttled":true,"effective_interval_ms":500,"remaining_ms":250,"consecutive_limits":0,"backed_off":false,"in_flight":1,"queued":3,"shards":1,"bytes_per_second":0,"download_bytes_per_second":0,"active":true}
 
                 : keepalive
 
@@ -65,7 +65,11 @@ get:
     schema. All lane fields are present, `group` is an empty string when unset,
     delays are rounded-up milliseconds, and `seconds` is an integer rate window.
     `bytes_per_second` is the configured per-transfer receive limit; zero disables
-    that bandwidth limit. Counter values are unsigned JSON integers.
+    that bandwidth limit. `download_bytes_per_second` reports received body bytes
+    over the last second across all lane transfers, sampled in 100 ms buckets. It
+    includes decoded error and redirect bodies and excludes headers. Active lanes
+    publish updates once per second, including zero speed after traffic stops.
+    Counter values are unsigned JSON integers.
 
     Both streams begin with `retry: 3000` (a reconnect delay of 3000 milliseconds).
     They send named `snapshot`, `update`, and `shutdown` events. Subscribe with

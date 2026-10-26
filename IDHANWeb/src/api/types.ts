@@ -445,6 +445,7 @@ export interface DebugLane {
     queued: number;
     shards: number;
     bytes_per_second: number;
+    download_bytes_per_second: number;
     active: boolean;
 }
 
@@ -457,6 +458,7 @@ export type DownloaderSecrets = Record<string, string>;
 
 export interface RateLimitLane {
     scheduling_key: string;
+    download_bytes_per_second: number;
     throttled: boolean;
     requests: number;
     seconds: number;
