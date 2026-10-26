@@ -167,9 +167,9 @@ scan_concurrency = 12
 
 # Overrides for the flags a parser declares in its manifest. Keys are flag names, so they must be
 # quoted. Anything left out keeps the parser's own default.
-#[downloader.flags]
+[downloader.flags]
 # Submit a gelbooru post's source URL back to the pipeline. On by default.
-#"gelbooru.followSource" = true
+"gelbooru.followSource" = true
 
 [parser.cbz]
 # Falls back to the .cbz extension when the archive's contents are inconclusive.
