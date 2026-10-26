@@ -232,9 +232,13 @@ export const api = {
     rescanMetadata(recordIds?: readonly number[], signal?: AbortSignal): Promise<JobDispatch> {
         return request<JobDispatch>('/jobs/metadata/rescan', {
             method: 'POST',
-            body: recordIds ? {record_ids: [...recordIds]} : {},
+            body: recordIds ? {records: [...recordIds]} : {},
             signal,
         });
+    },
+
+    reorganizeUrls(signal?: AbortSignal): Promise<JobDispatch> {
+        return request<JobDispatch>('/jobs/urls/reorganize', {method: 'POST', signal});
     },
 
     recordRelationships(recordId: number, signal?: AbortSignal): Promise<FileRelationships> {

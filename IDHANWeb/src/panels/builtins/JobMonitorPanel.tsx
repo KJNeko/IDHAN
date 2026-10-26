@@ -1,14 +1,37 @@
 /**
- * Job Monitor: a live view of the server's in-memory jobs. Receives snapshots and updates from
- * the shared /jobs/events stream. Jobs are process-local and reset
+ * Job Monitor starts manual maintenance jobs and follows the server's in-memory jobs
+ * through the shared /jobs/events stream. Jobs are process-local and reset
  * on server restart, so this is not a durable history.
  */
 
 import {useEffect, useState} from 'react';
 import {watchJobs} from '../../api/client';
+import {UrlReorganizationProgress, type UrlReorganizationProgressData} from './UrlReorganizationProgress';
+import {JobLauncher} from './JobLauncher';
 import type { PanelProps } from '../../host/types';
 import {ClusterScanProgress, type ClusterScanProgressData} from './ClusterScanProgress';
 import {BackgroundJobProgress, type BackgroundJobProgressData} from './BackgroundJobProgress';
+
+interface UrlReorganizationResult {
+    kind: 'url_reorganization';
+    total_count: number;
+    unique_count: number;
+    merged_count: number;
+    sorted_count: number;
+}
+
+interface MetadataRescanResult {
+    scanned_count: number;
+    failed_count: number
+}
+
+interface EmbeddingResult {
+    model_name: string;
+    embedded: number;
+    failed: number;
+    skipped: number;
+    error?: string
+}
 
 interface Job {
   job_id: number;
@@ -18,7 +41,8 @@ interface Job {
   start_time?: number; // unix seconds
     end_time?: number; // unix seconds, present once the job is done
   error?: string;
-    progress?: ClusterScanProgressData | BackgroundJobProgressData;
+    response?: UrlReorganizationResult | MetadataRescanResult | EmbeddingResult;
+    progress?: ClusterScanProgressData | BackgroundJobProgressData | UrlReorganizationProgressData;
 }
 
 function statusClass(status: string | undefined): string {
@@ -43,7 +67,7 @@ function elapsed(startSeconds: number | undefined, endSeconds: number | undefine
   return `${mins}m ${secs % 60}s`;
 }
 
-function JobMonitorPanel(_props: PanelProps) {
+function JobMonitorPanel({host}: PanelProps) {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [auto, setAuto] = useState(true);
@@ -79,6 +103,8 @@ function JobMonitorPanel(_props: PanelProps) {
         </span>
       </div>
 
+        <JobLauncher host={host} jobs={jobs} onQueued={job => setJobs(current =>
+            current.some(existing => existing.job_id === job.job_id) ? current : [...current, job])}/>
       {error && <p className="error">{error}</p>}
       {!error && jobs.length === 0 && <p className="muted">No jobs running.</p>}
 
@@ -86,6 +112,7 @@ function JobMonitorPanel(_props: PanelProps) {
         <ul className="job-items">
           {jobs.map((job) => {
               const since = elapsed(job.start_time, job.end_time, now);
+              const response = job.response && typeof job.response === 'object' ? job.response : undefined;
             return (
                 <li key={job.job_id} className="job-item">
                     <div className="job-row">
@@ -97,7 +124,24 @@ function JobMonitorPanel(_props: PanelProps) {
                   </span>
                         {since && <span className="muted job-elapsed">{since}</span>}
                     </div>
+                    {job.progress?.kind !== 'url_reorganization' && response && 'kind' in response && response.kind === 'url_reorganization' && (
+                        <p>Total: {response.total_count.toLocaleString()} ·
+                            Unique: {response.unique_count.toLocaleString()} ·
+                            Merged: {response.merged_count.toLocaleString()} ·
+                            Sorted: {response.sorted_count.toLocaleString()}</p>
+                    )}
+                    {response && 'scanned_count' in response && <p>
+                        Scanned: {response.scanned_count.toLocaleString()} ·
+                        Failed: {response.failed_count.toLocaleString()}
+                    </p>}
+                    {response && 'embedded' in response && <p>
+                        Embedded: {response.embedded.toLocaleString()} · Failed: {response.failed.toLocaleString()} ·
+                        Skipped: {response.skipped.toLocaleString()}
+                    </p>}
+                    {response && 'error' in response && response.error && <p className="error">{response.error}</p>}
                     {job.error && <p className="error">{job.error}</p>}
+                    {job.progress?.kind === 'url_reorganization' &&
+                        <UrlReorganizationProgress progress={job.progress}/>}
                     {job.progress?.kind === 'cluster_scan' && <ClusterScanProgress progress={job.progress}/>}
                     {job.progress?.kind === 'background_service' && <BackgroundJobProgress progress={job.progress}/>}
               </li>
@@ -112,7 +156,7 @@ function JobMonitorPanel(_props: PanelProps) {
 export const jobMonitorPanel = {
   type: 'job-monitor',
   title: 'Job Monitor',
-  description: 'Live view of the server’s running jobs.',
+    description: 'Start maintenance jobs and follow their progress and results.',
   component: JobMonitorPanel,
   configVersion: 1,
   singleton: true,
