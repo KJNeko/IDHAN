@@ -25,6 +25,21 @@ class ScriptContext
 		std::chrono::milliseconds burst_timeout { 5000 };
 	};
 
+	// Excludes synchronous host callbacks from the active worker's JavaScript budget.
+	// Nested callbacks share the outer pause; callbacks on other threads have no active burst.
+	class HostCall
+	{
+		ScriptContext* m_context {};
+		std::chrono::steady_clock::time_point m_started {};
+
+	  public:
+
+		HostCall();
+		HostCall( const HostCall& ) = delete;
+		HostCall& operator=( const HostCall& ) = delete;
+		~HostCall();
+	};
+
   private:
 
 	struct Burst
@@ -37,6 +52,7 @@ class ScriptContext
 	BytecodeCache& m_bytecode;
 	Burst m_burst {};
 	JSRuntimePtr m_runtime {};
+	static thread_local ScriptContext* s_active;
 
 	static int interrupt( JSRuntime* runtime, void* opaque );
 	static char* normalizeModule( JSContext* context, const char* base, const char* name, void* opaque );

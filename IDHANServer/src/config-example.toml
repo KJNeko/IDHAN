@@ -147,8 +147,8 @@ scan_concurrency = 12
 # and a work item stays on the thread whose runtime holds its realm. A script awaiting a request
 # leaves its thread free, so this bounds concurrent JavaScript, not concurrent downloads.
 #script_threads = 4
-# Bounds one uninterrupted run of JavaScript. A script waiting on a request is not running, so a
-# slow site never trips this.
+# Bounds one uninterrupted run of JavaScript, excluding synchronous host callbacks such as
+# database operations. Time awaiting an HTTP request is also excluded.
 #script_burst_timeout_ms = 5000
 # Ceiling on a response body idhan.request materialises in memory. Imports stream and ignore it.
 #max_response_bytes = 33554432
