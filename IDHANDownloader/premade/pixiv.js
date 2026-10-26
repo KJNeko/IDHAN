@@ -41,8 +41,9 @@ const artworkResponseSchema = resultSchema(z.object({
     illust_details: z.object({
         id: idSchema,
         ugoira_meta: z.union([z.null(), z.object({}).passthrough()]),
+        mask_reason: z.string().nullish(),
         url_big: z.string().nullish(),
-        page_count: idSchema,
+        page_count: idSchema.nullish(),
         tags: z.array(z.string()).nullish().transform((tags) => tags ?? []),
         title: z.string(),
         author_details: z.object({
@@ -91,7 +92,7 @@ function artistId(value) {
 }
 
 function postUrl(id) {
-    return `https://www.pixiv.net/artworks/${id}`;
+    return new URL(`/artworks/${id}`, "https://www.pixiv.net");
 }
 
 function detailsUrl(id) {
@@ -101,11 +102,11 @@ function detailsUrl(id) {
 }
 
 function artistUrl(id) {
-    return `https://www.pixiv.net/users/${id}/illustrations`;
+    return new URL(`/users/${id}/illustrations`, "https://www.pixiv.net");
 }
 
 function artistProfileUrl(id) {
-    return `https://www.pixiv.net/ajax/user/${id}/profile/all`;
+    return new URL(`/ajax/user/${id}/profile/all`, "https://www.pixiv.net");
 }
 
 function filenameFromUrl(url) {
@@ -135,7 +136,7 @@ function workIds(value) {
 
 export function image(input, idhan) {
     idhan.follow({
-        url: postUrl(imageArtworkId(input.url)),
+        url: postUrl(imageArtworkId(input.url)).href,
         type: "post",
     });
 }
@@ -144,8 +145,8 @@ export async function user(input, idhan) {
     const id = artistId(input.url);
     const sourceUrl = artistUrl(id);
     const response = await idhan.request({
-        url: artistProfileUrl(id),
-        referer: sourceUrl,
+        url: artistProfileUrl(id).href,
+        referer: sourceUrl.href,
         responseType: "text",
     });
     const result = parseJsonResponse(artistResponseSchema, response, "Pixiv artist API");
@@ -161,7 +162,7 @@ export async function user(input, idhan) {
 
     for (const workId of [...illustrationIds, ...mangaIds]) {
         idhan.follow({
-            url: postUrl(workId),
+            url: postUrl(workId).href,
             type: "post",
         });
     }
@@ -172,7 +173,7 @@ export async function post(input, idhan) {
     const sourceUrl = postUrl(id);
     const response = await idhan.request({
         url: detailsUrl(id).href,
-        referer: sourceUrl,
+        referer: sourceUrl.href,
         responseType: "text",
     });
     const result = parseJsonResponse(artworkResponseSchema, response, "Pixiv artwork API");
@@ -191,26 +192,35 @@ export async function post(input, idhan) {
         throw new Error(`Pixiv artwork ${id} is an ugoira, which this parser does not support yet`);
     }
 
+    if (details.mask_reason === "login_only") {
+        throw new Error(`Pixiv artwork ${id} is only available to logged-in users (mask_reason: login_only)`);
+    }
+
     const originalUrl = details.url_big;
     const pageCount = Number(details.page_count);
 
-    if (!originalUrl || pageCount < 1) {
+    if (typeof originalUrl !== "string" || originalUrl.trim() === "") {
         throw new Error(`Pixiv artwork ${id} has no downloadable pages`);
     }
 
+    if (!Number.isInteger(pageCount) || pageCount < 1) {
+        throw new Error(`Pixiv artwork ${id} returned invalid page count ${details.page_count}`);
+    }
+
+    const firstPageUrl = pageUrl(originalUrl, 0);
     const author = details.author_details;
     const tags = postTags(details, author.user_name);
 
     for (let page = 0; page < pageCount; ++page) {
-        const fileUrl = pageUrl(originalUrl, page);
+        const fileUrl = page === 0 ? firstPageUrl : pageUrl(originalUrl, page);
         idhan.import({
             request: {
                 url: fileUrl.href,
-                referer: sourceUrl,
+                referer: sourceUrl.href,
             },
             filename: filenameFromUrl(fileUrl),
             urls: [
-                {url: sourceUrl, type: "post"},
+                {url: sourceUrl.href, type: "post"},
                 {url: fileUrl.href, type: "file"},
             ],
             discoveredUrls: [],
