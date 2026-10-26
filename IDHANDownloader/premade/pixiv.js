@@ -125,8 +125,8 @@ function pageUrl(originalUrl, page) {
     return url;
 }
 
-function postTags(details) {
-    return [...new Set(details.tags)];
+function postTags(details, profileName) {
+    return [...new Set([...details.tags, `creator:${profileName}`])];
 }
 
 function workIds(value) {
@@ -198,8 +198,8 @@ export async function post(input, idhan) {
         throw new Error(`Pixiv artwork ${id} has no downloadable pages`);
     }
 
-    const tags = postTags(details);
     const author = details.author_details;
+    const tags = postTags(details, author.user_name);
 
     for (let page = 0; page < pageCount; ++page) {
         const fileUrl = pageUrl(originalUrl, page);
