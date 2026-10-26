@@ -20,7 +20,6 @@
 #include "downloader/DownloadSessionEventHub.hpp"
 #include "downloader/DownloadSessionManager.hpp"
 #include "idhan/db/DBContext.hpp"
-#include "idhan/http/SSEBodySource.hpp"
 #include "jsonBody.hpp"
 
 namespace idhan::httpapi
@@ -1024,32 +1023,6 @@ static http::HTTPTask< http::Response > listErrors( db::DBContext& db, http::Req
 	co_return jsonResponse( builder );
 }
 
-//! Sessions an opening subscription should report, in the order listSessions returns them so the
-//! snapshot and a subsequent list agree. \p filter narrows to the requested ids when non-empty.
-static http::HTTPTask< std::vector< DownloadSessionID > > existingSessionIds(
-	db::DBContext& db,
-	const std::vector< DownloadSessionID >& filter )
-{
-	db::DBBindings bindings {};
-	bindings.bind( filter.empty() );
-	bindings.bind( filter );
-	const auto rows {
-		co_await db
-			.query(
-				"SELECT download_session_id FROM download_sessions "
-				"WHERE $1 OR download_session_id = ANY($2::bigint[]) "
-				"ORDER BY last_used_at DESC, download_session_id DESC",
-				std::move( bindings ) )
-			.rows< DownloadSessionID >()
-	};
-
-	std::vector< DownloadSessionID > ids {};
-	ids.reserve( rows.size() );
-	for ( const auto& [ id ] : rows ) ids.emplace_back( id );
-
-	co_return ids;
-}
-
 std::vector< http::RouteDefinition > downloadSessionRoutes( db::DBContext& db )
 {
 	std::vector< http::RouteDefinition > routes {};
@@ -1072,24 +1045,6 @@ std::vector< http::RouteDefinition > downloadSessionRoutes( db::DBContext& db )
 	};
 
 	add( proxygen::HTTPMethod::GET, "/download_sessions", {}, listSessions );
-	routes.push_back(
-		http::RouteDefinition {
-			http::RouteMetadata {
-				proxygen::HTTPMethod::GET, "/download_sessions/events", {}, { apiAuthValidation( db ) } },
-			[ &db ]( http::RequestContext context ) -> http::HTTPTask< http::Response >
-			{
-				auto session_ids_e { context.parameters().vector< DownloadSessionID >( "session_id" ) };
-				if ( !session_ids_e ) co_return http::Response::error( 400, session_ids_e.error().message );
-
-				const auto existing { co_await existingSessionIds( db, *session_ids_e ) };
-
-				http::Response response {};
-				response.body = proxygen::coro::HTTPSourceHolder { new http::SSEBodySource {
-					std::move( response.message ),
-					downloader::DownloadSessionEventHub::instance().subscribe(
-						std::move( *session_ids_e ), existing ) } };
-				co_return response;
-			} } );
 	add( proxygen::HTTPMethod::POST, "/download_sessions", {}, createSession );
 	add( proxygen::HTTPMethod::GET,
 	     "/download_sessions/{session_id}",

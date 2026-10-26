@@ -12,13 +12,13 @@ export const API_PREFIXES = [
   '/auth',
   '/clusters',
   '/db',
+    '/events',
     '/download_sessions',
     '/downloader',
     '/embeddings',
   '/file',
   '/generate_api_key',
   '/health',
-  '/heartbeat',
   '/hyapi',
   '/integrity',
   '/jobs',
@@ -37,4 +37,4 @@ export const API_PREFIXES = [
 ] as const;
 
 /** Prefixes that also carry WebSocket traffic, which the dev proxy has to upgrade. */
-export const WS_PREFIXES: readonly string[] = ['/heartbeat', '/download_sessions', '/rate_limits'];
+export const WS_PREFIXES: readonly string[] = [];

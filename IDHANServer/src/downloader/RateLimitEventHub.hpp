@@ -5,6 +5,7 @@
 #include <chrono>
 #include <mutex>
 #include <unordered_map>
+#include <vector>
 
 #include "idhan/http/SSEEventHub.hpp"
 
@@ -13,6 +14,8 @@ namespace idhan::downloader
 
 class RateLimitEventHub final : public LaneObserver
 {
+  private:
+
 	struct StoredSnapshot
 	{
 		LaneSnapshot snapshot {};
@@ -21,14 +24,11 @@ class RateLimitEventHub final : public LaneObserver
 
 	std::mutex m_mutex {};
 	std::unordered_map< std::string, StoredSnapshot > m_limits {};
-	http::SSEEventHub m_events {};
 
   public:
 
 	static RateLimitEventHub& instance();
-	[[nodiscard]] http::SSESubscription subscribe();
-	void shutdown();
-
+	[[nodiscard]] std::vector< http::SSEInitialEvent > snapshotEvents();
 	void onLaneChanged( const LaneSnapshot& snapshot ) override;
 };
 

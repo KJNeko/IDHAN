@@ -1,6 +1,6 @@
 # Background service jobs
 
-Clients subscribe to `GET /jobs/events` for an initial jobs snapshot and pushed
+Clients subscribe to `GET /events?types=job.status` for job snapshots and pushed
 status/progress updates. `GET /jobs/status` and `GET /jobs/{job_id}/status` remain
 available for explicit reads. Each service owns
 a job with `progress.kind = "background_service"`; recurring maintenance has `continuous = true`, while startup

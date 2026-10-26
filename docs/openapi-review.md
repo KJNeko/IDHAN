@@ -592,14 +592,9 @@ assign whole files.
 
 ### F24 [Resolved] SSE event names, payloads, and delivery behavior are documented
 
-The original session-event documentation described generic parsed SSE fields but omitted snapshot
-data {"sessions":[...]}, update data {"id":...}, or deletion updates {"id":...,"removed":true}. The original rate-limit
-event documentation had no application payload contract: their snapshot is {"limits":[...]} and updates use
-scheduling_key and consecutive_limits, unlike REST lane and consecutive_failures, plus bytes_per_second. Both use named
-snapshot/update/shutdown events, retry 3000, and heartbeat comments. Document the event names and data shapes so
-consumers can subscribe and decode them correctly; do not imply REST and SSE payloads are interchangeable.
-
-Evidence: [docs/api/paths/download_sessions/events.yaml:10](/home/kj16609/Desktop/Projects/cxx/IDHAN/docs/api/paths/download_sessions/events.yaml:10); [docs/api/paths/rate_limits/events.yaml:10](/home/kj16609/Desktop/Projects/cxx/IDHAN/docs/api/paths/rate_limits/events.yaml:10); [IDHANServer/src/downloader/DownloadSessionEventHub.cpp:30](/home/kj16609/Desktop/Projects/cxx/IDHAN/IDHANServer/src/downloader/DownloadSessionEventHub.cpp:30); [IDHANServer/src/downloader/RateLimitEventHub.cpp:24](/home/kj16609/Desktop/Projects/cxx/IDHAN/IDHANServer/src/downloader/RateLimitEventHub.cpp:24); [IDHANHttp/src/SSEBodySource.cpp:17](/home/kj16609/Desktop/Projects/cxx/IDHAN/IDHANHttp/src/SSEBodySource.cpp:17).
+This historical review item is superseded by the unified `/events` endpoint. Its type-filtered protocol is documented in
+[docs/api/paths/events.yaml](/home/kj16609/Desktop/Projects/cxx/IDHAN/docs/api/paths/events.yaml)
+and [docs/api-sse.md](/home/kj16609/Desktop/Projects/cxx/IDHAN/docs/api-sse.md).
 
 **Resolution — 2026-10-19:** Both operations now reference explicit parsed-event schemas for `snapshot`, `update`, and
 `shutdown`, with `contentMediaType` and `contentSchema` describing JSON text in `data`. Session payloads distinguish
@@ -1394,13 +1389,13 @@ references point to the unbundled path descriptions.
 | POST             | `/jobs/metadata/rescan`                               | [docs/api/paths/jobs/rescan_metadata.yaml](/home/kj16609/Desktop/Projects/cxx/IDHAN/docs/api/paths/jobs/rescan_metadata.yaml)                                                     |
 | GET              | `/jobs/{job_id}/status`                               | [docs/api/paths/jobs/status.yaml](/home/kj16609/Desktop/Projects/cxx/IDHAN/docs/api/paths/jobs/status.yaml)                                                                       |
 | GET              | `/jobs/status`                                        | [docs/api/paths/jobs/status_all.yaml](/home/kj16609/Desktop/Projects/cxx/IDHAN/docs/api/paths/jobs/status_all.yaml)                                                               |
+| GET              | `/events`                                             | [docs/api/paths/events.yaml](/home/kj16609/Desktop/Projects/cxx/IDHAN/docs/api/paths/events.yaml)                                                                                 |
 | GET              | `/integrity`                                          | [docs/api/paths/integrity.yaml](/home/kj16609/Desktop/Projects/cxx/IDHAN/docs/api/paths/integrity.yaml)                                                                           |
 | POST             | `/purge/thumbnails`                                   | [docs/api/paths/purge/thumbnails.yaml](/home/kj16609/Desktop/Projects/cxx/IDHAN/docs/api/paths/purge/thumbnails.yaml)                                                             |
 | GET              | `/db/stats/sunburst`                                  | [docs/api/paths/db/stats/sunburst.yaml](/home/kj16609/Desktop/Projects/cxx/IDHAN/docs/api/paths/db/stats/sunburst.yaml)                                                           |
 | GET, POST        | `/downloader/secrets`                                 | [docs/api/paths/downloader/secrets.yaml](/home/kj16609/Desktop/Projects/cxx/IDHAN/docs/api/paths/downloader/secrets.yaml)                                                         |
 | GET              | `/health`                                             | [docs/api/paths/health.yaml](/home/kj16609/Desktop/Projects/cxx/IDHAN/docs/api/paths/health.yaml)                                                                                 |
 | GET              | `/auth/verify`                                        | [docs/api/paths/auth/verify.yaml](/home/kj16609/Desktop/Projects/cxx/IDHAN/docs/api/paths/auth/verify.yaml)                                                                       |
-| GET              | `/heartbeat`                                          | [docs/api/paths/heartbeat.yaml](/home/kj16609/Desktop/Projects/cxx/IDHAN/docs/api/paths/heartbeat.yaml)                                                                           |
 | POST             | `/records/metadata`                                   | [docs/api/paths/records/metadata.yaml](/home/kj16609/Desktop/Projects/cxx/IDHAN/docs/api/paths/records/metadata.yaml)                                                             |
 | GET              | `/db/stats`                                           | [docs/api/paths/db/stats.yaml](/home/kj16609/Desktop/Projects/cxx/IDHAN/docs/api/paths/db/stats.yaml)                                                                             |
 | GET              | `/mime`                                               | [docs/api/paths/mime.yaml](/home/kj16609/Desktop/Projects/cxx/IDHAN/docs/api/paths/mime.yaml)                                                                                     |
@@ -1423,10 +1418,8 @@ references point to the unbundled path descriptions.
 | POST             | `/download_sessions/{session_id}/urls/{url_id}/retry` | [docs/api/paths/download_sessions/session_id/urls/url_id/retry.yaml](/home/kj16609/Desktop/Projects/cxx/IDHAN/docs/api/paths/download_sessions/session_id/urls/url_id/retry.yaml) |
 | GET              | `/download_sessions/{session_id}/records`             | [docs/api/paths/download_sessions/session_id/records.yaml](/home/kj16609/Desktop/Projects/cxx/IDHAN/docs/api/paths/download_sessions/session_id/records.yaml)                     |
 | GET              | `/download_sessions/{session_id}/errors`              | [docs/api/paths/download_sessions/session_id/errors.yaml](/home/kj16609/Desktop/Projects/cxx/IDHAN/docs/api/paths/download_sessions/session_id/errors.yaml)                       |
-| GET              | `/download_sessions/events`                           | [docs/api/paths/download_sessions/events.yaml](/home/kj16609/Desktop/Projects/cxx/IDHAN/docs/api/paths/download_sessions/events.yaml)                                             |
 | GET              | `/rate_limits`                                        | [docs/api/paths/rate_limits.yaml](/home/kj16609/Desktop/Projects/cxx/IDHAN/docs/api/paths/rate_limits.yaml)                                                                       |
 | POST             | `/rate_limits/reset`                                  | [docs/api/paths/rate_limits/reset.yaml](/home/kj16609/Desktop/Projects/cxx/IDHAN/docs/api/paths/rate_limits/reset.yaml)                                                           |
-| GET              | `/rate_limits/events`                                 | [docs/api/paths/rate_limits/events.yaml](/home/kj16609/Desktop/Projects/cxx/IDHAN/docs/api/paths/rate_limits/events.yaml)                                                         |
 | GET              | `/downloader/debug`                                   | [docs/api/paths/downloader/debug.yaml](/home/kj16609/Desktop/Projects/cxx/IDHAN/docs/api/paths/downloader/debug.yaml)                                                             |
 | GET              | `/plugins`                                            | [docs/api/paths/plugins.yaml](/home/kj16609/Desktop/Projects/cxx/IDHAN/docs/api/paths/plugins.yaml)                                                                               |
 | GET              | `/log`                                                | [docs/api/paths/log.yaml](/home/kj16609/Desktop/Projects/cxx/IDHAN/docs/api/paths/log.yaml)                                                                                       |

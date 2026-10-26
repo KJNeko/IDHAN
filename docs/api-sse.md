@@ -1,106 +1,68 @@
-# Download-session and rate-limit streams
+# Unified server event stream
 
-`GET /download_sessions/events` and `GET /rate_limits/events` return
-`text/event-stream; charset=utf-8`. Both require native API authentication.
-Their OpenAPI operations contain wire examples and parsed event schemas.
+`GET /events` provides one authenticated SSE connection for jobs, download
+sessions, downloader diagnostics, and rate limits. Omit `types` to receive all
+event types. Otherwise pass a comma-separated list of strings:
 
-| Event      | Session stream data                                              | Rate-limit stream data                                             |
-|------------|------------------------------------------------------------------|--------------------------------------------------------------------|
-| `snapshot` | `{"sessions":[12,15]}`: existing session IDs to fetch            | `{"limits":[...]}`: latest advertised lane states                  |
-| `update`   | `{"id":12}`: refetch; `{"id":12,"removed":true}`: remove locally | Complete lane state, replacing the entry keyed by `scheduling_key` |
-| `shutdown` | Empty string, followed by stream end                             | Empty string, followed by stream end                               |
-
-Session deletion can also produce an empty `update` immediately before its JSON
-removal notification. Skip JSON decoding for empty data; refresh the session list
-if needed. Session updates contain invalidations, so fetch the session detail,
-URL, or record endpoints for any displayed information that needs refreshing.
-Repeated `session_id` query parameters restrict both opening IDs and subsequent
-notifications. An omitted filter subscribes to all sessions, including new ones.
-
-Rate-limit events use `scheduling_key` and `consecutive_limits` in place of the
-REST response's `lane` and `consecutive_failures`, and additionally include
-`bytes_per_second`. Preserve these wire names. All fifteen lane-state fields
-are emitted, including an empty `group` string when no group is configured and
-`active: false` for an inactive lane. Delays are nonnegative milliseconds rounded
-up, `seconds` is an integer rate window, and zero `bytes_per_second` means no
-per-transfer receive-bandwidth limit. Opening snapshots adjust stored remaining
-delays for elapsed time; updates are not a continuous countdown.
-
-## Framing and browser clients
-
-SSE responses negotiate gzip or zstd through `Accept-Encoding`, using the same
-compression settings as other HTTP responses. Clients that do not advertise a
-supported encoding receive uncompressed events. The compressor flushes after
-each event, including keepalive comments, so delivery does not wait for the stream
-to close or a size threshold to be reached. Browser clients decompress the HTTP
-response before parsing SSE frames.
-
-The opening `retry: 3000` block sets a reconnect delay of 3000 milliseconds.
-Blank lines terminate frames. `: keepalive` comments keep idle subscriptions
-open; the server checks for them approximately every ten seconds. A stream
-carrying updates does not need a separate heartbeat for each timer tick.
-
-Every application frame includes `timestamp: <integer Unix seconds>`, captured
-when the event is queued. Standard SSE parsers ignore this custom field. It is
-neither part of the JSON payload nor a browser MessageEvent property. The stream
-does not emit SSE `id` fields.
-The [HTML event-stream parsing rules](https://html.spec.whatwg.org/multipage/server-sent-events.html#event-stream-interpretation)
-also distinguish comments and retry control fields from dispatched events.
-
-Use named listeners for `snapshot`, `update`, and `shutdown`. Browser
-`onmessage` does not receive these named events. This example forwards decoded
-payloads to an application callback; empty updates and shutdown use `null`:
-
-```js
-function watchState(url, onState) {
-  const source = new EventSource(url);
-  for (const name of ["snapshot", "update"]) {
-    source.addEventListener(name, event => {
-      onState(name, event.data === "" ? null : JSON.parse(event.data));
-    });
-  }
-  source.addEventListener("shutdown", () => onState("shutdown", null));
-  return source;
-}
-
-// apiKey is the raw hexadecimal native API key. EventSource has no custom-header option.
-const url = new URL("/download_sessions/events", window.location.origin);
-url.searchParams.set("idhan_key", apiKey);
-const stream = watchState(url, (event, payload) => {
-  // Apply the session rules in the table above, including the empty-update case.
-});
-
-// When leaving the view or deliberately stopping subscriptions:
-// stream.close();
+```text
+/events?types=job.status,downloader.rate_limit
 ```
 
-The OpenAPI `itemSchema` models parsed events. Its `data` field remains a string;
-`contentMediaType: application/json` and `contentSchema` describe the decoded JSON
-payload. Content annotations require explicit decoding and validation by tooling;
-ordinary JSON Schema validation does not automatically check embedded JSON.
-See [OpenAPI's SSE guidance](https://spec.openapis.org/oas/v3.2.1.html#special-considerations-for-server-sent-events).
+`downloader.*` matches every type beginning with `downloader.`. Current event
+types are `job.status`, `downloader.session`, `downloader.rate_limit`, and
+`downloader.debug`. Type names are strings and may grow as new producers are
+added.
 
-## Delivery and reconnects
+## Frame format
 
-These streams provide current-state notifications. Pending updates for the same
-session or lane can coalesce, so intermediate changes may be omitted. A fresh
-connection receives an opening snapshot, then notifications. The opening database
-query or stored-lane snapshot and registration are not one atomic transaction.
-Refetch when local state is uncertain, and account for deleted sessions or stale
-REST responses when applying asynchronous fetch results.
+`event:` is the standard SSE event name and describes the frame lifecycle:
+`snapshot`, `update`, or `shutdown`. Every application frame also has a custom
+`type:` field naming its category and a custom `timestamp:` field containing
+Unix seconds. `data:` contains JSON text. Standard `EventSource` ignores the
+custom fields; IDHAN's fetch based client reads `type:` to route and filter
+events.
 
-On reconnect, replace local state using the new snapshot instead of merging it
-with every previously cached entity. There is no durable history or event-ID
-replay; sending `Last-Event-ID` does not recover missed changes. Session snapshots
-contain IDs, while rate-limit snapshots contain complete latest advertised states.
+```text
+event: update
+timestamp: 1793030402
+type: job.status
+data: {"job_id":42,"status":"running","completed":false}
 
-Shutdown emits an empty-data event and ends the response. EventSource can attempt
-to reconnect after shutdown or a dropped connection. Call `close()` when the
-application intends to stop; reconnecting while shutdown is already in progress
-can produce another shutdown event without an opening snapshot. Closing or
-disconnecting releases the server subscription.
+```
 
-Lane snapshots and updates include `download_bytes_per_second`: received body bytes
-over the last second across all shards, sampled in 100 ms buckets. This includes
-decoded error and redirect bodies and excludes headers. Idle lanes report zero
-after a second. Active lane snapshots refresh once per second.
+An opening subscription sends the selected types' current state, then a
+`stream.snapshot.complete` snapshot frame with `{}`. Clients can use that
+marker to apply a complete snapshot before processing later updates. A
+reconnection sends fresh snapshots; there is no `id:` field, durable event
+history, or `Last-Event-ID` replay.
+
+Current snapshot payloads are:
+
+- `job.status`: one complete JobStatus object per job. Updates replace that
+  job; `{job_id, removed: true}` removes a retained job.
+- `downloader.session`: `{id}` for each existing or changed session. The client
+  fetches its session and URL data through REST; `{id, removed: true}` removes it.
+- `downloader.rate_limit`: one complete lane state per scheduling key.
+- `downloader.debug`: the complete diagnostic snapshot, including session
+  event history, lanes, and module activity.
+
+The stream begins with `retry: 3000`. `: keepalive` comments keep idle streams
+open about every ten seconds. Shutdown sends an empty `shutdown` event and ends
+the response. The server negotiates gzip or zstd, flushing after each event.
+
+## Coalescing and history
+
+Pending state updates coalesce by type and entity. If a client is slow and a job
+changes several times before the queue drains, it receives the newest job
+status; intermediate states may be skipped. The same applies to session and
+rate-limit state. This keeps queued data bounded around current state rather
+than accumulating obsolete copies.
+
+Downloader debug uses coalesced invalidations. When one is read, the server
+renders the latest diagnostic snapshot and retained session event rings, so
+coalescing invalidations does not discard each history entry. The event ring
+reports any entries it evicted before the snapshot was read.
+
+The WebUI combines all active watcher type filters and maintains one `/events`
+connection. When the set of requested types changes, it reconnects once with
+the new union and replaces local state from the fresh snapshots.

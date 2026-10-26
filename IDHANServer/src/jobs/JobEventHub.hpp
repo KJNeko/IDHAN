@@ -23,9 +23,7 @@ class JobEventHub : public std::enable_shared_from_this< JobEventHub >
 	std::mutex m_mutex {};
 	std::condition_variable_any m_wakeup {};
 	std::map< JobID, std::weak_ptr< JobTaskStatus > > m_jobs {};
-	std::map< JobID, Json::Value > m_snapshots {};
 	std::set< JobID > m_dirty {};
-	http::SSEEventHub m_events {};
 	std::jthread m_publisher;
 
 	void run( std::stop_token stop );
@@ -37,7 +35,5 @@ class JobEventHub : public std::enable_shared_from_this< JobEventHub >
 	~JobEventHub();
 	void add( const std::shared_ptr< JobTaskStatus >& status );
 	void remove( JobID id );
-	void shutdown();
-	[[nodiscard]] http::SSESubscription subscribe();
 };
 } // namespace idhan::jobs

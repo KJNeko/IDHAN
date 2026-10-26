@@ -6,6 +6,7 @@
 #include <utility>
 
 #include "JobTaskStatus.hpp"
+#include "events/ServerEvents.hpp"
 #include "logging/log.hpp"
 
 namespace idhan::jobs
@@ -25,12 +26,6 @@ JobEventHub::~JobEventHub()
 	m_publisher.request_stop();
 	m_wakeup.notify_all();
 	if ( m_publisher.joinable() ) m_publisher.join();
-	m_events.shutdown();
-}
-
-void JobEventHub::shutdown()
-{
-	m_events.shutdown();
 }
 
 void JobEventHub::changed( const JobID id )
@@ -61,21 +56,11 @@ void JobEventHub::remove( const JobID id )
 {
 	std::lock_guard lock { m_mutex };
 	m_jobs.erase( id );
-	m_snapshots.erase( id );
 	m_dirty.erase( id );
 	Json::Value payload;
 	payload[ "job_id" ] = id;
 	payload[ "removed" ] = true;
-	m_events.remove( std::to_string( id ), eventJson( payload ) );
-}
-
-http::SSESubscription JobEventHub::subscribe()
-{
-	std::lock_guard lock { m_mutex };
-	Json::Value payload;
-	payload[ "jobs" ] = Json::Value { Json::arrayValue };
-	for ( const auto& [ id, snapshot ] : m_snapshots ) payload[ "jobs" ].append( snapshot );
-	return m_events.subscribe( {}, { eventJson( payload ) }, false );
+	server::events().remove( "job.status", std::to_string( id ), eventJson( payload ) );
 }
 
 void JobEventHub::run( const std::stop_token stop )
@@ -104,8 +89,7 @@ void JobEventHub::run( const std::stop_token stop )
 				lock.lock();
 				if ( !m_jobs.contains( id ) ) continue;
 
-				m_snapshots[ id ] = std::move( snapshot );
-				m_events.publish( std::to_string( id ), std::move( encoded ) );
+				server::events().publish( "job.status", std::to_string( id ), std::move( encoded ) );
 			}
 			catch ( const std::exception& error )
 			{

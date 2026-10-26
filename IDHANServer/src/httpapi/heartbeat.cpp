@@ -3,7 +3,7 @@
 #include <chrono>
 #include <utility>
 
-#include "idhan/http/SSEBodySource.hpp"
+#include "idhan/http/SSEEventHub.hpp"
 
 namespace idhan::httpapi
 {
@@ -25,7 +25,6 @@ void HeartbeatService::run( const std::stop_token stop_token )
 HeartbeatService::HeartbeatService() :
   m_timer_mutex {},
   m_timer_wakeup {},
-  m_events {},
   m_timer { &HeartbeatService::run, this }
 {}
 
@@ -34,26 +33,11 @@ HeartbeatService::~HeartbeatService()
 	shutdown();
 }
 
-http::RouteDefinition HeartbeatService::route()
-{
-	return http::RouteDefinition {
-		http::RouteMetadata { proxygen::HTTPMethod::GET, "/heartbeat", {}, {} },
-		[ this ]( [[maybe_unused]] http::RequestContext context ) -> http::HTTPTask< http::Response >
-		{
-			http::Response response {};
-			response.body = proxygen::coro::HTTPSourceHolder { new http::SSEBodySource {
-				std::move( response.message ), m_events.subscribe( {} ) } };
-			co_return response;
-		}
-	};
-}
-
 void HeartbeatService::shutdown()
 {
 	m_timer.request_stop();
 	m_timer_wakeup.notify_all();
 	if ( m_timer.joinable() ) m_timer.join();
-	m_events.shutdown();
 }
 
 } // namespace idhan::httpapi

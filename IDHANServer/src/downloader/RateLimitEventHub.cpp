@@ -1,5 +1,6 @@
 #include "RateLimitEventHub.hpp"
 #include "DebugEvents.hpp"
+#include "events/ServerEvents.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -70,45 +71,6 @@ static std::optional< http::ValidatedJson > serialize( const LaneSnapshot& snaps
 	return std::move( *validated );
 }
 
-static std::optional< http::ValidatedJson > serializeSnapshot( const std::vector< LaneSnapshot >& limits )
-{
-	simdjson::builder::string_builder builder;
-	builder.start_object();
-	builder.escape_and_append_with_quotes( "limits" );
-	builder.append_colon();
-	builder.start_array();
-
-	bool first { true };
-	for ( const auto& snapshot : limits )
-	{
-		auto event { serialize( snapshot ) };
-		if ( !event ) return std::nullopt;
-
-		if ( !first ) builder.append_comma();
-		first = false;
-		builder.append_raw( event->text() );
-	}
-
-	builder.end_array();
-	builder.end_object();
-
-	auto json { builder.view() };
-	if ( json.error() )
-	{
-		log::error( "Unable to serialize rate-limit snapshot: {}", simdjson::error_message( json.error() ) );
-		return std::nullopt;
-	}
-
-	auto validated { http::ValidatedJson::parse( std::string { *json } ) };
-	if ( !validated )
-	{
-		log::error( "Unable to validate rate-limit snapshot: {}", validated.error().message );
-		return std::nullopt;
-	}
-
-	return std::move( *validated );
-}
-
 static LaneSnapshot currentSnapshot( LaneSnapshot snapshot, const SteadyClock::time_point captured_at )
 {
 	const auto elapsed { std::max( SteadyClock::duration::zero(), SteadyClock::now() - captured_at ) };
@@ -125,22 +87,31 @@ RateLimitEventHub& RateLimitEventHub::instance()
 	return hub;
 }
 
-http::SSESubscription RateLimitEventHub::subscribe()
+std::vector< http::SSEInitialEvent > RateLimitEventHub::snapshotEvents()
 {
-	std::vector< LaneSnapshot > limits {};
-	std::lock_guard lock { m_mutex };
-	limits.reserve( m_limits.size() );
-	for ( const auto& [ key, stored ] : m_limits )
+	std::vector< StoredSnapshot > snapshots {};
 	{
-		(void)key;
-		limits.emplace_back( currentSnapshot( stored.snapshot, stored.captured_at ) );
+		std::lock_guard lock { m_mutex };
+		snapshots.reserve( m_limits.size() );
+		for ( const auto& [ key, stored ] : m_limits )
+		{
+			(void)key;
+			snapshots.emplace_back( stored );
+		}
 	}
 
-	std::ranges::sort( limits, {}, &LaneSnapshot::key );
-	auto snapshot { serializeSnapshot( limits ) };
-	if ( !snapshot ) return m_events.subscribe( {}, {}, false );
+	std::ranges::sort(
+		snapshots, {}, []( const StoredSnapshot& stored ) -> const std::string& { return stored.snapshot.key; } );
 
-	return m_events.subscribe( {}, { std::move( *snapshot ) }, false );
+	std::vector< http::SSEInitialEvent > events {};
+	events.reserve( snapshots.size() );
+	for ( const auto& stored : snapshots )
+	{
+		auto json { serialize( currentSnapshot( stored.snapshot, stored.captured_at ) ) };
+		if ( json ) events.push_back( { "downloader.rate_limit", stored.snapshot.key, std::move( *json ) } );
+	}
+
+	return events;
 }
 
 void RateLimitEventHub::onLaneChanged( const LaneSnapshot& snapshot )
@@ -152,13 +123,8 @@ void RateLimitEventHub::onLaneChanged( const LaneSnapshot& snapshot )
 	}
 
 	auto event { serialize( snapshot ) };
-	if ( event ) m_events.publish( snapshot.key, std::move( *event ) );
+	if ( event ) server::events().publish( "downloader.rate_limit", snapshot.key, std::move( *event ) );
 	notifyDebugChanged();
-}
-
-void RateLimitEventHub::shutdown()
-{
-	m_events.shutdown();
 }
 
 } // namespace idhan::downloader

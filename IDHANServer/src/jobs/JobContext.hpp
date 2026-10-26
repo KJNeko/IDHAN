@@ -54,9 +54,7 @@ class JobRuntime
 
 	void enqueue( const std::shared_ptr< JobContext >& ctx );
 
-	[[nodiscard]] idhan::http::SSESubscription subscribe() { return m_events->subscribe(); }
 
-	void shutdownEvents() { m_events->shutdown(); }
 
 	[[nodiscard]] folly::Executor::KeepAlive<> executor() const;
 

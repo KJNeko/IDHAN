@@ -9,7 +9,6 @@
 #include "downloader/DownloadSessionManager.hpp"
 #include "downloader/RateLimitEventHub.hpp"
 #include "idhan/db/DBContext.hpp"
-#include "idhan/http/SSEBodySource.hpp"
 
 namespace idhan::httpapi
 {
@@ -103,20 +102,6 @@ http::RouteDefinition rateLimitResetRoute( db::DBContext& db )
 {
 	return http::RouteDefinition {
 		http::RouteMetadata { proxygen::HTTPMethod::POST, "/rate_limits/reset", {}, { apiAuthValidation( db ) } }, reset
-	};
-}
-
-http::RouteDefinition rateLimitEventsRoute( db::DBContext& db )
-{
-	return http::RouteDefinition {
-		http::RouteMetadata { proxygen::HTTPMethod::GET, "/rate_limits/events", {}, { apiAuthValidation( db ) } },
-		[]( [[maybe_unused]] http::RequestContext context ) -> http::HTTPTask< http::Response >
-		{
-			http::Response response {};
-			response.body = proxygen::coro::HTTPSourceHolder { new http::SSEBodySource {
-				std::move( response.message ), downloader::RateLimitEventHub::instance().subscribe() } };
-			co_return response;
-		}
 	};
 }
 

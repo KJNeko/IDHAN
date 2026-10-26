@@ -22,7 +22,6 @@
 #include "fileMetadata.hpp"
 #include "idValidation.hpp"
 #include "idhan/db/DBContext.hpp"
-#include "idhan/http/SSEBodySource.hpp"
 #include "jobs/JobContext.hpp"
 #include "jobs/JobTask.hpp"
 #include "jobs/UrlReorganizationProgress.hpp"
@@ -81,16 +80,6 @@ static void appendJobStatus(
 	const auto snapshot { status->snapshot() };
 	if ( cleanup_on_completion && snapshot[ "completed" ].asBool() ) status->m_cleanup_requested = true;
 	builder.append_raw( toCompactJson( snapshot ) );
-}
-
-static http::HTTPTask< http::Response > jobEvents(
-	[[maybe_unused]] db::DBContext& db,
-	[[maybe_unused]] http::RequestContext context )
-{
-	http::Response response {};
-	response.body = proxygen::coro::HTTPSourceHolder { new http::SSEBodySource {
-		std::move( response.message ), getJobRuntime().subscribe() } };
-	co_return response;
 }
 
 [[nodiscard]] static http::Response jsonResponse( simdjson::builder::string_builder& builder )
@@ -587,7 +576,6 @@ std::vector< http::RouteDefinition > jobRoutes( db::DBContext& db )
 				std::move( bound ) } );
 	};
 
-	add( proxygen::HTTPMethod::GET, "/jobs/events", {}, jobEvents );
 	add( proxygen::HTTPMethod::GET, "/jobs/status", {}, jobsStatus );
 	add( proxygen::HTTPMethod::GET, "/jobs/{job_id}/status", { jobIdPathParameter() }, jobStatus );
 	add( proxygen::HTTPMethod::POST, "/jobs/metadata/rescan", {}, rescanMetadata );

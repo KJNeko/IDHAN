@@ -2,10 +2,31 @@
 
 #include <algorithm>
 #include <chrono>
+#include <string_view>
 #include <utility>
 
 namespace idhan::http
 {
+
+static bool matchesType( const std::vector< std::string >& types, const std::string_view type )
+{
+	if ( types.empty() ) return true;
+
+	for ( const auto& selector : types )
+	{
+		if ( selector == type ) return true;
+		if ( selector.ends_with( ".*" )
+		     && type.starts_with( std::string_view { selector }.substr( 0, selector.size() - 1 ) ) )
+			return true;
+	}
+
+	return false;
+}
+
+static std::string snapshotKey( const std::string_view type, const std::string_view entity )
+{
+	return std::string { type } + '\x1f' + std::string { entity };
+}
 
 SSESubscription::SSESubscription( SSEEventHub& hub, std::shared_ptr< SSESubscriber > subscriber ) :
   m_subscriber( std::move( subscriber ) ),
@@ -114,68 +135,135 @@ void SSEEventHub::heartbeatAll()
 }
 
 SSESubscription SSEEventHub::subscribe(
-	std::vector< std::string > entities,
+	std::vector< std::string > types,
 	std::vector< ValidatedJson > initial_snapshots,
 	const bool include_stored_snapshots )
 {
+	std::vector< SSEInitialEvent > initial_events {};
+	initial_events.reserve( initial_snapshots.size() );
+	for ( auto& snapshot : initial_snapshots ) initial_events.push_back( { {}, {}, std::move( snapshot ) } );
+	return subscribeEvents( std::move( types ), std::move( initial_events ), include_stored_snapshots );
+}
+
+SSESubscription SSEEventHub::subscribeEvents(
+	std::vector< std::string > types,
+	std::vector< SSEInitialEvent > initial_events,
+	const bool include_stored_snapshots )
+{
 	auto subscriber { std::make_shared< SSESubscriber >() };
-	subscriber->entities = std::move( entities );
+	subscriber->types = std::move( types );
 
 	std::lock_guard lock { m_mutex };
 	if ( m_shutdown )
 	{
 		subscriber->pending.emplace_back(
-			SSEEvent { SSEEvent::Kind::shutdown, {}, std::nullopt, m_sequence, nowSeconds() } );
+			SSEEvent { SSEEvent::Kind::shutdown, {}, {}, std::nullopt, m_sequence, nowSeconds() } );
 		subscriber->closed = true;
 		subscriber->readable.post();
 		return SSESubscription { *this, std::move( subscriber ) };
 	}
 
-	for ( auto& snapshot : initial_snapshots )
+	if ( include_stored_snapshots )
+	{
+		for ( const auto& [ key, snapshot ] : m_snapshots )
+		{
+			const auto separator { key.find( '\x1f' ) };
+			const auto type { key.substr( 0, separator ) };
+			const auto entity { separator == std::string::npos ? std::string {} : key.substr( separator + 1 ) };
+			if ( !matchesType( subscriber->types, type ) ) continue;
+
+			subscriber->pending.emplace_back(
+				SSEEvent { SSEEvent::Kind::snapshot, type, entity, snapshot, m_sequence, nowSeconds() } );
+		}
+	}
+
+	for ( auto& initial : initial_events )
 		subscriber->pending.emplace_back(
-			SSEEvent { SSEEvent::Kind::snapshot, {}, std::move( snapshot ), m_sequence, nowSeconds() } );
+			SSEEvent {
+				SSEEvent::Kind::snapshot,
+				std::move( initial.type ),
+				std::move( initial.entity ),
+				std::move( initial.data ),
+				m_sequence,
+				nowSeconds() } );
 
 	if ( include_stored_snapshots )
 	{
-		for ( const auto& [ entity, snapshot ] : m_snapshots )
-		{
-			if ( !subscriber->entities.empty()
-			     && std::ranges::find( subscriber->entities, entity ) == subscriber->entities.end() )
-				continue;
-
+		auto marker { ValidatedJson::parse( "{}" ) };
+		if ( marker )
 			subscriber->pending.emplace_back(
-				SSEEvent { SSEEvent::Kind::snapshot, entity, snapshot, m_sequence, nowSeconds() } );
-		}
+				SSEEvent {
+					SSEEvent::Kind::snapshot,
+					"stream.snapshot.complete",
+					{},
+					std::move( *marker ),
+					m_sequence,
+					nowSeconds() } );
 	}
 	m_subscribers.emplace_back( subscriber );
 	return SSESubscription { *this, std::move( subscriber ) };
 }
 
-void SSEEventHub::publish( std::string entity, ValidatedJson snapshot )
+void SSEEventHub::publish( std::string type, std::string entity, ValidatedJson snapshot, const bool retain_snapshot )
 {
 	std::lock_guard lock { m_mutex };
-	m_snapshots.insert_or_assign( entity, snapshot );
+	const auto key { snapshotKey( type, entity ) };
+	if ( retain_snapshot )
+		m_snapshots.insert_or_assign( key, snapshot );
+	else
+		m_snapshots.erase( key );
 	const auto sequence { ++m_sequence };
 
 	for ( const auto& subscriber : m_subscribers )
 	{
 		if ( subscriber->closed ) continue;
-		if ( !subscriber->entities.empty()
-		     && std::ranges::find( subscriber->entities, entity ) == subscriber->entities.end() )
-			continue;
+		if ( !matchesType( subscriber->types, type ) ) continue;
 
 		const auto pending = std::ranges::find_if(
 			subscriber->pending,
-			[ &entity ]( const SSEEvent& event )
-			{ return event.kind == SSEEvent::Kind::update && event.entity == entity; } );
+			[ &entity, &type ]( const SSEEvent& event )
+			{ return event.kind == SSEEvent::Kind::update && event.entity == entity && event.type == type; } );
 		if ( pending != subscriber->pending.end() )
 		{
-			*pending = SSEEvent { SSEEvent::Kind::update, entity, snapshot, sequence, nowSeconds() };
+			*pending = SSEEvent { SSEEvent::Kind::update, type, entity, snapshot, sequence, nowSeconds() };
 		}
 		else
 		{
 			subscriber->pending.emplace_back(
-				SSEEvent { SSEEvent::Kind::update, entity, snapshot, sequence, nowSeconds() } );
+				SSEEvent { SSEEvent::Kind::update, type, entity, snapshot, sequence, nowSeconds() } );
+		}
+		subscriber->readable.post();
+	}
+}
+
+void SSEEventHub::publish( std::string entity, ValidatedJson snapshot )
+{
+	publish( {}, std::move( entity ), std::move( snapshot ) );
+}
+
+void SSEEventHub::remove( std::string type, std::string entity, std::optional< ValidatedJson > removal )
+{
+	std::lock_guard lock { m_mutex };
+	m_snapshots.erase( snapshotKey( type, entity ) );
+	const auto sequence { ++m_sequence };
+
+	for ( const auto& subscriber : m_subscribers )
+	{
+		if ( subscriber->closed ) continue;
+		if ( !matchesType( subscriber->types, type ) ) continue;
+
+		const auto pending = std::ranges::find_if(
+			subscriber->pending,
+			[ &entity, &type ]( const SSEEvent& event )
+			{ return event.kind == SSEEvent::Kind::update && event.entity == entity && event.type == type; } );
+		if ( pending != subscriber->pending.end() )
+		{
+			*pending = SSEEvent { SSEEvent::Kind::update, type, entity, removal, sequence, nowSeconds() };
+		}
+		else
+		{
+			subscriber->pending.emplace_back(
+				SSEEvent { SSEEvent::Kind::update, type, entity, removal, sequence, nowSeconds() } );
 		}
 		subscriber->readable.post();
 	}
@@ -183,32 +271,7 @@ void SSEEventHub::publish( std::string entity, ValidatedJson snapshot )
 
 void SSEEventHub::remove( std::string entity, std::optional< ValidatedJson > removal )
 {
-	std::lock_guard lock { m_mutex };
-	m_snapshots.erase( entity );
-	const auto sequence { ++m_sequence };
-
-	for ( const auto& subscriber : m_subscribers )
-	{
-		if ( subscriber->closed ) continue;
-		if ( !subscriber->entities.empty()
-		     && std::ranges::find( subscriber->entities, entity ) == subscriber->entities.end() )
-			continue;
-
-		const auto pending = std::ranges::find_if(
-			subscriber->pending,
-			[ &entity ]( const SSEEvent& event )
-			{ return event.kind == SSEEvent::Kind::update && event.entity == entity; } );
-		if ( pending != subscriber->pending.end() )
-		{
-			*pending = SSEEvent { SSEEvent::Kind::update, entity, removal, sequence, nowSeconds() };
-		}
-		else
-		{
-			subscriber->pending.emplace_back(
-				SSEEvent { SSEEvent::Kind::update, entity, removal, sequence, nowSeconds() } );
-		}
-		subscriber->readable.post();
-	}
+	remove( {}, std::move( entity ), std::move( removal ) );
 }
 
 void SSEEventHub::heartbeat()
@@ -219,7 +282,7 @@ void SSEEventHub::heartbeat()
 	{
 		if ( subscriber->closed || !subscriber->pending.empty() ) continue;
 		subscriber->pending.emplace_back(
-			SSEEvent { SSEEvent::Kind::keepalive, {}, std::nullopt, sequence, nowSeconds() } );
+			SSEEvent { SSEEvent::Kind::keepalive, {}, {}, std::nullopt, sequence, nowSeconds() } );
 		subscriber->readable.post();
 	}
 }
@@ -234,7 +297,7 @@ void SSEEventHub::shutdown()
 	{
 		if ( subscriber->closed ) continue;
 		subscriber->pending.emplace_back(
-			SSEEvent { SSEEvent::Kind::shutdown, {}, std::nullopt, sequence, nowSeconds() } );
+			SSEEvent { SSEEvent::Kind::shutdown, {}, {}, std::nullopt, sequence, nowSeconds() } );
 		subscriber->closed = true;
 		subscriber->readable.post();
 	}

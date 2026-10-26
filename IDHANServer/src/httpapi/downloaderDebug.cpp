@@ -8,6 +8,7 @@
 #include <chrono>
 #include <cstdint>
 #include <format>
+#include <iterator>
 #include <memory>
 #include <simdjson.h>
 #include <string>
@@ -17,8 +18,11 @@
 
 #include "IDHANTypes.hpp"
 #include "apiAuth.hpp"
+#include "downloader/DownloadSessionEventHub.hpp"
 #include "downloader/DebugEvents.hpp"
 #include "downloader/DownloadSessionManager.hpp"
+#include "downloader/RateLimitEventHub.hpp"
+#include "events/ServerEvents.hpp"
 #include "idhan/db/DBContext.hpp"
 #include "idhan/http/SSEBodySource.hpp"
 #include "modules/ModuleLoader.hpp"
@@ -490,17 +494,73 @@ static runtime::Task< http::ValidatedJson > renderDebug(
 	co_return std::move( snapshot.data );
 }
 
-http::RouteDefinition downloaderDebugEventsRoute( db::DBContext& db )
+static std::vector< std::string > splitTypes( const std::string_view text )
+{
+	std::vector< std::string > types {};
+	std::size_t begin { 0 };
+	while ( begin < text.size() )
+	{
+		const auto end { text.find( ',', begin ) };
+		const auto length { end == std::string_view::npos ? text.size() - begin : end - begin };
+		if ( length > 0 ) types.emplace_back( text.substr( begin, length ) );
+		if ( end == std::string_view::npos ) break;
+		begin = end + 1;
+	}
+
+	return types;
+}
+
+static bool includesType( const std::vector< std::string >& types, const std::string_view type )
+{
+	if ( types.empty() ) return true;
+	for ( const auto& selector : types )
+	{
+		if ( selector == type ) return true;
+		if ( selector.ends_with( ".*" )
+		     && type.starts_with( std::string_view { selector }.substr( 0, selector.size() - 1 ) ) )
+			return true;
+	}
+	return false;
+}
+
+http::RouteDefinition eventsRoute( db::DBContext& db )
 {
 	return http::RouteDefinition {
-		http::RouteMetadata { proxygen::HTTPMethod::GET, "/downloader/debug/events", {}, { apiAuthValidation( db ) } },
-		[ &db ]( [[maybe_unused]] http::RequestContext context ) -> http::HTTPTask< http::Response >
+		http::RouteMetadata { proxygen::HTTPMethod::GET, "/events", {}, { apiAuthValidation( db ) } },
+		[ &db ]( http::RequestContext context ) -> http::HTTPTask< http::Response >
 		{
+			const auto requested_e { context.parameters().optional< std::string >( "types" ) };
+			if ( !requested_e ) co_return http::Response::error( 400, requested_e.error().message );
+			const auto types { requested_e->has_value() ? splitTypes( **requested_e ) : std::vector< std::string > {} };
+
+			std::vector< http::SSEInitialEvent > initial {};
+			if ( includesType( types, "downloader.debug" ) )
+				initial.push_back( { "downloader.debug", "", http::ValidatedJson::parse( "{}" ).value() } );
+			if ( includesType( types, "downloader.rate_limit" ) )
+			{
+				auto limits { downloader::RateLimitEventHub::instance().snapshotEvents() };
+				initial.insert(
+					initial.end(), std::make_move_iterator( limits.begin() ), std::make_move_iterator( limits.end() ) );
+			}
+
+			if ( includesType( types, "downloader.session" ) )
+			{
+				const auto ids {
+					co_await db.query( "SELECT download_session_id FROM download_sessions" ).rows< DownloadSessionID >()
+				};
+				for ( const auto& [ id ] : ids )
+				{
+					auto payload { http::ValidatedJson::parse( std::format( "{{\"id\":{}}}", id ) ) };
+					if ( payload )
+						initial.push_back( { "downloader.session", std::to_string( id ), std::move( *payload ) } );
+				}
+			}
+
 			auto cursors { std::make_shared< std::unordered_map< DownloadSessionID, std::uint64_t > >() };
 			http::Response response {};
 			response.body = proxygen::coro::HTTPSourceHolder { new http::SSEBodySource {
 				std::move( response.message ),
-				downloader::debugEvents().subscribe( {}, { http::ValidatedJson::parse( "{}" ).value() }, false ),
+				server::events().subscribeEvents( types, std::move( initial ), true ),
 				[ &db, cursors ] { return renderDebug( db, cursors ); } } };
 			co_return response;
 		}

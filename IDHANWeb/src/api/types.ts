@@ -594,7 +594,7 @@ export interface JobStatus {
     response?: unknown;
 }
 
-/** What a job-dispatching endpoint answers with; subscribe to `/jobs/events` for progress. */
+/** What a job-dispatching endpoint answers with; subscribe to `job.status` on `/events` for progress. */
 export interface JobDispatch {
     job_id: number;
     status: string;

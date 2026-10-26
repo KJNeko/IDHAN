@@ -160,8 +160,8 @@ paths:
     $ref: ./paths/jobs/rescan_metadata.yaml
   /jobs/{job_id}/status:
     $ref: ./paths/jobs/status.yaml
-  /jobs/events:
-    $ref: ./paths/jobs/events.yaml
+  /events:
+    $ref: ./paths/events.yaml
   /jobs/status:
     $ref: ./paths/jobs/status_all.yaml
   /integrity:
@@ -176,8 +176,6 @@ paths:
     $ref: ./paths/health.yaml
   /auth/verify:
     $ref: ./paths/auth/verify.yaml
-  /heartbeat:
-    $ref: ./paths/heartbeat.yaml
   /records/metadata:
     $ref: ./paths/records/metadata.yaml
   /db/stats:
@@ -222,16 +220,10 @@ paths:
     $ref: ./paths/download_sessions/session_id/records.yaml
   /download_sessions/{session_id}/errors:
     $ref: ./paths/download_sessions/session_id/errors.yaml
-  /download_sessions/events:
-    $ref: ./paths/download_sessions/events.yaml
   /rate_limits:
     $ref: ./paths/rate_limits.yaml
   /rate_limits/reset:
     $ref: ./paths/rate_limits/reset.yaml
-  /rate_limits/events:
-    $ref: ./paths/rate_limits/events.yaml
-  /downloader/debug/events:
-    $ref: ./paths/downloader/debug_events.yaml
   /downloader/debug:
     $ref: ./paths/downloader/debug.yaml
   /plugins:
