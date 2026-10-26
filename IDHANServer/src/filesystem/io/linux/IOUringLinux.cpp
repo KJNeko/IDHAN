@@ -2,6 +2,7 @@
 
 #include "filesystem/io/linux/IOUringLinux.hpp"
 
+#include <folly/coro/CurrentExecutor.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 
@@ -15,7 +16,6 @@
 #include <string_view>
 #include <utility>
 
-#include "drogon/HttpAppFramework.h"
 #include "filesystem/io/linux/OpAwaiter.hpp"
 #include "filesystem/io/linux/ReadAwaiter.hpp"
 #include "filesystem/io/linux/WriteAwaiter.hpp"
@@ -62,6 +62,15 @@ FileIOUring::FileIOUring( const std::filesystem::path& path, const bool readonly
 		throw std::runtime_error( format_ns::format( "Failed to open file {}", path.string() ) );
 }
 
+FileIOUring::FileIOUring( const int fd, const std::size_t size, const bool readonly ) :
+  m_fd( fd ),
+  m_size( size ),
+  m_path( "<anonymous>" ),
+  m_readonly( readonly )
+{
+	if ( static_cast< int >( m_fd ) <= 0 ) throw std::runtime_error( "Adopted an invalid file descriptor" );
+}
+
 FileIOUring::~FileIOUring() = default;
 
 IOUring::NativeHandle FileIOUring::nativeHandle() const
@@ -83,7 +92,7 @@ const std::filesystem::path& FileIOUring::path() const
 	return m_path;
 }
 
-drogon::Task< std::vector< std::byte > > FileIOUring::read( const std::size_t offset, std::size_t len ) const
+runtime::Task< std::vector< std::byte > > FileIOUring::read( const std::size_t offset, std::size_t len ) const
 {
 	const auto file_max { m_size };
 	if ( offset > file_max ) co_return {};
@@ -92,7 +101,7 @@ drogon::Task< std::vector< std::byte > > FileIOUring::read( const std::size_t of
 	co_return co_await IOUring::getInstance().read( nativeHandle(), offset, len );
 }
 
-drogon::Task< void > FileIOUring::write( const std::vector< std::byte > data, const std::size_t offset ) const
+runtime::Task< void > FileIOUring::write( const std::vector< std::byte > data, const std::size_t offset ) const
 {
 	if ( m_readonly ) throw std::runtime_error( "Unable to write: file opened as read-only" );
 	co_await IOUring::getInstance().write( nativeHandle(), data, offset );
@@ -350,19 +359,22 @@ IOUringLinux::~IOUringLinux()
 	if ( uring_fd > 0 ) close( uring_fd );
 }
 
-WriteAwaiter IOUringLinux::sendWrite( const io_uring_sqe& sqe )
+WriteAwaiter IOUringLinux::sendWrite( const io_uring_sqe& sqe, folly::Executor* executor )
 {
-	return WriteAwaiter { this, sqe };
+	return WriteAwaiter { this, sqe, executor };
 }
 
-ReadAwaiter IOUringLinux::sendRead( const io_uring_sqe& sqe, std::shared_ptr< std::vector< std::byte > >& data )
+ReadAwaiter IOUringLinux::sendRead(
+	const io_uring_sqe& sqe,
+	std::shared_ptr< std::vector< std::byte > >& data,
+	folly::Executor* executor )
 {
-	return ReadAwaiter { this, sqe, data };
+	return ReadAwaiter { this, sqe, data, executor };
 }
 
-OpAwaiter IOUringLinux::sendOp( const io_uring_sqe& sqe )
+OpAwaiter IOUringLinux::sendOp( const io_uring_sqe& sqe, folly::Executor* executor )
 {
-	return OpAwaiter { this, sqe };
+	return OpAwaiter { this, sqe, executor };
 }
 
 bool IOUringLinux::opUnsupported( const int result )
@@ -377,7 +389,7 @@ static int traceOp( const int result, const std::string_view op, const std::stri
 	return result;
 }
 
-drogon::Task< std::vector< std::byte > > IOUringLinux::read(
+runtime::Task< std::vector< std::byte > > IOUringLinux::read(
 	const NativeHandle handle,
 	const std::size_t offset,
 	const std::size_t len )
@@ -395,6 +407,8 @@ drogon::Task< std::vector< std::byte > > IOUringLinux::read(
 	if ( len >= std::numeric_limits< __u32 >::max() )
 		throw std::runtime_error( "Read length exceeds io_uring u32 limit" );
 
+	auto* executor { co_await folly::coro::co_current_executor };
+
 	auto buffer_ptr { std::make_shared< std::vector< std::byte > >() };
 	buffer_ptr->resize( len );
 
@@ -402,10 +416,10 @@ drogon::Task< std::vector< std::byte > > IOUringLinux::read(
 	std::memset( &sqe, 0, sizeof( sqe ) );
 	io_uring_prep_read( &sqe, static_cast< int >( handle ), buffer_ptr->data(), static_cast< __u32 >( len ), offset );
 
-	co_return co_await sendRead( sqe, buffer_ptr );
+	co_return co_await sendRead( sqe, buffer_ptr, executor );
 }
 
-drogon::Task< void > IOUringLinux::write(
+runtime::Task< void > IOUringLinux::write(
 	const NativeHandle handle,
 	std::vector< std::byte > data,
 	const std::size_t offset )
@@ -422,6 +436,8 @@ drogon::Task< void > IOUringLinux::write(
 	if ( data.size() >= std::numeric_limits< __u32 >::max() )
 		throw std::runtime_error( "Write length exceeds io_uring u32 limit" );
 
+	auto* executor { co_await folly::coro::co_current_executor };
+
 	std::size_t written { 0 };
 	while ( written < data.size() )
 	{
@@ -436,7 +452,7 @@ drogon::Task< void > IOUringLinux::write(
 			static_cast< __u32 >( remaining ),
 			offset + written );
 
-		const auto bytes { co_await sendWrite( sqe ) };
+		const auto bytes { co_await sendWrite( sqe, executor ) };
 
 		if ( bytes == 0 )
 			throw std::runtime_error(
@@ -446,17 +462,19 @@ drogon::Task< void > IOUringLinux::write(
 	}
 }
 
-drogon::Task< int > IOUringLinux::removeFile( const std::filesystem::path path )
+runtime::Task< int > IOUringLinux::removeFile( const std::filesystem::path path )
 {
 	log::trace( "unlink {}", path.native() );
 
 	if ( m_iouring_setup )
 	{
+		auto* executor { co_await folly::coro::co_current_executor };
+
 		io_uring_sqe sqe {};
 		std::memset( &sqe, 0, sizeof( sqe ) );
 		io_uring_prep_unlinkat( &sqe, AT_FDCWD, path.c_str(), 0 );
 
-		if ( const auto result { co_await sendOp( sqe ) }; !opUnsupported( result ) )
+		if ( const auto result { co_await sendOp( sqe, executor ) }; !opUnsupported( result ) )
 			co_return traceOp( result, "unlinkat", path.native() );
 
 		log::trace( "unlinkat unsupported, falling back to unlink for {}", path.native() );
@@ -465,17 +483,19 @@ drogon::Task< int > IOUringLinux::removeFile( const std::filesystem::path path )
 	co_return traceOp( unlink( path.c_str() ) == 0 ? 0 : -errno, "unlink", path.native() );
 }
 
-drogon::Task< int > IOUringLinux::renameFile( const std::filesystem::path from, const std::filesystem::path to )
+runtime::Task< int > IOUringLinux::renameFile( const std::filesystem::path from, const std::filesystem::path to )
 {
 	log::trace( "rename {} -> {}", from.native(), to.native() );
 
 	if ( m_iouring_setup )
 	{
+		auto* executor { co_await folly::coro::co_current_executor };
+
 		io_uring_sqe sqe {};
 		std::memset( &sqe, 0, sizeof( sqe ) );
 		io_uring_prep_renameat( &sqe, AT_FDCWD, from.c_str(), AT_FDCWD, to.c_str(), 0 );
 
-		if ( const auto result { co_await sendOp( sqe ) }; !opUnsupported( result ) )
+		if ( const auto result { co_await sendOp( sqe, executor ) }; !opUnsupported( result ) )
 		{
 			if ( result < 0 )
 				log::trace( "renameat {} -> {} failed: {}", from.native(), to.native(), strerror( -result ) );
@@ -492,9 +512,11 @@ drogon::Task< int > IOUringLinux::renameFile( const std::filesystem::path from, 
 	co_return result;
 }
 
-drogon::Task< int > IOUringLinux::createDirectories( const std::filesystem::path path )
+runtime::Task< int > IOUringLinux::createDirectories( const std::filesystem::path path )
 {
 	log::trace( "create directories {}", path.native() );
+
+	folly::Executor* executor { m_iouring_setup ? co_await folly::coro::co_current_executor : nullptr };
 
 	std::filesystem::path prefix {};
 
@@ -512,7 +534,7 @@ drogon::Task< int > IOUringLinux::createDirectories( const std::filesystem::path
 			std::memset( &sqe, 0, sizeof( sqe ) );
 			io_uring_prep_mkdirat( &sqe, AT_FDCWD, prefix.c_str(), 0777 );
 
-			result = traceOp( co_await sendOp( sqe ), "mkdirat", prefix.native() );
+			result = traceOp( co_await sendOp( sqe, executor ), "mkdirat", prefix.native() );
 
 			if ( opUnsupported( result ) )
 			{
@@ -536,7 +558,7 @@ drogon::Task< int > IOUringLinux::createDirectories( const std::filesystem::path
 	co_return 0;
 }
 
-drogon::Task< std::expected< std::uint64_t, int > > IOUringLinux::fileSize( const std::filesystem::path path )
+runtime::Task< std::expected< std::uint64_t, int > > IOUringLinux::fileSize( const std::filesystem::path path )
 {
 	log::trace( "stat {}", path.native() );
 
@@ -547,11 +569,13 @@ drogon::Task< std::expected< std::uint64_t, int > > IOUringLinux::fileSize( cons
 
 	if ( m_iouring_setup )
 	{
+		auto* executor { co_await folly::coro::co_current_executor };
+
 		io_uring_sqe sqe {};
 		std::memset( &sqe, 0, sizeof( sqe ) );
 		io_uring_prep_statx( &sqe, AT_FDCWD, path.c_str(), AT_STATX_SYNC_AS_STAT, STATX_SIZE, &stx );
 
-		if ( const auto result { co_await sendOp( sqe ) }; !opUnsupported( result ) )
+		if ( const auto result { co_await sendOp( sqe, executor ) }; !opUnsupported( result ) )
 		{
 			if ( result < 0 ) co_return std::unexpected( traceOp( result, "statx", path.native() ) );
 			co_return static_cast< std::uint64_t >( stx.stx_size );

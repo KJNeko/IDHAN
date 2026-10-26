@@ -6,9 +6,13 @@
 #include <string_view>
 
 #include "IDHANTypes.hpp"
-#include "db/dbTypes.hpp"
+#include "idhan/runtime/Task.hpp"
 #include "jobs/JobTask.hpp"
-#include "threading/IDHANTask.hpp"
+
+namespace idhan::db
+{
+class DBContext;
+}
 
 namespace idhan::embeddings
 {
@@ -19,18 +23,20 @@ struct EmbeddingModelInfo
 	std::int32_t dimensions;
 };
 
-[[nodiscard]] IDHANTask< std::optional< EmbeddingModelInfo > > findEmbeddingModel(
+[[nodiscard]] runtime::Task< std::optional< EmbeddingModelInfo > > findEmbeddingModel(
 	std::string_view model_name,
-	DbClientPtr db );
+	db::DBContext& db );
 
-IDHANTask< void > registerEmbeddingModels( DbClientPtr db );
+runtime::Task< void > registerEmbeddingModels( db::DBContext& db );
 
-JobTask backfillJob( std::int32_t model_id, std::string model_name );
-
-//! False when one is already running for that model. The claim is released by backfillJob however it
-//! finishes, so the set lives beside the job rather than beside the endpoint.
+//! Claims model_id for a backfill. False if one is already running for it.
 [[nodiscard]] bool tryBeginBackfill( std::int32_t model_id );
 
+//! Releases a claim taken by tryBeginBackfill.
 void endBackfill( std::int32_t model_id );
+
+//! Sweeps every eligible record missing an embedding under model_id and embeds it.
+//! Caller must hold a tryBeginBackfill claim for model_id; the job releases it on completion.
+[[nodiscard]] JobTask backfillJob( std::int32_t model_id, std::string model_name, db::DBContext& db );
 
 } // namespace idhan::embeddings

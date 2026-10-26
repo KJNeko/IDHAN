@@ -114,7 +114,7 @@ class TaskBase
 
 } // namespace detail
 
-//! Lazy, move-only coroutine return type with no drogon/trantor dependency.
+//! Lazy, move-only coroutine return type without an executor dependency.
 //! \warning Like IDHANTask, this is lazy. Never build one from a capturing lambda and store it to
 //!          await later: the closure is destroyed before the body runs, leaving the captures
 //!          dangling. Use a captureless lambda or a free function and pass state as parameters,

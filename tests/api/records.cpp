@@ -1,5 +1,9 @@
 #include <algorithm>
+#include <array>
+#include <barrier>
+#include <exception>
 #include <numeric>
+#include <thread>
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -13,7 +17,7 @@ static RecordID recordFor( ApiClient& api, const int seed )
 {
 	const auto response { api.get( "/records/search", { { "sha256", hashFor( seed ) } } ) };
 
-	if ( response.status != drogon::k200OK ) return -1;
+	if ( response.status != 200 ) return -1;
 	if ( !response.json[ "found" ].asBool() ) return -1;
 
 	return response.json[ "record_id" ].asInt();
@@ -23,6 +27,13 @@ static int recordCount( pqxx::connection& connection )
 {
 	pqxx::nontransaction tx { connection };
 	return tx.query_value< int >( "SELECT count(*) FROM records" );
+}
+
+static Json::Value singleHashBody( const int seed )
+{
+	Json::Value body {};
+	body[ "sha256" ] = hashFor( seed );
+	return body;
 }
 
 SCENARIO_METHOD( ServerFixture, "Record creation", "[api][records][create]" )
@@ -153,14 +164,13 @@ SCENARIO_METHOD( ServerFixture, "Record creation", "[api][records][create]" )
 
 		WHEN( "a single hash is posted as a string" )
 		{
-			Json::Value body {};
-			body[ "sha256" ] = hashFor( 7 );
+			const auto body { singleHashBody( 7 ) };
 
 			const auto created { api().post( "/records/create", body ) };
 
 			THEN( "the record id comes back on its own" )
 			{
-				REQUIRE( created.status == drogon::k200OK );
+				REQUIRE( created.status == 200 );
 				REQUIRE( created.json[ "record_id" ].isIntegral() );
 				CHECK( created.json[ "record_id" ].asInt() == recordFor( api(), 7 ) );
 				CHECK( recordCount( db() ) == 1 );
@@ -179,6 +189,51 @@ SCENARIO_METHOD( ServerFixture, "Record creation", "[api][records][create]" )
 			}
 		}
 
+		WHEN( "two clients create the same previously absent hash concurrently" )
+		{
+			constexpr int repeats { 8 };
+
+			for ( int iteration { 0 }; iteration < repeats; ++iteration )
+			{
+				const auto seed { 1000 + iteration };
+				const auto body { singleHashBody( seed ) };
+				ApiClient first { serverPort() };
+				ApiClient second { serverPort() };
+				std::array< ApiResponse, 2 > responses {};
+				std::array< std::exception_ptr, 2 > errors {};
+				std::barrier launch { 2 };
+
+				auto create = [ & ]( const std::size_t index, ApiClient& client )
+				{
+					try
+					{
+						launch.arrive_and_wait();
+						responses[ index ] = client.postWithKey( "/records/create", body, api().key() );
+					}
+					catch ( ... )
+					{
+						errors[ index ] = std::current_exception();
+					}
+				};
+
+				std::thread first_request { create, 0, std::ref( first ) };
+				std::thread second_request { create, 1, std::ref( second ) };
+				first_request.join();
+				second_request.join();
+
+				INFO( "iteration " << iteration );
+				REQUIRE( errors[ 0 ] == nullptr );
+				REQUIRE( errors[ 1 ] == nullptr );
+				REQUIRE( responses[ 0 ].status == 200 );
+				REQUIRE( responses[ 1 ].status == 200 );
+				REQUIRE( responses[ 0 ].json[ "record_id" ].isIntegral() );
+				REQUIRE( responses[ 1 ].json[ "record_id" ].isIntegral() );
+				CHECK( responses[ 0 ].json[ "record_id" ].asInt() == responses[ 1 ].json[ "record_id" ].asInt() );
+				CHECK( recordFor( api(), seed ) == responses[ 0 ].json[ "record_id" ].asInt() );
+				CHECK( recordCount( db() ) == iteration + 1 );
+			}
+		}
+
 		WHEN( "a hash is not the length of a sha256" )
 		{
 			Json::Value hashes { Json::arrayValue };
@@ -189,7 +244,7 @@ SCENARIO_METHOD( ServerFixture, "Record creation", "[api][records][create]" )
 
 			THEN( "the request is rejected" )
 			{
-				CHECK( api().post( "/records/create", body ).status == drogon::k400BadRequest );
+				CHECK( api().post( "/records/create", body ).status == 400 );
 			}
 		}
 
@@ -203,7 +258,7 @@ SCENARIO_METHOD( ServerFixture, "Record creation", "[api][records][create]" )
 
 			THEN( "the request is rejected" )
 			{
-				CHECK( api().post( "/records/create", body ).status == drogon::k400BadRequest );
+				CHECK( api().post( "/records/create", body ).status == 400 );
 			}
 		}
 
@@ -220,7 +275,7 @@ SCENARIO_METHOD( ServerFixture, "Record creation", "[api][records][create]" )
 
 			THEN( "the request is rejected, and neither entry is created" )
 			{
-				CHECK( created.status == drogon::k400BadRequest );
+				CHECK( created.status == 400 );
 				CHECK( recordCount( db() ) == 0 );
 			}
 		}
@@ -229,7 +284,7 @@ SCENARIO_METHOD( ServerFixture, "Record creation", "[api][records][create]" )
 		{
 			THEN( "the request is rejected" )
 			{
-				CHECK( api().post( "/records/create", domainBody( "characters" ) ).status == drogon::k400BadRequest );
+				CHECK( api().post( "/records/create", domainBody( "characters" ) ).status == 400 );
 			}
 		}
 
@@ -240,7 +295,7 @@ SCENARIO_METHOD( ServerFixture, "Record creation", "[api][records][create]" )
 
 			THEN( "the request is rejected" )
 			{
-				CHECK( api().post( "/records/create", body ).status == drogon::k400BadRequest );
+				CHECK( api().post( "/records/create", body ).status == 400 );
 			}
 		}
 	}

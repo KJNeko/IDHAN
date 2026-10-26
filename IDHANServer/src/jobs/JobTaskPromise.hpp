@@ -2,8 +2,6 @@
 #include <coroutine>
 #include <memory>
 
-#include "drogon/HttpResponse.h"
-
 struct JobTaskStatus;
 struct JobTask;
 struct JobTaskPromise;

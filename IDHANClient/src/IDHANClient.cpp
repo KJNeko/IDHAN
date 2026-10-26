@@ -218,25 +218,32 @@ void IDHANClient::sendClientJson(
 			return;
 		}
 
-		// check if this is a special error or not.
-		// It should have json if so
-		auto header = response->header( QNetworkRequest::ContentTypeHeader );
-		if ( header.isValid() && header.toString().contains( "application/json" ) )
+		const auto response_body { response->readAll() };
+		const auto header { response->header( QNetworkRequest::ContentTypeHeader ) };
+		if ( header.toString().contains( "application/json", Qt::CaseInsensitive ) )
 		{
-			const auto response_body { response->readAll() };
-			QJsonDocument response_doc { QJsonDocument::fromJson( response_body ) };
+			const auto response_doc { QJsonDocument::fromJson( response_body ) };
 			if ( response_doc.isObject() )
 			{
-				QJsonObject response_object { response_doc.object() };
-				if ( response_object.contains( "error" ) )
+				const auto error_value { response_doc.object().value( "error" ) };
+				if ( error_value.isString() && !error_value.toString().isEmpty() )
 				{
-					const auto error_msg { response_object[ "error" ].toString().toStdString() };
-					// logging::error( object[ "error" ].toString().toStdString() );
-
-					errorHandler( response, error, error_msg );
+					errorHandler( response, error, error_value.toString().toStdString() );
 					return;
 				}
 			}
+		}
+
+		if ( !response_body.trimmed().isEmpty() )
+		{
+			errorHandler(
+				response,
+				error,
+				format_ns::format(
+					"{}: {}",
+					response->errorString().toStdString(),
+					QString::fromUtf8( response_body ).toStdString() ) );
+			return;
 		}
 
 		errorHandler( response, error, response->errorString().toStdString() );
@@ -265,13 +272,12 @@ void IDHANClient::sendClientJson(
 		responseHandler( response );
 	};
 
-	const auto error_connection { QObject::connect( response, &QNetworkReply::errorOccurred, errorSlot ) };
+	// Read errors on finished so the complete response body is available.
 	const auto response_connection { QObject::connect( response, &QNetworkReply::finished, responseSlot ) };
 
 	if ( response->isFinished() )
 	{
 		QNetworkReply::disconnect( response_connection );
-		QNetworkReply::disconnect( error_connection );
 
 		if ( response->error() == QNetworkReply::NoError )
 			responseSlot();

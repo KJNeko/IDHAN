@@ -24,6 +24,26 @@ struct EmbeddedMetadata
 	bool icc_profile { false };
 };
 
+enum class ChromaSubsampling : std::uint8_t
+{
+	UNKNOWN = 0,
+	GREYSCALE = 1, //!< Single component; no chroma planes.
+	NONE = 2, //!< 4:4:4
+	HORIZONTAL = 3, //!< 4:2:2
+	VERTICAL = 4, //!< 4:4:0
+	BOTH = 5, //!< 4:2:0
+};
+
+struct EncodingQuality
+{
+	bool lossless { false };
+	//! Estimated IJG quality (1-100) from JPEG quantization tables; absent when unavailable.
+	std::optional< std::uint8_t > quality {};
+	ChromaSubsampling subsampling { ChromaSubsampling::UNKNOWN };
+	//! Absent when scan order is unavailable or unsupported by this parser.
+	std::optional< bool > progressive {};
+};
+
 struct MetadataInfoImage
 {
 	int width { 0 };
@@ -31,6 +51,10 @@ struct MetadataInfoImage
 	std::uint8_t channels { 0 };
 	std::optional< PerceptualHash > phash {};
 	EmbeddedMetadata embedded {};
+	//! Absent when encoding information is unavailable.
+	std::optional< EncodingQuality > encoding {};
+	//! Sanitized JPEG COM text. Empty if no text was retained; absent if comments were not parsed.
+	std::optional< std::string > comment {};
 };
 
 struct MetadataInfoAnimation

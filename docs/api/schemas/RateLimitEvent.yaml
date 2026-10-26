@@ -1,0 +1,145 @@
+description: >-
+  Parsed named rate-limit event. JSON payloads are text in data. This stream
+  uses scheduling_key and consecutive_limits, whereas GET /rate_limits uses
+  lane and consecutive_failures. bytes_per_second appears only in this stream.
+oneOf:
+  - type: object
+    required: [ event, data ]
+    properties:
+      event:
+        const: snapshot
+      data:
+        type: string
+        contentMediaType: application/json
+        contentSchema:
+          $ref: ./RateLimitEvent.yaml#/$defs/Snapshot
+        examples:
+          - '{"limits":[]}'
+  - type: object
+    required: [ event, data ]
+    properties:
+      event:
+        const: update
+      data:
+        type: string
+        contentMediaType: application/json
+        contentSchema:
+          $ref: ./RateLimitEvent.yaml#/$defs/LaneState
+  - $ref: ./SSEShutdownEvent.yaml
+examples:
+  - event: snapshot
+    data: '{"limits":[]}'
+  - event: update
+    data: '{"scheduling_key":"example.com","group":"","requests":2,"seconds":1,"throttled":true,"effective_interval_ms":500,"remaining_ms":250,"consecutive_limits":0,"backed_off":false,"in_flight":1,"queued":3,"shards":1,"bytes_per_second":0,"download_bytes_per_second":0,"active":true}'
+  - event: shutdown
+    data: ''
+$defs:
+  Snapshot:
+    type: object
+    required: [ limits ]
+    properties:
+      limits:
+        type: array
+        description: Latest known lane states, sorted by scheduling_key.
+        items:
+          $ref: ./RateLimitEvent.yaml#/$defs/LaneState
+    examples:
+      - limits: [ ]
+  LaneState:
+    type: object
+    description: >-
+      Latest advertised lane state, keyed by scheduling_key. All listed fields
+      are emitted. Unsigned counters are JSON integers and can exceed signed
+      int64 range. Extra future diagnostic fields may be present.
+    required:
+      - scheduling_key
+      - group
+      - requests
+      - seconds
+      - throttled
+      - effective_interval_ms
+      - remaining_ms
+      - consecutive_limits
+      - backed_off
+      - in_flight
+      - queued
+      - shards
+      - download_bytes_per_second
+      - bytes_per_second
+      - active
+    properties:
+      scheduling_key:
+        type: string
+        description: Stable lane identifier used to replace that lane's local state.
+      group:
+        type: string
+        description: Configured group; an empty string means no group is configured.
+      requests:
+        type: integer
+        minimum: 0
+        description: Configured requests per seconds window; zero when unthrottled.
+      seconds:
+        type: integer
+        minimum: 0
+        description: Configured request-rate window in seconds; zero when unthrottled.
+      throttled:
+        type: boolean
+        description: Whether a request-rate policy is configured for the lane.
+      effective_interval_ms:
+        type: integer
+        minimum: 0
+        description: Current request interval in milliseconds, rounded up and clamped at zero.
+      remaining_ms:
+        type: integer
+        minimum: 0
+        description: >-
+          Milliseconds until the next request slot, rounded up and clamped at zero.
+          Opening snapshots subtract elapsed time since the stored lane update.
+          This is an estimate, not a continuously streamed countdown.
+      consecutive_limits:
+        type: integer
+        minimum: 0
+        description: Current consecutive failure count, named consecutive_failures in REST.
+      backed_off:
+        type: boolean
+        description: Whether the interval exceeds its base value or failures remain recorded.
+      in_flight:
+        type: integer
+        minimum: 0
+        description: Requests currently in flight in the lane.
+      queued:
+        type: integer
+        minimum: 0
+        description: Requests waiting in the lane queue.
+      shards:
+        type: integer
+        minimum: 0
+        description: Current number of lane worker shards.
+      download_bytes_per_second:
+        type: integer
+        format: int64
+        minimum: 0
+        description: Received body bytes over the last second across all lane transfers, sampled in 100 ms buckets. Includes decoded error and redirect bodies; excludes headers. Zero after a second without received bytes.
+      bytes_per_second:
+        type: integer
+        minimum: 0
+        description: Configured per-transfer bandwidth limit in bytes per second; zero disables it.
+      active:
+        type: boolean
+        description: Whether the lane currently has an active runtime instance.
+    examples:
+      - scheduling_key: example.com
+        group: ''
+        requests: 2
+        seconds: 1
+        throttled: true
+        effective_interval_ms: 500
+        remaining_ms: 250
+        consecutive_limits: 0
+        backed_off: false
+        in_flight: 1
+        queued: 3
+        shards: 1
+        bytes_per_second: 0
+        download_bytes_per_second: 0
+        active: true

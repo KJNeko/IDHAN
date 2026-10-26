@@ -1,0 +1,49 @@
+post:
+  tags:
+    - relationships
+  summary: Marks two records as unrelated
+  responses:
+    '200':
+      description: Marks two records as unrelated
+      content:
+        application/json:
+          schema:
+            type: object
+    '400':
+      description: Request rejected; the body is a plain-text error message.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '404':
+      description: Requested resource is unavailable.
+      content:
+        text/plain:
+          schema:
+            type: string
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            record_id_a:
+              $ref: ../../../schemas/RecordID.yaml
+            record_id_b:
+              $ref: ../../../schemas/RecordID.yaml
+          required:
+            - record_id_a
+            - record_id_b

@@ -1,0 +1,28 @@
+oneOf:
+  - type: object
+    properties:
+      type:
+        type: string
+        const: text
+      text:
+        type: string
+        minLength: 1
+      weight:
+        type: number
+        default: 1
+    required:
+      - type
+      - text
+  - type: object
+    properties:
+      type:
+        type: string
+        const: record
+      record_id:
+        $ref: RecordID.yaml
+      weight:
+        type: number
+        default: 1
+    required:
+      - type
+      - record_id

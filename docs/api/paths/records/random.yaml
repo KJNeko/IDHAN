@@ -4,7 +4,7 @@ get:
   summary: Returns a random parsed record
   description: Only records with a MIME type assigned are eligible.
   responses:
-    200:
+    '200':
       description: A random record ID
       content:
         application/json:
@@ -12,11 +12,33 @@ get:
             type: object
             properties:
               record_id:
-                $ref: '../../schemas/RecordID.yaml'
+                $ref: ../../schemas/RecordID.yaml
           examples:
             random:
               summary: Random record ID
               value:
                 record_id: 42
-    400:
-      description: No parsed records exist
+    '400':
+      description: Missing or malformed API key.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '404':
+      description: No records with an assigned MIME type exist.
+      content:
+        text/plain:
+          schema:
+            type: string

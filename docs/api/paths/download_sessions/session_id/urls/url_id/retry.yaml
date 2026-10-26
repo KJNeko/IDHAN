@@ -1,0 +1,99 @@
+post:
+  tags:
+    - downloader
+  summary: Retries a completed or failed URL
+  responses:
+    '200':
+      description: >-
+        A completed or failed URL job was reset and accepted for scheduling.
+        Returns the reset job with state pending, null error and finished_at,
+        and an empty children array. Its next attempt runs asynchronously;
+        this response does not mean the download has completed or succeeded.
+      content:
+        application/json:
+          schema:
+            $ref: ../../../../../schemas/DownloadUrlNode.yaml
+          example:
+            id: 42
+            parent_id: null
+            url: https://example.com/gallery/123
+            state: pending
+            created_at: 1792440000
+            finished_at: null
+            error: null
+            note: Previously imported
+            record_id: 17
+            children: [ ]
+    '400':
+      description: >-
+        Invalid request parameters or credentials, or the reset URL could not be
+        rescheduled. On scheduling failure, the job is marked failed with the
+        scheduling error and a new finished_at; deleted descendant jobs are
+        not restored. The body is a plain-text error message.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '404':
+      description: The session does not exist, or the URL job does not belong to that session.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '409':
+      description: >-
+        The URL job is not completed or failed, or another request changed its
+        state before the guarded reset. The body is a plain-text error message.
+      content:
+        text/plain:
+          schema:
+            type: string
+  parameters:
+    - name: session_id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+    - name: url_id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+  description: |
+    Retries an existing URL job whose state is exactly `completed` or `failed`.
+    Jobs in `pending`, `processing`, or `skipped` state return 409. Cancellation
+    of a session does not add another accepted URL-job state.
+
+    Deletes the job's descendant URL jobs recursively, resets the original job
+    to `pending`, clears its `error` and `finished_at`, and submits that same job
+    for another asynchronous attempt. The URL job ID, session membership, parent
+    relationship, URL, original `created_at`, `note`, and `record_id` are preserved
+    by the reset. Descendant deletion removes URL-job rows, not imported media
+    records or their stored files. New descendant jobs may be created by the
+    subsequent attempt.
+
+    The successful response describes the reset job, including `children: []`;
+    background work can change its state before a subsequent read. Fetch the
+    session's URL endpoints for current progress.
+
+    Retry is not an all-or-nothing operation. Descendant deletion happens before
+    the guarded reset and scheduling. A concurrent state change can produce 409
+    after descendants have already been deleted. If scheduling fails after the
+    reset, the original job is marked `failed` with a new error and finish time,
+    and the endpoint returns 400 without restoring its previous descendants.

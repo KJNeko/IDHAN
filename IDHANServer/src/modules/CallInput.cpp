@@ -30,6 +30,22 @@ std::expected< CallInput, std::string > CallInput::forPath( const std::filesyste
 	return input;
 }
 
+std::expected< CallInput, std::string > CallInput::forFd( ipc::UniqueFd fd )
+{
+	if ( !fd ) return std::unexpected( std::string { "invalid file descriptor" } );
+
+	struct stat info {};
+	if ( ::fstat( fd.get(), &info ) != 0 ) return std::unexpected( std::string { "could not stat descriptor" } );
+
+	if ( !S_ISREG( info.st_mode ) ) return std::unexpected( std::string { "descriptor is not a regular file" } );
+
+	CallInput input {};
+	input.m_size = static_cast< std::size_t >( info.st_size );
+	input.m_file = std::move( fd );
+
+	return input;
+}
+
 std::expected< CallInput, std::string > CallInput::forBlob( ipc::Blob blob )
 {
 	CallInput input {};

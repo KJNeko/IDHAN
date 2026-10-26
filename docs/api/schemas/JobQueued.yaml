@@ -1,0 +1,8 @@
+type: object
+properties:
+  job_id:
+    type: integer
+    format: int64
+    minimum: 0
+required:
+  - job_id

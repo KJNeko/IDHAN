@@ -2,6 +2,7 @@ type: object
 required:
   - scanned_count
   - failed_count
+  - failures
 properties:
   scanned_count:
     type: integer
@@ -11,3 +12,15 @@ properties:
     type: integer
     minimum: 0
     description: Records whose metadata could not be parsed.
+  failures:
+    type: array
+    items:
+      type: object
+      properties:
+        record_id:
+          $ref: RecordID.yaml
+        error:
+          type: string
+      required:
+        - record_id
+        - error

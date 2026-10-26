@@ -7,13 +7,35 @@ get:
       name: tag_domain_id
       required: true
       schema:
-        $ref: '../../../schemas/TagDomainID.yaml'
+        $ref: ../../../schemas/TagDomainID.yaml
   responses:
     '200':
       description: Domain info
       content:
         application/json:
           schema:
-            $ref: '../../../schemas/TagDomainInfo.yaml'
+            $ref: ../../../schemas/TagDomainInfo.yaml
     '400':
       description: Tag domain not found
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '404':
+      description: Requested tag or domain does not exist.
+      content:
+        text/plain:
+          schema:
+            type: string

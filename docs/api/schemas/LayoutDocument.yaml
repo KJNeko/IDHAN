@@ -1,0 +1,15 @@
+type: object
+additionalProperties: true
+properties:
+  id:
+    type: string
+    format: uuid
+  name:
+    type: string
+    minLength: 1
+  schema:
+    type: integer
+required:
+  - id
+  - name
+  - schema

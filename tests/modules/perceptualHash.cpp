@@ -16,12 +16,10 @@
 
 namespace idhan::test
 {
-namespace
-{
 
-const int VIPS_STATUS { VIPS_INIT( "IDHANModuleTests" ) };
+static const int VIPS_STATUS { VIPS_INIT( "IDHANModuleTests" ) };
 
-[[nodiscard]] std::string hex( const PerceptualHash& hash )
+[[nodiscard]] static std::string hex( const PerceptualHash& hash )
 {
 	constexpr char HEX[] { "0123456789abcdef" };
 	std::string result( hash.size() * 2, '0' );
@@ -34,7 +32,7 @@ const int VIPS_STATUS { VIPS_INIT( "IDHANModuleTests" ) };
 	return result;
 }
 
-[[nodiscard]] VipsImagePtr memoryImage(
+[[nodiscard]] static VipsImagePtr memoryImage(
 	std::vector< std::uint8_t >& pixels,
 	const int width,
 	const int height,
@@ -44,9 +42,8 @@ const int VIPS_STATUS { VIPS_INIT( "IDHANModuleTests" ) };
 		pixels.data(), pixels.size(), width, height, bands, VIPS_FORMAT_UCHAR ) };
 }
 
-} // namespace
-
-TEST_CASE( "Average hash golden image", "[phash][modules]" )
+//! The expected hash is what Hydrus itself produces for this file.
+TEST_CASE( "Perceptual hash matches Hydrus on a golden image", "[phash][modules]" )
 {
 	REQUIRE( VIPS_STATUS == 0 );
 	VipsImagePtr image { vips_image_new_from_file( IDHAN_SOURCE_DIR "/3rd-party/hydrus/static/hydrus.png", nullptr ) };
@@ -55,7 +52,7 @@ TEST_CASE( "Average hash golden image", "[phash][modules]" )
 	const auto generated { generatePerceptualHash( image.get() ) };
 	REQUIRE( generated );
 	REQUIRE( *generated );
-	CHECK( hex( **generated ) == "fee7c3c3c3c3e766" );
+	CHECK( hex( **generated ) == "b44dc7b24dcb381c" );
 }
 
 TEST_CASE( "Perceptual hash accepts supported pixel layouts and filters blanks", "[phash][modules]" )
@@ -74,7 +71,7 @@ TEST_CASE( "Perceptual hash accepts supported pixel layouts and filters blanks",
 	}
 }
 
-TEST_CASE( "Average hash enlarges a small image", "[phash][modules]" )
+TEST_CASE( "Perceptual hash enlarges a small image", "[phash][modules]" )
 {
 	REQUIRE( VIPS_STATUS == 0 );
 	std::vector< std::uint8_t > pixels( 8 * 8 * 3 );
@@ -92,10 +89,10 @@ TEST_CASE( "Average hash enlarges a small image", "[phash][modules]" )
 	const auto generated { generatePerceptualHash( image.get() ) };
 	REQUIRE( generated );
 	REQUIRE( *generated );
-	CHECK( hex( **generated ) == "01030f7ffff1020e" );
+	CHECK( hex( **generated ) == "8d2b156e9b11ee91" );
 }
 
-TEST_CASE( "Average hash composites alpha onto white", "[phash][modules]" )
+TEST_CASE( "Perceptual hash composites alpha onto white", "[phash][modules]" )
 {
 	REQUIRE( VIPS_STATUS == 0 );
 	constexpr int WIDTH { 300 };
@@ -116,7 +113,86 @@ TEST_CASE( "Average hash composites alpha onto white", "[phash][modules]" )
 	const auto generated { generatePerceptualHash( image.get() ) };
 	REQUIRE( generated );
 	REQUIRE( *generated );
-	CHECK( hex( **generated ) == "af7ff7affaf77bd6" );
+	CHECK( hex( **generated ) == "b51d256f201d2de5" );
+}
+
+//! Apply EXIF orientation to PNG as well as other formats.
+TEST_CASE( "Perceptual hash honours EXIF orientation", "[phash][modules]" )
+{
+	REQUIRE( VIPS_STATUS == 0 );
+	constexpr int WIDTH { 300 };
+	constexpr int HEIGHT { 260 };
+
+	std::vector< std::uint8_t > pixels( WIDTH * HEIGHT * 3 );
+	for ( int y = 0; y < HEIGHT; ++y )
+		for ( int x = 0; x < WIDTH; ++x )
+		{
+			const auto offset { static_cast< std::size_t >( ( y * WIDTH + x ) * 3 ) };
+			pixels[ offset ] = static_cast< std::uint8_t >( ( x * 31 + y * 7 ) % 256 );
+			pixels[ offset + 1 ] = static_cast< std::uint8_t >( ( x * 11 + y * 43 ) % 256 );
+			pixels[ offset + 2 ] = static_cast< std::uint8_t >( ( x * 53 + y * 3 ) % 256 );
+		}
+
+	auto upright { memoryImage( pixels, WIDTH, HEIGHT, 3 ) };
+	auto tagged { memoryImage( pixels, WIDTH, HEIGHT, 3 ) };
+	REQUIRE( upright != nullptr );
+	REQUIRE( tagged != nullptr );
+
+	constexpr int ROTATE_90_CLOCKWISE { 6 };
+	vips_image_set_int( tagged.get(), VIPS_META_ORIENTATION, ROTATE_90_CLOCKWISE );
+
+	VipsImage* rotated_raw { nullptr };
+	REQUIRE( vips_rot( upright.get(), &rotated_raw, VIPS_ANGLE_D90, nullptr ) == 0 );
+	VipsImagePtr rotated { rotated_raw };
+
+	const auto from_tag { generatePerceptualHash( tagged.get() ) };
+	const auto from_rotation { generatePerceptualHash( rotated.get() ) };
+	const auto unrotated { generatePerceptualHash( upright.get() ) };
+	REQUIRE( from_tag );
+	REQUIRE( from_rotation );
+	REQUIRE( unrotated );
+	REQUIRE( *from_tag );
+	REQUIRE( *unrotated );
+
+	CHECK( hex( **from_tag ) == hex( **from_rotation ) );
+	CHECK( hex( **from_tag ) != hex( **unrotated ) );
+}
+
+//! Discarding an insignificant alpha channel also skips the Hydrus 256px prescale.
+TEST_CASE( "Perceptual hash ignores an alpha channel nothing shows through", "[phash][modules]" )
+{
+	REQUIRE( VIPS_STATUS == 0 );
+	constexpr int WIDTH { 400 };
+	constexpr int HEIGHT { 380 };
+
+	std::vector< std::uint8_t > rgb( WIDTH * HEIGHT * 3 );
+	std::vector< std::uint8_t > rgba( WIDTH * HEIGHT * 4 );
+	for ( int y = 0; y < HEIGHT; ++y )
+		for ( int x = 0; x < WIDTH; ++x )
+		{
+			const std::uint8_t channels[ 3 ] { static_cast< std::uint8_t >( ( x * 31 + y * 7 ) % 256 ),
+				                               static_cast< std::uint8_t >( ( x * 11 + y * 43 ) % 256 ),
+				                               static_cast< std::uint8_t >( ( x * 53 + y * 3 ) % 256 ) };
+			const auto pixel { static_cast< std::size_t >( y * WIDTH + x ) };
+			for ( std::size_t c = 0; c < 3; ++c )
+			{
+				rgb[ pixel * 3 + c ] = channels[ c ];
+				rgba[ pixel * 4 + c ] = channels[ c ];
+			}
+			rgba[ pixel * 4 + 3 ] = 255;
+		}
+
+	auto opaque { memoryImage( rgb, WIDTH, HEIGHT, 3 ) };
+	auto with_alpha { memoryImage( rgba, WIDTH, HEIGHT, 4 ) };
+	REQUIRE( opaque != nullptr );
+	REQUIRE( with_alpha != nullptr );
+
+	const auto without { generatePerceptualHash( opaque.get() ) };
+	const auto with { generatePerceptualHash( with_alpha.get() ) };
+	REQUIRE( without );
+	REQUIRE( with );
+	REQUIRE( *without );
+	CHECK( hex( **without ) == hex( **with ) );
 }
 
 TEST_CASE( "Perceptual hash bounds materialization for extreme dimensions", "[phash][modules][memory]" )

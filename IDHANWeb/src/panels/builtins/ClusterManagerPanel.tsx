@@ -44,7 +44,7 @@ export function sanitizeScanParams(params: ScanParams, clusterReadonly: boolean)
     return {...params, fix_extensions: false, remove_missing_files: false};
 }
 
-// Encode as ?scan_mime=true&... since Drogon's fromString<bool> reads "true"/"false".
+// Encode boolean scan parameters explicitly as true/false query values.
 export function buildScanQuery(params: ScanParams): string {
   const qs = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {

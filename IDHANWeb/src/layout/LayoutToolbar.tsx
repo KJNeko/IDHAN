@@ -11,12 +11,15 @@ import { listPanels } from '../panels/registry';
 import { useLayoutStore } from './store';
 
 const PANEL_GROUPS = [
-    {title: 'Browse', types: ['search', 'grid', 'media-viewer']},
+    {title: 'Browse', types: ['search', 'grid', 'compact-grid', 'media-viewer']},
     {title: 'Record details', types: ['record-info', 'file-relationships', 'tag-editor', 'url-list', 'notes']},
     {title: 'Tags', types: ['tag-domain-manager', 'tag-relationships']},
     {title: 'Import & jobs', types: ['import', 'job-monitor']},
     {title: 'Embeddings', types: ['embedding-search', 'embedding-compare', 'embeddings']},
-    {title: 'Administration', types: ['cluster-manager', 'sunburst-stats', 'log-viewer', 'server-status']},
+    {
+        title: 'Administration',
+        types: ['cluster-manager', 'downloader-secrets', 'sunburst-stats', 'log-viewer', 'server-status']
+    },
     {title: 'Developer', types: ['selection-inspector', 'debug']},
 ] as const;
 
@@ -191,8 +194,8 @@ export function LayoutToolbar({ onSignOut }: { onSignOut: () => void }) {
             </div>
         </details>
 
-      <button type="button" className="toolbar-button" onClick={() => store.toggleEditMode()}>
-        {editMode ? 'Done' : 'Edit'}
+        <button type="button" className="toolbar-button" aria-pressed={editMode} onClick={() => store.toggleEditMode()}>
+            {editMode ? 'Finish editing' : 'Edit layout'}
       </button>
 
       <details className="toolbar-menu" onToggle={onMenuToggle}>
@@ -261,6 +264,10 @@ export function LayoutToolbar({ onSignOut }: { onSignOut: () => void }) {
           ))}
         </div>
       </details>
+
+        <span className="toolbar-meta" aria-label={`${Object.keys(placedPanels).length} panels in this layout`}>
+        <strong>{Object.keys(placedPanels).length}</strong> panels
+      </span>
 
       <button type="button" className="toolbar-button ghost" onClick={onSignOut}>
         Sign out

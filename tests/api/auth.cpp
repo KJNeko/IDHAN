@@ -20,7 +20,7 @@ SCENARIO_METHOD( ServerFixture, "API key checks", "[api][auth]" )
 
 			THEN( "it is answered" )
 			{
-				CHECK( listed.status == drogon::k200OK );
+				CHECK( listed.status == 200 );
 			}
 		}
 
@@ -30,7 +30,7 @@ SCENARIO_METHOD( ServerFixture, "API key checks", "[api][auth]" )
 
 			THEN( "it is rejected as a bad request" )
 			{
-				CHECK( listed.status == drogon::k400BadRequest );
+				CHECK( listed.status == 400 );
 			}
 		}
 
@@ -40,7 +40,7 @@ SCENARIO_METHOD( ServerFixture, "API key checks", "[api][auth]" )
 
 			THEN( "it is rejected as a bad request" )
 			{
-				CHECK( listed.status == drogon::k400BadRequest );
+				CHECK( listed.status == 400 );
 			}
 		}
 
@@ -50,7 +50,7 @@ SCENARIO_METHOD( ServerFixture, "API key checks", "[api][auth]" )
 
 			THEN( "it is unauthorized" )
 			{
-				CHECK( listed.status == drogon::k401Unauthorized );
+				CHECK( listed.status == 401 );
 			}
 		}
 	}
@@ -61,9 +61,9 @@ SCENARIO_METHOD( ServerFixture, "API key checks", "[api][auth]" )
 		{
 			const auto minted { api().get( "/generate_api_key" ) };
 
-			THEN( "the request conflicts" )
+			THEN( "initial key generation is no longer available" )
 			{
-				CHECK( minted.status == drogon::k409Conflict );
+				CHECK( minted.status == 404 );
 			}
 		}
 	}

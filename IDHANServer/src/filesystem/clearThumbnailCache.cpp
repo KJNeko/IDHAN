@@ -1,62 +1,147 @@
-#include <expected>
-#include <filesystem>
-#include <format>
-#include <string>
+#include <sys/stat.h>
+
+#include <algorithm>
+#include <cerrno>
+#include <charconv>
+#include <dirent.h>
+#include <fcntl.h>
+#include <memory>
 #include <string_view>
 #include <system_error>
+#include <unistd.h>
 
-#include "IDHANTypes.hpp"
-#include "db/dbTypes.hpp"
-#include "filesystem.hpp"
-#include "logging/log.hpp"
-#include "paths.hpp"
+#include "ThumbnailCache.hpp"
 
 namespace idhan::filesystem
 {
 
 constexpr std::string_view HEX_DIGITS { "0123456789abcdef" };
 
-std::expected< std::size_t, std::string > clearThumbnailCache()
+struct CloseThumbnailDirectory
 {
-	const auto path { getThumbnailsPath() };
+	void operator()( DIR* directory ) const noexcept { ::closedir( directory ); }
+};
 
-	std::error_code error {};
+using ThumbnailDirectory = std::unique_ptr< DIR, CloseThumbnailDirectory >;
 
-	if ( !std::filesystem::exists( path, error ) )
+static std::expected< ThumbnailDirectory, std::string > thumbnailDirectory( const int descriptor )
+{
+	if ( descriptor < 0 )
+		return std::unexpected(
+			std::system_error( errno, std::generic_category(), "Opening thumbnail directory" ).what() );
+
+	auto* directory { ::fdopendir( descriptor ) };
+	if ( !directory )
 	{
-		if ( error ) return std::unexpected( std::format( "{}: {}", path.string(), error.message() ) );
-
-		log::debug( "Thumbnail cache {} does not exist, nothing to purge", path.string() );
-		return 0;
+		const auto error { errno };
+		::close( descriptor );
+		return std::unexpected(
+			std::system_error( error, std::generic_category(), "Reading thumbnail directory" ).what() );
 	}
 
-	std::size_t files { 0 };
-	for ( const auto& subfolder : std::filesystem::directory_iterator( path, error ) )
-	{
-		if ( !subfolder.is_directory() ) continue;
-		const auto subfolder_name { subfolder.path().filename().string() };
-		const auto starts_with_expected { subfolder_name.starts_with( 't' ) };
-		const auto is_correct_len { subfolder_name.size() == 3 /* 'f00' */ };
+	return ThumbnailDirectory { directory };
+}
 
-		if ( !starts_with_expected || !is_correct_len )
+static bool isThumbnailBucket( const std::string_view name )
+{
+	if ( name.size() != 3 ) return false;
+
+	return name.front() == 't' && HEX_DIGITS.contains( name[ 1 ] ) && HEX_DIGITS.contains( name[ 2 ] );
+}
+
+static bool isThumbnailFilename( const std::string_view bucket, const std::string_view name )
+{
+	if ( name.size() < 71 ) return false;
+
+	if ( !name.ends_with( ".webp" ) || name[ 64 ] != '.' ) return false;
+
+	const auto hash { name.substr( 0, 64 ) };
+	if ( !std::ranges::all_of( hash, []( const char digit ) { return HEX_DIGITS.contains( digit ); } ) ) return false;
+
+	if ( hash.substr( 0, 2 ) != bucket.substr( 1 ) ) return false;
+
+	const auto size_text { name.substr( 65, name.size() - 70 ) };
+	if ( size_text.front() == '0' ) return false;
+
+	unsigned size {};
+	const auto result { std::from_chars( size_text.data(), size_text.data() + size_text.size(), size ) };
+	return result.ec == std::errc {} && result.ptr == size_text.data() + size_text.size() && size >= 1 && size <= 4096;
+}
+
+static std::expected< std::size_t, std::string > purgeThumbnailBucket( DIR* root, const char* bucket_name )
+{
+	auto bucket {
+		thumbnailDirectory( ::openat( ::dirfd( root ), bucket_name, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC ) )
+	};
+	if ( !bucket ) return std::unexpected( std::move( bucket.error() ) );
+
+	std::size_t deleted {};
+	while ( true )
+	{
+		errno = 0;
+		const auto* entry { ::readdir( bucket->get() ) };
+		if ( !entry )
 		{
-			log::warn(
-				"Thumbnail cache {} holds a folder named '{}', which is not a t00-tff bucket. Leaving it alone",
-				path.string(),
-				subfolder_name );
-			continue;
+			if ( errno != 0 ) return std::unexpected( std::system_error( errno, std::generic_category() ).what() );
+			return deleted;
 		}
 
-		const auto removed { std::filesystem::remove_all( subfolder, error ) };
-		if ( error ) return std::unexpected( std::format( "{}: {}", subfolder.path().string(), error.message() ) );
+		if ( !isThumbnailFilename( bucket_name, entry->d_name ) ) continue;
 
-		// remove_all counts the directory itself; the caller is told how many thumbnails went.
-		if ( removed > 0 ) files += removed - 1;
+		struct stat status {};
+		if ( ::fstatat( ::dirfd( bucket->get() ), entry->d_name, &status, AT_SYMLINK_NOFOLLOW ) != 0 )
+		{
+			if ( errno == ENOENT ) continue;
+			return std::unexpected( std::system_error( errno, std::generic_category() ).what() );
+		}
 
-		std::filesystem::create_directories( subfolder );
+		if ( !S_ISREG( status.st_mode ) ) continue;
+
+		if ( ::unlinkat( ::dirfd( bucket->get() ), entry->d_name, 0 ) != 0 )
+		{
+			if ( errno == ENOENT ) continue;
+			return std::unexpected( std::system_error( errno, std::generic_category() ).what() );
+		}
+
+		++deleted;
 	}
+}
 
-	return files;
+std::expected< std::size_t, std::string > clearThumbnailCache( const std::filesystem::path& path )
+{
+	const auto descriptor { ::open( path.c_str(), O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC ) };
+	if ( descriptor < 0 && errno == ENOENT ) return 0;
+
+	auto root { thumbnailDirectory( descriptor ) };
+	if ( !root ) return std::unexpected( std::move( root.error() ) );
+
+	std::size_t deleted {};
+	while ( true )
+	{
+		errno = 0;
+		const auto* entry { ::readdir( root->get() ) };
+		if ( !entry )
+		{
+			if ( errno != 0 ) return std::unexpected( std::system_error( errno, std::generic_category() ).what() );
+			return deleted;
+		}
+
+		if ( !isThumbnailBucket( entry->d_name ) ) continue;
+
+		struct stat status {};
+		if ( ::fstatat( ::dirfd( root->get() ), entry->d_name, &status, AT_SYMLINK_NOFOLLOW ) != 0 )
+		{
+			if ( errno == ENOENT ) continue;
+			return std::unexpected( std::system_error( errno, std::generic_category() ).what() );
+		}
+
+		if ( !S_ISDIR( status.st_mode ) ) continue;
+
+		auto result { purgeThumbnailBucket( root->get(), entry->d_name ) };
+		if ( !result ) return std::unexpected( std::move( result.error() ) );
+
+		deleted += *result;
+	}
 }
 
 } // namespace idhan::filesystem

@@ -3,7 +3,8 @@ type: object
 properties:
   hex:
     type: string
-    example: "F0F0F0"
+    examples:
+      - F0F0F0
   r:
     type: integer
     minimum: 0

@@ -6,6 +6,7 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import type { PanelProps, RecordId } from '../../host/types';
+import {readApiError} from '../../api/client';
 
 type State =
   | { status: 'idle' }
@@ -21,10 +22,12 @@ function UrlListPanel({ host }: PanelProps) {
   const [state, setState] = useState<State>({ status: 'idle' });
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
+    const [mutationError, setMutationError] = useState<string | null>(null);
 
   useEffect(() =>
     host.selection.subscribe((ids) => {
       setFocused(ids.length > 0 ? ids[ids.length - 1]! : null);
+        setMutationError(null);
     }), [host]);
 
   const load = useCallback(
@@ -32,7 +35,7 @@ function UrlListPanel({ host }: PanelProps) {
       setState({ status: 'loading' });
       try {
         const res = await host.http.fetch(`/records/${id}/urls`, { signal });
-        if (!res.ok) throw new Error(`/records/${id}/urls → ${res.status}`);
+          if (!res.ok) throw await readApiError(res, `GET /records/${id}/urls`);
         const urls = (await res.json()) as string[];
         setState({ status: 'ok', urls });
       } catch (error) {
@@ -54,29 +57,37 @@ function UrlListPanel({ host }: PanelProps) {
   }, [focused, load]);
 
   async function mutate(path: string, url: string) {
-    if (focused === null) return;
+      if (focused === null) return false;
     setBusy(true);
+      setMutationError(null);
     try {
       const res = await host.http.fetch(`/records/${focused}/urls/${path}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ urls: [url] }),
       });
-      if (!res.ok) throw new Error(`urls/${path} → ${res.status}`);
+        if (!res.ok) throw await readApiError(res, `POST /records/${focused}/urls/${path}`);
       await load(focused);
+        return true;
     } catch (error) {
-      host.ui.toast(error instanceof Error ? error.message : 'URL update failed', { kind: 'error' });
+        const message = error instanceof Error ? error.message : 'URL update failed';
+        setMutationError(message);
+        host.ui.toast(message, {kind: 'error'});
+        return false;
     } finally {
       setBusy(false);
     }
   }
 
+    async function addUrl(url: string) {
+        if (await mutate('add', url)) setDraft((current) => current.trim() === url ? '' : current);
+    }
+
   function onAdd(event: FormEvent) {
     event.preventDefault();
     const url = draft.trim();
     if (!url) return;
-    setDraft('');
-    void mutate('add', url);
+      void addUrl(url);
   }
 
   return (
@@ -98,6 +109,7 @@ function UrlListPanel({ host }: PanelProps) {
             </button>
           </form>
 
+            {mutationError && <p className="error" role="alert">{mutationError}</p>}
           {state.status === 'loading' && <p className="muted">Loading…</p>}
           {state.status === 'error' && <p className="error">{state.message}</p>}
           {state.status === 'ok' && state.urls.length === 0 && <p className="muted">No URLs on this record.</p>}

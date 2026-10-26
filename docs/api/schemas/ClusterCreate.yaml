@@ -1,0 +1,41 @@
+type: object
+properties:
+  name:
+    type: string
+    minLength: 1
+    description: Unique cluster name, compared exactly and case-sensitively.
+  path:
+    type: string
+    minLength: 1
+    description: >-
+      Unique registered path after absolute lexical normalization against the
+      server's working directory. Dot segments and trailing separators are
+      simplified. Physical directory aliases and already registered marker UUIDs
+      also conflict. Existing directories are allowed; missing identity markers
+      are initialized automatically, including for logically read-only clusters.
+    examples:
+      - /mnt/media/idhan
+  readonly:
+    type: boolean
+    default: true
+    description: IDHAN will not add, move, or rename media files in this cluster. Identity marker initialization and acknowledged recovery are permitted.
+  ratio:
+    description: 'Weight used when picking a cluster for new files: this cluster''s ratio over the sum
+      of all ratios. Reads return it as `ratio_number`.'
+    type: integer
+    default: 1
+    minimum: 0
+    maximum: 32767
+    examples:
+      - 1
+  size:
+    type: object
+    properties:
+      limit:
+        type: integer
+        format: int64
+        minimum: 0
+        default: 0
+required:
+  - name
+  - path

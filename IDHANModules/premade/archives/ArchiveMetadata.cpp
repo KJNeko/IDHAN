@@ -8,7 +8,7 @@
 #include <memory>
 
 #include "archives.hpp"
-#include "crypto/simpleHasher.hpp"
+#include "idhan/SHA256.hpp"
 #include "spdlog/spdlog.h"
 
 std::string_view ArchiveMetadata::name()
@@ -93,7 +93,7 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > ArchiveMetadata::parseF
 
 		archive_metadata.contained_records.emplace_back( file_hash, *filename );
 		archive_metadata.m_size += file_size;
-		spdlog::trace( "Got hash {}", idhan::crypto::toHex( file_hash ) );
+		spdlog::trace( "Got hash {}", idhan::SHA256::fromBuffer( file_hash ).hex() );
 
 		ret = archive_read_next_header( a.get(), &entry );
 	}

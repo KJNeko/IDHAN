@@ -5,13 +5,15 @@
 #include "IDHANTypes.hpp"
 #include "MimeIDs.hpp"
 #include "MimeReader.hpp"
-#include "threading/IDHANTask.hpp"
+#include "idhan/runtime/Task.hpp"
 
 namespace idhan::mime
 {
 
-[[nodiscard]] IDHANTask< MimeID > prescanMime( MimeReader reader );
+[[nodiscard]] runtime::Task< MimeID > prescanMime( MimeReader reader );
 
-[[nodiscard]] IDHANTask< MimeID > prescanMimeForPath( std::filesystem::path path );
+[[nodiscard]] runtime::Task< MimeID > prescanMimeForPath( std::filesystem::path path );
+
+[[nodiscard]] runtime::Task< MimeID > prescanMimeForFd( int fd, std::size_t size );
 
 } // namespace idhan::mime

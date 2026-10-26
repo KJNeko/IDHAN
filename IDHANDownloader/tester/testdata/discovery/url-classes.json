@@ -1,0 +1,30 @@
+{
+  "urlClasses": [
+    {
+      "name": "test-gallery",
+      "script": "example.js",
+      "hosts": [
+        "example.com"
+      ],
+      "routes": [
+        {
+          "export": "gallery",
+          "path": "/gallery"
+        }
+      ]
+    },
+    {
+      "name": "test-pixiv",
+      "script": "source.js",
+      "hosts": [
+        "www.pixiv.net"
+      ],
+      "routes": [
+        {
+          "export": "post",
+          "pathPrefix": "/artworks/"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "urlClasses": [
+    {
+      "name": "gelbooru",
+      "sortQueryParameters": true,
+      "script": "gelbooru.js",
+      "requestRate": {
+        "requests": 10,
+        "seconds": 1,
+        "shareSubdomains": true
+      },
+      "hosts": [
+        "gelbooru.com",
+        {
+          "host": "img4.gelbooru.com",
+          "requestRate": {
+            "requests": 2,
+            "seconds": 1
+          },
+          "retry": [
+            {
+              "code": 404,
+              "count": 3
+            }
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "export": "gallery",
+          "query": {
+            "page": "post",
+            "s": "list"
+          }
+        },
+        {
+          "export": "post",
+          "query": {
+            "page": "post",
+            "s": "view"
+          }
+        }
+      ]
+    }
+  ]
+}

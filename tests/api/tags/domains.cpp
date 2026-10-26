@@ -15,7 +15,7 @@ SCENARIO_METHOD( ServerFixture, "Tag domains", "[api][tags][domains]" )
 
 			THEN( "the response names the new domain" )
 			{
-				REQUIRE( created.status == drogon::k200OK );
+				REQUIRE( created.status == 200 );
 				CHECK( created.json[ "domain_name" ].asString() == "characters" );
 				CHECK( domainOf( created ) > 0 );
 			}
@@ -31,7 +31,7 @@ SCENARIO_METHOD( ServerFixture, "Tag domains", "[api][tags][domains]" )
 			{
 				const auto listed { api().get( "/tags/domain/list" ) };
 
-				REQUIRE( listed.status == drogon::k200OK );
+				REQUIRE( listed.status == 200 );
 				REQUIRE( listed.json.isArray() );
 				CHECK( listed.json.size() == 2 );
 			}
@@ -40,7 +40,7 @@ SCENARIO_METHOD( ServerFixture, "Tag domains", "[api][tags][domains]" )
 			{
 				const auto info { api().get( "/tags/domain/" + std::to_string( domainOf( created ) ) + "/info" ) };
 
-				REQUIRE( info.status == drogon::k200OK );
+				REQUIRE( info.status == 200 );
 				CHECK( info.json[ "domain_name" ].asString() == "characters" );
 				CHECK( domainOf( info ) == domainOf( created ) );
 			}
@@ -51,7 +51,7 @@ SCENARIO_METHOD( ServerFixture, "Tag domains", "[api][tags][domains]" )
 
 				THEN( "it conflicts and returns the existing domain" )
 				{
-					REQUIRE( again.status == drogon::k409Conflict );
+					REQUIRE( again.status == 409 );
 					CHECK( domainOf( again ) == domainOf( created ) );
 				}
 			}
@@ -62,7 +62,7 @@ SCENARIO_METHOD( ServerFixture, "Tag domains", "[api][tags][domains]" )
 
 				THEN( "the response names the domain that went" )
 				{
-					REQUIRE( deleted.status == drogon::k200OK );
+					REQUIRE( deleted.status == 200 );
 					CHECK( domainOf( deleted ) == domainOf( created ) );
 				}
 
@@ -72,7 +72,7 @@ SCENARIO_METHOD( ServerFixture, "Tag domains", "[api][tags][domains]" )
 						api().del( "/tags/domain/" + std::to_string( domainOf( created ) ) + "/delete" )
 					};
 
-					CHECK( twice.status == drogon::k404NotFound );
+					CHECK( twice.status == 404 );
 				}
 			}
 		}
@@ -83,7 +83,7 @@ SCENARIO_METHOD( ServerFixture, "Tag domains", "[api][tags][domains]" )
 
 			THEN( "it holds the default domain alone" )
 			{
-				REQUIRE( listed.status == drogon::k200OK );
+				REQUIRE( listed.status == 200 );
 				REQUIRE( listed.json.isArray() );
 				REQUIRE( listed.json.size() == 1 );
 				CHECK( listed.json[ 0 ][ "domain_name" ].asString() == "default" );
@@ -96,7 +96,7 @@ SCENARIO_METHOD( ServerFixture, "Tag domains", "[api][tags][domains]" )
 
 			THEN( "it is not found" )
 			{
-				CHECK( info.status == drogon::k404NotFound );
+				CHECK( info.status == 404 );
 			}
 		}
 
@@ -109,7 +109,7 @@ SCENARIO_METHOD( ServerFixture, "Tag domains", "[api][tags][domains]" )
 
 			THEN( "the request is rejected" )
 			{
-				CHECK( created.status == drogon::k400BadRequest );
+				CHECK( created.status == 400 );
 			}
 		}
 
@@ -119,7 +119,7 @@ SCENARIO_METHOD( ServerFixture, "Tag domains", "[api][tags][domains]" )
 
 			THEN( "the request is rejected" )
 			{
-				CHECK( created.status == drogon::k400BadRequest );
+				CHECK( created.status == 400 );
 			}
 		}
 	}
@@ -130,11 +130,11 @@ SCENARIO_METHOD( ServerFixture, "Tag domains", "[api][tags][domains]" )
 		const auto samus { api().createTag( "character", "samus aran" ) };
 		const auto samus_aran { api().createTag( "character", "samus" ) };
 
-		REQUIRE( api().createAliases( domain, { { samus, samus_aran } } ).status == drogon::k200OK );
+		REQUIRE( api().createAliases( domain, { { samus, samus_aran } } ).status == 200 );
 
 		WHEN( "the domain is deleted" )
 		{
-			REQUIRE( api().del( "/tags/domain/" + std::to_string( domain ) + "/delete" ).status == drogon::k200OK );
+			REQUIRE( api().del( "/tags/domain/" + std::to_string( domain ) + "/delete" ).status == 200 );
 
 			THEN( "its alias rows go with it" )
 			{

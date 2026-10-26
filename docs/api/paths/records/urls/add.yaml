@@ -8,7 +8,7 @@ post:
       in: path
       required: true
       schema:
-        $ref: '../../../schemas/RecordID.yaml'
+        $ref: ../../../schemas/RecordID.yaml
   requestBody:
     required: true
     content:
@@ -28,18 +28,37 @@ post:
             summary: Add source URLs
             value:
               urls:
-                - "https://example.com/image.jpg"
-                - "https://other.com/img.png"
+                - https://example.com/image.jpg
+                - https://other.com/img.png
   responses:
-    200:
-      description: URLs added
+    '200':
+      description: URLs linked.
       content:
         application/json:
           schema:
             type: object
-            properties:
-              status:
-                type: integer
-                example: 200
-    400:
+            additionalProperties: false
+    '400':
       description: Missing or invalid body
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '404':
+      description: Record does not exist or is unavailable.
+      content:
+        text/plain:
+          schema:
+            type: string

@@ -1,6 +1,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+
 #include "IDHANClient.hpp"
 #include "logging/logger.hpp"
 
@@ -36,6 +37,15 @@ QFuture< std::string > IDHANClient::getTagText( const TagID tag_id )
 }
 
 QFuture< std::vector< std::pair< TagID, std::string > > > IDHANClient::autocompleteTag( const QString& text )
+{
+	return autocompleteTag( text, {} );
+}
+
+QFuture< std::vector< std::pair< TagID, std::string > > > IDHANClient::autocompleteTag(
+	const QString& text,
+	const std::vector< TagDomainID >& domains,
+	const QString& display_type,
+	const bool include_unused )
 {
 	const auto promise { std::make_shared< QPromise< std::vector< std::pair< TagID, std::string > > > >() };
 	promise->start();
@@ -79,9 +89,9 @@ QFuture< std::vector< std::pair< TagID, std::string > > > IDHANClient::autocompl
 	url.setPath( "/tags/autocomplete" );
 	QUrlQuery query;
 	query.addQueryItem( "tag", text );
-	query.addQueryItem( "pre_search", "false" );
-	query.addQueryItem( "post_search", "true" );
-	query.addQueryItem( "threshold", "30" );
+	for ( const auto domain : domains ) query.addQueryItem( "tag_domains", QString::number( domain ) );
+	query.addQueryItem( "tag_display_type", display_type );
+	query.addQueryItem( "include_unused", include_unused ? "true" : "false" );
 	query.addQueryItem( "limit", "8" );
 	url.setQuery( query );
 

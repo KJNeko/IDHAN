@@ -1,0 +1,85 @@
+description: >-
+  Parsed named session event. JSON payloads are carried as text in data.
+  The retry preamble and heartbeat comments do not dispatch application events.
+oneOf:
+  - type: object
+    required: [ event, data ]
+    properties:
+      event:
+        const: snapshot
+      data:
+        type: string
+        contentMediaType: application/json
+        contentSchema:
+          $ref: ./DownloadSessionEvent.yaml#/$defs/Snapshot
+        examples:
+          - '{"sessions":[12,15]}'
+          - '{"sessions":[]}'
+  - type: object
+    required: [ event, data ]
+    properties:
+      event:
+        const: update
+      data:
+        description: >-
+          A session invalidation or removal encoded as JSON. During deletion,
+          an empty update can precede the JSON removal notification; skip JSON
+          decoding for that empty string and refresh the session list if needed.
+        anyOf:
+          - type: string
+            const: ''
+          - type: string
+            minLength: 1
+            contentMediaType: application/json
+            contentSchema:
+              $ref: ./DownloadSessionEvent.yaml#/$defs/Update
+            examples:
+              - '{"id":12}'
+              - '{"id":12,"removed":true}'
+  - $ref: ./SSEShutdownEvent.yaml
+examples:
+  - event: snapshot
+    data: '{"sessions":[12,15]}'
+  - event: update
+    data: '{"id":12}'
+  - event: update
+    data: '{"id":12,"removed":true}'
+  - event: update
+    data: ''
+  - event: shutdown
+    data: ''
+$defs:
+  Snapshot:
+    type: object
+    description: >-
+      IDs of existing sessions matching the subscription filter at opening.
+      Fetch each session's REST endpoint for its current details. This is not
+      an atomic snapshot of the database and subsequent notifications.
+    required: [ sessions ]
+    properties:
+      sessions:
+        type: array
+        items:
+          type: integer
+          format: int64
+    examples:
+      - sessions: [ 12, 15 ]
+      - sessions: [ ]
+  Update:
+    type: object
+    description: >-
+      Refetch session id for an ordinary invalidation. If removed is true,
+      discard that session from local state. No session details are included.
+    required: [ id ]
+    properties:
+      id:
+        type: integer
+        format: int64
+      removed:
+        type: boolean
+        const: true
+        description: Present only for a removal notification.
+    examples:
+      - id: 12
+      - id: 12
+        removed: true

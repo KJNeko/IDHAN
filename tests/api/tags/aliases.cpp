@@ -19,7 +19,7 @@ SCENARIO_METHOD( ServerFixture, "Tag aliases", "[api][tags][aliases]" )
 
 			THEN( "the request succeeds" )
 			{
-				CHECK( created.status == drogon::k200OK );
+				CHECK( created.status == 200 );
 			}
 
 			THEN( "the alias row exists in that domain" )
@@ -30,7 +30,7 @@ SCENARIO_METHOD( ServerFixture, "Tag aliases", "[api][tags][aliases]" )
 					tx.query_value< int >(
 						"SELECT count(*) FROM tag_aliases WHERE tag_domain_id = $1 AND aliased_id = $2 AND alias_id = $3",
 						pqxx::params { domain, samus, samus_aran } )
-					== 1 );
+				    == 1 );
 			}
 
 			AND_WHEN( "the same alias is created again" )
@@ -39,7 +39,7 @@ SCENARIO_METHOD( ServerFixture, "Tag aliases", "[api][tags][aliases]" )
 
 				THEN( "the request succeeds and nothing is duplicated" )
 				{
-					CHECK( again.status == drogon::k200OK );
+					CHECK( again.status == 200 );
 
 					pqxx::nontransaction tx { db() };
 					CHECK( tx.query_value< int >( "SELECT count(*) FROM tag_aliases" ) == 1 );
@@ -55,14 +55,14 @@ SCENARIO_METHOD( ServerFixture, "Tag aliases", "[api][tags][aliases]" )
 
 				THEN( "the request succeeds but the alias still points at the first target" )
 				{
-					CHECK( rerouted.status == drogon::k200OK );
+					CHECK( rerouted.status == 200 );
 
 					pqxx::nontransaction tx { db() };
 					CHECK(
 						tx.query_value< int >(
 							"SELECT alias_id FROM tag_aliases WHERE tag_domain_id = $1 AND aliased_id = $2",
 							pqxx::params { domain, samus } )
-						== samus_aran );
+					    == samus_aran );
 				}
 			}
 
@@ -72,7 +72,7 @@ SCENARIO_METHOD( ServerFixture, "Tag aliases", "[api][tags][aliases]" )
 
 				THEN( "the row goes" )
 				{
-					CHECK( removed.status == drogon::k200OK );
+					CHECK( removed.status == 200 );
 
 					pqxx::nontransaction tx { db() };
 					CHECK( tx.query_value< int >( "SELECT count(*) FROM tag_aliases" ) == 0 );
@@ -86,7 +86,7 @@ SCENARIO_METHOD( ServerFixture, "Tag aliases", "[api][tags][aliases]" )
 
 			THEN( "the request still succeeds" )
 			{
-				CHECK( removed.status == drogon::k200OK );
+				CHECK( removed.status == 200 );
 			}
 		}
 
@@ -96,7 +96,7 @@ SCENARIO_METHOD( ServerFixture, "Tag aliases", "[api][tags][aliases]" )
 
 			THEN( "the request is rejected" )
 			{
-				CHECK( created.status == drogon::k400BadRequest );
+				CHECK( created.status == 400 );
 			}
 		}
 
@@ -106,7 +106,7 @@ SCENARIO_METHOD( ServerFixture, "Tag aliases", "[api][tags][aliases]" )
 
 			THEN( "the request succeeds and changes nothing" )
 			{
-				CHECK( created.status == drogon::k200OK );
+				CHECK( created.status == 200 );
 
 				pqxx::nontransaction tx { db() };
 				CHECK( tx.query_value< int >( "SELECT count(*) FROM tag_aliases" ) == 0 );
@@ -120,7 +120,7 @@ SCENARIO_METHOD( ServerFixture, "Tag aliases", "[api][tags][aliases]" )
 
 			THEN( "the request is rejected" )
 			{
-				CHECK( created.status == drogon::k400BadRequest );
+				CHECK( created.status == 400 );
 			}
 		}
 
@@ -139,7 +139,7 @@ SCENARIO_METHOD( ServerFixture, "Tag aliases", "[api][tags][aliases]" )
 
 			THEN( "the request is rejected" )
 			{
-				CHECK( created.status == drogon::k400BadRequest );
+				CHECK( created.status == 400 );
 			}
 		}
 
@@ -149,7 +149,7 @@ SCENARIO_METHOD( ServerFixture, "Tag aliases", "[api][tags][aliases]" )
 
 			THEN( "the tag is not found" )
 			{
-				CHECK( created.status == drogon::k404NotFound );
+				CHECK( created.status == 404 );
 			}
 		}
 
@@ -159,7 +159,7 @@ SCENARIO_METHOD( ServerFixture, "Tag aliases", "[api][tags][aliases]" )
 
 			THEN( "the domain is not found" )
 			{
-				CHECK( created.status == drogon::k404NotFound );
+				CHECK( created.status == 404 );
 			}
 		}
 
@@ -169,7 +169,7 @@ SCENARIO_METHOD( ServerFixture, "Tag aliases", "[api][tags][aliases]" )
 
 			THEN( "the request is rejected" )
 			{
-				CHECK( created.status == drogon::k400BadRequest );
+				CHECK( created.status == 400 );
 			}
 		}
 
@@ -179,7 +179,7 @@ SCENARIO_METHOD( ServerFixture, "Tag aliases", "[api][tags][aliases]" )
 
 			THEN( "the request is rejected" )
 			{
-				CHECK( created.status == drogon::k400BadRequest );
+				CHECK( created.status == 400 );
 			}
 		}
 
@@ -190,7 +190,7 @@ SCENARIO_METHOD( ServerFixture, "Tag aliases", "[api][tags][aliases]" )
 
 			THEN( "the request is rejected" )
 			{
-				CHECK( created.status == drogon::k400BadRequest );
+				CHECK( created.status == 400 );
 			}
 		}
 	}
@@ -201,7 +201,7 @@ SCENARIO_METHOD( ServerFixture, "Tag aliases", "[api][tags][aliases]" )
 		const auto first { api().createTag( "character", "samus" ) };
 		const auto second { api().createTag( "character", "samus aran" ) };
 
-		REQUIRE( api().createAliases( domain, { { first, second } } ).status == drogon::k200OK );
+		REQUIRE( api().createAliases( domain, { { first, second } } ).status == 200 );
 
 		WHEN( "the far end is aliased back to the near end" )
 		{
@@ -209,10 +209,52 @@ SCENARIO_METHOD( ServerFixture, "Tag aliases", "[api][tags][aliases]" )
 
 			THEN( "the cycle is refused" )
 			{
-				CHECK( created.status == drogon::k409Conflict );
+				CHECK( created.status == 409 );
 			}
 		}
 	}
+}
+
+TEST_CASE_METHOD(
+	ServerFixture,
+	"Alias batches roll back completely when a later pair creates a cycle",
+	"[api][tags][aliases][atomic]" )
+{
+	const auto domain { api().createDomain( "atomic aliases" ) };
+	const auto a { api().createTag( "", "a" ) };
+	const auto b { api().createTag( "", "b" ) };
+	const auto c { api().createTag( "", "c" ) };
+	CHECK( api().createAliases( domain, { { a, b }, { b, c }, { c, a } } ).status == 409 );
+	pqxx::nontransaction read { db() };
+	CHECK(
+		read.query_value< int >( "SELECT COUNT(*) FROM tag_aliases WHERE tag_domain_id = $1", pqxx::params { domain } )
+	    == 0 );
+	CHECK( api().createAliases( domain, { { a, b }, { b, c } } ).status == 200 );
+	CHECK(
+		read.query_value< int >(
+			"SELECT effective_tag_id FROM tag_aliases "
+			"WHERE tag_domain_id = $1 AND aliased_id = $2",
+			pqxx::params { domain, a } )
+	    == c );
+}
+
+TEST_CASE_METHOD(
+	ServerFixture,
+	"Malformed alias removal batches preserve all existing relationships",
+	"[api][tags][aliases][atomic]" )
+{
+	const auto domain { api().createDomain( "atomic removal" ) };
+	const auto a { api().createTag( "", "a" ) };
+	const auto b { api().createTag( "", "b" ) };
+	const auto c { api().createTag( "", "c" ) };
+	REQUIRE( api().createAliases( domain, { { a, b }, { b, c } } ).status == 200 );
+	auto body { aliasBody( { { a, b }, { b, c } } ) };
+	body[ 1 ][ "aliased_id" ] = "invalid";
+	CHECK( api().post( "/tags/alias/remove", body, { { "tag_domain_id", std::to_string( domain ) } } ).status == 400 );
+	pqxx::nontransaction read { db() };
+	CHECK(
+		read.query_value< int >( "SELECT COUNT(*) FROM tag_aliases WHERE tag_domain_id = $1", pqxx::params { domain } )
+	    == 2 );
 }
 
 } // namespace idhan::test

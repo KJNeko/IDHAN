@@ -9,9 +9,6 @@
 namespace idhan::search
 {
 
-//! The composite (key, record_id) ordering every Set is held in. For a keyless column all keys
-//! compare equal, so the composite degenerates to record_id alone, which is exactly the order a
-//! RANDOM-sorted fetch produces.
 template < typename Column >
 bool compositeLess(
 	const Column& lhs_keys,
@@ -30,8 +27,6 @@ bool compositeLess(
 	return lhs_ids[ lhs_index ] < rhs_ids[ rhs_index ];
 }
 
-//! Rebuilds \p values in the order \p order names. Used to apply one permutation across every
-//! parallel array so they cannot drift apart.
 template < typename T >
 void applyPermutation( std::vector< T >& values, const std::vector< std::size_t >& order )
 {

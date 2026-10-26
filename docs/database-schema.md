@@ -12,6 +12,11 @@ This document is the structural reference; that one is the behavioural reference
 
 ## Conventions
 
+- **Application namespace.** New installations use `idhan`; custom application
+  schemas remain configurable. Startup rejects `public.idhan_info`, requiring manual
+  migration of public installations. Extensions use `database.extension_schema`,
+  which defaults to `public`.
+  See [Database initialization](database-initialization.md) for setup and migration requirements.
 - **Migrations** live in `IDHANMigration/src/` as `N-name.sql` and execute in ascending numeric
   order at server startup. The `idhan_info` table records how far each table has been migrated.
 - **ID types.** Every surrogate key is a distinct C++ type alias over an integer (`RecordID`,
@@ -78,19 +83,26 @@ Indexes (migration 195, supporting sort types): `(size, record_id)`,
 A cluster maps a `ClusterID` to an on-disk directory. Managed exclusively by
 `filesystem::ClusterManager`. See CLAUDE.md § File storage.
 
-| Column               | Type                             | Notes                                   |
-|----------------------|----------------------------------|-----------------------------------------|
-| `cluster_id`         | `SMALLSERIAL` PK                 | `ClusterID`                             |
-| `ratio_number`       | `SMALLINT` NOT NULL DEFAULT 1    | fill ratio weight (ratio / total ratio) |
-| `size_used`          | `BIGINT` NOT NULL DEFAULT 0      | bytes currently used                    |
-| `size_limit`         | `BIGINT` NOT NULL DEFAULT 0      | byte cap                                |
-| `file_count`         | `INTEGER` NOT NULL DEFAULT 0     | files stored here                       |
-| `read_only`          | `BOOLEAN` NOT NULL DEFAULT TRUE  | read-only clusters accept no new files  |
-| `cluster_name`       | `TEXT` UNIQUE                    | falls back to `folder_path` when NULL   |
-| `folder_path`        | `TEXT` NOT NULL UNIQUE           | on-disk directory                       |
+| Column         | Type                            | Notes                                        |
+|----------------|---------------------------------|----------------------------------------------|
+| `cluster_id`   | `SMALLSERIAL` PK                | `ClusterID`                                  |
+| `ratio_number` | `SMALLINT` NOT NULL DEFAULT 1   | fill ratio weight (ratio / total ratio)      |
+| `size_used`    | `BIGINT` NOT NULL DEFAULT 0     | bytes currently used                         |
+| `size_limit`   | `BIGINT` NOT NULL DEFAULT 0     | byte cap                                     |
+| `file_count`   | `INTEGER` NOT NULL DEFAULT 0    | files stored here                            |
+| `cluster_uuid` | `UUID` NOT NULL UNIQUE          | persistent storage identity; migration 416   |
+| `read_only`    | `BOOLEAN` NOT NULL DEFAULT TRUE | read-only clusters accept no new media files |
+| `cluster_name` | `TEXT` UNIQUE                   | falls back to `folder_path` when NULL        |
+| `folder_path`  | `TEXT` NOT NULL UNIQUE          | on-disk directory                            |
 
 New clusters default to read-only; a cluster only accepts writes if it was created with an explicit
 `"readonly": false`. `allowed_thumbnails` and `allowed_files` were dropped in migration 194.
+
+The root `.idhan-cluster.json` must match `cluster_uuid` before media access. New
+registrations initialize missing markers, including for logically read-only roots.
+Startup rejects missing or conflicting identities; explicit, self-resetting TOML
+acknowledgement permits recreating missing roots/markers with their existing UUIDs.
+See [cluster identity and recovery](cluster-identity-proposal.md).
 
 ### `mime`
 
@@ -185,10 +197,12 @@ An archive record (e.g. a zip) groups member records.
   `WHERE distance = N` sweep does not seq scan the table.
 - **`hamming_distance_queue`** — `record_id INTEGER PK → records` (migration 317): records whose
   distances have not been computed yet. `queue_hamming_distance()` (migration 319) fills it from
-  triggers on `image_metadata` that fire when a row is inserted with a `phash` or an existing NULL
-  `phash` is replaced by a real one; migration 318 seeded it with whatever was already hashed. The
-  server drains it on a ten second timer, claiming a fixed batch per sweep
-  (`IDHANServer/src/hamming/`).
+  triggers on `image_metadata` that fire when a row is inserted with a `phash` or its `phash`
+  actually changes, including replacement and clearing. Migration 318 seeded it with whatever
+  was already hashed. The server drains bounded 32-record batches at startup and in periodic
+  sweeps, with a one-second wait between sweeps. Queue claims and pair rebuilding share a
+  transaction and the relationship advisory lock (`IDHANServer/src/hamming/`). See
+  [Periodic maintenance](jobs.md#periodic-maintenance) for backfill, retry, and shutdown behavior.
 
 ### Alternatives and duplicates
 
@@ -199,26 +213,22 @@ An archive record (e.g. a zip) groups member records.
   turn. The transitive `alternative_groups`/`alternative_group_members` tables this replaced were
   dropped in migrations 314-315, along with their contents, because group membership made a record
   an alternative of its own duplicate.
-- **`duplicate_pairs`** — directed "worse → better" duplicate relationships.
-  `worse_record_id` is UNIQUE (a record is the worse side of at most one pair);
-  `CHECK (worse != better)`; index on `better_record_id`. The `insert_duplicate_pair(worse,
-  better)` function (migration 130) enforces no re-insertion, no immediate cycle, and re-points any
-  chain that previously ended at `worse` to `better`.
-- **`flattened_duplicates`** — view over `duplicate_pairs` (migration 323): `(record_id, root_id)`,
-  every record in a chain paired with the best record its chain ends at. The walk is recursive
-  because `insert_duplicate_pair` only re-points the pairs that ended at the record it was handed,
-  so a chain can stay deeper than one hop. It uses `UNION` rather than `UNION ALL`, so a cyclic
-  chain terminates instead of spinning; records inside one reach no root and are absent from the
-  view entirely.
-- **`undecided_hamming_distance`** — view over `hamming_distance` (migration 324) exposing
-  `left_id, right_id, distance` for the pairs no one has ruled on yet, so a caller filters with
-  `WHERE distance = N`. A pair drops out when it is in `alternative_records`, or when both sides
-  flatten onto the same duplicate via `flattened_duplicates`, which catches two records that share a
-  best record without ever having been paired directly. `unrelated_records` is **not** consulted, so
-  dismissed lookalikes still appear; `GET /relationships/duplicates/undecided` filters those out
-  itself rather than the view doing it. Referencing `flattened_duplicates` on both sides evaluates its
-  recursion twice, once per side; both are linear in `duplicate_pairs` and independent of how large
-  `hamming_distance` is.
+- **`duplicate_members`** — `(record_id → records, king_id → records)` (migration
+  404), primary key on `record_id` and an index on `king_id`. Each record has one king,
+  kings point to themselves, and isolated records may omit a membership row.
+  `insert_duplicate_pair(worse, better)` assigns a subordinate directly to the destination
+  king. Explicitly assigning a king to another king moves its whole group; moving a subordinate changes only that
+  record. Selecting a better member for the king promotes that member for the whole group.
+  Alternative and unrelated rulings transfer with the whole group. Removing an assignment detaches
+  only the subordinate and leaves the existing king unchanged. Intermediate comparisons are
+  discarded; the old `duplicate_pairs` table is dropped by migration 415.
+- **`flattened_duplicates`** — legacy view used to backfill `duplicate_members`, then
+  dropped by migration 410. Duplicate lookups read `duplicate_members` directly through
+  `duplicate_king` and `duplicate_group_members`.
+- **`undecided_hamming_distance`** — legacy view dropped by migration 395.
+  Undecided pairs are read directly from `hamming_distance`. Relationship mutations remove
+  ruled pairs using the current kings and requeue affected records when assignments or
+  rulings are removed.
 
 ---
 
@@ -464,7 +474,7 @@ Behavioural detail for the tag-system triggers is in
 | `concat_tag(ns, subtag)`                                 | join components into display text                                            | 20, inlined 196 |
 | `tag_text(namespace_id, subtag_id)` / `tag_text(tag_id)` | resolve a tag's display text                                                 | 20, inlined 196 |
 | `createbatchtags(namespaces[], subtags[])`               | race-safe bulk create of namespaces/subtags/tags, returns ids in input order | 85, 197, 198    |
-| `insert_duplicate_pair(worse, better)`                   | insert a duplicate relationship with cycle/re-insertion guards               | 130             |
+| `insert_duplicate_pair(worse, better)`                   | assign a record or merge its group under the destination king                | 411             |
 | `add_count` / `remove_count`                             | incremental `tag_counts` maintenance (used by triggers)                      | 93              |
 
 > `createbatchtags` dropped its table-level `LOCK` guards in migration 197 in favour of

@@ -3,16 +3,15 @@ get:
     - tags
     - records
   summary: Returns resolved tags with their provenance
-  description: |
-    Same as `/records/{record_id}/tags/active`, plus where each tag came from.
+  description: Same as `/records/{record_id}/tags/active`, plus where each tag came from.
   parameters:
     - name: record_id
       in: path
       required: true
       schema:
-        $ref: '../../../schemas/RecordID.yaml'
+        $ref: ../../../schemas/RecordID.yaml
   responses:
-    200:
+    '200':
       description: Resolved tags with provenance
       content:
         application/json:
@@ -28,21 +27,21 @@ get:
                 - inherited_from
               properties:
                 tag_id:
-                  $ref: '../../../schemas/TagID.yaml'
+                  $ref: ../../../schemas/TagID.yaml
                 tag_domain_id:
-                  $ref: '../../../schemas/TagDomainID.yaml'
+                  $ref: ../../../schemas/TagDomainID.yaml
                 explicit:
                   type: boolean
                   description: Stored directly on the record.
                 aliased_from:
                   type: array
                   items:
-                    $ref: '../../../schemas/TagID.yaml'
+                    $ref: ../../../schemas/TagID.yaml
                   description: Tags this one was resolved from.
                 inherited_from:
                   type: array
                   items:
-                    $ref: '../../../schemas/TagID.yaml'
+                    $ref: ../../../schemas/TagID.yaml
                   description: Tags that pulled this one in as a parent.
           examples:
             verbose:
@@ -56,5 +55,30 @@ get:
                 - tag_id: 30
                   tag_domain_id: 1
                   explicit: false
-                  aliased_from: [ 25 ]
+                  aliased_from:
+                    - 25
                   inherited_from: [ ]
+    '400':
+      description: Request rejected; the body is a plain-text error message.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '404':
+      description: Record does not exist or is unavailable.
+      content:
+        text/plain:
+          schema:
+            type: string

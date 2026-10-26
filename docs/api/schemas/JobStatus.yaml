@@ -1,0 +1,84 @@
+type: object
+description: >-
+  Job envelope with state-dependent fields and an optional arbitrary JSON result.
+  Known jobs always include job_name, location, completed, and continuous. start_time is
+  omitted until execution begins. The serializer's not_found placeholder has
+  only job_id and status; the single-job HTTP endpoint returns 404 for unknown IDs.
+properties:
+  job_id:
+    type: integer
+    format: int64
+    minimum: 0
+  job_name:
+    type: string
+  location:
+    type: string
+    description: Source location of the queued job.
+  status:
+    type: string
+    enum:
+      - running
+      - completed
+      - failed
+      - not_found
+  completed:
+    type: boolean
+  continuous:
+    type: boolean
+    description: >-
+      True for ongoing maintenance that repeats until shutdown. False for finite
+      work such as a cluster scan. Independent of current execution status;
+      a continuous job can be waiting, stopped, completed, or failed.
+  start_time:
+    type: integer
+    format: int64
+    description: Approximate Unix epoch seconds when execution began; omitted before the job starts.
+  end_time:
+    type: integer
+    format: int64
+    description: Approximate Unix epoch seconds when the job finished; present only on completed or failed jobs.
+  error:
+    type: string
+    description: Present for failed jobs; the message can be empty.
+  response:
+    description: >-
+      Optional operation-specific result accepting any JSON value, including
+      null, scalars, arrays, and objects. Presence does not by itself mean the job
+      is complete. Known producer contracts are documented separately as
+      ClusterScanResult, RescanMetadataResult, and ReorganizeUrlsResult; this generic envelope does not
+      validate a result against either shape or select a type from job_name.
+  progress:
+    description: >-
+      Optional operation-specific live progress snapshot. Cluster scans publish
+      ClusterScanProgress; URL reorganization publishes UrlReorganizationProgress;
+      automatically started services publish BackgroundJobProgress.
+      Progress is separate from the final response. Snapshots
+      remain available until the job is cleaned up; they are not persisted.
+required:
+  - job_id
+  - status
+allOf:
+  - if:
+      properties:
+        status:
+          enum:
+            - running
+            - completed
+            - failed
+      required:
+        - status
+    then:
+      required:
+        - job_name
+        - location
+        - completed
+        - continuous
+  - if:
+      properties:
+        status:
+          const: failed
+      required:
+        - status
+    then:
+      required:
+        - error

@@ -3,11 +3,11 @@
 #include <QWidget>
 
 #include <chrono>
-#include <deque>
 
 #include "HydrusImporter.hpp"
-
-class TagServiceWorker;
+#include "TagServiceWorker.hpp"
+#include "gui/hydrus/ImportProgress.hpp"
+#include "gui/hydrus/ImportServiceStatus.hpp"
 
 namespace Ui
 {
@@ -27,18 +27,15 @@ class TagServiceWidget : public QWidget
 	QString m_name;
 	bool m_preprocessed { false };
 	TagServiceWorker* m_worker;
-	using Clock = std::chrono::high_resolution_clock;
-	using TimePoint = std::chrono::high_resolution_clock::time_point;
+	idhan::hydrus::ImportServiceStatus* m_status { nullptr };
+	QTimer m_time_timer { this };
+	bool m_importing { false };
+	using Clock = idhan::hydrus::ImportProgress::Clock;
+	using TimePoint = Clock::time_point;
 	TimePoint m_start;
 
-	// Rate tracking
-	struct ProcessingRecord
-	{
-		TimePoint timestamp;
-		std::size_t count;
-	};
-
-	std::deque< ProcessingRecord > m_mapping_records;
+	std::optional< TagServiceWorker::Phase > m_phase {};
+	idhan::hydrus::ImportProgress m_progress {};
 
   public:
 
@@ -54,17 +51,14 @@ class TagServiceWidget : public QWidget
 
 	void setInfo( const idhan::hydrus::ServiceInfo& service_info );
 
-	// Rate calculation methods
-	double getMappingsPerSecond() const { return getAverageMappingsPerMinute() / 60.0; }
-
-	double getAverageMappingsPerMinute() const;
-
   signals:
-	void preprocessingComplete();
+	void preprocessingComplete( bool success );
 
   public slots:
 	void startImport();
 	void startPreImport();
+	void phaseStarted( TagServiceWorker::Phase phase, std::chrono::steady_clock::time_point started );
+	void phaseProgress( std::size_t count, std::chrono::steady_clock::time_point completed );
 
 	void updateProcessed();
 
@@ -72,15 +66,14 @@ class TagServiceWidget : public QWidget
 	void processedParents( std::size_t count );
 	void processedAliases( std::size_t count );
 
-	void preprocessingFinished();
+	void preprocessingFinished( bool success );
+	void importFinished();
+	void importFailed( const QString& message );
 	void setMaxMappings( std::size_t count );
 	void setMaxParents( std::size_t count );
 	void setMaxAliases( std::size_t count );
 
   private:
-
-	void recordMappingProcessed( std::size_t count );
-	void cleanOldRecords();
 
 	Ui::TagServiceWidget* ui;
 };

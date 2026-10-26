@@ -6,9 +6,9 @@
 
 #include "fgl/defines.hpp"
 
-namespace trantor
+namespace folly
 {
-class EventLoop;
+class Executor;
 }
 
 namespace idhan
@@ -37,12 +37,14 @@ struct [[nodiscard]] OpAwaiter
 #pragma GCC diagnostic ignored "-Wpedantic"
 	io_uring_sqe m_sqe {};
 #pragma GCC diagnostic pop
-	trantor::EventLoop* m_event_loop { nullptr };
+	folly::Executor* m_executor { nullptr };
 	int m_result { 0 };
 
-	OpAwaiter( IOUringLinux* uring, io_uring_sqe sqe );
+	OpAwaiter( IOUringLinux* uring, io_uring_sqe sqe, folly::Executor* executor );
 
-	FGL_DELETE_ALL_RO5( OpAwaiter );
+	FGL_DELETE_COPY( OpAwaiter );
+	// Moved into folly's ViaIfAsyncAwaitable before await_suspend ever captures `this`, so this is safe.
+	FGL_DEFAULT_MOVE( OpAwaiter );
 
 	void complete( int result );
 

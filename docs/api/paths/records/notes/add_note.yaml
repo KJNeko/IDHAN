@@ -3,11 +3,11 @@ post:
     - records
     - notes
   summary: Adds a note to a record
-  description: |
+  description: |-
     Notes are deduplicated by text, so an existing note with identical text is
     reused rather than created again. Returns the record's full note list.
   parameters:
-    - $ref: '../../../parameters/record_id.yaml'
+    - $ref: ../../../parameters/record_id.yaml
   requestBody:
     required: true
     content:
@@ -17,7 +17,7 @@ post:
         examples:
           simple:
             summary: A short note
-            value: "This image is from episode 3."
+            value: This image is from episode 3.
   responses:
     '200':
       description: The record's notes after insertion
@@ -27,7 +27,9 @@ post:
             type: array
             items:
               type: object
-              required: [ note_id, text ]
+              required:
+                - note_id
+                - text
               properties:
                 note_id:
                   type: integer
@@ -39,8 +41,28 @@ post:
               summary: Notes after adding one
               value:
                 - note_id: 1
-                  text: "This image is from episode 3."
+                  text: This image is from episode 3.
     '400':
       description: Content-Type was not `text/plain`, or `record_id` is invalid
+      content:
+        text/plain:
+          schema:
+            type: string
     '500':
       description: Internal server error
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '404':
+      description: Record does not exist or is unavailable.
+      content:
+        text/plain:
+          schema:
+            type: string

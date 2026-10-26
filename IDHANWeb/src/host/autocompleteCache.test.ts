@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AutocompleteResult } from '../api/types';
+import type {AutocompleteOptions, AutocompleteResult} from '../api/types';
 
 // Mock the REST client so we can count network calls and assert the prefix-extension reuse.
 const autocompleteTags = vi.fn<
-  (prefix: string, opts?: { domain?: number; limit?: number }) => Promise<AutocompleteResult[]>
+    (prefix: string, opts?: AutocompleteOptions) => Promise<AutocompleteResult[]>
 >();
 
 vi.mock('../api/client', () => ({
-  api: { autocompleteTags: (prefix: string, opts?: { domain?: number; limit?: number }) => autocompleteTags(prefix, opts) },
+    api: {autocompleteTags: (prefix: string, opts?: AutocompleteOptions) => autocompleteTags(prefix, opts)},
 }));
 
 const { autocomplete, clearAutocompleteCache } = await import('./autocompleteCache');
@@ -56,4 +56,33 @@ describe('autocomplete cache', () => {
     await autocomplete('sam', { limit: 2 });
     expect(autocompleteTags).toHaveBeenCalledTimes(2);
   });
+
+    it('canonicalizes domain sets and keeps different selections separate', async () => {
+        autocompleteTags.mockResolvedValue([row('samus', 1)]);
+        await autocomplete('sam', {domains: [2, 1, 2]});
+        await autocomplete('sam', {domains: [1, 2]});
+        expect(autocompleteTags).toHaveBeenCalledTimes(1);
+        expect(autocompleteTags).toHaveBeenLastCalledWith('sam', {
+            domains: [1, 2], display: 'display', includeUnused: true, limit: 100,
+        });
+        await autocomplete('sam', {domains: [1]});
+        expect(autocompleteTags).toHaveBeenCalledTimes(2);
+        await autocomplete('sam', {domain: 1});
+        expect(autocompleteTags).toHaveBeenCalledTimes(2);
+        await autocomplete('sam', {domains: [], domain: 1});
+        expect(autocompleteTags).toHaveBeenCalledTimes(3);
+        await autocomplete('sam');
+        expect(autocompleteTags).toHaveBeenCalledTimes(3);
+    });
+
+    it('separates display modes and used-only settings for exact and prefix reuse', async () => {
+        autocompleteTags.mockResolvedValue([row('samus', 1)]);
+        await autocomplete('sam', {domain: 1, display: 'display'});
+        await autocomplete('sam', {domain: 1, display: 'storage'});
+        expect(autocompleteTags).toHaveBeenCalledTimes(2);
+        await autocomplete('samu', {domain: 1, display: 'storage', includeUnused: false});
+        expect(autocompleteTags).toHaveBeenCalledTimes(3);
+        await autocomplete('samus', {domain: 2, display: 'storage', includeUnused: false});
+        expect(autocompleteTags).toHaveBeenCalledTimes(4);
+    });
 });

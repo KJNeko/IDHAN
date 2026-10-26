@@ -1,0 +1,15 @@
+type: object
+description: >-
+  Parsed shutdown event, followed by the end of the stream. The data string is
+  empty and must not be JSON-decoded. The wire-only timestamp field is ignored
+  by standard SSE parsers and is not part of this parsed object.
+required: [ event, data ]
+properties:
+  event:
+    const: shutdown
+  data:
+    type: string
+    const: ''
+examples:
+  - event: shutdown
+    data: ''

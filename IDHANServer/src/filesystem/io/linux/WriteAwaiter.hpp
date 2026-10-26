@@ -8,9 +8,9 @@
 
 #include "fgl/defines.hpp"
 
-namespace trantor
+namespace folly
 {
-class EventLoop;
+class Executor;
 }
 
 namespace idhan
@@ -36,11 +36,13 @@ struct [[nodiscard]] WriteAwaiter
 #pragma GCC diagnostic ignored "-Wpedantic"
 	io_uring_sqe m_sqe {};
 #pragma GCC diagnostic pop
-	trantor::EventLoop* m_event_loop { nullptr };
+	folly::Executor* m_executor { nullptr };
 
-	WriteAwaiter( IOUringLinux* uring, io_uring_sqe sqe );
+	WriteAwaiter( IOUringLinux* uring, io_uring_sqe sqe, folly::Executor* executor );
 
-	FGL_DELETE_ALL_RO5( WriteAwaiter );
+	FGL_DELETE_COPY( WriteAwaiter );
+	// Moved into folly's ViaIfAsyncAwaitable before await_suspend ever captures `this`, so this is safe.
+	FGL_DEFAULT_MOVE( WriteAwaiter );
 
 	void complete( int result );
 

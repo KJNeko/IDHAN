@@ -6,7 +6,7 @@
 #include <type_traits>
 #include <variant>
 
-#include "crypto/simpleHasher.hpp"
+#include "idhan/SHA256.hpp"
 
 namespace idhan::ipc
 {
@@ -63,6 +63,36 @@ std::string describeWireValue( const Json::Value& json )
 	};
 }
 
+[[nodiscard]] Json::Value encodingToJson( const EncodingQuality& encoding )
+{
+	Json::Value json {};
+	json[ "lossless" ] = encoding.lossless;
+	if ( encoding.quality ) json[ "quality" ] = static_cast< Json::UInt >( *encoding.quality );
+	json[ "subsampling" ] = static_cast< Json::UInt >( std::to_underlying( encoding.subsampling ) );
+	if ( encoding.progressive ) json[ "progressive" ] = *encoding.progressive;
+	return json;
+}
+
+[[nodiscard]] EncodingQuality encodingFromJson( const Json::Value& json )
+{
+	EncodingQuality encoding {
+		.lossless = json[ "lossless" ].asBool(),
+		.quality = std::nullopt,
+		.subsampling = ChromaSubsampling::UNKNOWN,
+		.progressive = std::nullopt
+	};
+
+	if ( json[ "quality" ].isIntegral() ) encoding.quality = static_cast< std::uint8_t >( json[ "quality" ].asUInt() );
+	if ( json[ "progressive" ].isBool() ) encoding.progressive = json[ "progressive" ].asBool();
+
+	// Ignore subsampling values introduced by newer workers.
+	const auto subsampling { json[ "subsampling" ].asUInt() };
+	if ( subsampling <= std::to_underlying( ChromaSubsampling::BOTH ) )
+		encoding.subsampling = static_cast< ChromaSubsampling >( subsampling );
+
+	return encoding;
+}
+
 [[nodiscard]] Json::Value imageToJson( const MetadataInfoImage& image, const bool include_phash )
 {
 	Json::Value json {};
@@ -70,6 +100,8 @@ std::string describeWireValue( const Json::Value& json )
 	json[ "height" ] = image.height;
 	json[ "channels" ] = static_cast< Json::UInt >( image.channels );
 	json[ "embedded" ] = embeddedToJson( image.embedded );
+	if ( image.encoding ) json[ "encoding" ] = encodingToJson( *image.encoding );
+	if ( image.comment ) json[ "comment" ] = *image.comment;
 	if ( include_phash && image.phash ) json[ "phash" ] = phashToHex( *image.phash );
 	return json;
 }
@@ -83,8 +115,13 @@ std::string describeWireValue( const Json::Value& json )
 		.height = json[ "height" ].asInt(),
 		.channels = static_cast< std::uint8_t >( json[ "channels" ].asUInt() ),
 		.phash = std::nullopt,
-		.embedded = embeddedFromJson( json[ "embedded" ] )
+		.embedded = embeddedFromJson( json[ "embedded" ] ),
+		.encoding = std::nullopt,
+		.comment = std::nullopt
 	};
+
+	if ( json.isMember( "encoding" ) ) image.encoding = encodingFromJson( json[ "encoding" ] );
+	if ( json[ "comment" ].isString() ) image.comment = json[ "comment" ].asString();
 
 	if ( !include_phash || !json.isMember( "phash" ) ) return image;
 	if ( !json[ "phash" ].isString() ) return std::unexpected( "image metadata has a non-string phash" );
@@ -359,7 +396,7 @@ Json::Value toJson( const MetadataInfo& info )
 				for ( const auto& contained : metadata.contained_records )
 				{
 					Json::Value entry { Json::objectValue };
-					entry[ "hash" ] = crypto::toHex( contained.hash );
+					entry[ "hash" ] = idhan::SHA256::fromBuffer( contained.hash ).hex();
 					entry[ "path" ] = contained.path;
 					records.append( std::move( entry ) );
 				}
@@ -481,8 +518,10 @@ std::expected< MetadataInfo, std::string > metadataInfoFromJson( const Json::Val
 							return std::unexpected(
 								std::format( "archive metadata entry '{}' has a non-string path", hex ) );
 
-						archive.contained_records.emplace_back(
-							crypto::fromHex( hex ), contained[ "path" ].asString() );
+						const auto hash { SHA256::fromHex( hex ) };
+						if ( !hash ) return std::unexpected( hash.error() );
+
+						archive.contained_records.emplace_back( hash->data(), contained[ "path" ].asString() );
 					}
 
 					archive.m_size = static_cast< std::size_t >( value[ "size" ].asUInt64() );

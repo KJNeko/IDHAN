@@ -24,7 +24,7 @@ SCENARIO_METHOD( ServerFixture, "Tag relationships", "[api][tags][relationships]
 
 			THEN( "every side is an empty array" )
 			{
-				REQUIRE( relationships.status == drogon::k200OK );
+				REQUIRE( relationships.status == 200 );
 
 				for ( const auto& side :
 				      { "parents", "children", "older_siblings", "younger_siblings", "aliases", "aliased" } )
@@ -37,13 +37,13 @@ SCENARIO_METHOD( ServerFixture, "Tag relationships", "[api][tags][relationships]
 
 		WHEN( "one is aliased onto the other" )
 		{
-			REQUIRE( api().createAliases( domain, { { samus, samus_aran } } ).status == drogon::k200OK );
+			REQUIRE( api().createAliases( domain, { { samus, samus_aran } } ).status == 200 );
 
 			THEN( "the aliased tag names its alias" )
 			{
 				const auto relationships { api().get( relationshipsPath( domain, samus ) ) };
 
-				REQUIRE( relationships.status == drogon::k200OK );
+				REQUIRE( relationships.status == 200 );
 				REQUIRE( relationships.json[ "aliases" ].size() == 1 );
 				CHECK( relationships.json[ "aliases" ][ 0 ].asInt() == samus_aran );
 				CHECK( relationships.json[ "aliased" ].empty() );
@@ -53,7 +53,7 @@ SCENARIO_METHOD( ServerFixture, "Tag relationships", "[api][tags][relationships]
 			{
 				const auto relationships { api().get( relationshipsPath( domain, samus_aran ) ) };
 
-				REQUIRE( relationships.status == drogon::k200OK );
+				REQUIRE( relationships.status == 200 );
 				REQUIRE( relationships.json[ "aliased" ].size() == 1 );
 				CHECK( relationships.json[ "aliased" ][ 0 ].asInt() == samus );
 				CHECK( relationships.json[ "aliases" ].empty() );
@@ -64,20 +64,20 @@ SCENARIO_METHOD( ServerFixture, "Tag relationships", "[api][tags][relationships]
 				const auto other { api().createDomain( "other" ) };
 				const auto relationships { api().get( relationshipsPath( other, samus ) ) };
 
-				REQUIRE( relationships.status == drogon::k200OK );
+				REQUIRE( relationships.status == 200 );
 				CHECK( relationships.json[ "aliases" ].empty() );
 			}
 		}
 
 		WHEN( "one is made the parent of the other" )
 		{
-			REQUIRE( api().createParents( domain, { { samus, samus_aran } } ).status == drogon::k200OK );
+			REQUIRE( api().createParents( domain, { { samus, samus_aran } } ).status == 200 );
 
 			THEN( "the parent names its child" )
 			{
 				const auto relationships { api().get( relationshipsPath( domain, samus ) ) };
 
-				REQUIRE( relationships.status == drogon::k200OK );
+				REQUIRE( relationships.status == 200 );
 				REQUIRE( relationships.json[ "children" ].size() == 1 );
 				CHECK( relationships.json[ "children" ][ 0 ].asInt() == samus_aran );
 				CHECK( relationships.json[ "parents" ].empty() );
@@ -87,7 +87,7 @@ SCENARIO_METHOD( ServerFixture, "Tag relationships", "[api][tags][relationships]
 			{
 				const auto relationships { api().get( relationshipsPath( domain, samus_aran ) ) };
 
-				REQUIRE( relationships.status == drogon::k200OK );
+				REQUIRE( relationships.status == 200 );
 				REQUIRE( relationships.json[ "parents" ].size() == 1 );
 				CHECK( relationships.json[ "parents" ][ 0 ].asInt() == samus );
 				CHECK( relationships.json[ "children" ].empty() );

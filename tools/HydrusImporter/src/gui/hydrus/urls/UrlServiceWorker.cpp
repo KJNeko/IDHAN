@@ -25,6 +25,7 @@ void UrlServiceWorker::preprocess()
 {
 	try
 	{
+		emit statusMessage( "Counting URL mappings and unique URLs in Hydrus" );
 		idhan::hydrus::TransactionBaseCoro client_tr { m_importer->client_db };
 
 		std::size_t url_counter { 0 };
@@ -47,10 +48,8 @@ void UrlServiceWorker::preprocess()
 	catch ( const std::exception& e )
 	{
 		idhan::logging::error( "Error during URL preprocessing: {}", e.what() );
-		emit errorOccurred( QString( "Error during preprocessing: %1" ).arg( e.what() ) );
+		throw;
 	}
-
-	emit finished();
 }
 
 void UrlServiceWorker::process()
@@ -65,7 +64,7 @@ void UrlServiceWorker::process()
 
 		constexpr std::size_t URL_MAX = 500;
 
-		emit statusMessage( "Processing URLs" );
+		emit statusMessage( "Reading and ordering URL IDs from Hydrus" );
 
 		// Collect all unique url_ids (single query)
 		std::vector< int > all_url_ids {};
@@ -86,6 +85,9 @@ void UrlServiceWorker::process()
 			const auto chunk_size = chunk_end - chunk_offset;
 
 			std::unordered_map< idhan::hydrus::HashID, std::vector< std::string > > current_urls;
+			emit statusMessage( QString( "Reading URL batch %L1 of %L2 from Hydrus" )
+			                        .arg( chunk_offset / URL_MAX + 1 )
+			                        .arg( ( all_url_ids.size() + URL_MAX - 1 ) / URL_MAX ) );
 
 			// Batch query urls table: get url text for all url_ids in this chunk
 			std::unordered_map< int, std::string > url_text_map {};
@@ -148,13 +150,11 @@ void UrlServiceWorker::process()
 
 			emit processedUrls( total_records_processed, chunk_end );
 		}
-
-		emit statusMessage( "Finished!" );
 	}
 	catch ( const std::exception& e )
 	{
 		idhan::logging::error( "Error during URL processing: {}", e.what() );
-		emit errorOccurred( QString( "Error during processing: %1" ).arg( e.what() ) );
+		throw;
 	}
 }
 
@@ -175,6 +175,8 @@ void UrlServiceWorker::flushUrls(
 
 	if ( !uncached.empty() )
 	{
+		emit statusMessage(
+			QString( "Resolving %L1 file hashes and creating records on server" ).arg( uncached.size() ) );
 		const auto mapped_ids { m_importer->mapHydrusRecords( uncached ) };
 		for ( const auto& [ hy_hash_id, idhan_id ] : mapped_ids )
 			m_record_cache.insert_or_assign( hy_hash_id, idhan_id );
@@ -196,7 +198,7 @@ void UrlServiceWorker::flushUrls(
 		}
 	}
 
-	emit statusMessage( QString( "Adding %L1 mappings (%L2 URLs) to %L3 records" )
+	emit statusMessage( QString( "Waiting for server to add %L1 URL mappings (%L2 URLs) to %L3 records" )
 	                        .arg( mapping_count )
 	                        .arg( unique_urls.size() )
 	                        .arg( record_count ) );
@@ -223,21 +225,25 @@ void UrlServiceWorker::run()
 	{
 		if ( !m_preprocessed )
 		{
-			m_preprocessed = true;
 			preprocess();
+			m_preprocessed = true;
+			emit preprocessingFinished( true );
 			return;
 		}
 
 		process();
+		emit finished();
 	}
 	catch ( std::exception& e )
 	{
 		idhan::logging::error( e.what() );
 		emit errorOccurred( QString::fromStdString( e.what() ) );
+		if ( !m_preprocessed ) emit preprocessingFinished( false );
 	}
 	catch ( ... )
 	{
 		idhan::logging::error( "Unknown exception in UrlServiceWorker" );
 		emit errorOccurred( "Unknown exception during URL import" );
+		if ( !m_preprocessed ) emit preprocessingFinished( false );
 	}
 }

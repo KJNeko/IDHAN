@@ -1,0 +1,163 @@
+get:
+  tags:
+    - downloader
+  summary: Returns session errors and HTTP status counts
+  description: |
+    Returns retained errors for the session in two independently scoped arrays.
+    `statuses` counts all retained session errors, grouped by HTTP status,
+    regardless of the requested filter or the error-list limit. A null status
+    groups errors that have no HTTP status.
+
+    `errors` applies the optional `status` filter, orders matching rows by
+    descending error ID, and returns at most 1000 entries. ID order is not a
+    guarantee of strict timestamp order. `occurred_at` is Unix epoch seconds.
+    Use `status=none` to select errors without an HTTP status, or combine it with
+    codes, for example `status=500,none`. An omitted or empty filter selects all
+    statuses.
+
+    Status counts need not sum to the returned error-list length because the
+    list can be filtered or truncated. Exactly 1000 returned entries does not
+    establish whether additional matching errors exist. No pagination cursor or
+    truncation indicator is returned. Counts and rows are queried separately;
+    the response does not guarantee an atomic snapshot during concurrent writes.
+  responses:
+    '200':
+      description: Returns session errors and HTTP status counts
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              statuses:
+                type: array
+                description: Counts across all retained session errors, unaffected by the status filter or the 1000-entry list limit.
+                items:
+                  type: object
+                  properties:
+                    status:
+                      description: HTTP status code, or null when no HTTP status is associated with the error.
+                      type:
+                        - integer
+                        - 'null'
+                    count:
+                      type: integer
+                      format: int64
+                      minimum: 0
+              errors:
+                type: array
+                maxItems: 1000
+                description: Matching retained errors in descending error-ID order, limited after filtering.
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      format: int64
+                      description: Error ID used for descending list ordering.
+                    url_id:
+                      description: Associated download URL ID, or null when the error has no URL-job association.
+                      type:
+                        - integer
+                        - 'null'
+                    url:
+                      type: string
+                    status:
+                      description: HTTP status code, or null when no HTTP status is associated with the error.
+                      type:
+                        - integer
+                        - 'null'
+                    lane:
+                      type: string
+                    message:
+                      type:
+                        - string
+                        - 'null'
+                    occurred_at:
+                      type: integer
+                      format: int64
+                      description: Error occurrence time as Unix epoch seconds.
+          examples:
+            empty:
+              summary: Session with no retained errors
+              value:
+                statuses: [ ]
+                errors: [ ]
+            filteredHttp:
+              summary: status=500 selects one error while counts include every status
+              value:
+                statuses:
+                  - status: 404
+                    count: 2
+                  - status: 500
+                    count: 1
+                  - status: null
+                    count: 1
+                errors:
+                  - id: 104
+                    url_id: 42
+                    url: https://example.com/media.jpg
+                    status: 500
+                    lane: example.com
+                    message: Upstream server error
+                    occurred_at: 1792454400
+            withoutHttpStatus:
+              summary: status=none selects an error without an HTTP status or URL-job association
+              value:
+                statuses:
+                  - status: 404
+                    count: 2
+                  - status: 500
+                    count: 1
+                  - status: null
+                    count: 1
+                errors:
+                  - id: 103
+                    url_id: null
+                    url: https://example.com/media.jpg
+                    status: null
+                    lane: example.com
+                    message: Connection failed
+                    occurred_at: 1792454399
+    '400':
+      description: Request rejected; the body is a plain-text error message.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '401':
+      description: The supplied API key is not recognized.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      description: Internal server error.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '404':
+      description: Requested resource is unavailable.
+      content:
+        text/plain:
+          schema:
+            type: string
+  parameters:
+    - name: session_id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+    - name: status
+      in: query
+      required: false
+      schema:
+        type: string
+      description: >-
+        Filters only the errors array. Comma-separated HTTP codes from 100
+        through 599 and the lowercase token none select matching codes or errors
+        without an HTTP status; for example, 500,none. Omitted or empty selects
+        all statuses. The statuses counts always cover the entire retained
+        session history, independently of this filter.

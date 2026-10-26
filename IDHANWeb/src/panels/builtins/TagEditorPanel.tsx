@@ -101,7 +101,7 @@ function TagEditorPanel({ host }: PanelProps) {
     const controller = new AbortController();
     const timer = setTimeout(() => {
       host.tags
-        .autocomplete(token, { limit: 100 }, controller.signal)
+          .autocomplete(token, {domain: domainId ?? undefined, limit: 100}, controller.signal)
         .then((results) => {
           if (!controller.signal.aborted) setSuggestions(results);
         })
@@ -111,7 +111,7 @@ function TagEditorPanel({ host }: PanelProps) {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [host, input]);
+  }, [host, input, domainId]);
 
   const editTargets = selection.length > 0 ? [...selection] : focused !== null ? [focused] : [];
 

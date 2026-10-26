@@ -14,7 +14,8 @@
 - `--config <PATH>`: Use this config file exclusively. IDHAN will not load configs from other locations.
 - `--pg_user <USER>`: PostgreSQL user (overrides the config file)
 - `--pg_host <HOST>`: PostgreSQL hostname (overrides the config file)
-- `--pg_schema <SCHEMA>`: PostgreSQL schema to use (overrides the config file, default `public`)
+- `--pg_schema <SCHEMA>`: PostgreSQL application schema to use (overrides the config file, default `idhan`)
+- `--pg_extension_schema <SCHEMA>`: PostgreSQL extension schema (overrides the config file, default `public`)
 - `--force_start [on/off]`: Force IDHAN to start even if it detects a previous instance may still be running
 
 Every option also accepts `--name=value`. The two flag-style options (`--use_stdout`, `--force_start`) may be
@@ -46,6 +47,15 @@ All config options can also be set via environment variables using the format `I
 
 # Config options (`config.toml`)
 
+New installations create application objects in `idhan` and resolve extension
+objects through `database.extension_schema` (default `public`). The environment
+override is `IDHAN_DATABASE_EXTENSION_SCHEMA`; `--pg_extension_schema` takes
+precedence. Startup rejects any database containing
+`public.idhan_info`. Existing installations must be migrated manually into the
+configured application schema, or use a new database. See
+[Database initialization](database-initialization.md) for extension requirements
+and existing-installation behavior.
+
 The following example covers the most common options. Commented-out lines show the default values.
 
 ```toml
@@ -55,8 +65,9 @@ The following example covers the most common options. Commented-out lines show t
 #user = "idhan"
 #password = "idhan"
 #database = "idhan-db"
-# Schema put on the connection's search path
-#schema = "public"
+# Application and extension schemas; both are created when missing and permitted
+#schema = "idhan"
+#extension_schema = "public"
 
 [server]
 # TCP port the HTTP server listens on
@@ -75,9 +86,11 @@ The following example covers the most common options. Commented-out lines show t
 #ipv6_listen = "::1"
 # Enable TLS
 #use_tls = false
-# Paths to TLS certificate and key (required when use_tls = true)
+# Paths to TLS certificate and key (required when use_tls = true unless self_sign_tls = true)
 #server_cert_path = "./server.crt"
 #server_key_path = "./server.key"
+# Generate a persistent localhost certificate when both paths are absent.
+#self_sign_tls = true
 
 [thumbnails]
 #path = "./thumbnails"
@@ -99,7 +112,7 @@ The following example covers the most common options. Commented-out lines show t
 # Log output directory
 #path = "./log"
 # Entries held in memory for the /log endpoint; 0 disables the endpoint
-#buffer_size = 0
+#buffer_size = 1000000
 # Warn when a request exceeds the performance threshold
 #enable_perf_warnings = false
 
@@ -108,6 +121,10 @@ The following example covers the most common options. Commented-out lines show t
 #guess_with_extension = true
 
 [cluster]
+# Acknowledge missing marker/root recovery at next startup; automatically reset to false first.
+# Check that the intended storage is mounted. Existing conflicting markers are never replaced.
+# Requires a writable TOML file and directory; true environment/CLI overrides are rejected.
+#recreate_missing_markers = false
 # Concurrent files per cluster scan; per-request "concurrency" overrides it, clamped to 1..64
 #scan_concurrency = 4
 ```
@@ -178,3 +195,14 @@ resident set. `rss_limit_mb` is per-library too if a folded worker needs a diffe
 
 > **Note:** The server listens on port **16609** by default. Override it with `[server] port` (or
 > `IDHAN_SERVER_PORT`). Both the IPv4 and IPv6 listeners use this port.
+
+## Cluster marker recovery
+
+Registered clusters require a matching `.idhan-cluster.json`; verification failure stops
+startup. After checking the storage paths, set `[cluster] recreate_missing_markers = true`
+in a writable TOML file. IDHAN persists `false` before recreating missing directories and
+markers with their database UUIDs, including for logically read-only clusters. Existing
+invalid or mismatched markers are never overwritten. Reset failure prevents recovery;
+a later verification failure still consumes the acknowledgement. Repeat this process
+after a future wipe if needed. See [cluster identity and recovery](cluster-identity-proposal.md)
+for configuration restrictions and the distinction between restoring identity and media.

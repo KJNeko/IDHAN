@@ -1,11 +1,6 @@
 /**
- * Media Viewer: shows the currently active record full-size. "Active" is whatever the grid last
- * activated through the bus, or failing that the most recently selected record. Images render as
- * <img> and video/audio through native players, which seek using the server's range support.
- * Everything else offers a download link.
- *
- * The immediate neighbours in the ordered result set are prefetched on change, and the arrow buttons
- * and keys page through that set.
+ * Render the active record, falling back to the latest selection. Prefetch adjacent records for
+ * navigation. Display the thumbnail behind the full image while it loads.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -48,7 +43,8 @@ function MediaViewerPanel({ host }: PanelProps) {
     const sel = host.selection.get();
     return sel.length > 0 ? sel[sel.length - 1]! : null;
   });
-    const [meta, setMeta] = useState<RecordMetadata | null>(null);
+    const [meta, setMeta] = useState<{ id: RecordId; record: RecordMetadata | null } | null>(null);
+  const [loadedId, setLoadedId] = useState<RecordId | null>(null);
   const prefetched = useRef(new Set<string>());
 
   useEffect(() => host.results.subscribe(setResults), [host]);
@@ -65,20 +61,28 @@ function MediaViewerPanel({ host }: PanelProps) {
       setMeta(null);
       return;
     }
+    const id = activeId;
     let cancelled = false;
     host.records
-      .getMetadata([activeId])
+      .getMetadata([id])
       .then((res) => {
         if (cancelled) return;
-          setMeta(res.records[0] ?? null);
+          setMeta({ id, record: res.records[0] ?? null });
       })
       .catch(() => {
-          if (!cancelled) setMeta(null);
+          if (!cancelled) setMeta({ id, record: null });
       });
     return () => {
       cancelled = true;
     };
   }, [host, activeId]);
+
+  const record = meta !== null && meta.id === activeId ? meta.record : null;
+  const metaPending = meta === null || meta.id !== activeId;
+  const kind = metaPending ? null : kindOf(record);
+  // Images become ready after decoding; streaming media becomes ready when metadata is
+  // available.
+  const ready = kind !== null && (kind !== 'image' || loadedId === activeId);
 
   const ids = results.ids;
   const activeIndex = activeId === null ? -1 : ids.indexOf(activeId);
@@ -130,8 +134,11 @@ function MediaViewerPanel({ host }: PanelProps) {
     );
   }
 
-    const kind = kindOf(meta);
   const fileUrl = host.records.fileUrl(activeId);
+  // Reserve the image aspect ratio so the thumbnail backdrop is visible before the full image
+  // loads.
+  const dimensions =
+    record?.width && record?.height ? { width: record.width, aspectRatio: `${record.width} / ${record.height}` } : null;
 
   return (
     <div className="viewer-panel" tabIndex={0} onKeyDown={onKeyDown}>
@@ -139,10 +146,19 @@ function MediaViewerPanel({ host }: PanelProps) {
           {/* Only the image takes the record menu; video and audio keep the browser's own controls menu. */}
           {kind === 'image' && (
               <img
+                  key={activeId}
                   className="viewer-media"
+                  style={{
+                      ...dimensions,
+                      // Remove the flattened thumbnail after loading to preserve image
+                      // transparency.
+                      ...(ready ? null : { backgroundImage: `url("${host.records.thumbnailUrl(activeId)}")` }),
+                  }}
                   src={fileUrl}
                   alt={`#${activeId}`}
                   draggable={false}
+                  onLoad={() => setLoadedId(activeId)}
+                  onError={() => setLoadedId(activeId)}
                   onContextMenu={(event) => openRecordMenu(event, [activeId])}
               />
           )}
@@ -150,12 +166,13 @@ function MediaViewerPanel({ host }: PanelProps) {
         {kind === 'audio' && <audio className="viewer-audio" src={fileUrl} controls />}
         {kind === 'other' && (
           <div className="viewer-fallback">
-            <p className="muted">No inline preview for {meta?.mime ?? 'this type'}.</p>
+            <p className="muted">No inline preview for {record?.mime ?? 'this type'}.</p>
             <a className="viewer-download" href={host.records.fileUrl(activeId, { download: true })}>
               Download
             </a>
           </div>
         )}
+        {!ready && <p className="viewer-loading">Loading...</p>}
       </div>
       <div className="viewer-bar">
         <button type="button" onClick={() => step(-1)} disabled={activeIndex <= 0} title="Previous (←)">

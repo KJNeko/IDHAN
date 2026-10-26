@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <format>
 
-#include "crypto/simpleHasher.hpp"
+#include "idhan/SHA256.hpp"
 
 namespace idhan::modules
 {
@@ -139,7 +139,7 @@ IDHANTask< std::expected< ipc::Blob, ModuleError > > RemoteModule::generate(
 	if ( data.input == nullptr ) co_return std::unexpected( ModuleError { "no input supplied" } );
 
 	Json::Value body { baseBody( ipc::CallOp::GENERATE, data ) };
-	body[ ipc::field::HASH ] = crypto::toHex( desired_hash );
+	body[ ipc::field::HASH ] = idhan::SHA256::fromBuffer( desired_hash ).hex();
 
 	auto outcome { co_await m_pool->dispatch( std::move( body ), data.input, data.depth != SERVER_ORIGINATED ) };
 
