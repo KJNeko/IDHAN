@@ -141,17 +141,44 @@ TEST_CASE( "Verified cluster access pins the root and rejects later marker loss"
 		std::ofstream file { configured / "sentinel" };
 		file << "original";
 	}
-	auto access { filesystem::ClusterAccess::open( configured, uuid, true ) };
+	auto access { filesystem::ClusterAccess::open( configured, uuid, false ) };
 	REQUIRE( access );
 	std::filesystem::rename( configured, moved );
 	std::filesystem::create_directory( configured );
 	CHECK( markerContents( access->root() / "sentinel" ) == "original" );
-	CHECK_FALSE( filesystem::ClusterAccess::open( configured, uuid, true ) );
+	CHECK_FALSE( filesystem::ClusterAccess::open( configured, uuid, false ) );
 	CHECK( access->verify() );
 	std::filesystem::remove( moved / filesystem::clusterMarkerFilename );
 	CHECK_FALSE( access->verify() );
 	REQUIRE( filesystem::initializeClusterMarker( root.fd(), boost::uuids::random_generator {}() ) );
 	CHECK_FALSE( access->verify() );
+}
+
+TEST_CASE( "Readonly access permits absent markers but rejects conflicting identities", "[cluster-markers]" )
+{
+	MarkerDirectory directory;
+	const auto uuid { boost::uuids::random_generator {}() };
+	auto access_e { filesystem::ClusterAccess::open( directory.path, uuid, true ) };
+	REQUIRE( access_e.has_value() );
+	auto& access { access_e.value() };
+	CHECK( access.verify().has_value() );
+	CHECK( std::filesystem::is_empty( directory.path ) );
+	CHECK_FALSE( filesystem::ClusterAccess::open( directory.path, uuid, false ).has_value() );
+
+	folly::File root { directory.path.c_str(), O_RDONLY | O_DIRECTORY };
+	REQUIRE( filesystem::initializeClusterMarker( root.fd(), uuid ).has_value() );
+	CHECK( access.verify().has_value() );
+	std::filesystem::remove( directory.path / filesystem::clusterMarkerFilename );
+	CHECK( access.verify().has_value() );
+	REQUIRE( filesystem::initializeClusterMarker( root.fd(), boost::uuids::random_generator {}() ).has_value() );
+	CHECK_FALSE( access.verify().has_value() );
+	CHECK_FALSE( filesystem::ClusterAccess::open( directory.path, uuid, true ).has_value() );
+	{
+		std::ofstream marker { directory.path / filesystem::clusterMarkerFilename };
+		marker << "invalid JSON";
+	}
+	CHECK_FALSE( access.verify().has_value() );
+	CHECK_FALSE( filesystem::ClusterAccess::open( directory.path / "absent", uuid, true ).has_value() );
 }
 
 TEST_CASE( "Recovery acknowledgements reset persistently while preserving config text", "[cluster-markers][config]" )

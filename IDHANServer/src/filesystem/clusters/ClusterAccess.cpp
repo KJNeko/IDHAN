@@ -37,7 +37,12 @@ std::expected< void, std::string > ClusterAccess::verify() const
 	if ( !marker ) return std::unexpected( marker.error() );
 
 	if ( !*marker )
+	{
+		if ( m_readonly ) return {};
+
 		return std::unexpected( "Cluster marker is missing; restart with the acknowledged marker-recovery flag" );
+	}
+
 	if ( ( **marker ).uuid != m_uuid )
 		return std::unexpected(
 			std::format( "Cluster marker UUID does not match expected {}", boost::uuids::to_string( m_uuid ) ) );

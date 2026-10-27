@@ -11,7 +11,10 @@ properties:
       - /mnt/media/idhan
   readonly:
     type: boolean
-    description: IDHAN will not add, move, or rename media files in this cluster. Identity marker initialization and acknowledged recovery are permitted.
+    description: >-
+      When true, IDHAN will not add, move, or rename media files in this cluster
+      and will not create a missing identity marker. Changing to false initializes
+      a missing marker with the registered UUID and requires filesystem write permission.
   ratio:
     description: 'Weight used when picking a cluster for new files: this cluster''s ratio over the sum
       of all ratios. Reads return it as `ratio_number`.'

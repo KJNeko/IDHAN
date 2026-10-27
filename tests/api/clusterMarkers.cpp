@@ -44,6 +44,8 @@ class ClusterMarkerFixture : public ServerFixture
 			}
 		}
 		std::error_code error;
+		std::filesystem::permissions(
+			root, std::filesystem::perms::owner_all, std::filesystem::perm_options::add, error );
 		std::filesystem::remove_all( directory, error );
 	}
 
@@ -118,7 +120,7 @@ TEST_CASE_METHOD(
 	"Cluster markers bind identity and preserve extensible metadata",
 	"[api][cluster-markers]" )
 {
-	create( true );
+	create();
 	auto document { marker() };
 	CHECK( document[ "format" ].asString() == "idhan.cluster" );
 	CHECK( document[ "version" ].asInt() == 1 );
@@ -142,6 +144,43 @@ TEST_CASE_METHOD(
 	CHECK( std::filesystem::is_regular_file( root / ".idhan-cluster.json" ) );
 	create( true );
 	CHECK( marker() == document );
+}
+
+TEST_CASE_METHOD(
+	ClusterMarkerFixture,
+	"Readonly clusters scan and serve media without creating markers",
+	"[api][cluster-markers]" )
+{
+	const std::string bytes { "readonly media without a marker" };
+	orphan( bytes, true );
+	std::filesystem::permissions(
+		root,
+		std::filesystem::perms::owner_read | std::filesystem::perms::owner_exec,
+		std::filesystem::perm_options::replace );
+	create( true );
+	CHECK_FALSE( std::filesystem::exists( root / ".idhan-cluster.json" ) );
+	testServer().restart( false );
+	scan( { { "adopt_orphans", "true" }, { "verify_hash", "true" } } );
+	const auto hash { SHA256::hash( std::as_bytes( std::span { bytes.data(), bytes.size() } ) ) };
+	RecordID record_id {};
+	{
+		pqxx::work transaction { db() };
+		record_id = transaction.query_value< RecordID >(
+			"SELECT record_id FROM file_info JOIN records USING (record_id) WHERE sha256 = decode($1, 'hex')",
+			pqxx::params { hash.hex() } );
+	}
+	CHECK( api().get( std::format( "/records/{}/file", record_id ) ).body == bytes );
+	CHECK_FALSE( std::filesystem::exists( root / ".idhan-cluster.json" ) );
+
+	Json::Value change { Json::objectValue };
+	change[ "readonly" ] = false;
+	REQUIRE( api().patch( std::format( "/clusters/{}/modify", cluster_id ), change ).status == 409 );
+	CHECK( api().get( std::format( "/clusters/{}/info", cluster_id ) ).json[ "readonly" ].asBool() );
+	CHECK_FALSE( std::filesystem::exists( root / ".idhan-cluster.json" ) );
+	std::filesystem::permissions( root, std::filesystem::perms::owner_write, std::filesystem::perm_options::add );
+	REQUIRE( api().patch( std::format( "/clusters/{}/modify", cluster_id ), change ).status == 200 );
+	CHECK( std::filesystem::is_regular_file( root / ".idhan-cluster.json" ) );
+	CHECK( api().get( std::format( "/records/{}/file", record_id ) ).body == bytes );
 }
 
 TEST_CASE_METHOD(
