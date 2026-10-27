@@ -560,7 +560,12 @@ std::string SearchQuery::renderComparison(
 
 std::string SearchQuery::renderBounds( const std::string_view expression, const RangeSearchInfo& bounds )
 {
-	if ( bounds.impossible() ) return "FALSE";
+	std::string rendered {};
+	if ( bounds.impossible() )
+	{
+		rendered = "FALSE";
+		return rendered;
+	}
 
 	std::vector< std::string > conjuncts {};
 
@@ -576,9 +581,12 @@ std::string SearchQuery::renderBounds( const std::string_view expression, const 
 	for ( const auto& term : bounds.negated )
 		conjuncts.push_back( renderComparison( expression, term.operation, term.value ) );
 
-	if ( conjuncts.empty() ) return format_ns::format( "{} IS NOT NULL", expression );
+	if ( conjuncts.empty() )
+	{
+		rendered = format_ns::format( "{} IS NOT NULL", expression );
+		return rendered;
+	}
 
-	std::string rendered {};
 	for ( const auto& conjunct : conjuncts )
 	{
 		if ( !rendered.empty() ) rendered += " AND ";

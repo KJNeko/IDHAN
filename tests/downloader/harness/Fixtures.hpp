@@ -184,7 +184,7 @@ class MemoryImportFactory final : public downloader::ImportSinkFactory
 			override
 		{
 			const std::scoped_lock lock { m_owner.m_mutex };
-			const std::int64_t id { m_owner.m_next++ };
+			const RecordID id { m_owner.m_next++ };
 			m_owner.stored.emplace_back( id, std::move( m_bytes ) );
 			m_owner.metadata.emplace_back( metadata );
 			return downloader::ImportResult { .record_id = id };
@@ -194,11 +194,11 @@ class MemoryImportFactory final : public downloader::ImportSinkFactory
 	};
 
 	mutable std::mutex m_mutex {};
-	std::int64_t m_next { 1 };
+	RecordID m_next { 1 };
 
   public:
 
-	std::vector< std::pair< std::int64_t, std::string > > stored {};
+	std::vector< std::pair< RecordID, std::string > > stored {};
 	std::vector< downloader::ImportMetadata > metadata {};
 	std::atomic_size_t aborted {};
 	std::optional< downloader::ImportResult > reusable {};

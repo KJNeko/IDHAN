@@ -15,8 +15,8 @@ struct DBParameter
 {
 	Oid oid { 0 };
 	ResultFormat format { ResultFormat::binary };
-	std::optional< std::vector< std::byte > > binary;
-	std::optional< std::string > text;
+	std::optional< std::vector< std::byte > > binary {};
+	std::optional< std::string > text {};
 	bool secret { false };
 };
 
@@ -40,7 +40,7 @@ template < typename T >
 
 class DBBindings
 {
-	std::vector< DBParameter > m_values;
+	std::vector< DBParameter > m_values {};
 
   public:
 

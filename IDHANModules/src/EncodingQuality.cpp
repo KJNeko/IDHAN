@@ -241,8 +241,9 @@ static bool isLosslessFrameMarker( const std::uint8_t marker )
 
 static FileEncoding parseJpeg( const ModuleFile& file )
 {
+	FileEncoding result {};
 	const auto start { readAt( file, 0, 2 ) };
-	if ( !start || ( *start )[ 0 ] != std::byte { 0xFF } || ( *start )[ 1 ] != std::byte { 0xD8 } ) return {};
+	if ( !start || ( *start )[ 0 ] != std::byte { 0xFF } || ( *start )[ 1 ] != std::byte { 0xD8 } ) return result;
 
 	QuantizationTables tables {};
 	EncodingQuality encoding {};
@@ -314,7 +315,7 @@ static FileEncoding parseJpeg( const ModuleFile& file )
 		offset = payload_offset + payload_length;
 	}
 
-	FileEncoding result { .quality = std::nullopt, .comment = std::move( comment ) };
+	result.comment = std::move( comment );
 
 	if ( lossless_frame )
 	{

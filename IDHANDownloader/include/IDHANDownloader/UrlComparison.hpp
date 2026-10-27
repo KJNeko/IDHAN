@@ -22,9 +22,10 @@ namespace idhan::downloader
 // order and the fragment so stored signed URLs can still be used for requests.
 [[nodiscard]] inline std::string sortUrlQueryParameters( const std::string_view url )
 {
+	std::string sorted { url };
 	const auto fragment { url.find( '#' ) };
 	const auto query { url.find( '?' ) };
-	if ( query == std::string_view::npos || query > fragment ) return std::string { url };
+	if ( query == std::string_view::npos || query > fragment ) return sorted;
 
 	const auto end { fragment == std::string_view::npos ? url.size() : fragment };
 	std::vector< std::pair< std::string, std::string_view > > fields {};
@@ -45,7 +46,7 @@ namespace idhan::downloader
 		start = field_end + 1;
 	}
 	std::ranges::stable_sort( fields, {}, &decltype( fields )::value_type::first );
-	std::string sorted { url.substr( 0, query + 1 ) };
+	sorted.resize( query + 1 );
 	for ( std::size_t index {}; index < fields.size(); ++index )
 	{
 		if ( index != 0 ) sorted += '&';
@@ -63,13 +64,13 @@ namespace idhan::downloader
 {
 	const auto without_fragment { url.substr( 0, url.find( '#' ) ) };
 	const auto query { without_fragment.find( '?' ) };
-	if ( query == std::string_view::npos ) return std::string { without_fragment };
+	std::string key { without_fragment.substr( 0, query ) };
+	if ( query == std::string_view::npos ) return key;
 
 	ada::url_search_params parameters { without_fragment.substr( query + 1 ) };
 	for ( const auto& name : ephemeral_query ) parameters.remove( name );
 	parameters.sort();
 	const auto normalized_query { parameters.to_string() };
-	std::string key { without_fragment.substr( 0, query ) };
 	if ( !normalized_query.empty() ) key += "?" + normalized_query;
 
 	spdlog::debug( "{} normalized to {}", url, key );

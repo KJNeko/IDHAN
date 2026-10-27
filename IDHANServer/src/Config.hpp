@@ -267,17 +267,21 @@ template < typename T >
 template < typename T >
 [[nodiscard]] std::optional< std::vector< T > > getArray( const std::string_view group, const std::string_view name )
 {
-	if ( const auto user_config_path { getUserConfigPath() }; !user_config_path.empty() )
+	std::optional< std::vector< T > > result {};
+	const auto user_config_path { getUserConfigPath() };
+	if ( !user_config_path.empty() )
 	{
-		return getArrayFromFile< T >( user_config_path, group, name );
+		result = getArrayFromFile< T >( user_config_path, group, name );
+		return result;
 	}
 
 	for ( const auto& path : config_paths | std::views::reverse )
 	{
-		if ( auto result = getArrayFromFile< T >( path, group, name ); result ) return result;
+		result = getArrayFromFile< T >( path, group, name );
+		if ( result ) return result;
 	}
 
-	return std::nullopt;
+	return result;
 }
 
 template < typename T >
@@ -331,10 +335,13 @@ template < typename T >
 
 [[nodiscard]] inline std::unordered_map< std::string, bool > getBoolTable( const std::string_view group )
 {
-	if ( const auto user_config_path { getUserConfigPath() }; !user_config_path.empty() )
-		return getBoolTableFromFile( user_config_path, group );
-
 	std::unordered_map< std::string, bool > output {};
+	const auto user_config_path { getUserConfigPath() };
+	if ( !user_config_path.empty() )
+	{
+		output = getBoolTableFromFile( user_config_path, group );
+		return output;
+	}
 
 	for ( const auto& path : config_paths )
 		for ( auto& [ key, value ] : getBoolTableFromFile( path, group ) ) output.insert_or_assign( key, value );
@@ -378,7 +385,7 @@ constexpr auto no_warn_on_default { false };
 constexpr auto warn_config_default { warn_on_default };
 
 template < typename T, bool warn_when_defaulted = warn_config_default >
-[[nodiscard]] T get( const std::string_view group, const std::string_view name, const auto default_value )
+[[nodiscard]] T get( const std::string_view group, const std::string_view name, const T default_value )
 {
 	const auto ret { get< T >( group, name ) };
 
@@ -397,7 +404,7 @@ template < typename T, bool warn_when_defaulted = warn_config_default >
 }
 
 template < typename T >
-[[nodiscard]] T getSilentDefault( const std::string_view group, const std::string_view name, const auto default_value )
+[[nodiscard]] T getSilentDefault( const std::string_view group, const std::string_view name, const T default_value )
 {
 	const auto ret { get< T >( group, name ) };
 

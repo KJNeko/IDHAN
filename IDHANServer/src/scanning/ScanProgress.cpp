@@ -89,11 +89,11 @@ Json::Value ScanProgress::snapshot() const
 	result[ "processed_files" ] = static_cast< Json::UInt64 >( m_processed_files );
 	result[ "processed_bytes" ] = static_cast< Json::UInt64 >( m_processed_bytes );
 	result[ "failed_count" ] = static_cast< Json::UInt64 >( m_failed_count );
-	result[ "active_files" ] = static_cast< Json::UInt64 >( m_tasks.size() );
+	result[ "active_files" ] = m_tasks.size();
 	if ( m_total_files )
 	{
 		result[ "total_files" ] = static_cast< Json::UInt64 >( *m_total_files );
-		result[ "remaining_files" ] = static_cast< Json::UInt64 >( *m_total_files - m_processed_files );
+		result[ "remaining_files" ] = *m_total_files - m_processed_files;
 	}
 	if ( m_last_failure )
 	{

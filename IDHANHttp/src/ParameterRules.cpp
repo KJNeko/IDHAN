@@ -80,8 +80,9 @@ static std::vector< std::string > unknownJsonObjectParameters(
 	simdjson::dom::element nested;
 	if ( object.at_key( remaining.front() ).get( nested ) != simdjson::SUCCESS ) return unknown;
 
-	return unknownJsonObjectParameters(
+	unknown = unknownJsonObjectParameters(
 		nested, remaining.subspan( 1 ), allowed, pointer + "/" + pointerSegment( remaining.front() ) );
+	return unknown;
 }
 
 std::vector< std::string > unknownJsonParameters(

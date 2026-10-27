@@ -331,7 +331,8 @@ std::unique_ptr< ScriptExecution > SessionContext::Impl::beginWork(
 	if ( !route || !route->has_value() )
 	{
 		abort( route ? format_ns::format( "No URL class accepts URL: {}", work.url ) : std::move( route.error() ) );
-		return {};
+		execution.reset();
+		return execution;
 	}
 
 	execution->route = std::move( **route );
@@ -341,7 +342,8 @@ std::unique_ptr< ScriptExecution > SessionContext::Impl::beginWork(
 	if ( !realm )
 	{
 		abort( realm.error() );
-		return {};
+		execution.reset();
+		return execution;
 	}
 
 	execution->context = *realm;
@@ -383,7 +385,8 @@ std::unique_ptr< ScriptExecution > SessionContext::Impl::beginWork(
 		abandon( *execution );
 		scripts.freeRealm( execution->context );
 		abort( error );
-		return {};
+		execution.reset();
+		return execution;
 	}
 
 	execution->result = *evaluated;

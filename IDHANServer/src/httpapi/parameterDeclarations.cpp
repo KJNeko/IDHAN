@@ -845,7 +845,7 @@ http::RouteDefinition declareEndpointParameters( http::RouteDefinition route )
 	// Compatibility and UI/static routes are outside the native API contract.
 	if ( route.metadata.path.starts_with( "/hyapi/" ) ) return route;
 	constexpr std::array< std::string_view, 7 > ui_paths {
-		"/", "/status", "/index.html", "/api", "/api/{*path}", "/assets/{filename}", "/plugins/{*path}"
+		{ "/", "/status", "/index.html", "/api", "/api/{*path}", "/assets/{filename}", "/plugins/{*path}" }
 	};
 	for ( const auto path : ui_paths )
 		if ( route.metadata.path == path ) return route;

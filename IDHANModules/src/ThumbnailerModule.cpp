@@ -32,13 +32,14 @@ std::expected< ThumbnailInfo, ModuleError > ThumbnailerModuleI::createThumbnailF
 	const std::size_t width,
 	const std::size_t height )
 {
-	auto thumbnail { createThumbnailRaw( data, width, height ) };
-	if ( !thumbnail ) return std::unexpected( thumbnail.error() );
+	auto thumbnail_e { createThumbnailRaw( data, width, height ) };
+	if ( !thumbnail_e.has_value() ) return std::unexpected( thumbnail_e.error() );
 
 	// Anything that is not raw RGB arrives already encoded; there are no loose pixels to wrap.
-	if ( thumbnail->m_format != ThumbnailFormat::RGB ) return thumbnail;
+	auto& thumbnail { thumbnail_e.value() };
+	if ( thumbnail.m_format != ThumbnailFormat::RGB ) return std::move( thumbnail );
 
-	const auto& [ thumbnail_rgb, thumbnail_width, thumbnail_height, cache_thumbnail, format ] = *thumbnail;
+	const auto& [ thumbnail_rgb, thumbnail_width, thumbnail_height, cache_thumbnail, format ] = thumbnail;
 
 	VipsImage* rgb_image { vips_image_new_from_memory_copy(
 		thumbnail_rgb.data(),

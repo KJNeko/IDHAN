@@ -121,11 +121,13 @@ class Reader
 
 	[[nodiscard]] std::string readString()
 	{
+		std::string value {};
 		std::uint64_t length { 0 };
-		if ( !readVarint( length ) ) return {};
-		if ( static_cast< std::uint64_t >( m_end - m_cursor ) < length ) return {};
+		if ( !readVarint( length ) ) return value;
 
-		std::string value( reinterpret_cast< const char* >( m_cursor ), length );
+		if ( static_cast< std::uint64_t >( m_end - m_cursor ) < length ) return value;
+
+		value.assign( reinterpret_cast< const char* >( m_cursor ), length );
 		m_cursor += length;
 		return value;
 	}

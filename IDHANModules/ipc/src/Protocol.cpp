@@ -153,9 +153,9 @@ Json::Value toJson( const ModuleVersion& version )
 ModuleVersion moduleVersionFromJson( const Json::Value& json )
 {
 	return ModuleVersion {
-		.m_major = static_cast< std::size_t >( json[ field::MAJOR ].asUInt64() ),
-		.m_minor = static_cast< std::size_t >( json[ field::MINOR ].asUInt64() ),
-		.m_patch = static_cast< std::size_t >( json[ field::PATCH ].asUInt64() )
+		.m_major = json[ field::MAJOR ].asUInt64(),
+		.m_minor = json[ field::MINOR ].asUInt64(),
+		.m_patch = json[ field::PATCH ].asUInt64()
 	};
 }
 
@@ -208,7 +208,7 @@ std::expected< ManifestEntry, std::string > manifestEntryFromJson( const Json::V
 				"manifest entry has an unknown residency: {}", describeWireValue( json[ field::RESIDENCY ] ) ) );
 
 	ManifestEntry entry {};
-	entry.index = static_cast< std::size_t >( json[ field::INDEX ].asUInt64() );
+	entry.index = json[ field::INDEX ].asUInt64();
 	entry.name = json[ field::NAME ].asString();
 	entry.type = static_cast< ModuleType >( json[ field::TYPE ].asUInt() );
 	entry.version = moduleVersionFromJson( json[ field::VERSION ] );
@@ -235,7 +235,7 @@ std::expected< ManifestEntry, std::string > manifestEntryFromJson( const Json::V
 		if ( !json[ field::RSS_CEILING_MB ].isUInt64() )
 			return std::unexpected( std::string { "manifest entry has a non-integral rss_ceiling_mb" } );
 
-		entry.rss_ceiling_mb = static_cast< std::size_t >( json[ field::RSS_CEILING_MB ].asUInt64() );
+		entry.rss_ceiling_mb = json[ field::RSS_CEILING_MB ].asUInt64();
 	}
 
 	if ( json.isMember( field::MODEL_NAME ) )
@@ -251,7 +251,7 @@ std::expected< ManifestEntry, std::string > manifestEntryFromJson( const Json::V
 		if ( !json[ field::DIMENSIONS ].isUInt() )
 			return std::unexpected( std::string { "manifest entry has a non-integral dimensions" } );
 
-		entry.dimensions = static_cast< std::uint32_t >( json[ field::DIMENSIONS ].asUInt() );
+		entry.dimensions = json[ field::DIMENSIONS ].asUInt();
 	}
 
 	if ( json.isMember( field::SUPPORTS_TEXT ) )
@@ -524,7 +524,7 @@ std::expected< MetadataInfo, std::string > metadataInfoFromJson( const Json::Val
 						archive.contained_records.emplace_back( hash->data(), contained[ "path" ].asString() );
 					}
 
-					archive.m_size = static_cast< std::size_t >( value[ "size" ].asUInt64() );
+					archive.m_size = value[ "size" ].asUInt64();
 					archive.encrypted = value[ "encrypted" ].asBool();
 
 					info.m_metadata = std::move( archive );

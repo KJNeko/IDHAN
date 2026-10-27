@@ -44,16 +44,16 @@ static std::string formatDecodeError(
 }
 
 DBDecodeError::DBDecodeError(
-	const std::string& message,
-	const std::size_t column,
+	const std::string& error_message,
+	const std::size_t column_index,
 	const Oid expected,
 	const Oid actual,
 	const std::string& column_name,
 	const std::string& sql,
 	const std::optional< std::size_t > row ) :
-  std::runtime_error( formatDecodeError( message, column, expected, actual, column_name, sql, row ) ),
-  message( message ),
-  column( column ),
+  std::runtime_error( formatDecodeError( error_message, column_index, expected, actual, column_name, sql, row ) ),
+  message( error_message ),
+  column( column_index ),
   expected_oid( expected ),
   actual_oid( actual )
 {}

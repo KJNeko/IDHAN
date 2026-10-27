@@ -114,9 +114,7 @@ std::shared_ptr< DBReactor::Watch > DBReactor::removeWatch( DBConnection& connec
 	std::lock_guard lock( m_mutex );
 	auto found { m_watches.find( &connection ) };
 	if ( found == m_watches.end() ) return nullptr;
-	auto watch { std::move( found->second ) };
-	m_watches.erase( found );
-	return watch;
+	return std::move( m_watches.extract( found ).mapped() );
 }
 
 void DBReactor::registerWatch(
@@ -163,7 +161,7 @@ void DBReactor::run()
 			if ( m_stopping.load( std::memory_order_acquire ) ) return;
 			throw std::system_error( errno, std::generic_category(), "epoll_wait failed" );
 		}
-		for ( int index = 0; index < count; ++index )
+		for ( std::size_t index = 0; index < static_cast< std::size_t >( count ); ++index )
 		{
 			auto* connection { static_cast< DBConnection* >( events[ index ].data.ptr ) };
 			if ( !connection )

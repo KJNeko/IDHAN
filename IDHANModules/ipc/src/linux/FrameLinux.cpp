@@ -135,9 +135,8 @@ std::expected< void, std::string > sendFrame(
 		const std::span< const std::byte > header_bytes {
 			reinterpret_cast< const std::byte* >( &header ), sizeof( header )
 		};
-		if ( auto result { sendAll( sock, header_bytes.subspan( static_cast< std::size_t >( header_sent ) ) ) };
-		     !result )
-			return result;
+		const auto result_e { sendAll( sock, header_bytes.subspan( static_cast< std::size_t >( header_sent ) ) ) };
+		if ( !result_e.has_value() ) return std::unexpected( result_e.error() );
 	}
 
 	return sendAll(

@@ -17,7 +17,8 @@ enum ServiceTypes
 //! \return The matching Hydrus constant, or GENERAL_IMAGE if \p mime_name is unknown.
 inline std::uint16_t mimeToHyType( const std::string& mime_name )
 {
-	if ( auto itter = hy_type_mime.find( mime_name ); itter != hy_type_mime.end() ) return itter->second;
+	const auto itter { hy_type_mime.find( mime_name ) };
+	if ( itter != hy_type_mime.end() ) return static_cast< std::uint16_t >( itter->second );
 
 	return gen_constants::GENERAL_IMAGE;
 }

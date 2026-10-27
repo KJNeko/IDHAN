@@ -279,15 +279,15 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > FFMPEGThumbnailer::cre
 		rgb_frame->linesize );
 
 	// Create packed buffer without alignment padding
-	const size_t packed_line_size = rgb_frame->width * 3;
-	const size_t packed_size = packed_line_size * rgb_frame->height;
+	const size_t packed_line_size = static_cast< std::size_t >( rgb_frame->width ) * 3;
+	const size_t packed_size = packed_line_size * static_cast< std::size_t >( rgb_frame->height );
 	std::vector< unsigned char > packed_data( packed_size );
 
 	// Copy data line by line to remove padding
 	for ( int y = 0; y < rgb_frame->height; ++y )
 	{
 		std::memcpy(
-			packed_data.data() + ( y * packed_line_size ),
+			packed_data.data() + ( static_cast< std::size_t >( y ) * packed_line_size ),
 			rgb_frame->data[ 0 ] + ( y * rgb_frame->linesize[ 0 ] ),
 			packed_line_size );
 	}

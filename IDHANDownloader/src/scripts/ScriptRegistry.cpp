@@ -484,11 +484,11 @@ std::expected< std::optional< ScriptRoute >, std::string > ScriptRegistry::route
 
 std::vector< std::string > ScriptRegistry::ephemeralQuery( const std::string_view url ) const
 {
+	std::vector< std::string > names {};
 	const auto parsed { ada::parse< ada::url_aggregator >( url ) };
-	if ( !parsed ) return {};
+	if ( !parsed ) return names;
 
 	const auto host { parsed->get_hostname() };
-	std::vector< std::string > names {};
 	for ( const auto& url_class : m_classes )
 	{
 		for ( const auto& held : url_class.hosts )

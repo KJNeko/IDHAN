@@ -17,6 +17,7 @@
 namespace idhan::httpapi
 {
 
+#ifndef IDHAN_DISABLE_API_AUTH
 constexpr std::array< std::string_view, 3 > key_headers { { "Authorization", "X-API-Key", "IDHAN-API-Key" } };
 
 [[nodiscard]] static std::string headerKey( const proxygen::HTTPMessage& message )
@@ -29,6 +30,7 @@ constexpr std::array< std::string_view, 3 > key_headers { { "Authorization", "X-
 
 	return {};
 }
+#endif
 
 http::RouteDefinition verifyRoute( db::DBContext& db )
 {
@@ -62,6 +64,8 @@ http::RequestValidation apiAuthValidation( db::DBContext& db )
 	           -> http::HTTPTask< std::optional< http::Response > >
 	{
 #ifdef IDHAN_DISABLE_API_AUTH
+		(void)message;
+		(void)parameters;
 		static std::once_flag auth_disabled_flag;
 		std::call_once( auth_disabled_flag, [] { log::warn( "!!! API Auth Disabled. Approving all requests !!!" ); } );
 		co_return std::nullopt;

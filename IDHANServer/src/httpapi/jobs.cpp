@@ -362,7 +362,7 @@ static runtime::Task<> mergeUrlInChunks(
 		}
 
 		co_await transaction.commit();
-		progress->batchCommitted( finished ? 1 : 0, moved_count );
+		progress->batchCommitted( finished ? 1 : 0, static_cast< std::uint64_t >( moved_count ) );
 		if ( finished ) co_return;
 	}
 }
@@ -519,7 +519,7 @@ static runtime::Task< Json::Value > reorganizeUrls(
 	Json::Value result;
 	result[ "kind" ] = "url_reorganization";
 	result[ "total_count" ] = static_cast< Json::UInt64 >( total );
-	result[ "unique_count" ] = static_cast< Json::UInt64 >( total - merged );
+	result[ "unique_count" ] = total - merged;
 	result[ "merged_count" ] = static_cast< Json::UInt64 >( merged );
 	result[ "sorted_count" ] = static_cast< Json::UInt64 >( sorted );
 	co_return result;

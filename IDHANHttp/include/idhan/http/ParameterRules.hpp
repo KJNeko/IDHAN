@@ -30,8 +30,8 @@ struct JsonParameterObject
 
 struct ParameterRules
 {
-	std::vector< std::string > query;
-	std::vector< JsonParameterObject > json;
+	std::vector< std::string > query {};
+	std::vector< JsonParameterObject > json {};
 	UnknownParameterPolicy unknown { UnknownParameterPolicy::warn };
 };
 

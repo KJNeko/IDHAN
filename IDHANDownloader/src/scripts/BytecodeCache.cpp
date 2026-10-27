@@ -133,7 +133,7 @@ std::expected< std::span< const std::uint8_t >, std::string > BytecodeCache::byt
 
 std::expected< std::filesystem::path, std::string > BytecodeCache::locate( const std::filesystem::path& target )
 {
-	static constexpr std::array< std::string_view, 3 > suffixes { ".js", "/index.js", "/src/index.js" };
+	static constexpr std::array< std::string_view, 3 > suffixes { { ".js", "/index.js", "/src/index.js" } };
 
 	if ( std::filesystem::is_regular_file( target ) ) return target;
 
@@ -182,16 +182,17 @@ std::expected< std::filesystem::path, std::string > BytecodeCache::resolve(
 	if ( !target.string().starts_with( prefix ) )
 		return std::unexpected( format_ns::format( "Module {} resolves outside the parser directory", specifier ) );
 
-	auto located { locate( target ) };
+	const auto located_e { locate( target ) };
 
-	if ( !located ) return located;
+	if ( !located_e.has_value() ) return std::unexpected( located_e.error() );
 
+	const auto& located { located_e.value() };
 	std::error_code candidate_error {};
-	const auto candidate { std::filesystem::canonical( *located, candidate_error ) };
+	const auto candidate { std::filesystem::canonical( located, candidate_error ) };
 
 	if ( candidate_error )
 		return std::unexpected(
-			format_ns::format( "Unable to resolve module {}: {}", located->string(), candidate_error.message() ) );
+			format_ns::format( "Unable to resolve module {}: {}", located.string(), candidate_error.message() ) );
 
 	const auto mismatch { std::ranges::mismatch( root, candidate ) };
 

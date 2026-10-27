@@ -39,6 +39,7 @@
 namespace idhan::httpapi
 {
 
+#ifndef IDHAN_DISABLE_API_AUTH
 [[nodiscard]] static http::Response hyAuthError(
 	const std::uint16_t status,
 	const std::string_view message,
@@ -58,6 +59,7 @@ namespace idhan::httpapi
 
 	return http::Response::json( status, folly::IOBuf::copyBuffer( *json ) );
 }
+#endif
 
 [[nodiscard]] static http::RequestValidation hyAuthValidation( db::DBContext& db )
 {
@@ -65,6 +67,8 @@ namespace idhan::httpapi
 	           -> http::HTTPTask< std::optional< http::Response > >
 	{
 #ifdef IDHAN_DISABLE_API_AUTH
+		(void)message;
+		(void)parameters;
 		co_return std::nullopt;
 #else
 		const auto param_e { parameters.optional< std::string >( HY_ACCESS_KEY_HEADER_NAME ) };

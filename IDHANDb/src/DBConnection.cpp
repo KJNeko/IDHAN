@@ -138,11 +138,15 @@ bool DBConnection::hasWork() const
 	return !queued.empty() || !inflight.empty();
 }
 
-DBConnection::DBConnection( const std::uint64_t id, const ConnectionRole role, DBConfig config, DBReactor& reactor ) :
-  id( id ),
-  role( role ),
-  config( std::move( config ) ),
-  reactor( reactor )
+DBConnection::DBConnection(
+	const std::uint64_t connection_id,
+	const ConnectionRole connection_role,
+	DBConfig connection_config,
+	DBReactor& connection_reactor ) :
+  id( connection_id ),
+  role( connection_role ),
+  config( std::move( connection_config ) ),
+  reactor( connection_reactor )
 {}
 
 DBConnection::~DBConnection()
@@ -185,19 +189,20 @@ void DBConnection::wake()
 
 void DBConnection::pump()
 {
-	const auto state { this->state.load( std::memory_order_acquire ) };
+	const auto current_state { state.load( std::memory_order_acquire ) };
 
-	switch ( state )
+	switch ( current_state )
 	{
 		case ConnectionState::connecting:
 			[[fallthrough]];
 		case ConnectionState::configuring:
-			pumpHandshake( state );
+			pumpHandshake( current_state );
 			return;
 		case ConnectionState::connected:
 			pumpConnected();
 			return;
-		default:
+		case ConnectionState::cold:
+		case ConnectionState::failed:
 			return;
 	}
 }
@@ -295,30 +300,30 @@ void DBConnection::pumpConnected()
 	}
 }
 
-void DBConnection::pumpHandshake( const ConnectionState state )
+void DBConnection::pumpHandshake( const ConnectionState current_state )
 {
 	try
 	{
-		if ( state == ConnectionState::connecting && connection == nullptr )
+		if ( current_state == ConnectionState::connecting && connection == nullptr )
 		{
 			const auto port { std::to_string( config.port ) };
 			const std::array< const char*, 7 > keywords {
-				"host", "port", "dbname", "user", "password", "client_encoding", nullptr
+				{ "host", "port", "dbname", "user", "password", "client_encoding", nullptr }
 			};
 			const std::array< const char*, 7 > values {
-				config.host.c_str(),
+				{ config.host.c_str(),
 				port.c_str(),
 				config.database.c_str(),
 				config.user.c_str(),
 				config.password.c_str(),
 				"UTF8",
-				nullptr
+				nullptr }
 			};
 			connection = PQconnectStartParams( keywords.data(), values.data(), 0 );
 			if ( connection == nullptr ) throw connectionError( nullptr, "Could not start PostgreSQL connection" );
 		}
 
-		if ( state == ConnectionState::connecting )
+		if ( current_state == ConnectionState::connecting )
 		{
 			const auto status { PQconnectPoll( connection ) };
 			if ( status == PGRES_POLLING_READING || status == PGRES_POLLING_WRITING || status == PGRES_POLLING_ACTIVE )
@@ -348,9 +353,9 @@ void DBConnection::pumpHandshake( const ConnectionState state )
 			const auto timeout =
 				std::to_string( role == ConnectionRole::management ? 0 : config.statement_timeout.count() );
 			const auto search_path { makeSearchPath( config.schema, config.extension_schema ) };
-			const std::array< const char*, 2 > values { timeout.c_str(), search_path.c_str() };
-			constexpr std::array< int, 2 > lengths { 0, 0 };
-			constexpr std::array< int, 2 > formats { 0, 0 };
+			const std::array< const char*, 2 > values { { timeout.c_str(), search_path.c_str() } };
+			constexpr std::array< int, 2 > lengths { { 0, 0 } };
+			constexpr std::array< int, 2 > formats { { 0, 0 } };
 			// Values are parsed by PostgreSQL as data; no connection information or
 			// SQL configuration text is constructed by concatenation.
 			constexpr char startup_sql[] =
@@ -430,9 +435,12 @@ void DBConnection::pumpHandshake( const ConnectionState state )
 std::shared_ptr< DBOperation > DBConnection::popDispatchable( bool use_pipeline )
 {
 	std::lock_guard lock { queue_mutex };
-	if ( queued.empty() || ( !use_pipeline && !inflight.empty() ) ) return nullptr;
+	std::shared_ptr< DBOperation > operation {};
+	if ( queued.empty() ) return operation;
 
-	auto operation { std::move( queued.front() ) };
+	if ( !use_pipeline && !inflight.empty() ) return operation;
+
+	operation = std::move( queued.front() );
 	queued.pop_front();
 	return operation;
 }

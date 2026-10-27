@@ -63,9 +63,7 @@ folly::coro::Task< proxygen::coro::HTTPBodyEvent > FileBodySource::readBodyEvent
 		co_return event;
 	}
 
-	const auto want {
-		static_cast< std::size_t >( std::min< std::uint64_t >( { max, read_chunk_size, m_remaining } ) )
-	};
+	const auto want { std::min< std::uint64_t >( { max, read_chunk_size, m_remaining } ) };
 
 	auto buffer { folly::IOBuf::create( want ) };
 	auto* const data { buffer->writableTail() };
