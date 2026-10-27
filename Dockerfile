@@ -111,6 +111,7 @@ COPY 3rd-party/hydrus /build/3rd-party/hydrus
 COPY dependencies /build/dependencies
 
 COPY CMakeLists.txt /build/CMakeLists.txt
+COPY cmake /build/cmake
 
 COPY IDHAN /build/IDHAN
 COPY IDHANDb /build/IDHANDb
