@@ -159,7 +159,7 @@ async function tagTypes(idhan, base, credentials, names) {
         });
 
         for (const tag of await requestApi(idhan, url, tagRecordsResponseSchema, "Gelbooru tag API")) {
-            types.set(tag.name, tag.type);
+            types.set(decodeTagName(tag.name), tag.type);
         }
     }
 
@@ -174,9 +174,15 @@ function namespacedTags(names, types) {
     });
 }
 
+function decodeTagName(name) {
+    return name
+        .replace(/&#0*39;/gi, "'")
+        .replace(/&apos;/gi, "'");
+}
+
 function tagNames(post) {
     // Gelbooru returns tags as whitespace-separated names such as "cat blue_eyes".
-    return post.tags.split(/\s+/).filter((name) => name !== "");
+    return post.tags.split(/\s+/).filter((name) => name !== "").map(decodeTagName);
 }
 
 // Gallery pid is an offset; the API expects a page number.
