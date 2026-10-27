@@ -121,7 +121,7 @@ The following example covers the most common options. Commented-out lines show t
 #guess_with_extension = true
 
 [cluster]
-# Acknowledge missing marker/root recovery at next startup; automatically reset to false first.
+# Acknowledge missing writable cluster marker/root recovery; reset to false before recovery.
 # Check that the intended storage is mounted. Existing conflicting markers are never replaced.
 # Requires a writable TOML file and directory; true environment/CLI overrides are rejected.
 #recreate_missing_markers = false
@@ -198,10 +198,11 @@ resident set. `rss_limit_mb` is per-library too if a folded worker needs a diffe
 
 ## Cluster marker recovery
 
-Registered clusters require a matching `.idhan-cluster.json`; verification failure stops
+Writable clusters require a matching `.idhan-cluster.json`; verification failure stops
 startup. After checking the storage paths, set `[cluster] recreate_missing_markers = true`
 in a writable TOML file. IDHAN persists `false` before recreating missing directories and
-markers with their database UUIDs, including for logically read-only clusters. Existing
+markers with their database UUIDs for writable clusters only. Readonly clusters allow missing
+markers, but their directories must exist; recovery never creates their directories or markers. Existing
 invalid or mismatched markers are never overwritten. Reset failure prevents recovery;
 a later verification failure still consumes the acknowledgement. Repeat this process
 after a future wipe if needed. See [cluster identity and recovery](cluster-identity-proposal.md)

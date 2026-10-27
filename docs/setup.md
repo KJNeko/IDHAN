@@ -2,7 +2,8 @@
 
 ## Config
 
-The first thing you'll want to do is set up some configs
+For a Docker deployment, start with the [Docker guide](docker.md). Its Compose example configures the database and
+persistent thumbnail storage. For a native deployment, configure the paths and database connection below.
 
 Note: Each config will be listed as `[group] name`, this can either be set via an ENV variable `IDHAN_GROUP_NAME` or in
 one of the toml files
@@ -29,9 +30,13 @@ The main values to set here will be
 - `password` - the password to try to use
 - `database` - The database name
 
-IDHAN will create a public schema if it does not exist, as well as all the other tables. Note that if you are starting
-from scratch, Completely wipe the schema that was created last time, As IDHAN will also create some functions that won't
-be wiped if you just drop all the tables.
+### Postgres Setup (Non-Docker Compose)
+
+Create the PostgreSQL database and user before starting IDHAN;
+see [Database initialization](database-initialization.md).
+IDHAN applies schema migrations on startup. Keep the existing schema when restarting or upgrading.
+Deleting the schema is only appropriate for an intentional database reset: it removes database records and metadata.
+Dropping tables alone does not reset all schema objects, such as functions.
 
 ## Creating your first cluster
 
@@ -39,20 +44,29 @@ be wiped if you just drop all the tables.
 
 A cluster is a file location that IDHAN can read files from and write files to. IDHAN expects files in a cluster to be
 named by their hash with an extension. A cluster marked **readonly** will never have files added, moved, or renamed by
-IDHAN — it will only index what is already there.
+IDHAN — it will only index what is already there. Readonly clusters may have no identity marker; registration and
+startup recovery do not create one. Any existing marker must still be valid and match the registered identity.
+Changing a cluster to writable initializes a missing marker and requires filesystem write permission.
 
 **New clusters default to readonly.** This is intentional: it gives you a chance to verify the scan results before
 allowing IDHAN to make any changes to your files. If you are pointing IDHAN at an existing collection (e.g. migrating
 from Hydrus or another tool), keep readonly enabled until you are confident the scan looks correct.
 
-To create a cluster, start the server and open WebUI (`ip:port/`), If this is your first run you will need to also
-supply an API key, This can be gotten by accessing `ip:port/generate_api_key`, This can **ONLY** be used **ONCE**.
+To create a cluster, start the server and open the WebUI at `http://<host>:16609/` (use HTTPS if you enabled TLS).
+When no API keys exist, visit `/generate_api_key` on that server, save the returned `key`, and enter it in the WebUI.
+Once a key exists, that endpoint returns 404; use an existing key to manage additional keys.
 
 Start by adding the 'Cluster Manager' panel from the 'Add panel...' menu
 
 ![addPanelExample.webp](images/addPanelExample.webp)
 
-Once you have added that you can then add in your path
+Add a cluster with a unique name and its storage path. For new uploads, mark at least one cluster **writable**;
+imports cannot store files when all clusters are readonly.
+
+With the Docker guide's Compose example, use a container path such as `/media/clusters/main`, which is persisted
+under the host directory mounted at `/media`. Use container paths in the WebUI, and keep cluster paths inside a
+persistent mount. Mounting a directory alone does not register it as a cluster. A readonly cluster's directory must
+already exist; a writable cluster can create its directory during registration.
 
 ![ClusterMenu.webp](images/ClusterMenu.webp)
 
@@ -65,7 +79,6 @@ subdirectory derived from the first two hex characters of the hash:
 cluster_root/
   f{hex[0:2]}/
     {full_sha256}.{ext}
-  bad/                   # created by a non-readonly scan; files that fail validation are moved here
 ```
 
 For example, a JPEG whose hash starts with `ab` would be at:
@@ -74,20 +87,27 @@ For example, a JPEG whose hash starts with `ab` would be at:
 cluster_root/fab/ab3f7c....jpg
 ```
 
-If you are pointing IDHAN at an existing collection the files **must already follow this layout**. Any file that does
-not match the expected name or is in the wrong subdirectory will be treated as missing or corrupted during a scan.
+Readonly scans require files to follow this layout. Writable scans can move hash-named files from a different
+immediate subdirectory into the correct hash directory. Scans inspect files one directory level below the cluster
+root; they do not import arbitrary filenames or recursively traverse a collection. Files directly in the root,
+the `bad/` directory, and files ending in `.thumbnail` are skipped. Validation failures are reported in the scan
+results; failed files are not moved into `bad/`.
 
 > **Note:** Thumbnails are **not** stored in clusters. They are written to a separate path configured via
 > `[thumbnails] path` in the config file (default: `./thumbnails`), using the layout
 > `t{hex[0:2]}/{sha256}.thumbnail`.
 
+The Docker image overrides the thumbnail path to `/thumbnails`. The Docker guide's Compose example sets it to
+`/media/thumbnails` so thumbnails persist in the media mount.
+
 ## Scanning a cluster
 
-To scan a cluster you can hit the 'Scan' menu which will show you the options for the scan. If you are coming from
-another program, or want IDHAN to simply 'eat' the files, Check 'Adopt Orphans', This will make IDHAN register the files
-and run them through the import process. Note that if you are doing this on an ALREADY EXISTING directory that IDHAN has
-managed for awhile, It is recomended to keep this off, As IDHAN will register invalid files that shouldn't be in the
-directory (such as files with corruption) without any form of warning or error.
+Open the cluster's **Scan** menu to choose scan options. Enable **Adopt Orphans** to register hash-named files that
+have no existing database record. The filename and directory requirements above still apply. Leave this option off
+when you only want to check files already registered in the database.
+
+Hash verification is a separate option and defaults to off. Enable it to check that each file's contents match the
+SHA-256 in its filename. Review the scan results for validation failures; adopting orphans does not bypass validation.
 
 ## Where did my imported files go?
 
