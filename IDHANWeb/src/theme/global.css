@@ -2095,6 +2095,7 @@ body {
 }
 
 .download-tree-session {
+    min-width: 0;
     border: 1px solid var(--border);
     border-radius: var(--radius);
     background: var(--surface);
@@ -2104,6 +2105,7 @@ body {
     display: flex;
     gap: 0.5rem;
     align-items: center;
+    min-width: 0;
     padding: 0.35rem 0.45rem;
     border-bottom: 1px solid var(--border);
     font-size: max(11px, 0.78rem);
@@ -2310,13 +2312,12 @@ body {
 
 .download-tree-url {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 0.4rem;
     flex: 1 1 auto;
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
+    white-space: normal;
     border: 0;
     padding: 0;
     background: none;
@@ -2327,9 +2328,8 @@ body {
 
 .download-tree-url-text {
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
+    white-space: normal;
 }
 
 .download-tree-url-marker {
@@ -2438,9 +2438,10 @@ body {
 }
 
 .download-tree-flat-urls > li > .grow {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    white-space: normal;
 }
 
 .download-tree-child-url {
