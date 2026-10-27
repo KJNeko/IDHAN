@@ -67,9 +67,9 @@ static http::HTTPTask< http::Response > sunburst( db::DBContext& db, [[maybe_unu
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT t.table_name, "
+				"SELECT t.table_name::text AS table_name, "
 				"       pg_relation_size(quote_ident(t.table_name)::text) AS table_size, "
-				"       i.indexname AS index_name, "
+				"       i.indexname::text AS index_name, "
 				"       pg_relation_size(i.indexname::regclass) AS index_size "
 				"FROM information_schema.tables t "
 				"LEFT JOIN pg_indexes i "
