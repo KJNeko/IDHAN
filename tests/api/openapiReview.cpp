@@ -9,6 +9,32 @@
 namespace idhan::test
 {
 
+TEST_CASE_METHOD( ServerFixture, "Storage sunburst decodes PostgreSQL table and index names", "[api][stats][sunburst]" )
+{
+	const auto response { api().get( "/db/stats/sunburst" ) };
+	REQUIRE( response.status == 200 );
+	CHECK( response.json[ "name" ].asString() == "root" );
+	REQUIRE( response.json[ "children" ].isArray() );
+	bool found_records { false };
+	for ( const auto& table : response.json[ "children" ] )
+	{
+		REQUIRE( table[ "name" ].isString() );
+		if ( table[ "name" ].asString() != "records" ) continue;
+
+		found_records = true;
+		CHECK( table[ "value" ].isInt64() );
+		REQUIRE( table[ "children" ].isArray() );
+		REQUIRE_FALSE( table[ "children" ].empty() );
+		for ( const auto& index : table[ "children" ] )
+		{
+			CHECK( index[ "name" ].isString() );
+			CHECK_FALSE( index[ "name" ].asString().empty() );
+			CHECK( index[ "value" ].isInt64() );
+		}
+	}
+	CHECK( found_records );
+}
+
 static RecordIDs reviewedSearchIds( const ApiResponse& response )
 {
 	REQUIRE( response.status == 200 );
