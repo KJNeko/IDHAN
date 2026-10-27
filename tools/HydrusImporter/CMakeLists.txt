@@ -15,8 +15,8 @@ target_compile_options(HydrusImporter PRIVATE "-Wno-mismatched-tags")
 target_compile_definitions(HydrusImporter PRIVATE $<$<CONFIG:Debug>:IDHAN_TRACK_CORO_FRAMES>)
 
 if (WIN32)
+	# Qt6::Core supplies the entry-point library for Windows GUI executables.
 	set_target_properties(HydrusImporter PROPERTIES WIN32_EXECUTABLE TRUE)
-	target_link_libraries(HydrusImporter PRIVATE Qt6::EntryPoint)
 endif ()
 
 if (DEFINED IMPORTER_TESTS AND IMPORTER_TESTS EQUAL 1)
