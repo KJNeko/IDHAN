@@ -4,7 +4,8 @@
 
 #include <QFutureSynchronizer>
 
-#include <IDHAN>
+#include <idhan/IDHANClient.hpp>
+
 #include <optional>
 #include <ranges>
 #include <unordered_set>
