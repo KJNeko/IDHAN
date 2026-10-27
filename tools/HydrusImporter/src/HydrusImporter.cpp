@@ -38,11 +38,13 @@ HydrusImporter::HydrusImporter( const std::filesystem::path& path ) : m_path( pa
 
 void HydrusImporter::openDatabase( const std::filesystem::path& db_path, sqlite3** db )
 {
-	const int rc { sqlite3_open_v2( db_path.c_str(), db, SQLITE_OPEN_READONLY, nullptr ) };
+	const auto path_utf8 { db_path.u8string() };
+	const auto* filename { reinterpret_cast< const char* >( path_utf8.c_str() ) };
+	const int rc { sqlite3_open_v2( filename, db, SQLITE_OPEN_READONLY, nullptr ) };
 	if ( rc != SQLITE_OK )
 	{
 		const std::string message {
-			std::format( "Failed to open {}: {}", db_path.string(), *db ? sqlite3_errmsg( *db ) : "out of memory" )
+			std::format( "Failed to open {}: {}", filename, *db ? sqlite3_errmsg( *db ) : "out of memory" )
 		};
 		sqlite3_close_v2( *db );
 		*db = nullptr;
