@@ -139,9 +139,9 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 
 		all_generate_failed = false;
 
-		const auto thumbnail_rgb { this->m_callbacks.thumbnail( **generated_file, {}, path.filename().string() ) };
+		auto thumbnail_rgb_e { this->m_callbacks.thumbnail( **generated_file, {}, path.filename().string() ) };
 
-		if ( !thumbnail_rgb )
+		if ( !thumbnail_rgb_e.has_value() )
 		{
 			// Do not cache the thumbnail if we failed to thumbnail whatever was generated
 			flag_cache_thumbnail = false;
@@ -153,14 +153,14 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 		if ( grid_size == 1 )
 		{
 			spdlog::info( "Skipping grid processing, Only 1 item found. Should this really be a archive?" );
-			return thumbnail_rgb;
+			return std::move( thumbnail_rgb_e.value() );
 		}
 
 		// figure out where in the grid we should put this thumbnail
 		const auto x { counter % grid_size };
 		const auto y { counter / grid_size };
 		counter += 1;
-		const auto& [ rgb, gen_thumb_width, gen_thumb_height, cache_thumbnail, child_format ] = *thumbnail_rgb;
+		const auto& [ rgb, gen_thumb_width, gen_thumb_height, cache_thumbnail, child_format ] = thumbnail_rgb_e.value();
 
 		if ( child_format != idhan::ThumbnailFormat::RGB )
 		{

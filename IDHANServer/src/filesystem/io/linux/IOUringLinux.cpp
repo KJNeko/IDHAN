@@ -12,6 +12,7 @@
 #include <fstream>
 #include <liburing.h>
 #include <malloc.h>
+#include <span>
 #include <stdexcept>
 #include <string_view>
 #include <utility>
@@ -389,6 +390,69 @@ static int traceOp( const int result, const std::string_view op, const std::stri
 	return result;
 }
 
+// liburing's SQE contains GNU zero-length arrays. Prepare it outside coroutine
+// frames, then let the awaiter own the submission until await_suspend copies it.
+static ReadAwaiter prepareRead(
+	IOUringLinux& uring,
+	const IOUring::NativeHandle handle,
+	const std::size_t offset,
+	const std::size_t len,
+	std::shared_ptr< std::vector< std::byte > >& buffer,
+	folly::Executor* executor )
+{
+	io_uring_sqe sqe {};
+	io_uring_prep_read( &sqe, static_cast< int >( handle ), buffer->data(), static_cast< __u32 >( len ), offset );
+	return uring.sendRead( sqe, buffer, executor );
+}
+
+static WriteAwaiter prepareWrite(
+	IOUringLinux& uring,
+	const IOUring::NativeHandle handle,
+	const std::span< const std::byte > data,
+	const std::size_t offset,
+	folly::Executor* executor )
+{
+	io_uring_sqe sqe {};
+	io_uring_prep_write( &sqe, static_cast< int >( handle ), data.data(), static_cast< __u32 >( data.size() ), offset );
+	return uring.sendWrite( sqe, executor );
+}
+
+static OpAwaiter prepareUnlink( IOUringLinux& uring, const std::filesystem::path& path, folly::Executor* executor )
+{
+	io_uring_sqe sqe {};
+	io_uring_prep_unlinkat( &sqe, AT_FDCWD, path.c_str(), 0 );
+	return uring.sendOp( sqe, executor );
+}
+
+static OpAwaiter prepareRename(
+	IOUringLinux& uring,
+	const std::filesystem::path& from,
+	const std::filesystem::path& to,
+	folly::Executor* executor )
+{
+	io_uring_sqe sqe {};
+	io_uring_prep_renameat( &sqe, AT_FDCWD, from.c_str(), AT_FDCWD, to.c_str(), 0 );
+	return uring.sendOp( sqe, executor );
+}
+
+static OpAwaiter prepareMkdir( IOUringLinux& uring, const std::filesystem::path& path, folly::Executor* executor )
+{
+	io_uring_sqe sqe {};
+	io_uring_prep_mkdirat( &sqe, AT_FDCWD, path.c_str(), 0777 );
+	return uring.sendOp( sqe, executor );
+}
+
+static OpAwaiter prepareStat(
+	IOUringLinux& uring,
+	const std::filesystem::path& path,
+	struct statx& stx,
+	folly::Executor* executor )
+{
+	io_uring_sqe sqe {};
+	io_uring_prep_statx( &sqe, AT_FDCWD, path.c_str(), AT_STATX_SYNC_AS_STAT, STATX_SIZE, &stx );
+	return uring.sendOp( sqe, executor );
+}
+
 runtime::Task< std::vector< std::byte > > IOUringLinux::read(
 	const NativeHandle handle,
 	const std::size_t offset,
@@ -412,11 +476,7 @@ runtime::Task< std::vector< std::byte > > IOUringLinux::read(
 	auto buffer_ptr { std::make_shared< std::vector< std::byte > >() };
 	buffer_ptr->resize( len );
 
-	io_uring_sqe sqe {};
-	std::memset( &sqe, 0, sizeof( sqe ) );
-	io_uring_prep_read( &sqe, static_cast< int >( handle ), buffer_ptr->data(), static_cast< __u32 >( len ), offset );
-
-	co_return co_await sendRead( sqe, buffer_ptr, executor );
+	co_return co_await prepareRead( *this, handle, offset, len, buffer_ptr, executor );
 }
 
 runtime::Task< void > IOUringLinux::write(
@@ -441,18 +501,8 @@ runtime::Task< void > IOUringLinux::write(
 	std::size_t written { 0 };
 	while ( written < data.size() )
 	{
-		const auto remaining { data.size() - written };
-
-		io_uring_sqe sqe {};
-		std::memset( &sqe, 0, sizeof( sqe ) );
-		io_uring_prep_write(
-			&sqe,
-			static_cast< int >( handle ),
-			data.data() + written,
-			static_cast< __u32 >( remaining ),
-			offset + written );
-
-		const auto bytes { co_await sendWrite( sqe, executor ) };
+		const auto remaining { std::span< const std::byte > { data }.subspan( written ) };
+		const auto bytes { co_await prepareWrite( *this, handle, remaining, offset + written, executor ) };
 
 		if ( bytes == 0 )
 			throw std::runtime_error(
@@ -470,12 +520,8 @@ runtime::Task< int > IOUringLinux::removeFile( const std::filesystem::path path 
 	{
 		auto* executor { co_await folly::coro::co_current_executor };
 
-		io_uring_sqe sqe {};
-		std::memset( &sqe, 0, sizeof( sqe ) );
-		io_uring_prep_unlinkat( &sqe, AT_FDCWD, path.c_str(), 0 );
-
-		if ( const auto result { co_await sendOp( sqe, executor ) }; !opUnsupported( result ) )
-			co_return traceOp( result, "unlinkat", path.native() );
+		const auto result { co_await prepareUnlink( *this, path, executor ) };
+		if ( !opUnsupported( result ) ) co_return traceOp( result, "unlinkat", path.native() );
 
 		log::trace( "unlinkat unsupported, falling back to unlink for {}", path.native() );
 	}
@@ -491,11 +537,8 @@ runtime::Task< int > IOUringLinux::renameFile( const std::filesystem::path from,
 	{
 		auto* executor { co_await folly::coro::co_current_executor };
 
-		io_uring_sqe sqe {};
-		std::memset( &sqe, 0, sizeof( sqe ) );
-		io_uring_prep_renameat( &sqe, AT_FDCWD, from.c_str(), AT_FDCWD, to.c_str(), 0 );
-
-		if ( const auto result { co_await sendOp( sqe, executor ) }; !opUnsupported( result ) )
+		const auto result { co_await prepareRename( *this, from, to, executor ) };
+		if ( !opUnsupported( result ) )
 		{
 			if ( result < 0 )
 				log::trace( "renameat {} -> {} failed: {}", from.native(), to.native(), strerror( -result ) );
@@ -530,11 +573,7 @@ runtime::Task< int > IOUringLinux::createDirectories( const std::filesystem::pat
 
 		if ( m_iouring_setup )
 		{
-			io_uring_sqe sqe {};
-			std::memset( &sqe, 0, sizeof( sqe ) );
-			io_uring_prep_mkdirat( &sqe, AT_FDCWD, prefix.c_str(), 0777 );
-
-			result = traceOp( co_await sendOp( sqe, executor ), "mkdirat", prefix.native() );
+			result = traceOp( co_await prepareMkdir( *this, prefix, executor ), "mkdirat", prefix.native() );
 
 			if ( opUnsupported( result ) )
 			{
@@ -571,11 +610,8 @@ runtime::Task< std::expected< std::uint64_t, int > > IOUringLinux::fileSize( con
 	{
 		auto* executor { co_await folly::coro::co_current_executor };
 
-		io_uring_sqe sqe {};
-		std::memset( &sqe, 0, sizeof( sqe ) );
-		io_uring_prep_statx( &sqe, AT_FDCWD, path.c_str(), AT_STATX_SYNC_AS_STAT, STATX_SIZE, &stx );
-
-		if ( const auto result { co_await sendOp( sqe, executor ) }; !opUnsupported( result ) )
+		const auto result { co_await prepareStat( *this, path, stx, executor ) };
+		if ( !opUnsupported( result ) )
 		{
 			if ( result < 0 ) co_return std::unexpected( traceOp( result, "statx", path.native() ) );
 			co_return static_cast< std::uint64_t >( stx.stx_size );

@@ -11,7 +11,9 @@ namespace idhan::premade
 
 // gif and apng are absent: an animated frame would make a zip a sequence of animations rather than
 // the frames of one.
-constexpr std::array< std::string_view, 7 > FRAME_EXTENSIONS { "jpg", "jpeg", "png", "webp", "avif", "tif", "tiff" };
+constexpr std::array< std::string_view, 7 > FRAME_EXTENSIONS {
+	{ "jpg", "jpeg", "png", "webp", "avif", "tif", "tiff" }
+};
 
 [[nodiscard]] inline bool isFrameExtension( const std::string_view extension )
 {

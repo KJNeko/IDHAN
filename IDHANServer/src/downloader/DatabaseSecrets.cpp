@@ -31,7 +31,7 @@ std::optional< std::string > DatabaseSecrets::secret( const std::string_view nam
 	catch ( const std::exception& e )
 	{
 		log::warn( "Unable to read downloader secret {}: {}", name, e.what() );
-		return std::nullopt;
+		value.reset();
 	}
 
 	return value;

@@ -28,13 +28,13 @@ void readTriple( const Json::Value& json, std::array< float, 3 >& out )
 //! Parses a json file, returning an empty value when it is absent or malformed.
 [[nodiscard]] Json::Value readJsonFile( const std::filesystem::path& path )
 {
+	Json::Value json {};
 	std::ifstream file { path };
-	if ( !file ) return {};
+	if ( !file ) return json;
 
 	std::stringstream buffer {};
 	buffer << file.rdbuf();
 
-	Json::Value json {};
 	Json::CharReaderBuilder builder {};
 	std::string errors {};
 	std::istringstream input { buffer.str() };
@@ -42,7 +42,8 @@ void readTriple( const Json::Value& json, std::array< float, 3 >& out )
 	if ( !Json::parseFromStream( builder, input, &json, &errors ) )
 	{
 		spdlog::warn( "Ignoring {}: not valid json ({})", path.string(), errors );
-		return {};
+		json = Json::Value {};
+		return json;
 	}
 
 	return json;

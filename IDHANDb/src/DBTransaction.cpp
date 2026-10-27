@@ -15,10 +15,10 @@ namespace idhan::db
 {
 struct DBTransaction::State
 {
-	std::mutex mutex;
-	std::shared_ptr< DBConnection > connection;
-	folly::Executor::KeepAlive<> application_executor;
-	std::function< void( std::shared_ptr< DBConnection > ) > release;
+	std::mutex mutex {};
+	std::shared_ptr< DBConnection > connection {};
+	folly::Executor::KeepAlive<> application_executor {};
+	std::function< void( std::shared_ptr< DBConnection > ) > release {};
 	TransactionPhase current_phase { TransactionPhase::active };
 };
 

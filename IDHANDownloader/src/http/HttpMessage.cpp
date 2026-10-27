@@ -52,10 +52,19 @@ bool isMarkupContentType( std::string_view content_type )
 
 std::string describeBody( const std::string_view body, const std::uint64_t bytes )
 {
-	if ( bytes == 0 ) return "<empty>";
-	if ( bytes > HTTP_BODY_LOG_LIMIT || body.size() < bytes ) return format_ns::format( "<{} bytes>", bytes );
-
 	std::string collapsed {};
+	if ( bytes == 0 )
+	{
+		collapsed = "<empty>";
+		return collapsed;
+	}
+
+	if ( bytes > HTTP_BODY_LOG_LIMIT || body.size() < bytes )
+	{
+		collapsed = format_ns::format( "<{} bytes>", bytes );
+		return collapsed;
+	}
+
 	collapsed.reserve( body.size() );
 	bool pending_space { false };
 

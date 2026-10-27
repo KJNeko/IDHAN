@@ -481,8 +481,9 @@ static std::expected< void, ModuleError > readRows( VipsImage* image, Consume&& 
 		VipsRect rect { .left = 0, .top = top, .width = width, .height = std::min( BAND_HEIGHT, height - top ) };
 		if ( vips_region_prepare( region.get(), &rect ) != 0 ) return std::unexpected( "Failed to read image pixels" );
 
-		for ( int y = 0; y < rect.height; ++y )
-			consume( static_cast< const std::uint8_t* >( VIPS_REGION_ADDR( region.get(), 0, top + y ) ) );
+		const auto* pixels { VIPS_REGION_ADDR_TOPLEFT( region.get() ) };
+		const auto stride { VIPS_REGION_LSKIP( region.get() ) };
+		for ( int y = 0; y < rect.height; ++y ) consume( pixels + static_cast< std::size_t >( y ) * stride );
 	}
 
 	return {};

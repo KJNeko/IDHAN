@@ -29,7 +29,8 @@ T decodeColumn( PGresult* result, int row, int column )
 		if constexpr ( OptionalValue< T >::optional )
 			return std::nullopt;
 		else
-			throw DBDecodeError( "NULL column requested as non-optional", column, expected, actual );
+			throw DBDecodeError(
+				"NULL column requested as non-optional", static_cast< std::size_t >( column ), expected, actual );
 	}
 	const auto size { static_cast< std::size_t >( PQgetlength( result, row, column ) ) };
 	const auto* data { reinterpret_cast< const std::byte* >( PQgetvalue( result, row, column ) ) };
@@ -39,7 +40,7 @@ T decodeColumn( PGresult* result, int row, int column )
 	}
 	catch ( const DBDecodeError& error )
 	{
-		throw DBDecodeError( error.message, column, expected, actual );
+		throw DBDecodeError( error.message, static_cast< std::size_t >( column ), expected, actual );
 	}
 }
 

@@ -18,7 +18,7 @@
 namespace idhan::ipc
 {
 
-constexpr unsigned int BLOB_SEALS { F_SEAL_WRITE | F_SEAL_SHRINK | F_SEAL_GROW | F_SEAL_SEAL };
+constexpr int BLOB_SEALS { F_SEAL_WRITE | F_SEAL_SHRINK | F_SEAL_GROW | F_SEAL_SEAL };
 
 [[nodiscard]] std::string errnoMessage( const char* const what )
 {

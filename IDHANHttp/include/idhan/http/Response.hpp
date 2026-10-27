@@ -21,9 +21,9 @@ class Response
 
 	using Body = std::variant< std::monostate, std::unique_ptr< folly::IOBuf >, proxygen::coro::HTTPSourceHolder >;
 
-	proxygen::HTTPMessage message;
-	Body body;
-	std::optional< proxygen::HTTPHeaders > trailers;
+	proxygen::HTTPMessage message {};
+	Body body {};
+	std::optional< proxygen::HTTPHeaders > trailers {};
 
 	Response();
 	~Response();

@@ -122,24 +122,34 @@ static void addCorsHeaders( proxygen::HTTPMessage& message )
 
 [[nodiscard]] static Response routeError( const RouteMatch& match )
 {
-	if ( match.status == RouteMatch::Status::not_found ) return Response::error( 404, "Not found" );
+	std::uint16_t status { 405 };
+	std::string message { "Method not allowed" };
+	if ( match.status == RouteMatch::Status::not_found )
+	{
+		status = 404;
+		message = "Not found";
+	}
+	else if ( match.status == RouteMatch::Status::invalid_parameter )
+	{
+		status = 400;
+		message = "Invalid route parameter";
+	}
 
-	if ( match.status == RouteMatch::Status::invalid_parameter )
-		return Response::error( 400, "Invalid route parameter" );
+	auto response { Response::error( status, std::move( message ) ) };
+	if ( status == 405 ) response.message.getHeaders().set( "Allow", allowHeader( match.allowed_methods ) );
 
-	auto response { Response::error( 405, "Method not allowed" ) };
-	response.message.getHeaders().set( "Allow", allowHeader( match.allowed_methods ) );
 	return response;
 }
 
 [[nodiscard]] static Response preflightResponse( const RouteMatch& match )
 {
-	if ( match.status == RouteMatch::Status::not_found ) return Response::error( 404, "Not found" );
+	const bool not_found { match.status == RouteMatch::Status::not_found };
+	Response response { not_found ? Response::error( 404, "Not found" ) : Response {} };
+	if ( not_found ) return response;
 
 	auto methods { match.allowed_methods };
 	methods.push_back( proxygen::HTTPMethod::OPTIONS );
 
-	Response response;
 	response.message.setStatusCode( 204 );
 	response.message.setStatusMessage( proxygen::HTTPMessage::getDefaultReason( 204 ) );
 	response.message.getHeaders().set( "Access-Control-Allow-Methods", allowHeader( methods ) );

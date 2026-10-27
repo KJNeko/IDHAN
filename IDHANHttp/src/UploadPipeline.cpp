@@ -14,9 +14,14 @@ namespace idhan::http
 {
 static folly::File createUploadFile( const std::filesystem::path& directory )
 {
+	folly::File file {};
 	std::filesystem::create_directories( directory );
 	const int unnamed { ::open( directory.c_str(), O_TMPFILE | O_RDWR | O_CLOEXEC, 0600 ) };
-	if ( unnamed >= 0 ) return folly::File { unnamed, true };
+	if ( unnamed >= 0 )
+	{
+		file = folly::File { unnamed, true };
+		return file;
+	}
 
 	if ( errno != EOPNOTSUPP && errno != EINVAL && errno != EISDIR )
 		throw std::system_error( errno, std::generic_category(), "Creating temporary upload" );
@@ -25,7 +30,7 @@ static folly::File createUploadFile( const std::filesystem::path& directory )
 	const int descriptor { ::mkostemp( name.data(), O_CLOEXEC ) };
 	if ( descriptor < 0 ) throw std::system_error( errno, std::generic_category(), "Creating temporary upload" );
 
-	folly::File file { descriptor, true };
+	file = folly::File { descriptor, true };
 	if ( ::unlink( name.c_str() ) != 0 )
 		throw std::system_error( errno, std::generic_category(), "Unlinking temporary upload" );
 

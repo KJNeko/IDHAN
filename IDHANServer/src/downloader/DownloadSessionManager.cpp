@@ -162,11 +162,17 @@ std::shared_ptr< DownloadSessionManager::Session > DownloadSessionManager::sessi
 {
 	const std::scoped_lock lock { m_mutex };
 
-	if ( m_stopped.load() || m_downloader == nullptr ) return {};
+	std::shared_ptr< Session > session {};
+	if ( m_stopped.load() || m_downloader == nullptr ) return session;
 
-	if ( const auto found { m_sessions.find( session_id ) }; found != m_sessions.end() ) return found->second;
+	const auto found { m_sessions.find( session_id ) };
+	if ( found != m_sessions.end() )
+	{
+		session = found->second;
+		return session;
+	}
 
-	auto session { std::make_shared< Session >() };
+	session = std::make_shared< Session >();
 	session->id = session_id;
 	session->observer = std::make_unique< SessionRowObserver >( *this, session_id );
 	session->context = m_downloader->createSession(
@@ -174,7 +180,11 @@ std::shared_ptr< DownloadSessionManager::Session > DownloadSessionManager::sessi
 	                     .observer = session->observer.get(),
 	                     .host_tag = static_cast< std::uint64_t >( session_id ) } );
 
-	if ( !session->context ) return {};
+	if ( !session->context )
+	{
+		session.reset();
+		return session;
+	}
 
 	m_sessions.emplace( session_id, session );
 	return session;

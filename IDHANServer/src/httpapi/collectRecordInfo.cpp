@@ -28,7 +28,7 @@ struct TypeGroups
 	return SHA256::fromBuffer( bytes ).hex();
 }
 
-[[nodiscard]] static std::string_view subsamplingName( const std::int16_t subsampling )
+[[nodiscard]] static std::string_view subsamplingName( const std::uint16_t subsampling )
 {
 	switch ( subsampling )
 	{

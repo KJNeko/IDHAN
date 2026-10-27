@@ -50,13 +50,13 @@ class DBConnection : public std::enable_shared_from_this< DBConnection >
 	PGconn* connection { nullptr };
 
 	std::atomic< ConnectionState > state { ConnectionState::cold };
-	folly::coro::Baton connected;
-	std::exception_ptr connect_error;
+	folly::coro::Baton connected {};
+	std::exception_ptr connect_error {};
 	bool saw_startup_sync { false };
-	mutable std::mutex queue_mutex;
+	mutable std::mutex queue_mutex {};
 
-	std::deque< std::shared_ptr< DBOperation > > queued;
-	std::deque< std::shared_ptr< DBOperation > > inflight;
+	std::deque< std::shared_ptr< DBOperation > > queued {};
+	std::deque< std::shared_ptr< DBOperation > > inflight {};
 
 	std::size_t sent { 0 };
 	bool input_paused { false };

@@ -50,9 +50,7 @@ struct [[nodiscard]] IDHANTask
 
 	IDHANTask( const IDHANTask& ) = delete;
 
-	IDHANTask( IDHANTask&& other ) noexcept
-	{
-		coro_ = other.coro_;
+	IDHANTask( IDHANTask&& other ) noexcept : coro_( other.coro_ ) {
 		other.coro_ = nullptr;
 	}
 

@@ -21,13 +21,13 @@ using namespace idhan::db;
 
 static DBConfig testConfig()
 {
+	DBConfig config {};
 	const auto* connection = std::getenv( "IDHAN_PQ_TEST_CONNINFO" );
-	if ( !connection ) return DBConfig {};
+	if ( !connection ) return config;
 
 	PQconninfoOption* options = PQconninfoParse( connection, nullptr );
 	if ( !options ) throw std::runtime_error( "Invalid PostgreSQL test conninfo" );
 
-	DBConfig config;
 	if ( const auto* user = std::getenv( "USER" ) ) config.user = user;
 	for ( auto* option = options; option->keyword; ++option )
 	{

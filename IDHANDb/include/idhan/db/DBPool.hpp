@@ -17,10 +17,10 @@ class DBPool
 {
 	DBConfig m_config;
 	std::shared_ptr< DBReactor > m_reactor;
-	mutable std::mutex m_mutex;
-	std::vector< std::shared_ptr< DBConnection > > m_normal;
-	std::vector< std::shared_ptr< DBConnection > > m_transactions;
-	std::shared_ptr< folly::coro::BoundedQueue< std::shared_ptr< DBConnection > > > m_available_transactions;
+	mutable std::mutex m_mutex {};
+	std::vector< std::shared_ptr< DBConnection > > m_normal {};
+	std::vector< std::shared_ptr< DBConnection > > m_transactions {};
+	std::shared_ptr< folly::coro::BoundedQueue< std::shared_ptr< DBConnection > > > m_available_transactions {};
 	folly::Executor::KeepAlive<> m_application_executor;
 	std::size_t m_next_tie { 0 };
 	bool m_starting { false };

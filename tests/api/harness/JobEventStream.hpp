@@ -161,10 +161,11 @@ class JobEventStream
 			return false;
 		};
 		const auto ready = [ this, &matches ] { return std::ranges::any_of( m_events, matches ); };
-		if ( !m_readable.wait_for( lock, std::chrono::seconds { 12 }, ready ) ) return {};
+		Json::Value result {};
+		if ( !m_readable.wait_for( lock, std::chrono::seconds { 12 }, ready ) ) return result;
 
 		const auto found { std::ranges::find_if( m_events, matches ) };
-		auto result { std::move( found->second ) };
+		result = std::move( found->second );
 		m_events.erase( found );
 		return result;
 	}

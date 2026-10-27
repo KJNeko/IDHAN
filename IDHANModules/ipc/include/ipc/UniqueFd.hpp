@@ -18,7 +18,7 @@ class UniqueFd
 
 	UniqueFd() = default;
 
-	explicit UniqueFd( const int fd ) : m_fd( fd ) {}
+	explicit UniqueFd( const int fd ) noexcept : m_fd( fd ) {}
 
 	~UniqueFd() { reset(); }
 

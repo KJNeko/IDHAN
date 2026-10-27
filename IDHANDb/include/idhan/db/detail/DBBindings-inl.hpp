@@ -90,12 +90,20 @@ inline std::span< const std::byte > parameterBytes( const DBParameter& parameter
 // Escaping keeps diagnostics single-line and avoids treating binary storage as text.
 inline std::string diagnostic( const DBParameter& parameter, std::size_t max_bytes )
 {
-	if ( parameter.secret ) return "<redacted>";
+	std::string result {};
+	if ( parameter.secret )
+	{
+		result = "<redacted>";
+		return result;
+	}
 
-	if ( !parameter.binary && !parameter.text ) return "NULL";
+	if ( !parameter.binary && !parameter.text )
+	{
+		result = "NULL";
+		return result;
+	}
 
 	const auto bytes { parameterBytes( parameter ) };
-	std::string result;
 	constexpr char hex[] { "0123456789abcdef" };
 	for ( const auto byte : bytes.first( std::min( bytes.size(), max_bytes ) ) )
 	{

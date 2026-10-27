@@ -24,7 +24,7 @@ std::expected< std::string, http::Response > readRequestBody( http::RequestConte
 		if ( upload.size() > text.max_size() )
 			return std::unexpected( http::Response::error( 500, "Request body exceeds addressable string size" ) );
 
-		text.resize( static_cast< std::size_t >( upload.size() ) );
+		text.resize( upload.size() );
 		const auto file { upload.duplicateFile() };
 		const auto read { folly::preadFull( file.fd(), text.data(), text.size(), 0 ) };
 		if ( read < 0 )

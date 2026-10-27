@@ -9,7 +9,7 @@ namespace idhan::http
 
 class JsonParameterPath
 {
-	std::vector< std::string > m_path;
+	std::vector< std::string > m_path {};
 
   public:
 

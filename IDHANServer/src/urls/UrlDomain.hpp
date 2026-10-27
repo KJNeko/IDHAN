@@ -11,15 +11,14 @@ namespace idhan::helpers
 	const auto protocol_end { url.find( "://" ) };
 	const auto protocol { url.substr( 0, protocol_end ) };
 
-	if ( protocol == "file" ) return "";
+	std::string authority {};
+	if ( protocol == "file" ) return authority;
 
 	const auto start_pos { protocol_end != std::string::npos ? protocol_end + 3 : 0 };
 	const auto authority_end { url.find_first_of( "/?#", start_pos ) };
-	std::string authority {
-		authority_end != std::string::npos ?
+	authority = authority_end != std::string::npos ?
 			url.substr( start_pos, authority_end - start_pos ) :
-			url.substr( start_pos )
-	};
+	                url.substr( start_pos );
 
 	const auto user_info_end { authority.rfind( '@' ) };
 	if ( user_info_end != std::string::npos ) authority.erase( 0, user_info_end + 1 );
@@ -28,7 +27,10 @@ namespace idhan::helpers
 	{
 		// IPv6 literal: "[::1]:8080" → "::1"
 		const auto close_bracket { authority.find( ']' ) };
-		return close_bracket != std::string::npos ? authority.substr( 1, close_bracket - 1 ) : authority.substr( 1 );
+		authority = close_bracket != std::string::npos ?
+		                authority.substr( 1, close_bracket - 1 ) :
+		                authority.substr( 1 );
+		return authority;
 	}
 
 	const auto port_pos { authority.find( ':' ) };

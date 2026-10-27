@@ -1,7 +1,10 @@
 #include "FFMPEGMetadata.hpp"
 
+#include <algorithm>
+#include <cstdint>
 #include <cstring>
 #include <iostream>
+#include <limits>
 #include <memory>
 
 #include "ffmpeg.hpp"
@@ -95,11 +98,13 @@ std::expected< idhan::MetadataInfo, idhan::ModuleError > FFMPEGMetadata::parseFi
 
 			if ( codecpar->bit_rate > 0 )
 			{
-				video_metadata.bitrate_bps = codecpar->bit_rate;
+				video_metadata.bitrate_bps = static_cast< int >(
+					std::min< std::int64_t >( codecpar->bit_rate, std::numeric_limits< int >::max() ) );
 			}
 			else if ( format_context->bit_rate > 0 )
 			{
-				video_metadata.bitrate_bps = format_context->bit_rate;
+				video_metadata.bitrate_bps = static_cast< int >(
+					std::min< std::int64_t >( format_context->bit_rate, std::numeric_limits< int >::max() ) );
 			}
 
 			if ( stream->duration != AV_NOPTS_VALUE )

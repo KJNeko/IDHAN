@@ -63,7 +63,7 @@ enum class DBTaskState
 class DBTask
 {
 	PGconn* m_conn { nullptr };
-	std::shared_ptr< DBOperation > m_operation;
+	std::shared_ptr< DBOperation > m_operation {};
 
 	friend class IDHANPQContext;
 	friend class DBContext;
@@ -80,7 +80,7 @@ class DBTask
 
 	class Awaiter
 	{
-		std::shared_ptr< DBOperation > m_operation;
+		std::shared_ptr< DBOperation > m_operation {};
 		friend class DBTask;
 		explicit Awaiter( std::shared_ptr< DBOperation > );
 

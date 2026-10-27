@@ -112,3 +112,6 @@ endif ()
 if (BUILD_IDHAN_TESTS)
 	add_subdirectory(tests)
 endif ()
+
+include(cmake/ExternalWarnings.cmake)
+idhan_configure_external_warnings("${CMAKE_SOURCE_DIR}")

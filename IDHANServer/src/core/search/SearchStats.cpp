@@ -47,12 +47,17 @@ std::string SearchStats::summary() const
 {
 	const std::lock_guard< std::mutex > lock { m_mutex };
 
-	if ( m_steps.empty() ) return "search: no steps recorded";
+	std::string out {};
+	if ( m_steps.empty() )
+	{
+		out = "search: no steps recorded";
+		return out;
+	}
 
 	std::size_t column { 0 };
 	for ( const auto& step : m_steps ) column = std::max( column, prefixFor( step.kind ).size() + step.label.size() );
 
-	std::string out { "search steps:" };
+	out = "search steps:";
 	for ( const auto& step : m_steps )
 	{
 		const auto prefix { prefixFor( step.kind ) };

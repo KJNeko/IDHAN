@@ -71,8 +71,8 @@ class DownloadBuffer
 
 	std::expected< void, std::string > write( const std::span< const std::byte > bytes )
 	{
-		const auto opened { open() };
-		if ( !opened ) return opened;
+		const auto opened_e { open() };
+		if ( !opened_e.has_value() ) return std::unexpected( opened_e.error() );
 
 		if ( std::fwrite( bytes.data(), 1, bytes.size(), m_file.get() ) != bytes.size() )
 			return std::unexpected( std::string { std::strerror( errno ) } );

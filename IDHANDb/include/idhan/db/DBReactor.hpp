@@ -22,7 +22,7 @@ class DBReactor
 {
 	struct Watch
 	{
-		std::shared_ptr< DBConnection > connection;
+		std::shared_ptr< DBConnection > connection {};
 		int socket { -1 };
 		SocketInterest interest { SocketInterest::read };
 		std::atomic< bool > scheduled { false };
@@ -31,10 +31,10 @@ class DBReactor
 
 	int m_epoll_fd { -1 };
 	int m_wake_fd { -1 };
-	std::unique_ptr< folly::CPUThreadPoolExecutor > m_workers;
-	std::jthread m_poller;
-	std::mutex m_mutex;
-	std::unordered_map< DBConnection*, std::shared_ptr< Watch > > m_watches;
+	std::unique_ptr< folly::CPUThreadPoolExecutor > m_workers {};
+	std::jthread m_poller {};
+	std::mutex m_mutex {};
+	std::unordered_map< DBConnection*, std::shared_ptr< Watch > > m_watches {};
 	std::atomic< bool > m_started { false };
 	std::atomic< bool > m_stopping { false };
 

@@ -52,7 +52,7 @@ std::expected< FileContents, idhan::ModuleError > openWholeFile( const idhan::Mo
 
 std::uint16_t readUint16BE( const std::uint8_t* data )
 {
-	return ( static_cast< std::uint16_t >( data[ 0 ] ) << 8 ) | ( static_cast< std::uint16_t >( data[ 1 ] ) << 0 );
+	return static_cast< std::uint16_t >( ( static_cast< unsigned int >( data[ 0 ] ) << 8 ) | data[ 1 ] );
 }
 
 std::uint32_t readUint32BE( const std::uint8_t* data )
@@ -401,7 +401,7 @@ std::uint32_t countPSDLayers( const std::uint8_t* data, std::size_t length )
 		// Skip layer name
 		if ( offset >= length ) return realLayerCount;
 		const std::uint8_t nameLen { data[ offset ] };
-		offset += 1 + ( ( nameLen + 1 + 3 ) & ~3 ); // Padded to 4 bytes
+		offset += std::size_t { 1 } + ( ( std::size_t { nameLen } + 1 + 3 ) & ~std::size_t { 3 } ); // Padded to 4 bytes
 
 		// Parse additional layer info to find "lsct" (layer section divider)
 		std::uint32_t groupType { 0 }; // Default to NORMA}

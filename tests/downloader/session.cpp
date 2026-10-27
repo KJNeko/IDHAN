@@ -311,7 +311,7 @@ export async function child(input, idhan) {
 	const auto submitted { session->submit( harness.server.url( "/parent" ) ) };
 	REQUIRE( submitted.has_value() );
 
-	const bool started { waitUntil( [ & ] { return request_started.load(); } ) };
+	const bool started { waitUntil( [ & ]() noexcept { return request_started.load(); } ) };
 	const bool parent_completed {
 		started
 		&& waitUntil( [ & ] { return harness.observer.hasCompleted( *submitted ); }, std::chrono::seconds { 1 } )

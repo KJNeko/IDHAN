@@ -9,7 +9,6 @@
 #include "ServerContext.hpp"
 #include "fgl/defines.hpp"
 #include "logging/log.hpp"
-#include "startup/Preflight.hpp"
 
 using idhan::cli::Option;
 
@@ -58,18 +57,16 @@ void applyCLISettings(
 	}
 }
 
-bool checkForceStart( const idhan::cli::Parser& parser, const idhan::cli::Option& option )
+void checkForceStart( const idhan::cli::Parser& parser, const idhan::cli::Option& option )
 {
-	if ( !parser.isSet( option ) || !idhan::config::parseBool( parser.value( option ) ).value_or( false ) )
-		return false;
-
-	const std::filesystem::path tmp_path {
-		idhan::config::getSilentDefault< std::string >( "server", "temp_path", "/tmp/idhan" )
-	};
-	constexpr std::string_view marker_file { "idhan.active" };
-	std::filesystem::remove( tmp_path / marker_file );
-
-	return true;
+	if ( parser.isSet( option ) && idhan::config::parseBool( parser.value( option ) ).value_or( false ) )
+	{
+		const std::filesystem::path tmp_path {
+			idhan::config::getSilentDefault< std::string >( "server", "temp_path", "/tmp/idhan" )
+		};
+		constexpr std::string_view marker_file { "idhan.active" };
+		std::filesystem::remove( tmp_path / marker_file );
+	}
 }
 
 auto strToSpdlogLevel( const std::string& level )
@@ -162,7 +159,7 @@ int main( int argc, char** argv )
 
 	const auto level { configureLoggingLevel() };
 
-	const bool forced { checkForceStart( parser, force_start ) };
+	checkForceStart( parser, force_start );
 
 	idhan::ConnectionArguments arguments {};
 	arguments.log_level = level;
@@ -172,8 +169,6 @@ int main( int argc, char** argv )
 	if ( arguments.use_stdout ) spdlog::info( "Using stdout for logging" );
 
 	checkSystemLocale();
-
-	startup::runPreflight( forced );
 
 	log::info( "Starting IDHAN v{}.{}.{}", IDHAN_MAJOR_VERSION, IDHAN_MINOR_VERSION, IDHAN_PATCH_VERSION );
 

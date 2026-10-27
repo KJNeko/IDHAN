@@ -117,7 +117,8 @@ TEST_CASE(
 			RouteMetadata {
 				proxygen::HTTPMethod::GET,
 				"/records/{record_id}",
-				{ { "record_id", []( const std::string_view ) -> std::expected< void, ParseError > { return {}; } } },
+				{ { "record_id",
+				    []( const std::string_view ) noexcept -> std::expected< void, ParseError > { return {}; } } },
 				{},
 				rules },
 			parameterTestHandler } );

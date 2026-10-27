@@ -15,7 +15,7 @@ inline constexpr std::size_t kRecordCacheBytes { 64ull * 1024 * 1024 }; // 64 Mi
 class RecordSha256Cache
 {
 	LRUCache< RecordID, SHA256 > m_cache { kRecordCacheBytes };
-	std::mutex m_mutex;
+	std::mutex m_mutex {};
 
   public:
 
@@ -36,7 +36,7 @@ class RecordSha256Cache
 class RecordExistsCache
 {
 	ValidLRUCache< RecordID > m_cache { kRecordCacheBytes };
-	std::mutex m_mutex;
+	std::mutex m_mutex {};
 
   public:
 
