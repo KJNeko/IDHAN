@@ -1,11 +1,19 @@
 #include "ptr/flatten/DefinitionStore.hpp"
 
 #include <fcntl.h>
+#ifdef _WIN32
+#include <io.h>
+#include <sys/stat.h>
+#include <windows.h>
+#include <winioctl.h>
+#else
 #include <sys/mman.h>
 #include <unistd.h>
+#endif
 
 #include <spdlog/spdlog.h>
 
+#include <algorithm>
 #include <cstring>
 #include <format>
 #include <limits>
@@ -29,9 +37,35 @@ static_assert( sizeof( TagIndexEntry ) == 8, "tags.idx stride is format" );
 
 int openForWrite( const std::filesystem::path& path )
 {
+#ifdef _WIN32
+	const int fd = ::_wopen( path.c_str(), _O_RDWR | _O_CREAT | _O_TRUNC | _O_BINARY, _S_IREAD | _S_IWRITE );
+#else
 	const int fd = ::open( path.c_str(), O_RDWR | O_CREAT | O_TRUNC, 0644 );
+#endif
 	if ( fd < 0 ) throw std::runtime_error( std::format( "Failed to open {} for writing", path.string() ) );
+
+#ifdef _WIN32
+	const auto handle = reinterpret_cast< HANDLE >( ::_get_osfhandle( fd ) );
+	DWORD returned {};
+	if ( !::DeviceIoControl( handle, FSCTL_SET_SPARSE, nullptr, 0, nullptr, 0, &returned, nullptr ) )
+	{
+		::_close( fd );
+		throw std::runtime_error( std::format( "Failed to mark {} as a sparse file", path.string() ) );
+	}
+
+#endif
 	return fd;
+}
+
+void closeDefinitionFile( const int fd )
+{
+	if ( fd < 0 ) return;
+
+#ifdef _WIN32
+	::_close( fd );
+#else
+	::close( fd );
+#endif
 }
 
 void writeAt( const int fd, const void* const data, const std::size_t size, const std::uint64_t offset )
@@ -39,12 +73,29 @@ void writeAt( const int fd, const void* const data, const std::size_t size, cons
 	std::size_t written { 0 };
 	while ( written < size )
 	{
+#ifdef _WIN32
+		const auto handle = reinterpret_cast< HANDLE >( ::_get_osfhandle( fd ) );
+		const auto position = offset + written;
+		OVERLAPPED operation {};
+		operation.Offset = static_cast< DWORD >( position );
+		operation.OffsetHigh = static_cast< DWORD >( position >> 32 );
+		const auto count = static_cast< DWORD >( std::min< std::size_t >( size - written, MAXDWORD ) );
+		DWORD result {};
+		// The CRT opens a synchronous handle. Explicit offsets keep concurrent writes independent.
+		if ( !::WriteFile( handle, static_cast< const std::byte* >( data ) + written, count, &result, &operation ) )
+			throw std::runtime_error( "WriteFile failed while writing definitions" );
+
+		if ( result == 0 ) throw std::runtime_error( "WriteFile wrote no definition bytes" );
+
+#else
 		const auto result = ::pwrite(
 			fd,
 			static_cast< const std::byte* >( data ) + written,
 			size - written,
 			static_cast< off_t >( offset + written ) );
 		if ( result <= 0 ) throw std::runtime_error( "pwrite failed while writing definitions" );
+#endif
+
 		written += static_cast< std::size_t >( result );
 	}
 }
@@ -76,16 +127,26 @@ std::optional< std::array< std::byte, SHA256_BYTES > > decodeSha256Hex( const st
 DefinitionWriter::DefinitionWriter( const std::filesystem::path& dir )
 {
 	std::filesystem::create_directories( dir );
-	m_hashes_fd = openForWrite( dir / HASHES_FILENAME );
-	m_tag_index_fd = openForWrite( dir / TAG_INDEX_FILENAME );
-	m_tag_blob_fd = openForWrite( dir / TAG_BLOB_FILENAME );
+	try
+	{
+		m_hashes_fd = openForWrite( dir / HASHES_FILENAME );
+		m_tag_index_fd = openForWrite( dir / TAG_INDEX_FILENAME );
+		m_tag_blob_fd = openForWrite( dir / TAG_BLOB_FILENAME );
+	}
+	catch ( ... )
+	{
+		closeDefinitionFile( m_hashes_fd );
+		closeDefinitionFile( m_tag_index_fd );
+		closeDefinitionFile( m_tag_blob_fd );
+		throw;
+	}
 }
 
 DefinitionWriter::~DefinitionWriter()
 {
-	if ( m_hashes_fd >= 0 ) ::close( m_hashes_fd );
-	if ( m_tag_index_fd >= 0 ) ::close( m_tag_index_fd );
-	if ( m_tag_blob_fd >= 0 ) ::close( m_tag_blob_fd );
+	closeDefinitionFile( m_hashes_fd );
+	closeDefinitionFile( m_tag_index_fd );
+	closeDefinitionFile( m_tag_blob_fd );
 }
 
 bool DefinitionWriter::writeHash( const std::uint32_t hash_id, const std::string_view sha256_hex )
@@ -129,6 +190,22 @@ DefinitionReader::Mapping DefinitionReader::mapFile( const std::filesystem::path
 	const auto size = std::filesystem::file_size( path, ec );
 	if ( ec || size == 0 ) return {};
 
+#ifdef _WIN32
+	const auto file = ::CreateFileW(
+		path.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr );
+	if ( file == INVALID_HANDLE_VALUE )
+		throw std::runtime_error( std::format( "Failed to open {} for reading", path.string() ) );
+
+	const auto mapping = ::CreateFileMappingW( file, nullptr, PAGE_READONLY, 0, 0, nullptr );
+	::CloseHandle( file );
+	if ( mapping == nullptr )
+		throw std::runtime_error( std::format( "Failed to create mapping for {}", path.string() ) );
+
+	void* const data = ::MapViewOfFile( mapping, FILE_MAP_READ, 0, 0, 0 );
+	::CloseHandle( mapping );
+	if ( data == nullptr ) throw std::runtime_error( std::format( "Failed to map {}", path.string() ) );
+
+#else
 	const int fd = ::open( path.c_str(), O_RDONLY );
 	if ( fd < 0 ) throw std::runtime_error( std::format( "Failed to open {} for reading", path.string() ) );
 
@@ -136,13 +213,20 @@ DefinitionReader::Mapping DefinitionReader::mapFile( const std::filesystem::path
 	::close( fd );
 
 	if ( data == MAP_FAILED ) throw std::runtime_error( std::format( "Failed to mmap {}", path.string() ) );
+#endif
 
 	return Mapping { static_cast< const std::byte* >( data ), size };
 }
 
 void DefinitionReader::unmapFile( Mapping& mapping )
 {
-	if ( mapping.data != nullptr ) ::munmap( const_cast< std::byte* >( mapping.data ), mapping.size );
+	if ( mapping.data == nullptr ) return;
+
+#ifdef _WIN32
+	::UnmapViewOfFile( mapping.data );
+#else
+	::munmap( const_cast< std::byte* >( mapping.data ), mapping.size );
+#endif
 	mapping = {};
 }
 

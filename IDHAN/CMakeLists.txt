@@ -2,7 +2,9 @@
 AddFGLLibrary(IDHAN OBJECT ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # Replacement runtime does not depend on the legacy IDHAN objects.
-add_subdirectory(runtime)
+if (BUILD_IDHAN_SERVER OR BUILD_IDHAN_DOWNLOADER)
+	add_subdirectory(runtime)
+endif ()
 
 set(HYDRUS_CONSTANTS_FILE ${CMAKE_CURRENT_SOURCE_DIR}/include/hydrus_constants_gen.hpp)
 set(HYDRUS_CLIENT_CONSTANTS_FILE ${CMAKE_CURRENT_SOURCE_DIR}/include/hydrus_client_constants_gen.hpp)

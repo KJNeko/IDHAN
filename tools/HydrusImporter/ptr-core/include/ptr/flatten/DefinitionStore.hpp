@@ -78,7 +78,7 @@ class DefinitionWriter
 	std::atomic< std::uint64_t > m_rejected_hashes { 0 };
 };
 
-//! Read-only mmap over the files DefinitionWriter produced. Resident cost is page cache, which
+//! Read-only memory mapping over the files DefinitionWriter produced. Resident cost is page cache, which
 //! the kernel reclaims under pressure, rather than heap the process must hold.
 class DefinitionReader
 {
