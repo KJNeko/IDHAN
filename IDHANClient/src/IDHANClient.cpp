@@ -14,6 +14,8 @@
 namespace idhan
 {
 
+IDHANClient* IDHANClient::m_instance { nullptr };
+
 VersionInfo handleVersionInfo( QNetworkReply* reply )
 {
 	if ( reply == nullptr ) throw std::runtime_error( "Reply is null" );
