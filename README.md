@@ -17,6 +17,14 @@ Dev: ![Dev Build](https://github.com/KJNeko/IDHAN/actions/workflows/docker-build
 
 Issues should be brought up [here](https://github.com/KJNeko/IDHAN/issues)
 
+## Table of Contents
+
+- [Screenshots](#screenshots)
+- [Features](#features)
+- [Performance](#performance)
+- [Getting Started](#getting-started)
+- [Server docs](#server-docs)
+
 # Screenshots
 
 <table>
@@ -65,35 +73,25 @@ If your library is small, You likely don't want to use IDHAN. Alternatively, if 
 Hydrus, You
 might want to try IDHAN. It's still recommended to use Hydrus currently for downloaders.
 
-### Features that Hydrus lacks
+### IDHAN
 
-- Semantic searching
-- User modules for Metadata/Thumbnail/Mime processing
-- A Server/Client seperation
+- Better downloader integrated.
+- Semantic searching.
+- User modules for Metadata/Thumbnail/Mime processing.
+- A Server/Client seperation.
 
-### Features Hydrus has over IDHAN
+### Hydrus
 
-- Downloaders.
 - A way better UX.
 - More tested and stable.
-- Lack of needing to manage a DB
-
-# Performance
-
-I dunno, Works well enough on this piece of shit (Wyse 5070). Postgresql was the main bottleneck.
-
-![pieceofshit.png](docs/images/pieceofshit.png)
-
-In all seriousness, Performance on a Pentium Silver J5005 @ 1.50Ghz was fairly usable when it was generating thumbnails
-and importing files. Memory at worst is dependent on the files themselves and if you are using any embedding models for
-semantic searching.
+- Lack of needing to manage a DB.
 
 # Getting started
 
 - [Docker Guide](docs/docker.md)
 - [Building from source](docs/build.md) (Not recommended currently)
 - [Configuration options](docs/config.md)
-- [Quickstart guide](docs/setup.md) featuring config, TLS, and scanning your first cluster
+- [Quickstart guide](docs/setup.md)
 - [Migrating from Hydrus](docs/migrating-from-hydrus.md)
 
 # Server docs
@@ -109,3 +107,15 @@ Additional documentation:
 - [Downloader architecture](docs/downloader.md)
 - [WebUI plugins](docs/webui-plugins.md)
 - [Known issues](docs/known-issues.md)
+
+# Performance
+
+I dunno, Works well enough on this piece of shit (Wyse 5070). Postgresql was the main bottleneck.
+
+![pieceofshit.png](docs/images/pieceofshit.png)
+
+In all seriousness, Performance on a Pentium Silver J5005 @ 1.50Ghz was fairly usable when it was generating thumbnails
+and importing files. Memory at worst is dependent on the files themselves and if you are using any embedding models for
+semantic searching.
+
+

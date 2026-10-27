@@ -17,7 +17,7 @@ git submodule update --init --recursive
 docker build --build-arg BUILD_JOBS=4 -t idhan:local .
 ```
 
-The build and runtime stages use Ubuntu 26.04. The server builds with GCC 15 and
+The build and runtime stages use Ubuntu 26.10. The server builds with GCC 16 and
 C++26. `BUILD_JOBS` defaults to 4 to limit memory use while compiling the HTTP stack;
 raise it on machines with sufficient RAM. Builds must run on the target architecture.
 
@@ -33,15 +33,17 @@ Provide enough disk space there for concurrent uploads; it can be a separate vol
 
 ## secomp and io_uring
 
-Since IDHAN uses io_uring for I/O Docker might sometimes force it to fallback to non-io_uring due to seccomp. For the
-best performance you should run with `seccomp=undefined` for the easier setup. A safer approach is just to allow
-io_uring and it's related syscalls
+Docker's seccomp profile can block the io_uring syscalls IDHAN uses for I/O, causing it to fall back to other I/O
+methods. The Compose example below uses `seccomp=unconfined` to disable seccomp filtering for the server container.
+To retain filtering, supply a custom seccomp profile that allows `io_uring_setup`, `io_uring_enter`, and
+`io_uring_register`.
 
 ## Postgres shared memory (Docker specific)
 
-Postgresql can sometimes get held up by `/dev/shm` being too small. This really only happens when you start to have
-large queries. It can work without it being smaller but performance might be hurt as a result. You can raise this value
-in docker by seing `shm_size` when creating the postgresql container.
+Docker defaults `/dev/shm` to 64 MiB. PostgreSQL parallel queries use it for shared state such as hash tables and
+tuple queues; exhausting it can fail queries with "could not resize shared memory segment". Increase it by setting
+`shm_size` on the PostgreSQL container, as in the example below. Size it for your workload and parallel-query settings.
+This is separate from `shared_buffers`, which does not consume `/dev/shm`.
 
 # Semantic search models
 
@@ -60,7 +62,8 @@ model directory under it, one subdirectory per model:
 The subdirectory name is the model name IDHAN registers. The expected layout is the
 one [onnx-community](https://huggingface.co/onnx-community/siglip2-base-patch16-224-ONNX) publishes:
 `onnx/vision_model.onnx`, optionally `onnx/text_model.onnx` for text queries, plus `preprocessor_config.json` and
-`tokenizer.json` beside them. A flat directory with `model.onnx` at the top level also works.
+`tokenizer.json` in the model's root directory (alongside the `onnx/` directory). A flat directory with `model.onnx`
+at the top level also works.
 
 To fetch the fp32 siglip2 pair without cloning the repository, which carries eight precision variants of each tower and
 runs to roughly 11.4 GB:
@@ -128,10 +131,11 @@ services:
       IDHAN_DATABASE_PASSWORD: idhan
       IDHAN_DATABASE_DATABASE: idhan-db
       IDHAN_LOGGING_LEVEL: info
+      IDHAN_THUMBNAILS_PATH: /media/thumbnails
     ports:
       - "16609:16609"
     volumes:
-      - /path/to/your/media:/files
+      - /path/to/your/media:/media
       # Optional, for semantic search. See "Semantic search models" above.
       # - /path/to/siglip2-base-patch16-224:/usr/share/idhan/models/siglip2-base-patch16-224
     security_opt:
@@ -144,3 +148,13 @@ services:
 volumes:
   idhan_pg18:
 ```
+
+After starting the services, open the WebUI and add the **Cluster Manager** panel from **Add panel...**.
+Create a cluster with a path such as `/media/clusters/main` and mark it writable before importing files.
+Use the path inside the container; mounting a directory alone does not register it as a cluster.
+The equivalent API operation is `POST /clusters/add` with a JSON body such as
+`{"name":"main","path":"/media/clusters/main","readonly":false}`.
+See [Initial setup](setup.md) for the WebUI setup steps.
+
+The `/media` mount persists both cluster files and thumbnails. Keep registered cluster paths under this mount (or
+another persistent mount) so they survive container recreation.
