@@ -2469,6 +2469,11 @@ body {
   color: var(--fg);
 }
 
+.import-drop.is-disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
 .import-force {
   display: inline-flex;
   align-items: center;

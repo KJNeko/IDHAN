@@ -6,11 +6,12 @@
  */
 
 import {useCallback, useEffect, useRef, useState, type DragEvent} from 'react';
-import {api} from '../../api/client';
+import {api, readApiError} from '../../api/client';
 import type {DownloadSessionInfo, DownloadSessionUrlNode} from '../../api/types';
 import type { PanelProps, RecordId } from '../../host/types';
 import { RecordInfoView, type RecordInfo } from './RecordInfoView';
 import {useRecordMenu} from './recordActions';
+import {ImportStorageNotice, useImportStorage} from './importStorage';
 
 const MAX_CONCURRENT = 3;
 
@@ -38,15 +39,11 @@ interface Item {
   info?: RecordInfo;
 }
 
-/**
- * The two response shapes overload `status`: a 2xx carries an ImportStatus, while the error helpers
- * (createBadRequest and friends) put the HTTP code there alongside the message in `error`. Only read
- * `status` as an ImportStatus when the response was ok.
- */
+/** Successful HTTP responses can still report a failed or skipped import. */
 interface ImportResponse {
   record_id?: number;
   status?: number;
-  /** Set by the error helpers on any 4xx/5xx. */
+    /** Kept for application-level errors in a successful HTTP response. */
   error?: string;
   /** Set on a 200 that still failed, currently only an unidentifiable mime. */
   reason?: string;
@@ -72,6 +69,8 @@ export function parseNewlineUrlList(value: string): string[] {
 }
 
 function ImportPanel({ host }: PanelProps) {
+    const storage = useImportStorage(host);
+    const {canImport, check: checkStorage} = storage;
     const [sessions, setSessions] = useState<DownloadSessionInfo[]>([]);
     const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
     const [newSessionName, setNewSessionName] = useState('');
@@ -180,7 +179,7 @@ function ImportPanel({ host }: PanelProps) {
     }, [loadSessionRecords, newSessionName]);
 
     const queueUrl = useCallback(async () => {
-        if (!activeSession) return;
+        if (!activeSession || !canImport || sessionBusy) return;
 
         const urls = parseNewlineUrlList(downloadUrl);
         if (urls.length === 0) return;
@@ -190,6 +189,7 @@ function ImportPanel({ host }: PanelProps) {
         const failedUrls: string[] = [];
         const errors: string[] = [];
         try {
+            if (!await checkStorage()) return;
             for (const url of urls) {
                 try {
                     const queued = await api.downloadSessions.submitUrl(activeSession.id, url);
@@ -231,19 +231,20 @@ function ImportPanel({ host }: PanelProps) {
         } finally {
             setSessionBusy(false);
         }
-    }, [activeSession, downloadUrl, host, loadSessionRecords, refreshSessions]);
+    }, [activeSession, canImport, checkStorage, downloadUrl, host, loadSessionRecords, refreshSessions, sessionBusy]);
 
     const retryUrl = useCallback(async (jobId: number) => {
-        if (!activeSession) return;
+        if (!activeSession || !canImport) return;
         setSessionError(null);
         try {
+            if (!await checkStorage()) return;
             const retried = await api.downloadSessions.retryUrl(activeSession.id, jobId);
             setUrlJobs((previous) => previous.map((job) => (job.id === jobId ? retried : job)));
             setPollGeneration((value) => value + 1);
         } catch (error) {
             setSessionError(error instanceof Error ? error.message : String(error));
         }
-    }, [activeSession]);
+    }, [activeSession, canImport, checkStorage]);
 
     const destroySession = useCallback(async () => {
         if (!activeSession) return;
@@ -269,6 +270,12 @@ function ImportPanel({ host }: PanelProps) {
   const importFiles = useCallback(
     async (files: File[]) => {
       if (files.length === 0) return;
+        if (!canImport || busy) return;
+        setBusy(true);
+        if (!await checkStorage()) {
+            setBusy(false);
+            return;
+        }
       const queued: Item[] = files.map((file) => ({
         id: nextId.current++,
         name: file.name,
@@ -276,7 +283,6 @@ function ImportPanel({ host }: PanelProps) {
         state: 'pending',
       }));
       setItems((prev) => [...queued, ...prev]);
-      setBusy(true);
 
       const imported: RecordId[] = [];
 
@@ -298,12 +304,10 @@ function ImportPanel({ host }: PanelProps) {
               headers: { 'Content-Type': file.type || 'application/octet-stream' },
               body: file,
             });
-            const data = (await res.json().catch(() => ({}))) as ImportResponse;
-
             if (!res.ok) {
-              patch(item.id, { state: 'error', detail: 'failed', reason: data.error ?? `HTTP ${res.status}` });
-              return;
+                throw await readApiError(res, 'POST /file/import');
             }
+              const data = (await res.json()) as ImportResponse;
 
             const recordId = typeof data.record_id === 'number' ? data.record_id : undefined;
 
@@ -352,7 +356,7 @@ function ImportPanel({ host }: PanelProps) {
         host.ui.toast(`Imported ${imported.length} file${imported.length === 1 ? '' : 's'}`, { kind: 'success' });
       }
     },
-    [host, forceImport, patch],
+      [host, forceImport, patch, canImport, checkStorage, busy],
   );
 
   function onDrop(event: DragEvent) {
@@ -367,6 +371,7 @@ function ImportPanel({ host }: PanelProps) {
 
   return (
     <div className="panel-body import-panel">
+        <ImportStorageNotice storage={storage}/>
         <section className="download-session-panel">
             <h3>URL download session</h3>
             <div className="download-session-row">
@@ -401,10 +406,10 @@ function ImportPanel({ host }: PanelProps) {
                     value={downloadUrl}
                     onChange={(event) => setDownloadUrl(event.target.value)}
                     placeholder="Paste one URL per line"
-                    disabled={sessionBusy || !activeSession}
+                    disabled={sessionBusy || !activeSession || !canImport}
                 />
                 <button type="button"
-                        disabled={sessionBusy || !activeSession || parseNewlineUrlList(downloadUrl).length === 0}
+                        disabled={sessionBusy || !activeSession || !canImport || parseNewlineUrlList(downloadUrl).length === 0}
                         onClick={() => void queueUrl()}>Queue URL(s)
                 </button>
             </div>
@@ -422,6 +427,7 @@ function ImportPanel({ host }: PanelProps) {
                                         type="button"
                                         className="download-session-job-retry"
                                         title="Queue this URL again"
+                                        disabled={!canImport}
                                         onClick={() => void retryUrl(job.id)}
                                     >
                                         Retry
@@ -436,16 +442,19 @@ function ImportPanel({ host }: PanelProps) {
             {sessionError && <p className="error">{sessionError}</p>}
         </section>
       <div
-        className={`import-drop${dragOver ? ' is-over' : ''}`}
+          className={`import-drop${dragOver ? ' is-over' : ''}${!canImport || busy ? ' is-disabled' : ''}`}
         onDragOver={(e) => {
           e.preventDefault();
-          setDragOver(true);
+            if (canImport && !busy) setDragOver(true);
         }}
         onDragLeave={() => setDragOver(false)}
         onDrop={onDrop}
-        onClick={() => fileInput.current?.click()}
+          onClick={() => {
+              if (canImport && !busy) fileInput.current?.click();
+          }}
         role="button"
-        tabIndex={0}
+          aria-disabled={!canImport || busy}
+          tabIndex={canImport && !busy ? 0 : -1}
       >
         <p>Drop files here, or click to choose.</p>
         <input
@@ -453,6 +462,7 @@ function ImportPanel({ host }: PanelProps) {
           type="file"
           multiple
           hidden
+          disabled={!canImport || busy}
           onChange={(e) => {
             void importFiles(Array.from(e.target.files ?? []));
             e.target.value = '';
@@ -461,7 +471,8 @@ function ImportPanel({ host }: PanelProps) {
       </div>
 
       <label className="import-force">
-        <input type="checkbox" checked={forceImport} onChange={(e) => setForceImport(e.target.checked)} />
+          <input type="checkbox" checked={forceImport} disabled={!canImport || busy}
+                 onChange={(e) => setForceImport(e.target.checked)}/>
         Force import files with an unknown type
       </label>
 

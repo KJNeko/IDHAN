@@ -38,6 +38,7 @@ it('refreshes tags on expanded downloads when a followed parser imports the same
     };
     mocks.recordsMetadata.mockImplementation(async () => ({records: [metadata], missing: []}));
     const host = {
+        http: {fetch: vi.fn(async () => new Response(JSON.stringify([{readonly: false}]), {status: 200}))},
         records: {getMetadata, thumbnailUrl: () => '/thumbnail'},
         results: {set: vi.fn()}, selection: {set: vi.fn()},
     } as unknown as PanelProps['host'];
