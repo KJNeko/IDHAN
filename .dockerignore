@@ -1,5 +1,6 @@
 # Build directories
 build/
+.cache/
 **/cmake-build-*/
 
 # Node dependencies and web build output — installed/built inside the image. Copying the host's

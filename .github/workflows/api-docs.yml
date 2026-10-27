@@ -23,6 +23,14 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Cache OpenAPI tooling downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: api-docs-npm-v1-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            api-docs-npm-v1-${{ runner.os }}-
+
       - name: Bundle OpenAPI spec
         run: npx --yes @redocly/cli bundle docs/api/index.yaml -o dist/openapi.yaml
 

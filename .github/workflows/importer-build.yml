@@ -1,6 +1,18 @@
 name: Build Hydrus Importer
 
 on:
+  # Tag caches are isolated; branch builds seed the caches used by later releases.
+  push:
+    branches: [ dev, master ]
+    paths:
+      - 'CMakeLists.txt'
+      - 'cmake/**'
+      - 'dependencies/**'
+      - '3rd-party/hydrus/**'
+      - 'IDHAN/**'
+      - 'IDHANClient/**'
+      - 'tools/HydrusImporter/**'
+      - '.github/workflows/importer-build.yml'
   workflow_call:
   workflow_dispatch:
 
@@ -9,6 +21,10 @@ permissions:
 
 env:
   TAG: ${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
+  CCACHE_DIR: ${{ github.workspace }}/.cache/ccache
+  CCACHE_BASEDIR: ${{ github.workspace }}
+  CCACHE_COMPILERCHECK: content
+  CCACHE_MAXSIZE: 1G
 
 jobs:
   build-linux:
@@ -24,15 +40,31 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            g++-15 cmake ninja-build qt6-base-dev qt6-wayland \
+            g++-15 cmake ninja-build ccache qt6-base-dev qt6-wayland \
             libjsoncpp-dev libspdlog-dev libssl-dev libsqlite3-dev \
             zlib1g-dev patchelf libcatch2-dev
 
+      - name: Restore compiler cache
+        id: compiler-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: importer-ccache-v1-${{ runner.os }}-${{ runner.arch }}-ubuntu2604-gcc15-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            importer-ccache-v1-${{ runner.os }}-${{ runner.arch }}-ubuntu2604-gcc15-
+
+      - name: Initialize compiler cache statistics
+        run: |
+          ccache --version
+          ccache --zero-stats
+
       - name: Build Hydrus Importer
+        id: build
         run: |
           cmake -S . -B build/importer-linux -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_CXX_COMPILER=g++-15 \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DFGL_MARCH=x86-64 \
             -DBUILD_IDHAN_SERVER=OFF \
             -DBUILD_IDHAN_DOWNLOADER=OFF \
@@ -52,6 +84,18 @@ jobs:
           cmake --build build/importer-linux --target HydrusImporter PTRCoreTests --parallel 4
           ctest --test-dir build/importer-linux -R '^PTRCoreTests$' --output-on-failure
           cmake --install build/importer-linux --component HydrusImporter --prefix "$PWD/package/HydrusImporter"
+
+      - name: Report compiler cache statistics
+        if: ${{ !cancelled() && steps.build.outcome != 'skipped' }}
+        run: ccache --show-stats --verbose
+
+      # Successful compilations are reusable even if a later compilation, test or install fails.
+      - name: Save compiler cache
+        if: ${{ !cancelled() && steps.build.outcome != 'skipped' && steps.compiler-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ steps.compiler-cache.outputs.cache-primary-key }}
 
       - name: Check packaged importer
         run: |
@@ -101,6 +145,7 @@ jobs:
             mingw-w64-ucrt-x86_64-gcc
             mingw-w64-ucrt-x86_64-cmake
             mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-ccache
             mingw-w64-ucrt-x86_64-qt6-base
             mingw-w64-ucrt-x86_64-jsoncpp
             mingw-w64-ucrt-x86_64-spdlog
@@ -109,11 +154,27 @@ jobs:
             mingw-w64-ucrt-x86_64-zlib
             mingw-w64-ucrt-x86_64-catch
 
+      - name: Restore compiler cache
+        id: compiler-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: importer-ccache-v1-${{ runner.os }}-${{ runner.arch }}-ucrt64-gcc-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            importer-ccache-v1-${{ runner.os }}-${{ runner.arch }}-ucrt64-gcc-
+
+      - name: Initialize compiler cache statistics
+        run: |
+          ccache --version
+          ccache --zero-stats
+
       - name: Build Hydrus Importer
+        id: build
         run: |
           cmake -S . -B build/importer-windows -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_CXX_COMPILER=g++ \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DFGL_MARCH=x86-64 \
             -DBUILD_IDHAN_SERVER=OFF \
             -DBUILD_IDHAN_DOWNLOADER=OFF \
@@ -131,6 +192,17 @@ jobs:
           cmake --build build/importer-windows --target HydrusImporter PTRCoreTests --parallel 4
           ctest --test-dir build/importer-windows -R '^PTRCoreTests$' --output-on-failure
           cmake --install build/importer-windows --component HydrusImporter --prefix "$PWD/package/HydrusImporter"
+
+      - name: Report compiler cache statistics
+        if: ${{ !cancelled() && steps.build.outcome != 'skipped' }}
+        run: ccache --show-stats --verbose
+
+      - name: Save compiler cache
+        if: ${{ !cancelled() && steps.build.outcome != 'skipped' && steps.compiler-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ steps.compiler-cache.outputs.cache-primary-key }}
 
       - name: Check packaged importer without the build environment
         shell: pwsh

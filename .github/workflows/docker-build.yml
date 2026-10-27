@@ -4,9 +4,15 @@ on:
   push:
     branches:
       - dev
+      # Seed the default-branch compiler cache that release tags can restore.
+      - master
     tags:
       - 'v*.*.*'
   workflow_dispatch:
+
+concurrency:
+  group: docker-build-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_type != 'tag' }}
 
 env:
   REGISTRY: ghcr.io
@@ -36,6 +42,7 @@ jobs:
             type=raw,value=latest,enable=${{ github.ref_type == 'tag' && !contains(github.ref_name, '-') }}
             type=raw,value=dev,enable=${{ github.ref == 'refs/heads/dev' }}
             type=ref,event=tag
+            type=sha,enable=${{ github.ref == 'refs/heads/master' }}
 
       - name: Set cache refs
         id: cache
@@ -49,7 +56,9 @@ jobs:
           {
             echo "cache_from<<EOF"
             echo "type=registry,ref=$CACHE"
-            if [ "$GITHUB_REF" != "refs/heads/dev" ]; then
+            if [ "$GITHUB_REF" = "refs/heads/dev" ]; then
+              echo "type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache"
+            else
               echo "type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:dev-buildcache"
             fi
             echo "EOF"
@@ -61,7 +70,8 @@ jobs:
           registry: ${{ env.REGISTRY }}
           token: ${{ secrets.GITHUB_TOKEN }}
           platforms: ${{ env.PLATFORMS }}
-          push: 'true'
+          # Default-branch builds warm caches without publishing an image.
+          push: ${{ github.ref == 'refs/heads/dev' || github.ref_type == 'tag' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: ${{ steps.cache.outputs.cache_from }}
