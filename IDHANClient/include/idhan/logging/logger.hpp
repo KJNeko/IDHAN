@@ -3,6 +3,7 @@
 #include <functional>
 #include <string_view>
 
+#include "idhan/IDHANClientExport.hpp"
 #include "logging/qt_formatters/qstring.hpp"
 
 #pragma GCC diagnostic push
@@ -29,7 +30,7 @@ namespace idhan::logging
 {
 
 //! \return The client's shared spdlog logger (created on first use).
-std::shared_ptr< spdlog::logger > getLogger();
+IDHAN_CLIENT_EXPORT std::shared_ptr< spdlog::logger > getLogger();
 
 //! Logs at "notify" level (see the namespace description for level semantics).
 template < typename... Ts >
@@ -89,7 +90,7 @@ void critical( format_ns::format_string< Ts... > fmt, Ts&&... ts )
 }
 
 //! Logs the network error response to the local log only.
-void logResponse( QNetworkReply* reply );
+IDHAN_CLIENT_EXPORT void logResponse( QNetworkReply* reply );
 
 //! Bitmask of log levels a callback subscribes to (see registerCallback).
 enum CallbackLevel : uint8_t
@@ -106,7 +107,7 @@ enum CallbackLevel : uint8_t
 using CallbackFunction = std::function< void( CallbackLevel level, std::string_view message ) >;
 
 //! Registers a callback. The level will act as a mask for specific events
-void registerCallback( CallbackFunction& func, CallbackLevel level );
+IDHAN_CLIENT_EXPORT void registerCallback( CallbackFunction& func, CallbackLevel level );
 
 } // namespace idhan::logging
 

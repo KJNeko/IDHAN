@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "fgl/defines.hpp"
+#include "idhan/IDHANClientExport.hpp"
 
 namespace idhan
 {
@@ -22,7 +23,7 @@ enum HttpMethod
 
 //! Thin wrapper around QNetworkAccessManager that marshals requests onto the network thread. The
 //! manager is affine to its own thread, so send() hands work to doSendData() via the sendData signal.
-class Network : public QObject
+class IDHAN_CLIENT_EXPORT Network : public QObject
 {
 	Q_OBJECT
 

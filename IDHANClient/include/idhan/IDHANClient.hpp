@@ -13,6 +13,7 @@
 #include <string>
 
 #include "IDHANTypes.hpp"
+#include "idhan/IDHANClientExport.hpp"
 #include "Network.hpp"
 #include "logging/logger.hpp"
 
@@ -50,7 +51,7 @@ struct VersionInfo
 };
 
 //! Registers IDHAN's standard command-line options (server host, port, API key, TLS, ...) on \p parser.
-void addIDHANOptions( QCommandLineParser& parser );
+IDHAN_CLIENT_EXPORT void addIDHANOptions( QCommandLineParser& parser );
 
 //! Callback invoked with the completed network reply on success.
 using IDHANResponseHandler = std::function< void( QNetworkReply* ) >;
@@ -60,10 +61,10 @@ using IDHANErrorHandler = std::function< void( QNetworkReply*, QNetworkReply::Ne
 //! Typed C++/Qt wrapper over the IDHAN REST API. Each method issues one HTTP request and returns a
 //! QFuture that resolves to the parsed result (or reports an error). Construct one with the server
 //! host/port/key (Qt must be initialised first); a process-wide instance is reachable via instance().
-class IDHANClient
+class IDHAN_CLIENT_EXPORT IDHANClient
 {
 	std::shared_ptr< spdlog::logger > m_logger { nullptr };
-	inline static IDHANClient* m_instance { nullptr };
+	static IDHANClient* m_instance;
 	QUrl m_url_template {};
 
 	Network network;
