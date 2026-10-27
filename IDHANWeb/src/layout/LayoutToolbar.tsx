@@ -4,8 +4,8 @@
  * push/pull); localStorage remains the source of truth and the server copy is opt-in.
  */
 
-import {type ChangeEvent, type SyntheticEvent, useMemo, useRef, useState} from 'react';
-import { ApiError } from '../api/client';
+import {type ChangeEvent, type SyntheticEvent, useEffect, useMemo, useRef, useState} from 'react';
+import {api, ApiError} from '../api/client';
 import type {PanelDefinition} from '../host/types';
 import { listPanels } from '../panels/registry';
 import { useLayoutStore } from './store';
@@ -54,6 +54,17 @@ function run(promise: Promise<unknown>): void {
 }
 
 export function LayoutToolbar({ onSignOut }: { onSignOut: () => void }) {
+    const [version, setVersion] = useState<string | null>(null);
+
+    useEffect(() => {
+        const controller = new AbortController();
+        void api.version(controller.signal)
+            .then((info) => setVersion(info.idhan_server_version.string))
+            .catch(() => { /* Keep the toolbar available if the server cannot be reached. */
+            });
+        return () => controller.abort();
+    }, []);
+
   const name = useLayoutStore((s) => s.doc.name);
   const editMode = useLayoutStore((s) => s.editMode);
   const savedLayouts = useLayoutStore((s) => s.savedLayouts);
@@ -137,7 +148,10 @@ export function LayoutToolbar({ onSignOut }: { onSignOut: () => void }) {
 
   return (
     <header className="toolbar">
-      <span className="toolbar-brand">IDHAN</span>
+      <span className="toolbar-brand">
+        IDHAN
+          {version && <span className="toolbar-version">v{version}</span>}
+      </span>
 
         <span className="toolbar-notice" role="note" title="Development UI, Not for real usage. Vibecoded slop">
         Development UI, Not for real usage. Vibecoded slop
