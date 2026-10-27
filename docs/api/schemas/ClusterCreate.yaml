@@ -12,13 +12,15 @@ properties:
       server's working directory. Dot segments and trailing separators are
       simplified. Physical directory aliases and already registered marker UUIDs
       also conflict. Existing directories are allowed; missing identity markers
-      are initialized automatically, including for logically read-only clusters.
+      are initialized automatically for writable clusters. Read-only clusters may
+      have no marker; registration never creates one for them. Existing markers
+      are validated and reused.
     examples:
       - /mnt/media/idhan
   readonly:
     type: boolean
     default: true
-    description: IDHAN will not add, move, or rename media files in this cluster. Identity marker initialization and acknowledged recovery are permitted.
+    description: IDHAN will not add, move, or rename media files in this cluster. Missing identity markers are allowed and are never created while read-only.
   ratio:
     description: 'Weight used when picking a cluster for new files: this cluster''s ratio over the sum
       of all ratios. Reads return it as `ratio_number`.'

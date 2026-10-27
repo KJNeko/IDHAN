@@ -105,7 +105,7 @@ render_threads = 2
 #path = "./static/plugins"
 
 [cluster]
-# Acknowledge missing marker/root recovery at next startup; automatically reset to false first.
+# Acknowledge missing writable cluster marker/root recovery; reset to false before recovery.
 # Check that the intended storage is mounted. Existing conflicting markers are never replaced.
 # Requires a writable TOML file and directory; true environment/CLI overrides are rejected.
 #recreate_missing_markers = false

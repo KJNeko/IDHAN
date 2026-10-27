@@ -389,9 +389,24 @@ static http::HTTPTask< http::Response > addCluster( db::DBContext& db, http::Req
 
 	auto root { folly::File::makeFile( target_path.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC ) };
 	if ( !root ) co_return http::Response::error( 500, "Could not open cluster directory for initialization" );
-	auto marker { filesystem::initializeClusterMarker( root->fd(), boost::uuids::random_generator {}() ) };
-	if ( !marker ) co_return http::Response::error( 409, marker.error() );
-	const auto cluster_uuid { boost::uuids::to_string( marker->uuid ) };
+	auto uuid { boost::uuids::random_generator {}() };
+	if ( readonly )
+	{
+		auto marker_e { filesystem::readClusterMarker( root->fd() ) };
+		if ( !marker_e.has_value() ) co_return http::Response::error( 409, marker_e.error() );
+
+		const auto& marker { marker_e.value() };
+		if ( marker ) uuid = marker->uuid;
+	}
+	else
+	{
+		auto marker_e { filesystem::initializeClusterMarker( root->fd(), uuid ) };
+		if ( !marker_e.has_value() ) co_return http::Response::error( 409, marker_e.error() );
+
+		uuid = marker_e.value().uuid;
+	}
+
+	const auto cluster_uuid { boost::uuids::to_string( uuid ) };
 
 	db::DBBindings insert_bindings {};
 	insert_bindings.bind( *fields.name );
@@ -468,6 +483,21 @@ static http::HTTPTask< http::Response > modifyCluster( db::DBContext& db, http::
 
 	auto verified { co_await filesystem::openCluster( db, cluster_id ) };
 	if ( !verified ) co_return http::Response::error( 503, verified.error() );
+
+	if ( fields.readonly == false && verified->readonly() )
+	{
+		const auto configuration { filesystem::ClusterManager::getInstance().find( cluster_id ) };
+		if ( !configuration ) co_return http::Response::error( 404, "Cluster does not exist" );
+
+		auto root { folly::File::makeFile( verified->root().c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC ) };
+		if ( !root ) co_return http::Response::error( 503, "Could not open cluster directory for initialization" );
+
+		auto marker_e { filesystem::initializeClusterMarker( root->fd(), configuration->uuid ) };
+		if ( !marker_e.has_value() ) co_return http::Response::error( 409, marker_e.error() );
+
+		if ( marker_e.value().uuid != configuration->uuid )
+			co_return http::Response::error( 409, "Cluster marker UUID does not match the registered identity" );
+	}
 
 	auto modification_error { co_await applyClusterFields( transaction, cluster_id, fields ) };
 	if ( modification_error )

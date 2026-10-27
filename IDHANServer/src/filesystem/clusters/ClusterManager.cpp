@@ -104,7 +104,7 @@ runtime::Task< void > ClusterManager::reloadClusters( db::DBContext& db, const b
 		const auto& folder_path { info.path };
 		const auto read_only { info.read_only };
 		const auto uuid { info.uuid };
-		if ( recreate_missing_markers )
+		if ( recreate_missing_markers && !read_only )
 		{
 			std::error_code error;
 			std::filesystem::create_directories( folder_path, error );
