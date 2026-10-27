@@ -3,7 +3,6 @@ name: Build and Push Docker Image
 on:
   push:
     branches:
-      - master
       - dev
     tags:
       - 'v*.*.*'
@@ -42,19 +41,29 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          flavor: latest=false
           tags: |
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/master' }}
+            type=raw,value=latest,enable=${{ github.ref_type == 'tag' && !contains(github.ref_name, '-') }}
             type=raw,value=dev,enable=${{ github.ref == 'refs/heads/dev' }}
             type=ref,event=tag
 
-      - name: Set cache ref
+      - name: Set cache refs
         id: cache
         run: |
           if [ "$GITHUB_REF" = "refs/heads/dev" ]; then
-            echo "ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:dev-buildcache" >> $GITHUB_OUTPUT
+            CACHE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:dev-buildcache"
           else
-            echo "ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache" >> $GITHUB_OUTPUT
+            CACHE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache"
           fi
+          echo "ref=$CACHE" >> $GITHUB_OUTPUT
+          {
+            echo "cache_from<<EOF"
+            echo "type=registry,ref=$CACHE"
+            if [ "$GITHUB_REF" != "refs/heads/dev" ]; then
+              echo "type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:dev-buildcache"
+            fi
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -64,5 +73,43 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=registry,ref=${{ steps.cache.outputs.ref }}
+          cache-from: ${{ steps.cache.outputs.cache_from }}
           cache-to: type=registry,ref=${{ steps.cache.outputs.ref }},mode=max
+
+  release:
+    needs: build-and-push
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+          IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        run: |
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "Release $TAG already exists"
+            exit 0
+          fi
+
+          {
+            echo '```sh'
+            echo "docker pull $IMAGE:$TAG"
+            echo '```'
+          } > notes.md
+
+          PRERELEASE=""
+          case "$TAG" in
+            *-*) PRERELEASE="--prerelease" ;;
+          esac
+
+          gh release create "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --title "$TAG" \
+            --notes-file notes.md \
+            --generate-notes \
+            $PRERELEASE

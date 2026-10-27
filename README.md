@@ -10,7 +10,7 @@ IDHAN can be given modules to expand it's knowledge of files and eventually will
 methods using
 python scripts.
 
-Master: ![Master Build](https://github.com/KJNeko/IDHAN/actions/workflows/docker-build.yml/badge.svg?branch=master)
+Release: [![Latest Release](https://img.shields.io/github/v/release/KJNeko/IDHAN)](https://github.com/KJNeko/IDHAN/releases/latest)
 Dev: ![Dev Build](https://github.com/KJNeko/IDHAN/actions/workflows/docker-build.yml/badge.svg?branch=dev)
 
 [Discord](https://discord.gg/YMYXS884cP)
