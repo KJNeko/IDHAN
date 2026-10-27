@@ -1,0 +1,6 @@
+#!/bin/sh
+set -eu
+
+IMPORTER_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+export LD_LIBRARY_PATH="$IMPORTER_DIR/@CMAKE_INSTALL_LIBDIR@${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+exec "$IMPORTER_DIR/@CMAKE_INSTALL_BINDIR@/HydrusImporter" "$@"

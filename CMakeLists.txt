@@ -24,6 +24,7 @@ list(APPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_LIST_DIR}/dependencies")
 option(BUILD_IDHAN_DOCS "Builds the API and source docs" ON)
 option(BUILD_IDHAN_WEB "Builds the React WebUI for IDHAN server" ON)
 option(BUILD_IDHAN_SERVER "Builds the server" ON)
+option(BUILD_IDHAN_DOWNLOADER "Builds the downloader runtime" ON)
 
 option(BUILD_IDHAN_TESTS "Builds all tests relating to IDHAN" OFF)
 
@@ -49,6 +50,8 @@ endfunction()
 idhan_require_option(BUILD_IDHAN_SERVER BUILD_IDHAN_HTTP)
 idhan_require_option(BUILD_IDHAN_TESTS BUILD_IDHAN_SERVER)
 idhan_require_option(BUILD_IDHAN_DOCS BUILD_IDHAN_SERVER)
+idhan_require_option(BUILD_IDHAN_SERVER BUILD_IDHAN_DOWNLOADER)
+idhan_require_option(BUILD_IDHAN_DOWNLOADER_TESTER BUILD_IDHAN_DOWNLOADER)
 idhan_require_option(BUILD_HYDRUS_IMPORTER BUILD_IDHAN_CLIENT)
 idhan_require_option(BUILD_IDHAN_TOOLS BUILD_IDHAN_CLIENT)
 
@@ -73,17 +76,25 @@ endif ()
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-#IDHANServer/IDHANClient
-include(postgres)
-include(toml)
+if (BUILD_IDHAN_SERVER)
+	include(postgres)
+	include(toml)
+endif ()
 
 find_package(spdlog REQUIRED)
 find_package(Jsoncpp REQUIRED)
 
 add_subdirectory(IDHAN)
-add_subdirectory(IDHANDb)
-add_subdirectory(IDHANDownloader)
+if (BUILD_IDHAN_SERVER OR BUILD_IDHAN_DOWNLOADER)
+	include(proxygen)
+endif ()
+
+if (BUILD_IDHAN_DOWNLOADER)
+	add_subdirectory(IDHANDownloader)
+endif ()
+
 if (BUILD_IDHAN_SERVER)
+	add_subdirectory(IDHANDb)
 	add_subdirectory(IDHANHttp)
 	add_subdirectory(IDHANMigration)
 	add_subdirectory(IDHANModules)

@@ -1,0 +1,177 @@
+name: Build Hydrus Importer
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  TAG: ${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-26.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            g++-15 cmake ninja-build qt6-base-dev qt6-wayland \
+            libjsoncpp-dev libspdlog-dev libssl-dev libsqlite3-dev \
+            zlib1g-dev patchelf libcatch2-dev
+
+      - name: Build Hydrus Importer
+        run: |
+          cmake -S . -B build/importer-linux -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_COMPILER=g++-15 \
+            -DFGL_MARCH=x86-64 \
+            -DBUILD_IDHAN_SERVER=OFF \
+            -DBUILD_IDHAN_DOWNLOADER=OFF \
+            -DBUILD_IDHAN_HTTP=OFF \
+            -DBUILD_IDHAN_TESTS=OFF \
+            -DBUILD_IDHAN_DOCS=OFF \
+            -DBUILD_IDHAN_WEB=OFF \
+            -DBUILD_IDHAN_TOOLS=OFF \
+            -DBUILD_IDHAN_CLIENT=ON \
+            -DBUILD_HYDRUS_IMPORTER=ON \
+            -DBUILD_IDHAN_DOWNLOADER_TESTER=OFF \
+            -DBUILD_IDHAN_DOWNLOADER_SPECS=OFF \
+            -DBUILD_PTR_CORE_TESTS=ON \
+            -DIDHAN_PACKAGE_HYDRUS_IMPORTER=ON \
+            -DQT_DEPLOY_USE_PATCHELF=ON \
+            -DCMAKE_INSTALL_LIBDIR=lib
+          cmake --build build/importer-linux --target HydrusImporter PTRCoreTests --parallel 4
+          ctest --test-dir build/importer-linux -R '^PTRCoreTests$' --output-on-failure
+          cmake --install build/importer-linux --component HydrusImporter --prefix "$PWD/package/HydrusImporter"
+
+      - name: Check packaged importer
+        run: |
+          status=0
+          QT_QPA_PLATFORM=offscreen timeout 5 ./package/HydrusImporter/HydrusImporter > importer-startup.log 2>&1 || status=$?
+          if [ "$status" -ne 124 ]; then
+            cat importer-startup.log
+            exit 1
+          fi
+
+      - name: Version and checksum archive
+        run: |
+          mkdir -p dist
+          tar -C package -czf "dist/HydrusImporter-$TAG-linux-x86_64.tar.gz" HydrusImporter
+          cd dist
+          sha256sum "HydrusImporter-$TAG-linux-x86_64.tar.gz" > "HydrusImporter-$TAG-linux-x86_64.tar.gz.sha256"
+
+      - name: Upload Hydrus Importer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hydrus-importer-linux-x86_64
+          path: dist/*
+          if-no-files-found: error
+          overwrite: true
+
+  build-windows:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Windows build environment
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-git
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-qt6-base
+            mingw-w64-ucrt-x86_64-jsoncpp
+            mingw-w64-ucrt-x86_64-spdlog
+            mingw-w64-ucrt-x86_64-openssl
+            mingw-w64-ucrt-x86_64-sqlite3
+            mingw-w64-ucrt-x86_64-zlib
+            mingw-w64-ucrt-x86_64-catch
+
+      - name: Build Hydrus Importer
+        run: |
+          cmake -S . -B build/importer-windows -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_COMPILER=g++ \
+            -DFGL_MARCH=x86-64 \
+            -DBUILD_IDHAN_SERVER=OFF \
+            -DBUILD_IDHAN_DOWNLOADER=OFF \
+            -DBUILD_IDHAN_HTTP=OFF \
+            -DBUILD_IDHAN_TESTS=OFF \
+            -DBUILD_IDHAN_DOCS=OFF \
+            -DBUILD_IDHAN_WEB=OFF \
+            -DBUILD_IDHAN_TOOLS=OFF \
+            -DBUILD_IDHAN_CLIENT=ON \
+            -DBUILD_HYDRUS_IMPORTER=ON \
+            -DBUILD_IDHAN_DOWNLOADER_TESTER=OFF \
+            -DBUILD_IDHAN_DOWNLOADER_SPECS=OFF \
+            -DBUILD_PTR_CORE_TESTS=ON \
+            -DIDHAN_PACKAGE_HYDRUS_IMPORTER=ON
+          cmake --build build/importer-windows --target HydrusImporter PTRCoreTests --parallel 4
+          ctest --test-dir build/importer-windows -R '^PTRCoreTests$' --output-on-failure
+          cmake --install build/importer-windows --component HydrusImporter --prefix "$PWD/package/HydrusImporter"
+
+      - name: Check packaged importer without the build environment
+        shell: pwsh
+        run: |
+          $env:PATH = "$env:SystemRoot\System32;$env:SystemRoot"
+          $env:QT_QPA_PLATFORM = 'offscreen'
+          $env:QT_PLUGIN_PATH = ''
+          $env:QTDIR = ''
+          $env:QT_QPA_PLATFORM_PLUGIN_PATH = ''
+          $package = (Resolve-Path './package/HydrusImporter').Path
+          $importer = Start-Process -FilePath './package/HydrusImporter/HydrusImporter.exe' -PassThru
+          try {
+            if ($importer.WaitForExit(5000)) {
+              throw "Packaged Hydrus Importer exited early with code $($importer.ExitCode)"
+            }
+            foreach ($name in @('Qt6Core.dll', 'libIDHANClient.dll', 'qoffscreen.dll')) {
+              $module = $importer.Modules | Where-Object { $_.ModuleName -eq $name }
+              if (-not $module -or -not $module.FileName.StartsWith("$package\", [StringComparison]::OrdinalIgnoreCase)) {
+                throw "Importer did not load $name from its package"
+              }
+            }
+          } finally {
+            if (-not $importer.HasExited) {
+              Stop-Process -Id $importer.Id -Force
+            }
+          }
+
+      - name: Version and checksum archive
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path dist -Force | Out-Null
+          $archive = "HydrusImporter-$env:TAG-windows-x86_64.zip"
+          Compress-Archive -Path package/HydrusImporter -DestinationPath "dist/$archive"
+          $hash = (Get-FileHash -Algorithm SHA256 "dist/$archive").Hash.ToLowerInvariant()
+          "$hash  $archive" | Set-Content -Encoding ascii "dist/$archive.sha256"
+
+      - name: Upload Hydrus Importer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hydrus-importer-windows-x86_64
+          path: dist/*
+          if-no-files-found: error
+          overwrite: true
+

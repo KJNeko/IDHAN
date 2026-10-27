@@ -32,7 +32,11 @@ std::vector< MappingEvent > readBucket( const std::filesystem::path& path )
 	std::vector< MappingEvent > events( size / sizeof( MappingEvent ) );
 	if ( events.empty() ) return events;
 
+#ifdef _WIN32
+	std::FILE* const file = ::_wfopen( path.c_str(), L"rb" );
+#else
 	std::FILE* const file = std::fopen( path.c_str(), "rb" );
+#endif
 	if ( file == nullptr ) throw std::runtime_error( std::format( "Failed to open bucket {}", path.string() ) );
 
 	const auto read = std::fread( events.data(), sizeof( MappingEvent ), events.size(), file );
@@ -110,7 +114,11 @@ void BucketWriter::flushBucket( const std::size_t bucket )
 	if ( m_files[ bucket ] == nullptr )
 	{
 		const auto path = bucketPath( m_dir, bucket );
+#ifdef _WIN32
+		FilePtr file { ::_wfopen( path.c_str(), L"ab" ) };
+#else
 		FilePtr file { std::fopen( path.c_str(), "ab" ) };
+#endif
 		if ( file == nullptr ) throw std::runtime_error( std::format( "Failed to open bucket {}", path.string() ) );
 		m_files[ bucket ] = std::move( file );
 	}
