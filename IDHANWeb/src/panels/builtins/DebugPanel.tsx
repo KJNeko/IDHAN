@@ -487,7 +487,7 @@ function Lanes({lanes, receivedAt, now}: { lanes: readonly DebugLane[]; received
 
 function ModuleQueues({modules}: { modules: readonly DebugModule[] | null }) {
     const rows = useMemo(() => [...(modules ?? [])].sort((a, b) =>
-        b.queued - a.queued || b.running - a.running || a.library.localeCompare(b.library)
+        a.library.localeCompare(b.library) || a.name.localeCompare(b.name)
         || a.module_index - b.module_index), [modules]);
 
     if (modules === null) return <p className="muted">Waiting for module reporting.</p>;
