@@ -112,7 +112,9 @@ body {
   z-index: 20;
   top: calc(100% + 4px);
   left: 0;
-  min-width: 12rem;
+    min-width: min(12rem, calc(100vw - 1.25rem));
+    max-width: min(32rem, calc(100vw - 1.25rem));
+    overflow-wrap: anywhere;
   padding: 0.25rem;
     border: 1px solid var(--border);
     border-radius: var(--radius);
@@ -303,12 +305,16 @@ body {
 /* ---- panel content ---- */
 .panel-body {
     padding: 0.5rem 0.625rem;
+    min-width: 0;
+    overflow-wrap: anywhere;
   height: 100%;
   overflow: auto;
 }
 
 .panel-row {
   display: flex;
+    flex-wrap: wrap;
+    min-width: 0;
   align-items: center;
     gap: 0.5rem;
     margin: 0.35rem 0;
@@ -342,6 +348,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
+    max-width: calc(100vw - 2rem);
 }
 
 /* Bottom centre, clear of the toasts in the bottom right. */
@@ -352,6 +359,10 @@ body {
   transform: translateX(-50%);
   z-index: 100;
   display: flex;
+    flex-wrap: wrap;
+    width: max-content;
+    max-width: calc(100vw - 2rem);
+    overflow-wrap: anywhere;
   align-items: center;
   gap: 0.6rem;
   padding: 0.45rem 0.5rem 0.45rem 0.85rem;
@@ -379,6 +390,7 @@ body {
     border: 1px solid var(--border);
   box-shadow: 0 6px 20px rgb(0 0 0 / 0.35);
   max-width: 22rem;
+    overflow-wrap: anywhere;
 }
 
 .toast-success {
@@ -476,7 +488,7 @@ body {
 
 .version {
   display: grid;
-  grid-template-columns: max-content 1fr;
+    grid-template-columns: max-content minmax(0, 1fr);
   gap: 0.25rem 1rem;
   margin: 0;
 }
@@ -486,6 +498,7 @@ body {
 }
 
 .version dd {
+    min-width: 0;
   margin: 0;
   font-variant-numeric: tabular-nums;
 }
@@ -506,6 +519,8 @@ body {
 
 .chip {
   display: inline-flex;
+    min-width: 0;
+    max-width: 100%;
   align-items: center;
   gap: 0.3rem;
   padding: 0.15rem 0.45rem;
@@ -545,7 +560,13 @@ body {
     text-decoration: underline;
 }
 
+.chip-text {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
 .chip-x {
+    flex: 0 0 auto;
   color: var(--muted);
 }
 
@@ -558,6 +579,7 @@ body {
 }
 
 .search-input {
+    min-width: 0;
   width: 100%;
   padding: 0.45rem 0.6rem;
     border: 1px solid var(--border);
@@ -611,6 +633,7 @@ body {
 }
 
 .suggestion-count {
+    flex: 0 0 auto;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
     font-size: max(11px, 0.85em);
@@ -620,10 +643,16 @@ body {
     color: #8fbedd;
 }
 
+.suggestion-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
 .suggestion-hint {
     color: var(--muted);
     font-size: max(11px, 0.85em);
-    white-space: nowrap;
+    max-width: 50%;
 }
 
 .search-controls {
@@ -637,9 +666,12 @@ body {
   align-items: center;
   gap: 0.35rem;
   color: var(--muted);
+    min-width: 0;
+    max-width: 100%;
 }
 
 .search-sort select {
+    min-width: 0;
   padding: 0.3rem 0.4rem;
     border: 1px solid var(--border);
     border-radius: var(--radius);
@@ -828,6 +860,7 @@ body {
   padding: 0.25rem;
   list-style: none;
   min-width: 10rem;
+    overflow-wrap: anywhere;
     border: 1px solid var(--border);
     border-radius: var(--radius);
     background: var(--raised);
@@ -1763,9 +1796,10 @@ body {
 }
 
 .info-list dd {
+    min-width: 0;
   margin: 0;
   font-variant-numeric: tabular-nums;
-  word-break: break-word;
+    overflow-wrap: anywhere;
 }
 
 /* A record can carry several source URLs, so each gets its own line rather than running together. */
@@ -1794,9 +1828,12 @@ body {
   align-items: center;
   gap: 0.35rem;
   color: var(--muted);
+    min-width: 0;
+    max-width: 100%;
 }
 
 .tag-domain select {
+    min-width: 0;
   padding: 0.25rem 0.4rem;
     border: 1px solid var(--border);
     border-radius: var(--radius);
@@ -1833,10 +1870,12 @@ body {
 
 .tag-text {
   flex: 1 1 auto;
-  word-break: break-word;
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .tag-badge {
+    flex: 0 0 auto;
     font-size: max(11px, 0.75em);
   padding: 0.05rem 0.35rem;
     border-radius: var(--radius);
@@ -1855,6 +1894,7 @@ body {
 }
 
 .tag-remove {
+    flex: 0 0 auto;
   border: none;
   background: none;
   color: var(--muted);
@@ -1928,9 +1968,7 @@ body {
 .url-link {
   color: #6ea8ff;
   text-decoration: none;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+    overflow-wrap: anywhere;
 }
 
 .url-link:hover {
@@ -1939,12 +1977,13 @@ body {
 
 .note-text {
   white-space: pre-wrap;
-  word-break: break-word;
+    overflow-wrap: anywhere;
 }
 
 /* Import */
 .download-session-panel {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 0.45rem;
     margin-bottom: 1rem;
     padding-bottom: 0.85rem;
@@ -1975,6 +2014,7 @@ body {
 
 .download-session-jobs {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 0.3rem;
     max-height: 11rem;
     margin: 0.2rem 0 0;
@@ -1998,9 +2038,7 @@ body {
 }
 
 .download-session-job-head > .grow {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
 }
 
 .download-session-job-state {
@@ -2045,8 +2083,10 @@ body {
 }
 
 .downloads-panel {
-    display: grid;
-    grid-template-rows: auto auto 1fr;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow-wrap: anywhere;
     gap: 0.45rem;
     padding: 0.5rem;
     min-height: 0;
@@ -2054,9 +2094,15 @@ body {
     overflow: hidden;
 }
 
+.downloads-panel > * {
+    flex: 0 0 auto;
+}
+
 /** The queue and toolbar stay put; only the session list scrolls. */
 .download-tree-scroll {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    flex: 1 1 auto;
     gap: 0.45rem;
     align-content: start;
     min-height: 0;
@@ -2114,15 +2160,18 @@ body {
 .download-tree-session-select {
     flex: 1 1 auto;
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
+    white-space: normal;
     border: 0;
     padding: 0;
     background: none;
     color: var(--text);
     text-align: left;
     cursor: pointer;
+}
+
+.download-tree-session-head > button:last-child {
+    flex: 0 0 auto;
 }
 
 .download-tree-session.is-selected {
@@ -2312,6 +2361,7 @@ body {
 
 .download-tree-url {
     display: flex;
+    flex-wrap: wrap;
     align-items: flex-start;
     gap: 0.4rem;
     flex: 1 1 auto;
@@ -2328,6 +2378,7 @@ body {
 
 .download-tree-url-text {
     min-width: 0;
+    max-width: 100%;
     overflow-wrap: anywhere;
     white-space: normal;
 }
@@ -2508,12 +2559,19 @@ body {
     border-top: 1px solid var(--border);
   padding-top: 0.35rem;
   display: flex;
+    flex-wrap: wrap;
   align-items: flex-start;
   gap: 0.6rem;
 }
 
 .import-meta .info-list {
   margin: 0;
+}
+
+.import-meta-info {
+    flex: 1 1 16rem;
+    min-width: 0;
+    max-width: 100%;
 }
 
 .import-thumb {
@@ -2552,6 +2610,10 @@ body {
     padding: 0.5rem;
     border-bottom: 1px solid var(--border);
     min-width: 0;
+}
+
+.job-row {
+    flex-wrap: wrap;
 }
 
 .job-progress {
@@ -2623,6 +2685,7 @@ body {
 
 .job-toolbar {
   display: flex;
+    flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
   margin-bottom: 0.6rem;
@@ -2685,6 +2748,7 @@ body {
 /* Embeddings */
 .embed-toolbar {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem;
     margin-bottom: 0.6rem;
@@ -2712,6 +2776,7 @@ body {
 
 .embed-head {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem;
 }
@@ -2748,6 +2813,7 @@ body {
 
 .embed-progress {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem;
     font-size: max(11px, 0.85em);
@@ -2798,6 +2864,7 @@ body {
 
 .embed-controls {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem;
 }
@@ -2822,7 +2889,7 @@ body {
 
 /* The model name is the variable-length part; the limit is three digits and never needs more. */
 .embed-field-model {
-    flex: 1 1 auto;
+    flex: 1 1 12rem;
 }
 
 .embed-field-model select {
@@ -2851,6 +2918,7 @@ body {
 
 .embed-term-head {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
@@ -2879,7 +2947,7 @@ body {
 
 .embed-term {
     display: grid;
-    grid-template-columns: auto auto 4.25rem 1fr auto;
+    grid-template-columns: auto auto 4.25rem minmax(0, 1fr) auto;
     align-items: center;
     gap: 0.5rem;
     padding: 0.25rem 0.4rem;
@@ -2925,6 +2993,7 @@ body {
 }
 
 .embed-term-weight {
+    min-width: 0;
     width: 100%;
     padding: 0.15rem 0.3rem;
     border: 1px solid var(--border);
@@ -2936,6 +3005,7 @@ body {
 }
 
 .embed-term-label {
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -3109,6 +3179,7 @@ body {
 /* Downloader Secrets */
 .downloader-secrets {
     display: flex;
+    container-type: inline-size;
     flex-direction: column;
     gap: 0.8rem;
 }
@@ -3136,7 +3207,7 @@ body {
 
 .secret-row {
     display: grid;
-    grid-template-columns: minmax(10rem, 0.8fr) minmax(12rem, 1fr) auto;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr) auto;
     align-items: center;
     gap: 0.5rem;
 }
@@ -3148,7 +3219,8 @@ body {
 }
 
 .secret-value {
-    min-width: 10rem;
+    min-width: 0;
+    max-width: 100%;
 }
 
 .secret-reveal {
@@ -3169,6 +3241,8 @@ body {
 
 .secret-new-key {
     flex: 1 1 15rem;
+    min-width: 0;
+    max-width: 100%;
 }
 
 .secret-add-row .secret-value {
@@ -3181,7 +3255,18 @@ body {
 
 @media (max-width: 700px) {
     .secret-row {
-        grid-template-columns: 1fr auto;
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .secret-key {
+        grid-column: 1 / -1;
+    }
+}
+
+/* Docked panels can be narrow even in a wide browser window. */
+@container (max-width: 30rem) {
+    .secret-row {
+        grid-template-columns: minmax(0, 1fr) auto;
     }
 
     .secret-key {
@@ -3261,6 +3346,9 @@ body {
 }
 .scan-modal {
   width: min(440px, 92vw);
+    max-height: calc(100dvh - 2rem);
+    overflow: auto;
+    overflow-wrap: anywhere;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
@@ -3279,9 +3367,15 @@ body {
 }
 .scan-modal-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.4rem 1rem;
 }
+
+.scan-modal-grid .log-check {
+    min-width: 0;
+    white-space: normal;
+}
+
 .scan-modal-advanced {
     border-top: 1px solid var(--border);
   padding-top: 0.6rem;
@@ -3291,6 +3385,7 @@ body {
 }
 .scan-modal-actions {
   display: flex;
+    flex-wrap: wrap;
   justify-content: flex-end;
   gap: 0.5rem;
   margin-top: 0.25rem;
@@ -3320,6 +3415,7 @@ body {
 }
 .rel-kind {
   display: flex;
+    flex-wrap: wrap;
   gap: 0.8rem;
 }
 .rel-pair {
@@ -3345,6 +3441,7 @@ body {
 }
 .rel-actions {
   display: flex;
+    flex-wrap: wrap;
   gap: 0.5rem;
 }
 .rel-instant-notice {
@@ -3517,6 +3614,7 @@ body {
   white-space: nowrap;
 }
 .tagpick-clear {
+    flex: 0 0 auto;
   border: none;
   background: none;
   color: var(--muted);
@@ -3536,6 +3634,7 @@ body {
 }
 .dbstat-toolbar {
   display: flex;
+    flex-wrap: wrap;
   align-items: center;
   gap: 0.6rem;
 }
@@ -3747,6 +3846,7 @@ body {
 
 .debug-toolbar {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem;
     margin-bottom: 0.6rem;
@@ -3759,6 +3859,7 @@ body {
 
 .debug-sort-table {
     display: flex;
+    overflow-x: auto;
     flex-direction: column;
     gap: 1px;
     font-size: max(11px, 0.85em);
@@ -3766,6 +3867,7 @@ body {
 
 .debug-sort-row {
     display: grid;
+    min-width: 34rem;
     grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr 1fr;
     gap: 0.5rem;
     align-items: center;
@@ -3792,6 +3894,7 @@ body {
 
 .debug-rate-table {
     display: flex;
+    overflow-x: auto;
     flex-direction: column;
     gap: 1px;
     margin-bottom: 1rem;
@@ -3800,6 +3903,7 @@ body {
 
 .debug-rate-row {
     display: grid;
+    min-width: min-content;
     grid-template-columns: minmax(8rem, 2fr) minmax(8rem, 1.4fr) minmax(8rem, 1.4fr) 4.5rem 5.5rem;
     gap: 0.5rem;
     align-items: center;
@@ -3949,7 +4053,7 @@ body {
 
 .cmp-term {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+    grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.4rem;
   padding: 0.1rem 0.2rem;
@@ -4034,7 +4138,7 @@ body {
 
 .debug-session-head {
     display: grid;
-    grid-template-columns: 1rem minmax(6rem, auto) auto minmax(0, 1fr) auto;
+    grid-template-columns: 1rem minmax(0, 1fr) auto minmax(0, 1fr) auto;
     gap: 0.5rem;
     align-items: center;
     width: 100%;
@@ -4056,6 +4160,8 @@ body {
 }
 
 .debug-session-name {
+    min-width: 0;
+    overflow-wrap: anywhere;
     font-weight: 600;
 }
 
