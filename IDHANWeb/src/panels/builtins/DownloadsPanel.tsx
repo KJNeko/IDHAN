@@ -13,6 +13,7 @@ import type {PanelProps, RecordId} from '../../host/types';
 import {forgetMetadata} from '../../host/metadataCache';
 import {RecordInfoView, type RecordInfo} from './RecordInfoView';
 import {useRecordMenu} from './recordActions';
+import {ImportStorageNotice, useImportStorage} from './importStorage';
 
 const TERMINAL = new Set(['completed', 'failed', 'skipped']);
 
@@ -354,6 +355,7 @@ interface TreeRowProps {
     onToggle: (id: number) => void;
     onSelect: (node: DownloadSessionUrlNode) => void;
     onRetry: (id: number) => void;
+    retryDisabled: boolean;
     onOpenMedia: (recordId: number) => void;
     onRecordMenu: (event: React.MouseEvent, recordId: number) => void;
 }
@@ -368,6 +370,7 @@ function TreeRow({
                      onToggle,
                      onSelect,
                      onRetry,
+                     retryDisabled,
                      onOpenMedia,
                      onRecordMenu,
                  }: TreeRowProps) {
@@ -410,7 +413,8 @@ function TreeRow({
                 {node.record_id !== null && <span className="download-tree-record">#{node.record_id}</span>}
                 <span className="download-tree-state">{rowStatusLabel(state, node.note)}</span>
                 {TERMINAL.has(node.state) && (
-                    <button type="button" className="download-tree-retry" onClick={() => onRetry(node.id)}>
+                    <button type="button" className="download-tree-retry" disabled={retryDisabled}
+                            onClick={() => onRetry(node.id)}>
                         Retry
                     </button>
                 )}
@@ -462,6 +466,7 @@ function TreeRow({
                     onToggle={onToggle}
                     onSelect={onSelect}
                     onRetry={onRetry}
+                    retryDisabled={retryDisabled}
                     onOpenMedia={onOpenMedia}
                     onRecordMenu={onRecordMenu}
                 />
@@ -471,6 +476,8 @@ function TreeRow({
 }
 
 function DownloadsPanel({host}: PanelProps) {
+    const storage = useImportStorage(host);
+    const {canImport, check: checkStorage} = storage;
     const [sessions, setSessions] = useState<DownloadSessionInfo[]>([]);
     const [trees, setTrees] = useState<Record<number, DownloadSessionUrlNode[]>>({});
     const [flat, setFlat] = useState<Record<number, DownloadSessionUrlFlat[]>>({});
@@ -606,6 +613,7 @@ function DownloadsPanel({host}: PanelProps) {
     }, []);
 
     const queue = useCallback(async () => {
+        if (!canImport || busy) return;
         const urls = parseNewlineUrlList(draft);
         if (urls.length === 0) return;
 
@@ -614,6 +622,7 @@ function DownloadsPanel({host}: PanelProps) {
         const failedUrls: string[] = [];
         const errors: string[] = [];
         try {
+            if (!await checkStorage()) return;
             for (const url of urls) {
                 try {
                     const created = await api.downloadSessions.submitUrlSession(url);
@@ -642,17 +651,19 @@ function DownloadsPanel({host}: PanelProps) {
         } finally {
             setBusy(false);
         }
-    }, [draft, host, refresh]);
+    }, [draft, host, refresh, canImport, checkStorage, busy]);
 
     const retry = useCallback(async (sessionId: number, urlId: number) => {
+        if (!canImport) return;
         setError(null);
         try {
+            if (!await checkStorage()) return;
             await api.downloadSessions.retryUrl(sessionId, urlId);
             await refresh();
         } catch (caught) {
             setError(caught instanceof Error ? caught.message : String(caught));
         }
-    }, [refresh]);
+    }, [refresh, canImport, checkStorage]);
 
     const destroy = useCallback(async (session: DownloadSessionInfo) => {
         setError(null);
@@ -751,14 +762,15 @@ function DownloadsPanel({host}: PanelProps) {
 
     return (
         <div className="downloads-panel">
+            <ImportStorageNotice storage={storage}/>
             <div className="download-session-row">
         <textarea
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             placeholder="Paste one URL per line"
-            disabled={busy}
+            disabled={busy || !canImport}
         />
-                <button type="button" disabled={busy || parseNewlineUrlList(draft).length === 0}
+                <button type="button" disabled={busy || !canImport || parseNewlineUrlList(draft).length === 0}
                         onClick={() => void queue()}>Download URL(s)
                 </button>
             </div>
@@ -871,6 +883,7 @@ function DownloadsPanel({host}: PanelProps) {
                                         onToggle={toggle}
                                         onSelect={select}
                                         onRetry={(id) => void retry(session.id, id)}
+                                        retryDisabled={!canImport}
                                         onOpenMedia={openMedia}
                                         onRecordMenu={(event, recordId) => openRecordMenu(event, [recordId])}
                                     />
