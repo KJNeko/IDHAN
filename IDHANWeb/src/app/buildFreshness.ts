@@ -1,6 +1,5 @@
 /**
- * Detect build changes by comparing the content-hashed entry module path in the served
- * index.html with the loaded document.
+ * Detect build changes by conditionally checking the loaded document's Last-Modified time.
  */
 
 import { useEffect, useState } from 'react';
@@ -35,10 +34,15 @@ export function useStaleBuild(): boolean {
       if (cancelled || checking) return;
       checking = true;
       try {
-        const response = await fetch(new URL('index.html', document.baseURI), { cache: 'no-store' });
-        if (!response.ok) return;
-        const served = entryFromHtml(await response.text());
-        if (!cancelled && served !== null && served !== running) setStale(true);
+          const lastModified = new Date(document.lastModified);
+          if (Number.isNaN(lastModified.getTime())) return;
+
+          const response = await fetch(new URL('index.html', document.baseURI), {
+              method: 'HEAD',
+              headers: {'If-Modified-Since': lastModified.toUTCString()},
+              cache: 'no-store',
+          });
+          if (!cancelled && response.status === 200) setStale(true);
       } catch {
         // Retry transient fetch failures on the next check.
       } finally {
