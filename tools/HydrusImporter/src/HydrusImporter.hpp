@@ -3,7 +3,7 @@
 #include <QFutureSynchronizer>
 #include <QFutureWatcher>
 
-#include <IDHAN>
+#include <idhan/IDHANClient.hpp>
 #include <filesystem>
 #include <sqlite3.h>
 
