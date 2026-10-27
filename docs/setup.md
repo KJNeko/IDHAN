@@ -1,60 +1,20 @@
 # Getting started
 
+> This guide is written assuming you are going to use docker
+
 ## Config
 
 For a Docker deployment, start with the [Docker guide](docker.md). Its Compose example configures the database and
 persistent thumbnail storage. For a native deployment, configure the paths and database connection below.
 
-Note: Each config will be listed as `[group] name`, this can either be set via an ENV variable `IDHAN_GROUP_NAME` or in
-one of the toml files
+## Getting your API key
 
-Example:
-
-```toml
-[group]
-name = value
-```
-
-### Thumbnails
-
-The main thing to set up here will be where IDHAN will place thumbnails it's generated via one of the thumbnail
-generators. To do so you'll want to set a path for `[thumbnails] path`
-
-### Postgres
-
-The main values to set here will be
-(all are in group `[database]`)
-
-- `host` - The host or ip of the pg database
-- `user` - The user to attempt to sign in with
-- `password` - the password to try to use
-- `database` - The database name
-
-### Postgres Setup (Non-Docker Compose)
-
-Create the PostgreSQL database and user before starting IDHAN;
-see [Database initialization](database-initialization.md).
-IDHAN applies schema migrations on startup. Keep the existing schema when restarting or upgrading.
-Deleting the schema is only appropriate for an intentional database reset: it removes database records and metadata.
-Dropping tables alone does not reset all schema objects, such as functions.
+To generate your first API key you need to access `/generate_api_key`, SAVE THIS KEY SOMEWHERE, Unless you wanna dive in
+the postgresql database this endpoint will disable itself after you hit it once.
 
 ## Creating your first cluster
 
 ###### If you are coming from Hydrus, This is just a file path set in the 'database' management stuff.
-
-A cluster is a file location that IDHAN can read files from and write files to. IDHAN expects files in a cluster to be
-named by their hash with an extension. A cluster marked **readonly** will never have files added, moved, or renamed by
-IDHAN — it will only index what is already there. Readonly clusters may have no identity marker; registration and
-startup recovery do not create one. Any existing marker must still be valid and match the registered identity.
-Changing a cluster to writable initializes a missing marker and requires filesystem write permission.
-
-**New clusters default to readonly.** This is intentional: it gives you a chance to verify the scan results before
-allowing IDHAN to make any changes to your files. If you are pointing IDHAN at an existing collection (e.g. migrating
-from Hydrus or another tool), keep readonly enabled until you are confident the scan looks correct.
-
-To create a cluster, start the server and open the WebUI at `http://<host>:16609/` (use HTTPS if you enabled TLS).
-When no API keys exist, visit `/generate_api_key` on that server, save the returned `key`, and enter it in the WebUI.
-Once a key exists, that endpoint returns 404; use an existing key to manage additional keys.
 
 Start by adding the 'Cluster Manager' panel from the 'Add panel...' menu
 
