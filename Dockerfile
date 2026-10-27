@@ -8,7 +8,7 @@ RUN corepack enable
 WORKDIR /web
 
 COPY IDHANWeb/package.json IDHANWeb/pnpm-lock.yaml IDHANWeb/pnpm-workspace.yaml ./
-RUN --mount=type=cache,target=/pnpm-store \
+RUN --mount=type=cache,target=/pnpm-store,id=idhan-pnpm-v1,sharing=locked \
     pnpm config set store-dir /pnpm-store && pnpm install --frozen-lockfile
 COPY IDHANWeb/ ./
 RUN pnpm exec vite build --outDir /web/dist
@@ -88,7 +88,7 @@ RUN apt-get update && \
     default-jre-headless && \
     rm -rf /var/lib/apt/lists/*
 
-# GCC 15 supports the C++26 dialect used by IDHAN and its coroutine dependencies.
+# GCC 16 supports the C++26 dialect used by IDHAN and its coroutine dependencies.
 ENV CC=gcc-16 CXX=g++-16
 ARG BUILD_JOBS=4
 
@@ -111,6 +111,7 @@ COPY 3rd-party/hydrus /build/3rd-party/hydrus
 COPY dependencies /build/dependencies
 
 COPY CMakeLists.txt /build/CMakeLists.txt
+COPY Dockerfile /build/Dockerfile
 COPY cmake /build/cmake
 
 COPY IDHAN /build/IDHAN
@@ -130,11 +131,19 @@ ARG CMAKE_BUILD_TYPE=Release
 
 ARG TARGETVARIANT
 
-ENV CCACHE_DIR=/root/.ccache
+ENV CCACHE_DIR=/root/.ccache \
+    CCACHE_COMPILERCHECK=content \
+    CCACHE_MAXSIZE=3G \
+    CCACHE_STATSLOG=/tmp/idhan-ccache.log
 # The npm cache also holds the openapi-generator jar that npx fetches for the downloader specs.
-RUN --mount=type=cache,target=/root/.ccache,id=idhan-ccache-${TARGETARCH}${TARGETVARIANT} \
-    --mount=type=cache,target=/build/build,id=idhan-cmake-ubuntu2604-gcc15-http-${TARGETARCH}${TARGETVARIANT} \
-    --mount=type=cache,target=/root/.npm,id=idhan-npm-${TARGETARCH}${TARGETVARIANT} \
+RUN --mount=type=cache,target=/root/.ccache,id=idhan-ccache-v1 \
+    --mount=type=cache,target=/build/build,id=idhan-cmake-ubuntu2610-gcc16-v1-${TARGETARCH}${TARGETVARIANT}-${CMAKE_BUILD_TYPE},sharing=locked \
+    --mount=type=cache,target=/root/.npm,id=idhan-npm-v1-${TARGETARCH}${TARGETVARIANT} \
+    toolchain_key="$( { dpkg-query -W; sha256sum /build/Dockerfile; } | sha256sum | cut -d ' ' -f1)" && \
+    if [ "$(cat build/.idhan-toolchain 2>/dev/null)" != "$toolchain_key" ]; then \
+        find build -mindepth 1 -maxdepth 1 -exec rm -rf {} + && \
+        printf '%s\n' "$toolchain_key" > build/.idhan-toolchain; \
+    fi && \
     case "${TARGETARCH}/${TARGETVARIANT}" in \
         amd64/|amd64/v1) FGL_MARCH=x86-64 ;; \
         amd64/v2)       FGL_MARCH=x86-64-v2 ;; \
@@ -144,6 +153,7 @@ RUN --mount=type=cache,target=/root/.ccache,id=idhan-ccache-${TARGETARCH}${TARGE
         *) echo "IDHAN: unsupported target '${TARGETARCH}/${TARGETVARIANT}'" >&2; exit 1 ;; \
     esac && \
     echo "IDHAN: building for ${TARGETARCH}/${TARGETVARIANT:-v1} with -march=${FGL_MARCH}" && \
+    rm -f "$CCACHE_STATSLOG" && \
     git config --global --add safe.directory /build && \
     cmake -S . -B build -G Ninja \
     -UFGL_GIT_BRANCH -UFGL_GIT_COMMIT -UFGL_GIT_TAG \
@@ -157,8 +167,15 @@ RUN --mount=type=cache,target=/root/.ccache,id=idhan-ccache-${TARGETARCH}${TARGE
     -DBUILD_IDHAN_CLIENT=OFF \
     -DBUILD_IDHAN_TOOLS=OFF \
     -DIDHAN_DISABLE_API_AUTH=${IDHAN_DISABLE_API_AUTH} \
+    -DCMAKE_C_COMPILER_LAUNCHER=ccache \
     -DCMAKE_CXX_COMPILER_LAUNCHER=ccache && \
-    cmake --build build --target IDHANServer -j${BUILD_JOBS} && \
+    if cmake --build build --target IDHANServer -j${BUILD_JOBS}; then \
+        ccache --show-log-stats --verbose; \
+    else \
+        build_status=$?; \
+        ccache --show-log-stats --verbose; \
+        exit "$build_status"; \
+    fi && \
     cp /build/build/bin /build/bin -r && \
     find /build/bin -name '*.debug' -delete
 

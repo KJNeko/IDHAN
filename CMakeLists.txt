@@ -12,6 +12,9 @@ set(BUILD_SHARED_LIBS OFF)
 cmake_minimum_required(VERSION 3.28)
 project(IDHAN LANGUAGES CXX)
 
+# No targets use named C++ modules. Scanning adds GCC module flags that prevent ccache hits.
+set(CMAKE_CXX_SCAN_FOR_MODULES OFF CACHE BOOL "Scan C++ sources for module dependencies")
+
 set(IDHAN_DEPENDENCIES ${CMAKE_CURRENT_SOURCE_DIR}/dependencies)
 
 enable_testing()

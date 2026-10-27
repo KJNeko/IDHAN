@@ -48,6 +48,7 @@ jobs:
               echo "cache_from<<EOF"
               echo "type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$TAG-buildcache"
               echo "type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:dev-buildcache"
+              echo "type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache"
               echo "EOF"
             } >> $GITHUB_OUTPUT
           else
@@ -70,7 +71,7 @@ jobs:
             io.github.kjneko.idhan.pr.url=${{ github.event.pull_request.html_url }}
             io.github.kjneko.idhan.pr.head-ref=${{ github.event.pull_request.head.ref }}
             io.github.kjneko.idhan.pr.base-ref=${{ github.event.pull_request.base.ref }}
-          # Internal PRs seed from their cache first, then the dev branch cache.
+          # Internal PRs seed from their cache, then development and release caches.
           # Forks have no registry credentials, so build without importing private cache layers.
           cache-from: ${{ steps.ctx.outputs.cache_from }}
           cache-to: ${{ steps.ctx.outputs.push == 'true' && format('type=registry,ref={0},mode=max', steps.ctx.outputs.cache) || '' }}
