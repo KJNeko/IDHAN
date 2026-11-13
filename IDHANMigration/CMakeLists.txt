@@ -10,6 +10,9 @@ file(GLOB_RECURSE MIGRATION_SQLS CONFIGURE_DEPENDS ${MIGRATION_DIR}/*.sql)
 add_custom_command(
 		OUTPUT ${MIGRATION_SOURCE}
 		DEPENDS ${MIGRATION_SQLS}
+		${CMAKE_CURRENT_SOURCE_DIR}/src/migration-template.cpp.unused
+		${CMAKE_CURRENT_SOURCE_DIR}/src/check-template.cpp.unused
+		${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/GenerateMigrations.cmake
 		COMMAND ${CMAKE_COMMAND} -DMIGRATION_DIR=${MIGRATION_DIR} -DOUT=${MIGRATION_SOURCE} -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/GenerateMigrations.cmake"
 		COMMENT "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/GenerateMigrations.cmake: Generating doMigration.cpp")
 

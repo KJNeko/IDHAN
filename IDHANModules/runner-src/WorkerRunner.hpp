@@ -21,7 +21,6 @@
 #include "ModuleLibrary.hpp"
 #include "ipc/Blob.hpp"
 #include "ipc/Frame.hpp"
-#include "ipc/ModuleActivity.hpp"
 #include "ipc/Protocol.hpp"
 #include "ipc/UniqueFd.hpp"
 
@@ -91,7 +90,6 @@ class WorkerRunner
 	std::mutex m_queue_mutex {};
 	std::condition_variable m_queue_ready {};
 	std::deque< QueuedCall > m_queue {};
-	std::vector< ipc::ModuleActivity > m_module_activity {};
 	std::vector< std::jthread > m_pool {};
 
 	//! One lock per module, used only for modules that report threadSafe() == false.

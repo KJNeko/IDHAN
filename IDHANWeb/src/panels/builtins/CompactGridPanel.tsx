@@ -1,3 +1,4 @@
+import {PanelShortcut} from '../PanelShortcut';
 import {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import type {PanelProps} from '../../host/types';
 import {compactGridLayout, imageRatio} from './compactGridLayout';
@@ -95,7 +96,9 @@ function CompactResults({host, ids}: PanelProps & { ids: Int32Array }) {
                 const top = event.currentTarget.scrollTop;
                 setViewport((current) => ({...current, top}));
             }}>
-                {ids.length === 0 && <p className="muted grid-empty">Run a search to populate the grid.</p>}
+				{ids.length === 0 &&
+                    <div className="grid-empty"><p className="muted">No search results.</p><PanelShortcut type="search">Search
+                        files</PanelShortcut></div>}
                 <div style={{height: layout.height, position: 'relative'}}>
                     {visible.map((tile) => {
                         const id = ids[tile.index]!;
@@ -122,7 +125,7 @@ function CompactResults({host, ids}: PanelProps & { ids: Int32Array }) {
                                                                                              onClick={() => setRetry((value) => value + 1)}>Retry</button>
                     </p>
                     : ratios.length < ids.length && <p className="muted grid-empty"
-                                                       role="status">{needsMore ? 'Loading dimensions…' : `${ratios.length.toLocaleString()} loaded · scroll for more`}</p>}
+                                                       role="status">{needsMore ? 'Loading dimensions…' : `${ratios.length.toLocaleString()} loaded`}</p>}
             </div>
             {recordMenu}
         </div>
@@ -132,7 +135,7 @@ function CompactResults({host, ids}: PanelProps & { ids: Int32Array }) {
 export const compactGridPanel = {
     type: 'compact-grid',
     title: 'Compact Grid',
-    description: 'Equal-width thumbnails in masonry columns with 5px gaps.',
+	description: 'Compact image grid.',
     component: CompactGridPanel,
     defaultConfig: DEFAULT_CONFIG,
     configVersion: 1,

@@ -1,0 +1,22 @@
+# Copy compiler-emitted bytes without running the binary or generating schemas.
+foreach (REQUIRED IN ITEMS IDHAN_OBJCOPY IDHAN_BINARY IDHAN_OPENAPI_OUTPUT)
+	if (NOT DEFINED ${REQUIRED})
+		message(FATAL_ERROR "Set ${REQUIRED}")
+	endif ()
+endforeach ()
+
+get_filename_component(DIRECTORY "${IDHAN_OPENAPI_OUTPUT}" DIRECTORY)
+file(MAKE_DIRECTORY "${DIRECTORY}")
+string(RANDOM LENGTH 12 ALPHABET 0123456789abcdef SUFFIX)
+set(DOCUMENT "${IDHAN_OPENAPI_OUTPUT}.${SUFFIX}.tmp")
+set(COPY "${IDHAN_OPENAPI_OUTPUT}.${SUFFIX}.binary")
+execute_process(
+		COMMAND "${IDHAN_OBJCOPY}" --dump-section ".idhan.openapi.document=${DOCUMENT}" "${IDHAN_BINARY}" "${COPY}"
+		RESULT_VARIABLE STATUS ERROR_VARIABLE ERROR)
+if (NOT STATUS EQUAL 0 OR NOT EXISTS "${DOCUMENT}")
+	file(REMOVE "${DOCUMENT}" "${COPY}")
+	message(FATAL_ERROR "Cannot export the compiled OpenAPI document: ${ERROR}")
+endif ()
+
+file(COPY_FILE "${DOCUMENT}" "${IDHAN_OPENAPI_OUTPUT}" ONLY_IF_DIFFERENT)
+file(REMOVE "${DOCUMENT}" "${COPY}")

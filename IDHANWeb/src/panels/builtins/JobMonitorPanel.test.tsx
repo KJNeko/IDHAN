@@ -6,7 +6,7 @@ import type {JobStatus} from '../../api/types';
 import {api, watchJobs} from '../../api/client';
 import {jobMonitorPanel} from './JobMonitorPanel';
 
-vi.mock('../../api/client', () => ({watchJobs: vi.fn(), api: {reorganizeUrls: vi.fn()}}));
+vi.mock('../../api/client', () => ({watchJobs: vi.fn(), api: {deduplicateUrls: vi.fn()}}));
 Object.assign(globalThis, {IS_REACT_ACT_ENVIRONMENT: true});
 
 it('renders streamed maintenance and scan progress, releases its subscription, and never polls', async () => {
@@ -47,34 +47,39 @@ it('renders streamed maintenance and scan progress, releases its subscription, a
         await act(() => onJobs([{job_id: 2, job_name: 'Cluster scan', status: 'completed', completed: true}]));
         expect(view.querySelectorAll('.job-item')).toHaveLength(1);
         expect(view.textContent).toContain('completed');
+		await act(() => onJobs([{
+			job_id: 8, job_name: 'Subscription 9', status: 'running', completed: false,
+			progress: {kind: 'subscription', subscription_id: 9, imported_count: 123, known_count: 20}
+		}]));
+		expect(view.textContent).toContain('123 imported · 20 known');
         expect(fetch).not.toHaveBeenCalled();
-        vi.mocked(api.reorganizeUrls).mockResolvedValue({job_id: 3});
+		vi.mocked(api.deduplicateUrls).mockResolvedValue({job_id: 3});
         await act(() => view.querySelector('.job-launcher')!.dispatchEvent(new Event('submit', {
             bubbles: true,
             cancelable: true
         })));
-        expect(api.reorganizeUrls).toHaveBeenCalledOnce();
+		expect(api.deduplicateUrls).toHaveBeenCalledOnce();
         await act(() => onJobs([{
-            job_id: 3, job_name: 'Reorganizing URLs', status: 'running', completed: false,
+			job_id: 3, job_name: 'Deduplicating URLs', status: 'running', completed: false,
             progress: {
-                kind: 'url_reorganization', phase: 'waiting', message: 'Waiting for exclusive access to URL writes',
+				kind: 'url_deduplication', phase: 'waiting', message: 'Waiting for exclusive access to URL writes',
                 processed_count: 0, sorted_count: 0, merged_count: 0,
             },
         }]));
         expect(view.textContent).toContain('Waiting for exclusive access to URL writes');
         await act(() => onJobs([{
-            job_id: 3, job_name: 'Reorganizing URLs', status: 'running', completed: false,
+			job_id: 3, job_name: 'Deduplicating URLs', status: 'running', completed: false,
             progress: {
-                kind: 'url_reorganization', phase: 'sorting', message: 'Checking URLs against URL class sorting rules',
+				kind: 'url_deduplication', phase: 'sorting', message: 'Checking URLs against URL class sorting rules',
                 processed_count: 4, total_count: 8, sorted_count: 2, merged_count: 0,
             },
         }]));
         expect(view.textContent).toContain('Checked: 4 / 8');
         expect(view.querySelector('progress')?.value).toBe(4);
         await act(() => onJobs([{
-            job_id: 3, job_name: 'Reorganizing URLs', status: 'running', completed: false,
+			job_id: 3, job_name: 'Deduplicating URLs', status: 'running', completed: false,
             progress: {
-                kind: 'url_reorganization', phase: 'merging', message: 'Combining record mappings',
+				kind: 'url_deduplication', phase: 'merging', message: 'Combining record mappings',
                 processed_count: 8, total_count: 8, sorted_count: 4, unique_count: 4,
                 merge_candidate_count: 4, merged_count: 1, committed_batch_count: 2, mappings_processed_count: 1500,
             },
@@ -83,20 +88,20 @@ it('renders streamed maintenance and scan progress, releases its subscription, a
         expect(view.textContent).toContain('Merged: 1 · Planned merges: 4');
         expect(view.textContent).toContain('Committed batches: 2 · Mappings processed: 1,500');
         await act(() => onJobs([{
-            job_id: 3, job_name: 'Reorganizing URLs', status: 'completed', completed: true,
-            response: {kind: 'url_reorganization', total_count: 8, unique_count: 4, merged_count: 4, sorted_count: 4},
+			job_id: 3, job_name: 'Deduplicating URLs', status: 'completed', completed: true,
+			response: {kind: 'url_deduplication', total_count: 8, unique_count: 4, merged_count: 4, sorted_count: 4},
         }]));
         expect(view.textContent).toContain('Total: 8 · Unique: 4 · Merged: 4 · Sorted: 4');
         await act(() => onJobs([{
-            job_id: 3, job_name: 'Reorganizing URLs', status: 'completed', completed: true,
+			job_id: 3, job_name: 'Deduplicating URLs', status: 'completed', completed: true,
             progress: {
-                kind: 'url_reorganization', phase: 'completed', message: 'URL reorganization complete',
+				kind: 'url_deduplication', phase: 'completed', message: 'URL deduplication complete',
                 processed_count: 8, total_count: 8, sorted_count: 4, unique_count: 4,
                 merge_candidate_count: 4, merged_count: 4,
             },
-            response: {kind: 'url_reorganization', total_count: 8, unique_count: 4, merged_count: 4, sorted_count: 4},
+			response: {kind: 'url_deduplication', total_count: 8, unique_count: 4, merged_count: 4, sorted_count: 4},
         }]));
-        expect(view.textContent).toContain('URL reorganization complete');
+		expect(view.textContent).toContain('URL deduplication complete');
         expect(view.textContent).toContain('Total: 8 · Unique: 4 · Merged: 4');
         expect(view.textContent).not.toContain('Planned merges');
         await act(() => onJobs([

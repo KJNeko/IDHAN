@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the API description, local references, examples, and registered route coverage."""
+"""Validate compiled OpenAPI JSON, local references, examples, and registered route coverage."""
 
 import argparse
 import copy
@@ -9,91 +9,19 @@ from pathlib import Path
 import re
 import sys
 import tempfile
-from urllib.parse import urldefrag, urljoin
 from urllib.request import urlopen
 
-import yaml
 from jsonschema import Draft202012Validator
 from jsonschema.validators import SPECIFICATIONS
 from referencing import Registry, Resource
 from referencing.jsonschema import DRAFT202012
 
 ROOT = Path(__file__).resolve().parents[2]
-API = ROOT / "docs/api"
 OFFICIAL_SCHEMA = "https://spec.openapis.org/oas/3.2/schema-base/2026-08-30"
 METHODS = {"get", "post", "put", "patch", "delete", "head", "options", "trace", "query"}
 # UI entrypoints and static-file routes are outside the API contract.
-UI_PATHS = {"/api", "/api/{*path}", "/assets/{filename}", "/plugins/{*path}"}
-
-
-class UniqueKeyLoader(yaml.SafeLoader):
-    pass
-
-
-def unique_mapping(loader, node, deep=False):
-    result = {}
-    for key_node, value_node in node.value:
-        key = loader.construct_object(key_node, deep=deep)
-        if key in result:
-            raise ValueError(f"Duplicate YAML key {key!r} at line {key_node.start_mark.line + 1}")
-        result[key] = loader.construct_object(value_node, deep=deep)
-    return result
-
-
-UniqueKeyLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, unique_mapping)
-
-
-def read_yaml(path):
-    return yaml.load(path.read_text(), Loader=UniqueKeyLoader)
-
-
-def pointer(document, fragment):
-    if not fragment:
-        return document
-    if not fragment.startswith("/"):
-        raise ValueError(f"Unsupported local reference fragment: {fragment}")
-    for field in fragment[1:].split("/"):
-        field = field.replace("~1", "/").replace("~0", "~")
-        document = document[int(field)] if isinstance(document, list) else document[field]
-    return document
-
-
-def bundle():
-    """Inline path/parameter refs and register file schemas as local components, preserving recursion."""
-    documents = {p.resolve(): read_yaml(p) for p in API.rglob("*.yaml")}
-    schemas = {p: p.stem for p in documents if p.parent == (API / "schemas").resolve()}
-
-    def resolve(value, source, trail=()):
-        if isinstance(value, list):
-            return [resolve(item, source, trail) for item in value]
-        if not isinstance(value, dict):
-            return value
-        if "$ref" in value:
-            url = urljoin(source.as_uri(), value["$ref"])
-            target, fragment = urldefrag(url)
-            if not target.startswith("file://"):
-                raise ValueError(f"External API reference requires an explicit local copy: {url}")
-            from urllib.request import url2pathname
-
-            path = Path(url2pathname(target[len("file://"):])).resolve()
-            if path not in documents:
-                raise ValueError(f"Missing reference target: {path}")
-            selected = pointer(documents[path], fragment)
-            siblings = {k: resolve(v, source, trail) for k, v in value.items() if k != "$ref"}
-            if path in schemas:
-                suffix = fragment if fragment else ""
-                return {"$ref": f"#/components/schemas/{schemas[path]}{suffix}", **siblings}
-            if url in trail:
-                raise ValueError(f"Circular non-schema reference: {url}")
-            return {**resolve(selected, path, (*trail, url)), **siblings}
-        return {key: resolve(item, source, trail) for key, item in value.items()}
-
-    index = (API / "index.yaml").resolve()
-    result = resolve(documents[index], index)
-    result["components"]["schemas"] = {
-        name: resolve(documents[path], path) for path, name in schemas.items()
-    }
-    return result
+UI_PATHS = {"/", "/status", "/index.html", "/api", "/assets/{filename}", "/plugins/{*path}",
+            "/log/pretty"}
 
 
 def official_registry(cache):
@@ -117,17 +45,18 @@ def official_registry(cache):
 
 def registered_routes():
     routes = set()
-    # Literal route registrations, e.g. add(HTTPMethod::GET, "/clusters/list", ...).
+    # Matches literal registrations and Endpoint annotations for URLs such as
+    # http://localhost:16609/clusters/list.
     pattern = re.compile(r'proxygen::HTTPMethod::(\w+)\s*,\s*"([^"\n]+)"')
-    for source in (ROOT / "IDHANServer/src/httpapi").glob("*.cpp"):
-        # Parameter declarations describe existing endpoints; they do not register routes.
-        if source.name == "parameterDeclarations.cpp":
+    # Matches function annotations such as Post{"/records/tags/add"} for
+    # http://localhost:16609/records/tags/add.
+    annotated = re.compile(r'http::(Get|Post|Put|Patch|Delete)\s*[{(]\s*"([^"\n]+)"')
+    for source in (ROOT / "IDHANServer/src").rglob("*"):
+        if source.suffix not in {".cpp", ".hpp", ".h", ".hh", ".hxx"}:
             continue
-        routes.update((method.lower(), path) for method, path in pattern.findall(source.read_text()))
-    server = (ROOT / "IDHANServer/src/ServerContext.cpp").read_text()
-    # Dynamic aliases such as recordFileRoute(db, "/records/{record_id}").
-    for path in re.findall(r'record(?:File|Info)Route\([^\n]*?"([^"]+)"', server):
-        routes.add(("get", path))
+        text = source.read_text()
+        routes.update((method.lower(), path) for method, path in pattern.findall(text))
+        routes.update((method.lower(), path) for method, path in annotated.findall(text))
     # Compatibility routes are excluded from the published contract pending their rework.
     return {
         (method, path) for method, path in routes
@@ -211,23 +140,50 @@ def check_contract(document):
     return errors, len(documented)
 
 
+def local_reference_errors(document):
+    errors = []
+
+    def visit(value, location):
+        if isinstance(value, list):
+            for index, item in enumerate(value):
+                visit(item, f"{location}/{index}")
+        elif isinstance(value, dict):
+            reference = value.get("$ref")
+            if isinstance(reference, str) and reference.startswith("#/"):
+                target = document
+                try:
+                    for encoded in reference[2:].split("/"):
+                        key = encoded.replace("~1", "/").replace("~0", "~")
+                        target = target[int(key)] if isinstance(target, list) else target[key]
+                except (KeyError, IndexError, ValueError, TypeError):
+                    errors.append(f"{location}: unresolved reference {reference}")
+            for key, item in value.items():
+                visit(item, f"{location}/{key}")
+
+    visit(document, "")
+    return errors
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--schema-cache", type=Path, default=Path(tempfile.gettempdir()) / "idhan-openapi-schema-cache")
-    parser.add_argument("--bundle", type=Path, help="Optionally write a standalone JSON description")
+    parser.add_argument("--input", type=Path, required=True, help="Validate a compiled OpenAPI JSON document")
+    parser.add_argument("--offline", action="store_true",
+                        help="Check local references, examples and route coverage without downloading the official schema")
     args = parser.parse_args()
-    document = bundle()
-    schema, registry = official_registry(args.schema_cache)
-    validator = Draft202012Validator(schema, registry=registry)
-    errors = [f"{'/'.join(map(str, e.absolute_path))}: {e.message}" for e in validator.iter_errors(document)]
+    document = json.loads(args.input.read_text())
+    errors = local_reference_errors(document)
+    if not args.offline:
+        schema, registry = official_registry(args.schema_cache)
+        validator = Draft202012Validator(schema, registry=registry)
+        errors.extend(f"{'/'.join(map(str, e.absolute_path))}: {e.message}" for e in validator.iter_errors(document))
     contract_errors, count = check_contract(document)
     errors.extend(contract_errors)
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1
-    if args.bundle:
-        args.bundle.write_text(json.dumps(document, indent=2) + "\n")
-    print(f"OpenAPI {document['openapi']}: official schema, local refs, examples, and {count} operations validated.")
+    checks = "local refs, examples" if args.offline else "official schema, local refs, examples"
+    print(f"OpenAPI {document['openapi']}: {checks}, and {count} operations validated.")
     return 0
 
 

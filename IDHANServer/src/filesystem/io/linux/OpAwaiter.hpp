@@ -16,13 +16,8 @@ namespace idhan
 
 class IOUringLinux;
 
-//! Awaits any completion whose result is just an integer: unlinkat, renameat, mkdirat, statx.
-//!
-//! Unlike ReadAwaiter/WriteAwaiter this never throws and never logs. Those two carry an error
-//! message specific to reading or writing file contents; a path op has no single right reaction to
-//! a negative result. Removing a file that is already gone is usually fine, an unsupported opcode
-//! means fall back to the blocking call, and a failed rename is fatal. So the raw result is handed
-//! back and the caller decides.
+//! Returns raw path-operation results without throwing or logging; callers choose error handling
+//! and fallbacks for unsupported opcodes.
 struct [[nodiscard]] OpAwaiter
 {
 	static bool await_ready() noexcept;
@@ -43,7 +38,7 @@ struct [[nodiscard]] OpAwaiter
 	OpAwaiter( IOUringLinux* uring, io_uring_sqe sqe, folly::Executor* executor );
 
 	FGL_DELETE_COPY( OpAwaiter );
-	// Moved into folly's ViaIfAsyncAwaitable before await_suspend ever captures `this`, so this is safe.
+	// Folly moves this into ViaIfAsyncAwaitable before await_suspend captures `this`.
 	FGL_DEFAULT_MOVE( OpAwaiter );
 
 	void complete( int result );

@@ -17,9 +17,25 @@ git submodule update --init --recursive
 docker build --build-arg BUILD_JOBS=4 -t idhan:local .
 ```
 
-The build and runtime stages use Ubuntu 26.10. The server builds with GCC 16 and
+The native builder and runtime stages use Ubuntu 26.10. The server builds with GCC 16 and
 C++26. `BUILD_JOBS` defaults to 4 to limit memory use while compiling the HTTP stack;
 raise it on machines with sufficient RAM. Builds must run on the target architecture.
+
+TypeScript parser bundles are built in the separate `parserbuilder` stage using
+Node 22, the pinned TypeScript/esbuild dependencies, and their own npm cache.
+The native builder consumes that stage's output through
+`-DIDHAN_DOWNLOADER_PREBUILT_DIR=/build/parser-bundles`, so neither the C++ builder
+nor the runtime image installs Node or npm. The WebUI has its own `webbuilder` stage.
+To check the parser build environment independently:
+
+```sh
+docker build --target parserbuilder -t idhan-parsers:local .
+```
+
+Native builds can also consume externally built bundles by passing
+`-DIDHAN_DOWNLOADER_PREBUILT_DIR=/absolute/path/to/bundles` to CMake. Without this
+option, local builds continue to generate bundles automatically. Enabling C++ tests
+still requires Node/npm for compiling the test fixtures.
 
 The image defaults to plain HTTP, matching the Compose health checks. For native TLS,
 mount a certificate and key, set `IDHAN_HOST_USE_TLS=true`, configure

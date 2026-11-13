@@ -3,8 +3,8 @@
 #include <expected>
 #include <string>
 
-#include "idhan/http/RequestContext.hpp"
-#include "idhan/http/Response.hpp"
+#include "idhan/http/request/RequestContext.hpp"
+#include "idhan/http/response/Response.hpp"
 
 namespace idhan::httpapi
 {

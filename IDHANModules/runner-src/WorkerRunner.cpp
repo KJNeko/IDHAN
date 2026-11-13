@@ -176,7 +176,6 @@ std::expected< void, std::string > WorkerRunner::load()
 	if ( !library ) return std::unexpected( library.error() );
 
 	m_library = std::move( *library );
-	m_module_activity.resize( m_library.size() );
 
 	m_module_locks.reserve( m_library.size() );
 	for ( std::size_t i = 0; i < m_library.size(); ++i )
@@ -508,8 +507,6 @@ void WorkerRunner::handleCall( ipc::Frame&& frame )
 	{
 		const std::lock_guard< std::mutex > guard { m_queue_mutex };
 		m_queue.emplace_back( std::move( call ) );
-		const auto module_index { m_queue.back().module_index };
-		if ( module_index < m_module_activity.size() ) ++m_module_activity[ module_index ].queued;
 	}
 
 	m_queue_ready.notify_one();
@@ -759,20 +756,7 @@ void WorkerRunner::workerLoop( const std::stop_token& stop )
 		if ( module != nullptr && !module->threadSafe() )
 			serialised = std::unique_lock< std::recursive_mutex > { *m_module_locks[ module_index ] };
 
-		{
-			const std::lock_guard< std::mutex > guard { m_queue_mutex };
-			if ( module_index < m_module_activity.size() )
-			{
-				--m_module_activity[ module_index ].queued;
-				++m_module_activity[ module_index ].running;
-			}
-		}
-
 		runCall( std::move( call ) );
-		{
-			const std::lock_guard< std::mutex > guard { m_queue_mutex };
-			if ( module_index < m_module_activity.size() ) --m_module_activity[ module_index ].running;
-		}
 
 		m_active_calls.fetch_sub( 1 );
 	}
@@ -784,18 +768,6 @@ void WorkerRunner::sendHeartbeat()
 	body[ ipc::field::TYPE ] = ipc::toWire( ipc::MessageType::HEARTBEAT );
 	body[ ipc::field::RSS_KB ] = Json::UInt64 { residentSetKb() };
 	body[ ipc::field::ACTIVE_CALLS ] = Json::UInt64 { m_active_calls.load() };
-	Json::Value activity { Json::arrayValue };
-	{
-		const std::lock_guard< std::mutex > guard { m_queue_mutex };
-		for ( const auto& module : m_module_activity )
-		{
-			Json::Value entry {};
-			entry[ ipc::field::QUEUED ] = Json::UInt64 { module.queued };
-			entry[ ipc::field::RUNNING ] = Json::UInt64 { module.running };
-			activity.append( std::move( entry ) );
-		}
-	}
-	body[ ipc::field::MODULE_ACTIVITY ] = std::move( activity );
 
 	if ( const auto sent { send( body ) }; !sent ) spdlog::debug( "Worker heartbeat failed: {}", sent.error() );
 }

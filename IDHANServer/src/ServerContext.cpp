@@ -2,6 +2,8 @@
 #include "jobs/JobContext.hpp"
 #include "maintenance/HashMaintenance.hpp"
 #include "maintenance/TagCountMaintenance.hpp"
+#include "maintenance/BandwidthMaintenance.hpp"
+#include "maintenance/SubscriptionMaintenance.hpp"
 #include "maintenance/ModuleMaintenance.hpp"
 #include "config/consumeFlag.hpp"
 
@@ -27,21 +29,25 @@
 #include "idhan/SHA256.hpp"
 #include "db/ManagementConnection.hpp"
 #include "events/ServerEvents.hpp"
-#include "downloader/DebugEvents.hpp"
 #include "downloader/DownloadSessionManager.hpp"
+#include "downloader/SessionUrlIds.hpp"
+#include "downloader/downloaderEvents.hpp"
+#include "db/subscriptions.hpp"
 #include "embeddings/embeddings.hpp"
 #include "filesystem/ThumbnailCache.hpp"
 #include "filesystem/io/IOUring.hpp"
 #include "httpapi/apiAuth.hpp"
 #include "httpapi/clusters.hpp"
 #include "httpapi/downloadSessions.hpp"
-#include "httpapi/downloaderDebug.hpp"
+#include "httpapi/events.hpp"
 #include "httpapi/downloaderSecrets.hpp"
+#include "httpapi/downloaderHosts.hpp"
 #include "httpapi/embeddings.hpp"
 #include "httpapi/fileMetadata.hpp"
 #include "httpapi/generateApiKey.hpp"
 #include "httpapi/health.hpp"
 #include "httpapi/heartbeat.hpp"
+#include "subscriptions/SubscriptionEventHub.hpp"
 #include "httpapi/hydrus.hpp"
 #include "httpapi/importFile.hpp"
 #include "httpapi/info.hpp"
@@ -60,10 +66,10 @@
 #include "httpapi/version.hpp"
 #include "idhan/db/DBConfig.hpp"
 #include "idhan/db/DBContext.hpp"
-#include "idhan/http/HTTPConfig.hpp"
-#include "idhan/http/HTTPServer.hpp"
-#include "idhan/http/RouteRegistry.hpp"
-#include "httpapi/parameterDeclarations.hpp"
+#include "idhan/http/server/HTTPConfig.hpp"
+#include "idhan/http/server/HTTPServer.hpp"
+#include "idhan/http/routing/RouteRegistry.hpp"
+#include "httpapi/nativeRoutes.hpp"
 #include "logging/log.hpp"
 #include "spdlog/async.h"
 
@@ -82,8 +88,6 @@ void printCoreLocation()
 
 std::shared_ptr< spdlog::logger > ServerContext::createLogger( const ConnectionArguments& arguments )
 {
-	constexpr std::string_view server_format_str { "[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] [thread %t] %v" };
-
 	if ( !arguments.use_stdout ) log::warn( "use_stdout is false, This will be the last IDHAN output via stdout!" );
 
 	constexpr std::size_t KiB { 1024 };
@@ -100,7 +104,6 @@ std::shared_ptr< spdlog::logger > ServerContext::createLogger( const ConnectionA
 	{
 		ring_buffer = std::make_shared< spdlog::sinks::ringbuffer_sink_mt >( ring_buffer_size );
 		sinks.emplace_back( ring_buffer );
-		ring_buffer->set_pattern( std::string( server_format_str ) );
 		ring_buffer->set_level( spdlog::level::trace );
 	}
 	else
@@ -111,19 +114,16 @@ std::shared_ptr< spdlog::logger > ServerContext::createLogger( const ConnectionA
 	auto& trace_file_logger { sinks.emplace_back(
 		std::make_shared< spdlog::sinks::rotating_file_sink_mt >( log_path / "trace.log", MiB * 2, 4, true ) ) };
 
-	trace_file_logger->set_pattern( std::string( server_format_str ) );
 	trace_file_logger->set_level( spdlog::level::trace );
 
 	auto& info_file_logger { sinks.emplace_back(
 		std::make_shared< spdlog::sinks::rotating_file_sink_mt >( log_path / "info.log", MiB * 2, 4, true ) ) };
 
-	info_file_logger->set_pattern( std::string( server_format_str ) );
 	info_file_logger->set_level( spdlog::level::info );
 
 	auto& error_file_logger { sinks.emplace_back(
 		std::make_shared< spdlog::sinks::rotating_file_sink_mt >( log_path / "error.log", MiB * 16, 4, true ) ) };
 
-	error_file_logger->set_pattern( std::string( server_format_str ) );
 	error_file_logger->set_level( spdlog::level::warn );
 
 	if ( arguments.use_stdout )
@@ -134,7 +134,7 @@ std::shared_ptr< spdlog::logger > ServerContext::createLogger( const ConnectionA
 
 	auto logger { std::make_shared< spdlog::logger >( "default", sinks.begin(), sinks.end() ) };
 
-	logger->set_pattern( std::string( server_format_str ) );
+	logger->set_formatter( log::makeServerFormatter() );
 	logger->set_level( spdlog::level::trace );
 
 	spdlog::set_default_logger( logger );
@@ -201,30 +201,53 @@ void setupTempPath()
 	}
 }
 
-//! URLs a shutdown left unfinished are only recorded in the database, since jobs themselves live in
-//! memory and their ids reset on restart. The submits run here rather than inside a database
-//! coroutine on purpose: submit() reaches downloader host callbacks that block on their own
-//! queries, and those resume on the database executor's single thread, so submitting from that
-//! thread deadlocks startup.
-static void resumeDownloads( db::DBContext& db, const folly::Executor::KeepAlive<>& db_executor )
+static runtime::Task<> resumeDownloads( db::DBContext& db )
 {
 	auto& downloads { downloader::downloadSessionManager() };
-	auto pending { folly::coro::co_withExecutor( db_executor, downloads.resumable( db ) ).start().get() };
-
-	if ( pending.empty() ) return;
+	const auto pending { co_await downloads.resumable( db ) };
+	if ( pending.empty() ) co_return;
 
 	log::info( "Resuming {} interrupted download(s)", pending.size() );
-
-	for ( auto& root : pending )
+	for ( const auto& root : pending )
 	{
-		auto scheduled { downloads.submit( root.job_id, root.session_id, std::move( root.url ) ) };
-		if ( scheduled ) continue;
+		auto scheduled_e {
+			co_await downloads.submit( root.url_id, root.session_id, root.url, root.settings, std::nullopt, true )
+		};
+		if ( scheduled_e.has_value() ) continue;
 
-		folly::coro::co_withExecutor(
-			db_executor, downloads.markUnresumable( root.job_id, std::move( scheduled.error() ), db ) )
-			.start()
-			.get();
+		co_await downloads.markUnresumable( root, std::move( scheduled_e.error() ), db );
 	}
+}
+
+static runtime::Task<> prepareDownloads( db::DBContext& db )
+{
+	co_await downloader::SessionUrlIds::instance().load( db );
+	co_await db::queueInterruptedSubscriptions( db );
+	const auto subscription_sessions { co_await db::subscriptionSessionIds( db ) };
+	for ( const auto id : subscription_sessions ) downloader::events::setSubscriptionSession( id, true );
+	log::info( "Checking downloader parsers before accepting API requests" );
+	try
+	{
+		const auto prepared_e { co_await downloader::downloadSessionManager().prepareParsers() };
+		if ( !prepared_e.has_value() )
+		{
+			log::error( "Downloader startup preparation failed: {}", prepared_e.error() );
+		}
+		else
+		{
+			const auto& report { prepared_e.value() };
+			const auto failures {
+				std::ranges::count_if( report, []( const auto& parser ) { return parser.error.has_value(); } )
+			};
+			log::info( "Downloader parser checks finished: {} checked, {} failed", report.size(), failures );
+		}
+	}
+	catch ( const std::exception& exception )
+	{
+		log::error( "Downloader startup preparation failed: {}", exception.what() );
+	}
+
+	co_await resumeDownloads( db );
 }
 
 void ServerContext::startReplacementStack()
@@ -264,6 +287,7 @@ void ServerContext::startReplacementStack()
 		{
 			co_await m_clusters->reloadClusters( *m_db_context, recreate_markers );
 			co_await embeddings::registerEmbeddingModels( *m_db_context );
+			co_await prepareDownloads( *m_db_context );
 
 			const auto key_count { co_await auth::keyCount( *m_db_context ) };
 			if ( key_count == 0 )
@@ -272,10 +296,13 @@ void ServerContext::startReplacementStack()
 		.start()
 		.get();
 
-	resumeDownloads( *m_db_context, db_executor );
 	m_module_maintenance = std::make_unique< maintenance::ModuleMaintenance >( *m_module_loader );
 	m_hash_maintenance = std::make_unique< maintenance::HashMaintenance >( *m_db_context, db_executor );
 	m_tag_count_maintenance = std::make_unique< maintenance::TagCountMaintenance >( *m_db_context, db_executor );
+	m_subscription_maintenance = std::make_unique< maintenance::SubscriptionMaintenance >( *m_db_context, db_executor );
+	m_subscription_events = std::jthread(
+		[ this, db_executor ]( const std::stop_token stop )
+		{ subscriptions::SubscriptionEventHub::instance().runUpdates( *m_db_context, db_executor, stop ); } );
 
 	http::HTTPConfig http_config { http::HTTPConfig::defaults() };
 	http_config.ipv4_listen = config::get< std::string >( "host", "ipv4_listen", "127.0.0.1" );
@@ -290,61 +317,13 @@ void ServerContext::startReplacementStack()
 
 	http::RouteRegistry routes {};
 	m_heartbeat = std::make_unique< httpapi::HeartbeatService >();
-	routes.add( httpapi::declareEndpointParameters( httpapi::versionRoute() ) );
-	routes.add( httpapi::declareEndpointParameters( httpapi::healthRoute() ) );
-	routes.add( httpapi::declareEndpointParameters( httpapi::generateApiKeyRoute( *m_db_context ) ) );
-	routes.add( httpapi::declareEndpointParameters( httpapi::importFileRoute( *m_db_context ) ) );
-	routes.add( httpapi::declareEndpointParameters( httpapi::verifyRoute( *m_db_context ) ) );
-	routes.add(
-		httpapi::declareEndpointParameters( httpapi::recordFileRoute( *m_db_context, "/records/{record_id}/file" ) ) );
-	routes.add(
-		httpapi::declareEndpointParameters( httpapi::recordFileRoute( *m_db_context, "/records/{record_id}" ) ) );
-	routes.add(
-		httpapi::declareEndpointParameters( httpapi::recordInfoRoute( *m_db_context, "/records/{record_id}/info" ) ) );
-	routes.add(
-		httpapi::declareEndpointParameters(
-			httpapi::recordInfoRoute( *m_db_context, "/records/{record_id}/metadata" ) ) );
-	routes.add( httpapi::declareEndpointParameters( httpapi::recordMetadataBatchRoute( *m_db_context ) ) );
-	routes.add( httpapi::declareEndpointParameters( httpapi::recordMetadataScanRoute( *m_db_context ) ) );
-	routes.add( httpapi::declareEndpointParameters( httpapi::thumbnailRoute( *m_db_context ) ) );
-	routes.add( httpapi::declareEndpointParameters( httpapi::searchRoute( *m_db_context ) ) );
-	routes.add( httpapi::declareEndpointParameters( httpapi::searchPostRoute( *m_db_context ) ) );
-	routes.add( httpapi::declareEndpointParameters( httpapi::rateLimitListRoute( *m_db_context ) ) );
-	routes.add( httpapi::declareEndpointParameters( httpapi::rateLimitResetRoute( *m_db_context ) ) );
-	routes.add( httpapi::declareEndpointParameters( httpapi::apiDocsIndexRoute() ) );
-	routes.add( httpapi::declareEndpointParameters( httpapi::logRoute( *m_db_context ) ) );
-	routes.add( httpapi::declareEndpointParameters( httpapi::pluginsRoute( *m_db_context ) ) );
-	routes.add( httpapi::declareEndpointParameters( httpapi::downloaderDebugRoute( *m_db_context ) ) );
-	routes.add( httpapi::declareEndpointParameters( httpapi::eventsRoute( *m_db_context ) ) );
-	routes.add( httpapi::declareEndpointParameters( httpapi::downloaderSecretsListRoute( *m_db_context ) ) );
-	routes.add( httpapi::declareEndpointParameters( httpapi::downloaderSecretsSetRoute( *m_db_context ) ) );
-	for ( auto& route : httpapi::layoutRoutes( *m_db_context ) )
-		routes.add( httpapi::declareEndpointParameters( std::move( route ) ) );
-	routes.add( httpapi::declareEndpointParameters( httpapi::indexRoute( "/" ) ) );
-	routes.add( httpapi::declareEndpointParameters( httpapi::indexRoute( "/status" ) ) );
-	// useStaleBuild() fetches this to compare the served entry module against the running one.
-	routes.add( httpapi::declareEndpointParameters( httpapi::indexRoute( "/index.html" ) ) );
-	routes.add( httpapi::declareEndpointParameters( httpapi::assetsRoute() ) );
-	routes.add( httpapi::declareEndpointParameters( httpapi::apiDocsFilesRoute() ) );
-	routes.add( httpapi::declareEndpointParameters( httpapi::pluginFilesRoute() ) );
-	for ( auto& route : httpapi::tagRoutes( *m_db_context ) )
-		routes.add( httpapi::declareEndpointParameters( std::move( route ) ) );
-	for ( auto& route : httpapi::relationshipRoutes( *m_db_context ) )
-		routes.add( httpapi::declareEndpointParameters( std::move( route ) ) );
-	for ( auto& route : httpapi::embeddingRoutes( *m_db_context ) )
-		routes.add( httpapi::declareEndpointParameters( std::move( route ) ) );
-	for ( auto& route : httpapi::recordRoutes( *m_db_context ) )
-		routes.add( httpapi::declareEndpointParameters( std::move( route ) ) );
-	for ( auto& route : httpapi::maintenanceRoutes( *m_db_context ) )
-		routes.add( httpapi::declareEndpointParameters( std::move( route ) ) );
-	for ( auto& route : httpapi::jobRoutes( *m_db_context ) )
-		routes.add( httpapi::declareEndpointParameters( std::move( route ) ) );
-	for ( auto& route : httpapi::clusterRoutes( *m_db_context ) )
-		routes.add( httpapi::declareEndpointParameters( std::move( route ) ) );
-	for ( auto& route : httpapi::downloadSessionRoutes( *m_db_context ) )
-		routes.add( httpapi::declareEndpointParameters( std::move( route ) ) );
-	for ( auto& route : httpapi::hydrusRoutes( *m_db_context ) )
-		routes.add( httpapi::declareEndpointParameters( std::move( route ) ) );
+	httpapi::registerNativeRoutes( routes, *m_db_context );
+	for ( const auto path : { "/", "/status", "/index.html" } ) routes.add( httpapi::indexRoute( path ) );
+
+	routes.add( httpapi::assetsRoute() );
+	routes.add( httpapi::pluginFilesRoute() );
+	for ( auto& route : httpapi::hydrusRoutes( *m_db_context ) ) routes.add( std::move( route ) );
+
 	routes.seal();
 
 	m_http_server = std::make_unique< http::HTTPServer >( http_config, std::move( routes ) );
@@ -352,6 +331,7 @@ void ServerContext::startReplacementStack()
 
 	log::info( "IDHAN initialization finished" );
 	log::info( "Server available at http://localhost:{}", m_http_server->port() );
+	log::info( "{} on port {}", log::ready_marker, m_http_server->port() );
 }
 
 ServerContext::ServerContext( const ConnectionArguments& arguments ) :
@@ -415,13 +395,25 @@ void ServerContext::run()
 
 ServerContext::~ServerContext()
 {
+	m_subscription_events.request_stop();
+	if ( m_subscription_events.joinable() ) m_subscription_events.join();
+
 	if ( m_heartbeat != nullptr ) m_heartbeat->shutdown();
-	if ( m_http_server != nullptr ) m_http_server->stop();
+	if ( m_http_server != nullptr ) m_http_server->stopAdmission();
+	// Idle SSE body reads hold HTTP executor keepalives until their hub wakes them.
+	// Close the streams before joining the HTTP threads that are waiting for them.
 	server::events().shutdown();
+	if ( m_http_server != nullptr ) m_http_server->stop();
+
+	m_subscription_maintenance.reset();
 	m_tag_count_maintenance.reset();
 	m_hash_maintenance.reset();
 	m_module_maintenance.reset();
-	downloader::downloadSessionManager().shutdown();
+	if ( m_db_executor != nullptr )
+		folly::coro::co_withExecutor( m_db_executor.get(), downloader::downloadSessionManager().shutdown() )
+			.start()
+			.get();
+	m_bandwidth_maintenance.reset();
 	// The same key setupTempPath() created it under. Reading a different one deleted /tmp/idhan and
 	// left the configured directory behind, marker file and all, which aborts the next boot.
 	const auto upload_path { config::getSilentDefault< std::string >( "server", "temp_path", "/tmp/idhan" ) };

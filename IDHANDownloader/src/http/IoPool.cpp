@@ -61,7 +61,8 @@ IoPool::IoPool( const std::size_t count )
 	};
 	m_threads.reserve( threads );
 
-	for ( std::size_t index = 0; index < threads; ++index ) m_threads.emplace_back( std::make_unique< IoThread >() );
+	for ( std::size_t index = 0; index < threads; ++index )
+		m_threads.emplace_back( std::make_unique< IoThread >( index ) );
 }
 
 IoPool::~IoPool()
@@ -72,6 +73,7 @@ IoPool::~IoPool()
 void IoPool::stop()
 {
 	for ( auto& thread : m_threads ) thread->stop();
+	for ( auto& thread : m_threads ) thread->join();
 }
 
 IoThread& IoPool::leastLoaded()

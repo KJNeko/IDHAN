@@ -15,7 +15,7 @@
 #include "core/search/SearchTypes.hpp"
 #include "idhan/SHA256.hpp"
 #include "idhan/db/DBContext.hpp"
-#include "idhan/http/Response.hpp"
+#include "idhan/http/response/Response.hpp"
 #include "idhan/runtime/Task.hpp"
 
 namespace idhan::httpapi

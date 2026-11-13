@@ -6,9 +6,8 @@
 #include <sstream>
 
 #include "httpapi/jsonBody.hpp"
-#include "httpapi/parameterDeclarations.hpp"
-#include "idhan/http/JsonParameterPath.hpp"
-#include "idhan/http/RouteRegistry.hpp"
+#include "idhan/http/request/JsonParameterPath.hpp"
+#include "idhan/http/routing/RouteRegistry.hpp"
 
 // Folly includes glog, which also defines CHECK. Use Catch2 assertions below.
 #undef CHECK
@@ -169,21 +168,6 @@ TEST_CASE( "The JSON body reader warns today and can reject by policy", "[parame
 	}
 	CHECK( log.text().find( "/typo" ) != std::string::npos );
 	CHECK( log.text().find( "SECRET_JSON_VALUE" ) == std::string::npos );
-}
-
-TEST_CASE( "Native routes require explicit warn-mode declarations", "[parameters][declarations]" )
-{
-	auto route { httpapi::declareEndpointParameters(
-		RouteDefinition { RouteMetadata { proxygen::HTTPMethod::POST, "/search", {}, {} }, parameterTestHandler } ) };
-	REQUIRE( route.metadata.parameters );
-	CHECK( route.metadata.parameters->unknown == UnknownParameterPolicy::warn );
-	CHECK( route.metadata.parameters->query == std::vector< std::string > { "idhan_key" } );
-	CHECK( route.metadata.parameters->json.size() == 2 );
-	CHECK_THROWS_AS(
-		httpapi::declareEndpointParameters(
-			RouteDefinition { RouteMetadata { proxygen::HTTPMethod::GET, "/undeclared-native-route", {}, {} },
-			                  parameterTestHandler } ),
-		std::invalid_argument );
 }
 
 } // namespace idhan::http::test

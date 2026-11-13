@@ -10,6 +10,7 @@
 export const API_PREFIXES = [
   '/api',
   '/auth',
+	'/bandwidth',
   '/clusters',
   '/db',
     '/events',
@@ -31,6 +32,8 @@ export const API_PREFIXES = [
   '/records',
   '/relationships',
   '/search',
+	'/subscription_groups',
+	'/subscriptions',
   '/tags',
   '/test',
   '/version',

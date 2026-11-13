@@ -32,8 +32,9 @@ function node(
         created_at: 0,
         finished_at: 0,
         error: null,
-        note: null,
+        stage: null,
         record_id: recordId,
+        size: null,
         children,
     };
 }
@@ -60,25 +61,27 @@ describe('download tree projection', () => {
 
 describe('download session summary', () => {
     it('counts unique new and existing files and includes already seen skips in progress totals', () => {
-        const repeatedImport = {...node(3, 10), note: 'Already imported earlier in this session'};
-        const existingImport = {...node(4, 20), note: 'Already in the database'};
-        const alreadySeen = {...node(5, null, [], 'skipped'), note: 'Already seen in this session'};
+        const repeatedImport = {...node(3, 10, [], 'imported_previously'), size: 1000};
+        const existingImport = {...node(4, 20, [], 'imported_previously'), size: 2500};
+        const alreadySeen = node(5, null, [], 'skipped_already_seen');
         const tree = [node(1, null, [
             repeatedImport,
-            node(2, 10),
+            {...node(2, 10, [], 'imported'), size: 1000},
             existingImport,
             {...existingImport, id: 9},
             alreadySeen,
             node(6, null, [], 'pending'),
             node(7, null, [], 'processing'),
             node(8, null, [], 'failed'),
-            node(10, null, [], 'skipped'),
+            node(10, null, [], 'skipped_no_url_class'),
         ])];
 
         expect(summarizeDownloadSession(tree)).toEqual({
             files: 2,
             newlyImported: 1,
             existing: 1,
+            newBytes: 1000,
+            existingBytes: 2500,
             pending: 1,
             processing: 1,
             failed: 1,
@@ -111,7 +114,7 @@ describe('parseNewlineUrlList', () => {
 
 describe('display state', () => {
     it('leaves a completed URL alone when its whole subtree is terminal', () => {
-        const settled = node(1, 10, [node(2, 20), node(3, 30, [node(4, 40, [], 'skipped')], 'failed')]);
+        const settled = node(1, 10, [node(2, 20), node(3, 30, [node(4, 40, [], 'skipped_no_url_class')], 'failed')]);
 
         expect(displayState(settled)).toBe('completed');
     });
@@ -149,8 +152,9 @@ describe('display state', () => {
             created_at: 0,
             finished_at: null,
             error: null,
-            note: null,
+            stage: null,
             record_id: null,
+            size: null,
         });
         const entry = (...states: DownloadSessionUrlState[]): DownloadSessionUrlFlat => ({
             ...job(1, 'completed'),
@@ -158,13 +162,14 @@ describe('display state', () => {
             record_ids: [],
         });
 
-        expect(flatDisplayState(entry('completed', 'skipped'))).toBe('completed');
+        expect(flatDisplayState(entry('completed', 'skipped_no_url_class'))).toBe('completed');
         expect(flatDisplayState(entry('completed', 'pending'))).toBe('pending-children');
     });
 
     it('labels the derived state as words, leaving stored states untouched', () => {
         expect(stateLabel('pending-children')).toBe('pending children');
         expect(stateLabel('completed')).toBe('completed');
+        expect(stateLabel('skipped_already_seen')).toBe('skipped (Already Seen)');
     });
 });
 

@@ -1,7 +1,6 @@
 #pragma once
 
-//! Alias for the active formatting library: std::format when IDHAN_USE_STD_FORMAT is defined,
-//! otherwise {fmt}. Use format_ns::format everywhere so call sites don't hard-code either backend.
+// Use format_ns at call sites to support both std::format and {fmt}.
 #ifdef IDHAN_USE_STD_FORMAT
 #include <format>
 #include "logging/std_formatters/path.hpp"

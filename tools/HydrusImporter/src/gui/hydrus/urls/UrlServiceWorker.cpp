@@ -2,10 +2,12 @@
 
 #include <moc_UrlServiceWorker.cpp>
 
-#include <QFutureSynchronizer>
+#include <QFuture>
+#include <QUrl>
 
 #include <idhan/IDHANClient.hpp>
 
+#include <exception>
 #include <optional>
 #include <ranges>
 #include <unordered_set>
@@ -108,7 +110,18 @@ void UrlServiceWorker::process()
 					binder << all_url_ids[ chunk_offset + i ];
 				}
 				binder >> [ & ]( int url_id, std::string_view url )
-				{ url_text_map.emplace( url_id, std::string( url ) ); };
+				{
+					// Rough stand-in for the server's ada parse; catches invalid hosts such as "file://a (1).png".
+					const QUrl parsed { QString::fromUtf8( url.data(), url.size() ), QUrl::TolerantMode };
+					if ( !parsed.isValid() )
+					{
+						idhan::logging::warn(
+							"Skipping invalid Hydrus URL {}: {}", url, parsed.errorString().toStdString() );
+						return;
+					}
+
+					url_text_map.emplace( url_id, std::string( url ) );
+				};
 			}
 
 			// Batch query url_map: get hash_ids for all url_ids in this chunk
@@ -204,20 +217,33 @@ void UrlServiceWorker::flushUrls(
 	                        .arg( unique_urls.size() )
 	                        .arg( record_count ) );
 
-	// Use QFutureSynchronizer for proper parallel processing
-	QFutureSynchronizer< void > synchronizer;
+	std::vector< QFuture< void > > futures {};
+	futures.reserve( record_count );
 
 	for ( auto& [ hash_id, urls ] : current_urls )
 	{
 		const auto itter { m_record_cache.find( hash_id ) };
 		if ( itter == m_record_cache.end() ) continue; // hash could not be mapped to a record
 
-		synchronizer.addFuture( client.addUrls( itter->second, std::move( urls ) ) );
+		futures.emplace_back( client.addUrls( itter->second, std::move( urls ) ) );
 	}
 
-	synchronizer.waitForFinished();
+	std::exception_ptr first_failure {};
+	for ( auto& future : futures )
+	{
+		try
+		{
+			future.waitForFinished();
+		}
+		catch ( ... )
+		{
+			if ( !first_failure ) first_failure = std::current_exception();
+		}
+	}
 
 	current_urls.clear();
+
+	if ( first_failure ) std::rethrow_exception( first_failure );
 }
 
 void UrlServiceWorker::run()

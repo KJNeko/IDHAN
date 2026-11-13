@@ -1,3 +1,4 @@
+#include <folly/coro/BlockingWait.h>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 #include <atomic>
@@ -19,32 +20,51 @@ class FailingObserver final : public SessionObserver
 	WorkID import_id {};
 	std::optional< WorkID > parent {};
 
-	void onStarted( const WorkInfo& ) override { throw std::runtime_error( "database unavailable" ); }
-	std::expected< void, std::string > onImportQueued( const WorkInfo& info ) override
+	folly::coro::Task< void > onStarted( WorkInfo ) override
+	{
+		throw std::runtime_error( "database unavailable" );
+		co_return;
+	}
+
+	folly::coro::Task< std::expected< void, std::string > > onImportQueued( WorkInfo info ) override
 	{
 		import_id = info.id;
 		parent = info.parent;
 		++queued;
 		if ( reject_queue ) throw std::runtime_error( "cannot persist import" );
 
-		return {};
+		co_return std::expected< void, std::string > {};
 	}
-	void onCompleted( const WorkInfo& ) override
+
+	folly::coro::Task< void > onCompleted( WorkInfo ) override
 	{
 		++completed;
 		throw std::runtime_error( "completion database unavailable" );
+
+		co_return;
 	}
-	void onImported( const ImportInfo& info ) override
+
+	folly::coro::Task< void > onImported( ImportInfo info ) override
 	{
 		if ( info.work == import_id ) ++imported;
 		throw std::runtime_error( "import database unavailable" );
+
+		co_return;
 	}
-	void onImportFailed( const WorkInfo&, const std::string&, const std::string& ) override
+
+	folly::coro::Task< void > onImportFailed( WorkInfo, std::string, std::string ) override
 	{
 		++failed;
 		throw std::runtime_error( "failure database unavailable" );
+
+		co_return;
 	}
-	void onFinished() override { throw std::runtime_error( "finished observer failed" ); }
+
+	folly::coro::Task< void > onFinished() override
+	{
+		throw std::runtime_error( "finished observer failed" );
+		co_return;
+	}
 };
 
 TEST_CASE( "Observer exceptions do not kill a worker or lose settlement", "[downloader][host]" )
@@ -55,13 +75,13 @@ TEST_CASE( "Observer exceptions do not kill a worker or lose settlement", "[down
 	observer.reject_queue = reject;
 	harness.server.route( "/file", []( const TestRequest& ) { return TestResponse { .body = "file" }; } );
 	harness.parsers.write( "test.js", R"JS(
-export function run(input, idhan) { idhan.import({request: {url: input.url}}); }
+export function execute(input, idhan) { idhan.queueImport({request: {url: input.url}}); }
 )JS" );
-	harness.configure( R"([{"export":"run","path":"/file"}])" );
+	harness.configure( R"([{"export":"execute","path":"/file"}])" );
 	const auto session { harness.context->createSession( SessionOptions { .observer = &observer } ) };
 	const auto work { session->submit( harness.server.url( "/file" ) ) };
 	REQUIRE( work.has_value() );
-	session->wait();
+	folly::coro::blockingWait( session->wait() );
 	CHECK( session->idle() );
 	CHECK( observer.queued.load() == 1 );
 	CHECK( observer.completed.load() == 1 );
@@ -71,7 +91,7 @@ export function run(input, idhan) { idhan.import({request: {url: input.url}}); }
 	CHECK( observer.failed.load() == ( reject ? 1 : 0 ) );
 	CHECK( harness.server.requestCount() == ( reject ? 0 : 1 ) );
 	// Join before destroying the borrowed observer, including its onFinished callback.
-	harness.context->shutdown();
+	folly::coro::blockingWait( harness.context->shutdown() );
 }
 
 class ThrowingImports final : public ImportSinkFactory
@@ -81,14 +101,18 @@ class ThrowingImports final : public ImportSinkFactory
 		ThrowingImports& m_owner;
 	  public:
 		explicit Sink( ThrowingImports& owner ) : m_owner( owner ) {}
-		std::expected< void, std::string > write( std::span< const std::byte > ) override
+
+		folly::coro::Task< std::expected< void, std::string > > write( std::span< const std::byte > ) override
 		{
 			if ( m_owner.mode == 1 ) throw std::runtime_error( "write failed" );
-			return {};
+
+			co_return std::expected< void, std::string > {};
 		}
-		std::expected< ImportResult, std::string > finish( const ImportMetadata& ) override
+
+		folly::coro::Task< std::expected< ImportResult, std::string > > finish( ImportMetadata ) override
 		{
 			throw std::runtime_error( "import database unavailable" );
+			co_return ImportResult {};
 		}
 		void abort() override
 		{
@@ -114,19 +138,20 @@ TEST_CASE( "Throwing import adapters settle with failure and release the lane", 
 	imports.mode = mode;
 	harness.server.route( "/file", []( const TestRequest& ) { return TestResponse { .body = "file" }; } );
 	harness.parsers.write( "test.js", R"JS(
-export function run(input, idhan) { idhan.import({request: {url: input.url}}); }
+export function execute(input, idhan) { idhan.queueImport({request: {url: input.url}}); }
 )JS" );
-	harness.configure( R"([{"export":"run","path":"/file"}])" );
+	harness.configure( R"([{"export":"execute","path":"/file"}])" );
 	DownloaderConfig config {};
 	config.parser_directory = harness.parsers.root();
 	config.io_threads = 1;
-	config.script_threads = 1;
-	auto created { DownloaderContext::create( config, DownloaderHost { .imports = &imports } ) };
+	auto created {
+		folly::coro::blockingWait( DownloaderContext::create( config, DownloaderHost { .imports = &imports } ) )
+	};
 	REQUIRE( created.has_value() );
 	auto context { std::move( *created ) };
 	const auto session { context->createSession( SessionOptions { .observer = &harness.observer } ) };
 	REQUIRE( session->submit( harness.server.url( "/file" ) ).has_value() );
-	session->wait();
+	folly::coro::blockingWait( session->wait() );
 	CHECK( session->idle() );
 	CHECK( harness.observer.import_failures.size() == 1 );
 	CHECK( imports.aborted.load() == ( mode == 0 ? 0 : 1 ) );
@@ -136,6 +161,6 @@ export function run(input, idhan) { idhan.import({request: {url: input.url}}); }
 			if ( lane.in_flight != 0 ) return false;
 		return true;
 	} ) );
-	context->shutdown();
+	folly::coro::blockingWait( context->shutdown() );
 }
 }

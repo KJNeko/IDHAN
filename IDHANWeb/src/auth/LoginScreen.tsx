@@ -33,11 +33,12 @@ export function LoginScreen() {
     <main className="login">
       <form className="login-card" onSubmit={onSubmit}>
         <h1>IDHAN</h1>
-        <p className="muted">Enter your access key to continue.</p>
+		  <label htmlFor="access-key">Access key</label>
         <input
           type="password"
           className="login-input"
-          placeholder="64-character key"
+		  id="access-key"
+		  placeholder="Access key"
           autoComplete="off"
           autoFocus
           spellCheck={false}

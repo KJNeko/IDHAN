@@ -14,12 +14,14 @@ describe('system predicate matching', () => {
         expect(matchSystemPredicates('samus aran')).toEqual([]);
     });
 
-    it('stays quiet for a token too short to mean system:', () => {
-        expect(matchSystemPredicates('sy')).toEqual([]);
-    });
+	it.each(['', 's', 'sy', 'sys', 'syst', 'syste', 'system', '  SYSTEM '])(
+		'requires the complete system: prefix for %j',
+		(input) => {
+			expect(matchSystemPredicates(input)).toEqual([]);
+		},
+	);
 
-    it('opens the catalogue once the token can only be system:', () => {
-        expect(texts('sys')).toEqual(SYSTEM_PREDICATES.slice(0, 12).map((p) => p.text));
+	it('opens the catalogue after system:', () => {
         expect(texts('system:')).toEqual(SYSTEM_PREDICATES.slice(0, 12).map((p) => p.text));
     });
 

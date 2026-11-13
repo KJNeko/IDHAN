@@ -1,5 +1,6 @@
 # JavaScript dependencies
 node_modules/
+/IDHANDownloader/dist/
 
 # Build dirs
 /build/

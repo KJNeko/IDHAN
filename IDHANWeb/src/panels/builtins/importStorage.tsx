@@ -1,3 +1,4 @@
+import {PanelShortcut} from '../PanelShortcut';
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {readApiError} from '../../api/client';
 import type {HostApi} from '../../host/types';
@@ -21,8 +22,8 @@ export function useImportStorage(host: HostApi) {
             const canImport = clusters.some((cluster) => cluster.readonly === false);
             if (signal?.aborted || request !== latestRequest.current) return false;
             const message = canImport ? null : clusters.length === 0
-                ? 'No storage clusters are configured. Add a writable cluster in Cluster Manager to import files.'
-                : 'All storage clusters are read-only. Mark at least one cluster as writable in Cluster Manager to import files.';
+				? 'No storage clusters.'
+				: 'Storage is read-only.';
             setState({canImport, message});
             return canImport;
         } catch (error) {
@@ -55,7 +56,7 @@ export function ImportStorageNotice({storage}: { storage: ReturnType<typeof useI
     if (storage.message === null) return null;
     return (
         <p className="muted" role="status">
-            {storage.message}{' '}
+			{storage.message}{' '}<PanelShortcut type="cluster-manager">Manage storage</PanelShortcut>{' '}
             <button type="button" className="toolbar-button" onClick={() => void storage.check()}>Refresh storage
             </button>
         </p>

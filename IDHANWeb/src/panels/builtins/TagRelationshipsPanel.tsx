@@ -1,3 +1,4 @@
+import {PanelShortcut} from '../PanelShortcut';
 /**
  * Tag Relationships: edit one tag's relationships.
  *
@@ -41,7 +42,6 @@ function RelationBox({
   host,
   domainId,
   title,
-  hint,
   ids,
   label,
   onAdd,
@@ -51,7 +51,6 @@ function RelationBox({
   host: PanelProps['host'];
   domainId: number;
   title: string;
-  hint: string;
   ids: number[];
   label: (id: number) => string;
   onAdd: (tag: AutocompleteResult) => void;
@@ -61,13 +60,14 @@ function RelationBox({
   return (
     <div className="rel-box">
       <div className="rel-box-title">
-        {title} <span className="muted rel-box-hint">{hint}</span>
+		  {title}
       </div>
       {ids.length > 0 && (
         <ul className="rel-list">
           {ids.map((id) => (
             <li key={id} className="rel-item">
-              <button type="button" className="rel-del" disabled={busy} onClick={() => onRemove(id)} title="Remove">
+				<button type="button" className="rel-del" disabled={busy} onClick={() => onRemove(id)}
+	                    aria-label={`Remove ${label(id)}`} title="Remove">
                 <TrashIcon />
               </button>
               <span className="grow" title={`#${id}`}>
@@ -91,6 +91,8 @@ function RelationBox({
 
 function TagRelationshipsPanel({ host }: PanelProps) {
   const [domains, setDomains] = useState<TagDomain[]>([]);
+    const [domainError, setDomainError] = useState<string | null>(null);
+    const [domainsLoading, setDomainsLoading] = useState(true);
   const [domainId, setDomainId] = useState<number | null>(null);
   const [subject, setSubject] = useState<AutocompleteResult | null>(null);
   const [busy, setBusy] = useState(false);
@@ -109,7 +111,12 @@ function TagRelationshipsPanel({ host }: PanelProps) {
         setDomains(list);
         setDomainId((current) => current ?? list[0]?.tag_domain_id ?? null);
       })
-      .catch(() => {});
+        .catch((error: unknown) => {
+            if (!cancelled) setDomainError(`Could not load tag domains: ${error instanceof Error ? error.message : String(error)}`);
+        })
+        .finally(() => {
+            if (!cancelled) setDomainsLoading(false);
+        });
     return () => {
       cancelled = true;
     };
@@ -181,7 +188,10 @@ function TagRelationshipsPanel({ host }: PanelProps) {
   if (domainId === null) {
     return (
       <div className="panel-body">
-        <p className="muted">No tag domains exist. Create one in the Tag Domain Manager first.</p>
+          {domainError ? <p className="error" role="alert">{domainError}</p> :
+			  <div className="panel-row"><span
+		          className="muted">{domainsLoading ? 'Loading domains…' : 'No tag domains.'}</span>{!domainsLoading &&
+                  <PanelShortcut type="tag-domain-manager">Add tag domain</PanelShortcut>}</div>}
       </div>
     );
   }
@@ -206,8 +216,9 @@ function TagRelationshipsPanel({ host }: PanelProps) {
 
   return (
     <div className="panel-body tag-relationships">
-        <p className="rel-instant-notice">Changes apply instantly; there is no save step.</p>
+
       <div className="rel-row">
+		  {subject && <span className="muted" role="status">{busy ? 'Saving…' : error ? 'Not saved' : 'Saved'}</span>}
         <label className="tag-domain">
           Domain
           <select value={domainId} onChange={(e) => setDomainId(Number(e.target.value))}>
@@ -233,7 +244,6 @@ function TagRelationshipsPanel({ host }: PanelProps) {
             host={host}
             domainId={domainId}
             title="Alias for"
-            hint="this tag is an alias of"
             ids={edit.aliased}
             label={label}
             busy={busy}
@@ -244,7 +254,6 @@ function TagRelationshipsPanel({ host }: PanelProps) {
             host={host}
             domainId={domainId}
             title="Parents"
-            hint="this tag's parents"
             ids={edit.parents}
             label={label}
             busy={busy}
@@ -255,7 +264,6 @@ function TagRelationshipsPanel({ host }: PanelProps) {
             host={host}
             domainId={domainId}
             title="Children"
-            hint="tags with this tag as parent"
             ids={edit.children}
             label={label}
             busy={busy}
@@ -305,7 +313,7 @@ function TagRelationshipsPanel({ host }: PanelProps) {
 export const tagRelationshipsPanel = {
   type: 'tag-relationships',
   title: 'Tag Relationships',
-  description: "Edit a tag's aliases, parents, and children, and view its relationships across domains.",
+	description: 'Tag aliases, parents, and children.',
   component: TagRelationshipsPanel,
   configVersion: 1,
   singleton: true,

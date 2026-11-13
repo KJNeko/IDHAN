@@ -94,7 +94,7 @@ function createToasts() {
         id: nextId++,
         message,
         kind: options?.kind ?? 'info',
-        timeoutMs: options?.timeoutMs ?? 4000,
+          timeoutMs: options?.timeoutMs ?? (options?.kind === 'error' ? 0 : 4000),
       };
       for (const listener of listeners) listener(toast);
     },

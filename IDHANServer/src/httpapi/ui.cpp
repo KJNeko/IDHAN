@@ -9,7 +9,7 @@
 #include <ranges>
 #include <unordered_map>
 
-#include "idhan/http/FileResponse.hpp"
+#include "idhan/http/response/FileResponse.hpp"
 #include "paths.hpp"
 
 namespace idhan::httpapi
@@ -132,11 +132,6 @@ static http::HTTPTask< http::Response > serveSubtree( const std::filesystem::pat
 	co_return co_await http::FileResponse::create( context, std::move( file ), std::move( metadata ) );
 }
 
-static http::HTTPTask< http::Response > apiDocsFile( http::RequestContext context )
-{
-	co_return co_await serveSubtree( getApiDocsPath(), context );
-}
-
 static http::HTTPTask< http::Response > pluginFile( http::RequestContext context )
 {
 	co_return co_await serveSubtree( getPluginsPath(), context );
@@ -173,14 +168,6 @@ http::RouteDefinition assetsRoute()
 		http::RouteMetadata {
 			proxygen::HTTPMethod::GET, "/assets/{filename}", { { "filename", validateAssetFilename } }, {} },
 		asset
-	};
-}
-
-http::RouteDefinition apiDocsFilesRoute()
-{
-	return http::RouteDefinition {
-		http::RouteMetadata { proxygen::HTTPMethod::GET, "/api/{*path}", { { "path", validateSubtreePath } }, {} },
-		apiDocsFile
 	};
 }
 

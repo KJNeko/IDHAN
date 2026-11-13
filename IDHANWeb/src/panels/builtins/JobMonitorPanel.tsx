@@ -1,3 +1,4 @@
+import type {SubscriptionRunProgress} from '../../api/types';
 /**
  * Job Monitor starts manual maintenance jobs and follows the server's in-memory jobs
  * through the shared /events stream. Jobs are process-local and reset
@@ -6,14 +7,14 @@
 
 import {useEffect, useState} from 'react';
 import {watchJobs} from '../../api/client';
-import {UrlReorganizationProgress, type UrlReorganizationProgressData} from './UrlReorganizationProgress';
+import {UrlDeduplicationProgress, type UrlDeduplicationProgressData} from './UrlDeduplicationProgress';
 import {JobLauncher} from './JobLauncher';
 import type { PanelProps } from '../../host/types';
 import {ClusterScanProgress, type ClusterScanProgressData} from './ClusterScanProgress';
 import {BackgroundJobProgress, type BackgroundJobProgressData} from './BackgroundJobProgress';
 
-interface UrlReorganizationResult {
-    kind: 'url_reorganization';
+interface UrlDeduplicationResult {
+	kind: 'url_deduplication';
     total_count: number;
     unique_count: number;
     merged_count: number;
@@ -41,8 +42,8 @@ interface Job {
   start_time?: number; // unix seconds
     end_time?: number; // unix seconds, present once the job is done
   error?: string;
-    response?: UrlReorganizationResult | MetadataRescanResult | EmbeddingResult;
-    progress?: ClusterScanProgressData | BackgroundJobProgressData | UrlReorganizationProgressData;
+	response?: UrlDeduplicationResult | MetadataRescanResult | EmbeddingResult | SubscriptionRunProgress;
+	progress?: ClusterScanProgressData | BackgroundJobProgressData | UrlDeduplicationProgressData | SubscriptionRunProgress;
 }
 
 function statusClass(status: string | undefined): string {
@@ -124,7 +125,7 @@ function JobMonitorPanel({host}: PanelProps) {
                   </span>
                         {since && <span className="muted job-elapsed">{since}</span>}
                     </div>
-                    {job.progress?.kind !== 'url_reorganization' && response && 'kind' in response && response.kind === 'url_reorganization' && (
+					{job.progress?.kind !== 'url_deduplication' && response && 'kind' in response && response.kind === 'url_deduplication' && (
                         <p>Total: {response.total_count.toLocaleString()} ·
                             Unique: {response.unique_count.toLocaleString()} ·
                             Merged: {response.merged_count.toLocaleString()} ·
@@ -140,9 +141,13 @@ function JobMonitorPanel({host}: PanelProps) {
                     </p>}
                     {response && 'error' in response && response.error && <p className="error">{response.error}</p>}
                     {job.error && <p className="error">{job.error}</p>}
-                    {job.progress?.kind === 'url_reorganization' &&
-                        <UrlReorganizationProgress progress={job.progress}/>}
+					{job.progress?.kind === 'url_deduplication' &&
+                        <UrlDeduplicationProgress progress={job.progress}/>}
                     {job.progress?.kind === 'cluster_scan' && <ClusterScanProgress progress={job.progress}/>}
+					{job.progress?.kind === 'subscription' && <div className="muted">
+						{job.progress.imported_count.toLocaleString()} imported
+                        · {job.progress.known_count.toLocaleString()} known
+                    </div>}
                     {job.progress?.kind === 'background_service' && <BackgroundJobProgress progress={job.progress}/>}
               </li>
             );
@@ -156,7 +161,7 @@ function JobMonitorPanel({host}: PanelProps) {
 export const jobMonitorPanel = {
   type: 'job-monitor',
   title: 'Job Monitor',
-    description: 'Start maintenance jobs and follow their progress and results.',
+	description: 'Background jobs.',
   component: JobMonitorPanel,
   configVersion: 1,
   singleton: true,

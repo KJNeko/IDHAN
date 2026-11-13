@@ -1,6 +1,5 @@
 #include "recordValidator.hpp"
 
-#include <charconv>
 #include <format>
 
 #include "IDHANTypes.hpp"
@@ -9,36 +8,6 @@
 
 namespace idhan::httpapi
 {
-
-http::PathParameter recordIdPathParameter()
-{
-	return http::PathParameter {
-		"record_id",
-		[]( const std::string_view value ) -> std::expected< void, http::ParseError >
-		{
-			RecordID id {};
-			const auto result { std::from_chars( value.data(), value.data() + value.size(), id ) };
-			if ( result.ec != std::errc {} || result.ptr != value.data() + value.size() || id <= 0 )
-				return std::unexpected( http::ParseError { "record_id", "must be a positive record id" } );
-			return {};
-		}
-	};
-}
-
-http::PathParameter noteIdPathParameter()
-{
-	return http::PathParameter {
-		"note_id",
-		[]( const std::string_view value ) -> std::expected< void, http::ParseError >
-		{
-			NoteID id {};
-			const auto result { std::from_chars( value.data(), value.data() + value.size(), id ) };
-			if ( result.ec != std::errc {} || result.ptr != value.data() + value.size() || id <= 0 )
-				return std::unexpected( http::ParseError { "note_id", "must be a positive note id" } );
-			return {};
-		}
-	};
-}
 
 http::RequestValidation recordExistsValidation( db::DBContext& db )
 {

@@ -10,7 +10,7 @@
 #include <thread>
 
 #include "IDHANTypes.hpp"
-#include "idhan/http/SSEEventHub.hpp"
+#include "idhan/http/streaming/SSEEventHub.hpp"
 
 struct JobTaskStatus;
 
@@ -24,6 +24,7 @@ class JobEventHub : public std::enable_shared_from_this< JobEventHub >
 	std::condition_variable_any m_wakeup {};
 	std::map< JobID, std::weak_ptr< JobTaskStatus > > m_jobs {};
 	std::set< JobID > m_dirty {};
+	std::map< JobID, Json::Value > m_responses {};
 	std::jthread m_publisher;
 
 	void run( std::stop_token stop );
@@ -35,5 +36,7 @@ class JobEventHub : public std::enable_shared_from_this< JobEventHub >
 	~JobEventHub();
 	void add( const std::shared_ptr< JobTaskStatus >& status );
 	void remove( JobID id );
+	//! Every tracked job as one `snapshot` event, for a subscriber that has just connected.
+	[[nodiscard]] http::SSEInitialEvent snapshotEvent();
 };
 } // namespace idhan::jobs

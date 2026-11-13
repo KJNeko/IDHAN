@@ -20,7 +20,6 @@
 #include "CallInput.hpp"
 #include "ipc/Blob.hpp"
 #include "ipc/Frame.hpp"
-#include "ipc/ModuleActivity.hpp"
 #include "ipc/Protocol.hpp"
 #include "threading/IDHANTask.hpp"
 
@@ -96,7 +95,6 @@ class WorkerProcess : public std::enable_shared_from_this< WorkerProcess >
 
 	std::mutex m_calls_mutex {};
 	std::unordered_map< std::uint64_t, PendingCall > m_calls {};
-	std::optional< std::vector< ipc::ModuleActivity > > m_module_activity {};
 	//! The input of every in-flight call, so a module passing its own input back through a callback is
 	//! answered by reusing it.
 	std::unordered_map< std::uint64_t, InFlightInput > m_call_inputs {};
@@ -153,7 +151,6 @@ class WorkerProcess : public std::enable_shared_from_this< WorkerProcess >
 	[[nodiscard]] std::size_t activeCalls() const { return m_active_calls.load(); }
 
 	//! The last heartbeat's counters, in manifest order; absent before the first report.
-	[[nodiscard]] std::optional< std::vector< ipc::ModuleActivity > > moduleActivity();
 
 	[[nodiscard]] std::chrono::steady_clock::time_point lastActivity();
 
@@ -164,11 +161,11 @@ class WorkerProcess : public std::enable_shared_from_this< WorkerProcess >
 	[[nodiscard]] bool manifestSeen();
 
 	//! Blocks until the worker announces its manifest, or the timeout expires. Startup only.
-	[[nodiscard]] std::expected< std::vector< ipc::ManifestEntry >, std::string > awaitManifest(
+	[[nodiscard]] std::expected< std::vector< ipc::ManifestEntry >, std::string > awaitManifestSync(
 		std::chrono::milliseconds timeout );
 
 	//! Waits for a startup manifest without blocking the event loop that dispatched the call.
-	[[nodiscard]] IDHANTask< std::expected< std::vector< ipc::ManifestEntry >, std::string > > awaitManifestAsync(
+	[[nodiscard]] IDHANTask< std::expected< std::vector< ipc::ManifestEntry >, std::string > > awaitManifest(
 		std::chrono::milliseconds timeout );
 
 	[[nodiscard]] std::expected< void, std::string > post( const Json::Value& body, std::span< const int > fds = {} );

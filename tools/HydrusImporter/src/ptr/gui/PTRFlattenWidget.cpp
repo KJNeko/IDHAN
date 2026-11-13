@@ -99,7 +99,7 @@ void PTRFlattenWidget::onFlatten()
 		m_worker.get(), &idhan::hydrus::ptr::PTRFlattenWorker::subProgress, this, &PTRFlattenWidget::onSubProgress );
 	connect(
 		m_worker.get(), &idhan::hydrus::ptr::PTRFlattenWorker::statsUpdated, this, &PTRFlattenWidget::onStatsUpdated );
-	connect( m_worker.get(), &idhan::hydrus::ptr::PTRFlattenWorker::finished, this, &PTRFlattenWidget::onFinished );
+	connect( m_worker.get(), &idhan::hydrus::ptr::PTRFlattenWorker::finished, this, &PTRFlattenWidget::onFinishedSync );
 
 	QThreadPool::globalInstance()->start( m_worker.get() );
 }
@@ -159,7 +159,7 @@ void PTRFlattenWidget::onStatsUpdated( const idhan::hydrus::ptr::FlattenLiveStat
 		                                  .arg( number( stats.defined_tags ) ) );
 }
 
-void PTRFlattenWidget::onFinished( const bool success, const QString& message )
+void PTRFlattenWidget::onFinishedSync( const bool success, const QString& message )
 {
 	m_flattening = false;
 	ui->flattenButton->setEnabled( true );

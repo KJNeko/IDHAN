@@ -1,18 +1,23 @@
+#include <folly/coro/BlockingWait.h>
+#include <folly/coro/Mutex.h>
 #include "IDHANDownloader/DownloaderContext.hpp"
 
+#include <folly/executors/thread_factory/NamedThreadFactory.h>
 #include <spdlog/spdlog.h>
 
 #include <algorithm>
 #include <mutex>
+#include <map>
 #include <utility>
 #include <vector>
 
-#include "SessionContext.hpp"
+#include "session/SessionContext.hpp"
 #include "cookies/CookieStore.hpp"
 #include "http/LanePool.hpp"
 #include "js/ScriptRunner.hpp"
 #include "logging/format_ns.hpp"
 #include "scripts/ScriptRegistry.hpp"
+#include "scripts/ScriptWatcher.hpp"
 
 namespace idhan::downloader
 {
@@ -27,8 +32,11 @@ class DownloaderContext::Impl
 	CookieStore cookies;
 	std::unique_ptr< LanePool > lanes {};
 	std::unique_ptr< ScriptRunner > runner {};
+	std::unique_ptr< folly::CPUThreadPoolExecutor > import_executor {};
+	std::unique_ptr< ScriptWatcher > watcher {};
 
 	mutable std::mutex mutex {};
+	folly::coro::Mutex shutdown_mutex {};
 	std::vector< std::weak_ptr< SessionContext > > sessions {};
 	bool stopped {};
 
@@ -38,23 +46,109 @@ class DownloaderContext::Impl
 DownloaderContext::DownloaderContext( std::unique_ptr< Impl > impl ) : m_impl( std::move( impl ) )
 {}
 
-std::string DownloaderContext::classStorageUrl( const std::string_view url ) const
+std::expected< NormalizedUrl, std::string > DownloaderContext::normalizeUrl( const std::string_view url ) const
 {
-	return m_impl->registry->storageUrl( url, true );
+	return m_impl->registry->normalizeUrl( url );
 }
 
 DownloaderContext::~DownloaderContext()
 {
-	shutdown();
+	// C++ destruction cannot suspend; callers normally await shutdown before destroying the context.
+	folly::coro::blockingWait( shutdown() );
 }
 
-std::expected< std::unique_ptr< DownloaderContext >, std::string > DownloaderContext::create(
+std::expected< ParserUpdateReport, std::string > DownloaderContext::updateParsers()
+{
+	return m_impl->registry->updateParsers();
+}
+
+std::expected< ParserUpdateReport, std::string > DownloaderContext::updateParser( const std::filesystem::path& path )
+{
+	return m_impl->registry->updateParser( path );
+}
+
+Json::Value DownloaderContext::downloadOptions() const
+{
+	Json::Value result { Json::objectValue };
+	result[ "force_import" ] = m_impl->config.force_download;
+	result[ "parsers" ] = Json::Value { Json::arrayValue };
+	std::map< std::string, Json::Value > selected;
+	for ( const auto& parser : m_impl->registry->parsers() )
+	{
+		const auto& metadata { parser[ "metadata" ] };
+		const auto id { metadata[ "id" ].asString() };
+		if ( !selected.contains( id ) || metadata[ "version" ].asUInt64() > selected[ id ][ "version" ].asUInt64() )
+			selected[ id ] = metadata;
+	}
+	for ( auto& [ parser_id, metadata ] : selected )
+	{
+		const auto id { metadata[ "id" ].asString() };
+		for ( auto& option : metadata[ "options" ] )
+		{
+			const auto name { option[ "name" ].asString() };
+			if ( m_impl->config.options[ id ].isMember( name ) )
+				option[ "default" ] = m_impl->config.options[ id ][ name ];
+		}
+		Json::Value exposed { Json::objectValue };
+		exposed[ "id" ] = id;
+		exposed[ "options" ] = std::move( metadata[ "options" ] );
+		result[ "parsers" ].append( std::move( exposed ) );
+	}
+	return result;
+}
+
+std::expected< void, std::string > DownloaderContext::installParser(
+	std::string filename,
+	std::string source,
+	bool replace )
+{
+	return m_impl->registry->installParser( std::move( filename ), std::move( source ), replace );
+}
+
+std::expected< std::string, std::string > DownloaderContext::parserSource( std::string filename ) const
+{
+	return m_impl->registry->parserSource( std::move( filename ) );
+}
+
+Json::Value DownloaderContext::parsers() const
+{
+	Json::Value result { Json::arrayValue };
+	for ( const auto& parser : m_impl->registry->parsers() )
+	{
+		auto metadata { parser[ "metadata" ] };
+		metadata.removeMember( "cookies" );
+		metadata[ "filename" ] = parser[ "script" ];
+		result.append( std::move( metadata ) );
+	}
+
+	return result;
+}
+
+std::expected< void, std::string > DownloaderContext::setParserHost( std::string host, std::string parser )
+{
+	const auto host_copy { host };
+	const auto result_e { m_impl->registry->setParserHost( std::move( host ), std::move( parser ) ) };
+	if ( result_e.has_value() ) m_impl->lanes->reconfigure( host_copy );
+
+	return result_e;
+}
+
+void DownloaderContext::removeParserHost( const std::string_view host )
+{
+	m_impl->registry->removeParserHost( host );
+	m_impl->lanes->reconfigure( host );
+}
+
+ParserUpdateReport DownloaderContext::parserStatus() const
+{
+	return m_impl->registry->parserStatus();
+}
+
+folly::coro::Task< std::expected< std::unique_ptr< DownloaderContext >, std::string > > DownloaderContext::create(
 	DownloaderConfig config,
 	DownloaderHost host )
 {
-	if ( config.parser_directory.empty() ) return std::unexpected( "The downloader needs a parser directory" );
-
-	if ( config.url_classes.empty() ) config.url_classes = config.parser_directory / "url-classes";
+	if ( config.parser_directory.empty() ) co_return std::unexpected( "The downloader needs a parser directory" );
 
 	auto impl { std::make_unique< Impl >( host ) };
 
@@ -67,22 +161,23 @@ std::expected< std::unique_ptr< DownloaderContext >, std::string > DownloaderCon
 
 	auto registry { ScriptRegistry::create( config.url_classes, config.parser_directory, defaults ) };
 
-	if ( !registry ) return std::unexpected( std::move( registry.error() ) );
+	if ( !registry ) co_return std::unexpected( std::move( registry.error() ) );
 
 	impl->registry = std::move( *registry );
-	impl->cookies.load();
+	const auto loaded_hosts_e { co_await impl->registry->loadParserHosts( host.parser_hosts ) };
+	if ( !loaded_hosts_e.has_value() ) co_return std::unexpected( loaded_hosts_e.error() );
+
+	co_await impl->cookies.load();
 
 	LanePool::Config lanes {
-		.lane = Lane::Config { .max_shards = config.max_shards_per_lane,
-		                       .shard_growth_threshold = config.shard_growth_threshold,
-		                       .unthrottled_concurrency = config.unthrottled_lane_concurrency,
-		                       .throttled_concurrency = config.throttled_lane_concurrency },
+		.lane = Lane::Config { .concurrency = config.lane_concurrency },
 		.keep_alive = config.lane_keep_alive,
 		.default_rate = config.default_rate,
 		.http_version = config.http_version,
 		.user_agent = config.user_agent,
 		.max_response_bytes = config.max_response_bytes,
-		.observer = host.lanes
+		.observer = host.lanes,
+		.import_threads = config.import_threads
 	};
 
 	ScriptRegistry* resolver_registry { impl->registry.get() };
@@ -92,16 +187,30 @@ std::expected< std::unique_ptr< DownloaderContext >, std::string > DownloaderCon
 		{ return resolver_registry->laneSettings( host_name ); },
 		config.io_threads );
 
+	impl->import_executor = std::make_unique< folly::CPUThreadPoolExecutor >(
+		std::max< std::size_t >( 1, config.import_threads ),
+		std::make_shared< folly::NamedThreadFactory >( "dl-host-" ) );
+
 	impl->runner = std::make_unique< ScriptRunner >(
 		ScriptRunner::Options {
-			.threads = config.script_threads,
+			.parser_instances = config.parser_instances,
 			.script = ScriptContext::Options { .memory_limit = config.worker_memory_limit,
 	                                           .stack_limit = config.worker_stack_limit,
 	                                           .burst_timeout = config.script_burst_timeout } },
 		impl->registry->bytecode() );
 
+	if ( config.watch_scripts )
+	{
+		impl->watcher = std::make_unique< ScriptWatcher >(
+			*impl->registry,
+			config.parser_directory,
+			config.url_classes,
+			config.script_watch_interval,
+			config.script_watch_debounce );
+	}
+
 	impl->config = std::move( config );
-	return std::unique_ptr< DownloaderContext > { new DownloaderContext { std::move( impl ) } };
+	co_return std::unique_ptr< DownloaderContext > { new DownloaderContext { std::move( impl ) } };
 }
 
 std::shared_ptr< SessionContext > DownloaderContext::createSession( SessionOptions options )
@@ -117,8 +226,17 @@ std::shared_ptr< SessionContext > DownloaderContext::createSession( SessionOptio
 		.imports = m_impl->host.imports,
 		.secrets = m_impl->host.secrets,
 		.runner = m_impl->runner.get(),
+		.import_executor = m_impl->import_executor.get(),
 		.config = m_impl->config
 	};
+
+	for ( const auto& id : options.parser_options.getMemberNames() )
+	{
+		for ( const auto& name : options.parser_options[ id ].getMemberNames() )
+			environment.config.options[ id ][ name ] = options.parser_options[ id ][ name ];
+	}
+
+	if ( options.force_import.has_value() ) environment.config.force_download = options.force_import.value();
 
 	std::shared_ptr< SessionContext > session { new SessionContext {
 		std::make_unique< SessionContext::Impl >( std::move( environment ), std::move( options ) ) } };
@@ -154,6 +272,11 @@ std::vector< LaneSnapshot > DownloaderContext::laneSnapshots() const
 	return m_impl->lanes->snapshots();
 }
 
+ParserCacheSnapshot DownloaderContext::cacheSnapshot() const
+{
+	return m_impl->runner->cacheSnapshot();
+}
+
 std::vector< SessionSnapshot > DownloaderContext::sessionSnapshots( const std::uint64_t since ) const
 {
 	std::vector< std::shared_ptr< SessionContext > > sessions {};
@@ -176,14 +299,15 @@ std::vector< SessionSnapshot > DownloaderContext::sessionSnapshots( const std::u
 	return snapshots;
 }
 
-void DownloaderContext::shutdown()
+folly::coro::Task< void > DownloaderContext::shutdown()
 {
+	const auto shutdown_lock { co_await m_impl->shutdown_mutex.co_scoped_lock() };
 	std::vector< std::shared_ptr< SessionContext > > sessions {};
 
 	{
 		const std::scoped_lock lock { m_impl->mutex };
 
-		if ( m_impl->stopped ) return;
+		if ( m_impl->stopped ) co_return;
 
 		m_impl->stopped = true;
 
@@ -195,12 +319,17 @@ void DownloaderContext::shutdown()
 		m_impl->sessions.clear();
 	}
 
-	for ( const auto& session : sessions ) session->close();
-	for ( const auto& session : sessions ) session->wait();
+	m_impl->watcher.reset();
 
+	for ( const auto& session : sessions ) session->impl().shutdown();
+
+	// Stop parser execution and network callbacks before draining the owned import jobs.
 	m_impl->runner->stop();
+	co_await m_impl->lanes->shutdown();
+	for ( const auto& session : sessions ) co_await session->impl().drain();
+
+	m_impl->import_executor->join();
 	sessions.clear();
-	m_impl->lanes->shutdown();
 }
 
 } // namespace idhan::downloader

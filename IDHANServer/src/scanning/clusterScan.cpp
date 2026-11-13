@@ -118,7 +118,7 @@ void recordFailure(
 	RecordID after_record_id {};
 	while ( true )
 	{
-		const auto valid { access.verify() };
+		const auto valid { access.verifySync() };
 		if ( !valid ) co_return std::unexpected( valid.error() );
 
 		const auto files { co_await db::clusterRecordFiles( db, cluster_id, after_record_id, 1024 ) };
@@ -137,7 +137,7 @@ void recordFailure(
 			progress.checkedRecord();
 			if ( std::filesystem::is_regular_file( status ) ) continue;
 
-			const auto still_valid { access.verify() };
+			const auto still_valid { access.verifySync() };
 			if ( !still_valid ) co_return std::unexpected( still_valid.error() );
 
 			co_await db::detachMissingRecordFile( db, file.record_id, cluster_id );
@@ -253,7 +253,7 @@ void recordFailure(
 		co_return std::unexpected(
 			ScanError { std::format( "File is outside its hash directory: {}", candidate.path.string() ) } );
 
-	const auto valid { access.verify() };
+	const auto valid { access.verifySync() };
 	if ( !valid ) co_return std::unexpected( ScanError { valid.error(), true } );
 
 	const auto state { co_await db::findRecordFileState( db, hash ) };
@@ -296,7 +296,7 @@ void recordFailure(
 	if ( candidate.path != destination )
 	{
 		progress.setStage( task_id, "moving_file" );
-		const auto valid_before_move { access.verify() };
+		const auto valid_before_move { access.verifySync() };
 		if ( !valid_before_move ) co_return std::unexpected( ScanError { valid_before_move.error(), true } );
 
 		auto moved { moveWithoutReplacing( candidate.path, destination ) };
@@ -307,7 +307,7 @@ void recordFailure(
 	const auto times { filesystem::getFileTimes( candidate.path ) };
 	if ( !times ) co_return std::unexpected( ScanError { std::format( "Cannot stat {}", candidate.path.string() ) } );
 
-	const auto valid_before_update { access.verify() };
+	const auto valid_before_update { access.verifySync() };
 	if ( !valid_before_update ) co_return std::unexpected( ScanError { valid_before_update.error(), true } );
 
 	progress.setStage( task_id, "updating_database" );
@@ -395,7 +395,7 @@ runtime::Task< void > scheduleFiles(
 	{
 		while ( !exhausted && !stopped.load() && active < options.concurrency )
 		{
-			const auto valid { access.verify() };
+			const auto valid { access.verifySync() };
 			if ( !valid )
 			{
 				recordFailure( totals, progress, access.root(), valid.error() );

@@ -92,7 +92,7 @@ function UrlListPanel({ host }: PanelProps) {
 
   return (
     <div className="panel-body url-list">
-      {focused === null && <p className="muted">Select a record to see its URLs.</p>}
+		{focused === null && <p className="muted">No record selected.</p>}
 
       {focused !== null && (
         <>
@@ -142,7 +142,7 @@ function UrlListPanel({ host }: PanelProps) {
 export const urlListPanel = {
   type: 'url-list',
   title: 'URLs',
-  description: 'Known source URLs for the focused record; add and remove them.',
+	description: 'Record URLs.',
   component: UrlListPanel,
   configVersion: 1,
 } as const;

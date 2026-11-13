@@ -18,8 +18,7 @@ function HelloPanel({ host }) {
   return h(
     'div',
     { className: 'panel-body', style: { padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' } },
-    h('h2', null, 'Hello from a plugin! 👋'),
-    h('p', { className: 'muted' }, 'This panel was loaded at runtime from ', h('code', null, '/plugins/hello/index.js'), '.'),
+      h('h2', null, 'Hello'),
     h('p', { className: 'muted' }, 'Instance id: ', h('code', null, host.instanceId)),
     h(
       'button',
@@ -40,6 +39,6 @@ function HelloPanel({ host }) {
 registerPanel({
   type: 'example.hello',
   title: 'Hello',
-  description: 'Example plugin panel demonstrating runtime loading and the host API.',
+    description: 'Example plugin.',
   component: HelloPanel,
 });

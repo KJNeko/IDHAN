@@ -1,5 +1,0 @@
-in: path
-name: note_id
-required: true
-schema:
-  $ref: '../schemas/NoteID.yaml'

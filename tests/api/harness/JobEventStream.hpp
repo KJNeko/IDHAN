@@ -125,7 +125,7 @@ class JobEventStream
 	JobEventStream(
 		const std::uint16_t port,
 		const std::string& key,
-		const std::string_view path = "/events?types=job.status",
+		const std::string_view path = "/events?filter=job",
 		std::string accept_encoding = "identity" ) :
 	  m_url( std::format( "http://127.0.0.1:{}{}", port, path ) ),
 	  m_auth( "X-API-Key: " + key ),
@@ -145,15 +145,15 @@ class JobEventStream
 		return m_content_encoding;
 	}
 
-	Json::Value waitFor(
-		const std::string& event,
-		const std::optional< JobID > job = {},
-		const std::string& stage = {} )
+	//! Matches the payload's `type` field, which names the event within its stream.
+	Json::Value waitFor( const std::string& type, const std::optional< JobID > job = {},
+		const std::string& stage = {},
+		const std::chrono::milliseconds timeout = std::chrono::seconds { 12 } )
 	{
 		std::unique_lock lock { m_mutex };
-		const auto matches = [ &event, job, &stage ]( const auto& item )
+		const auto matches = [ &type, job, &stage ]( const auto& item )
 		{
-			if ( item.first != event ) return false;
+			if ( item.second[ "type" ].asString() != type ) return false;
 			if ( job && item.second[ "job_id" ].template as< JobID >() != *job ) return false;
 			if ( stage.empty() ) return true;
 			for ( const auto& task : item.second[ "progress" ][ "tasks" ] )
@@ -162,7 +162,7 @@ class JobEventStream
 		};
 		const auto ready = [ this, &matches ] { return std::ranges::any_of( m_events, matches ); };
 		Json::Value result {};
-		if ( !m_readable.wait_for( lock, std::chrono::seconds { 12 }, ready ) ) return result;
+		if ( !m_readable.wait_for( lock, timeout, ready ) ) return result;
 
 		const auto found { std::ranges::find_if( m_events, matches ) };
 		result = std::move( found->second );

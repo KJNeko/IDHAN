@@ -1,4 +1,6 @@
+#include <folly/coro/BlockingWait.h>
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 
 #include <filesystem>
 #include <fstream>
@@ -12,129 +14,42 @@ using idhan::test::waitUntil;
 
 static void copyPackages( Harness& harness )
 {
+	const auto source { std::filesystem::path { IDHAN_DOWNLOADER_TEST_PARSER_DIR } / "packages/sdk" };
+	const auto packages { harness.parsers.root() / "packages" };
+	std::filesystem::create_directories( packages / "sdk" );
+	std::filesystem::copy( source, packages / "sdk", std::filesystem::copy_options::recursive );
+}
+
+TEST_CASE( "Bundled parsers use the current class and Session contracts", "[downloader][parser-contracts]" )
+{
+	const auto name { GENERATE(
+		"e621",
+		"gelbooru",
+		"hyshare",
+		"pixiv",
+		"pawchive",
+		"gelbooru-secrets",
+		"e621-secrets",
+		"gelbooru-subscriptions" ) };
+	Harness harness;
 	const auto packages { harness.parsers.root() / "packages" };
 	std::filesystem::create_directories( packages );
 
-	for ( const std::string_view name : { "zod.js", "validation.js", "parser.js" } )
-	{
-		const auto source {
-			name == "zod.js" ? std::filesystem::path { IDHAN_DOWNLOADER_PARSER_DIR } / "packages" / name :
-							   std::filesystem::path { IDHAN_SOURCE_DIR } / "IDHANDownloader/premade/packages" / name
-		};
-		std::filesystem::copy_file( source, packages / name );
-	}
-}
-
-TEST_CASE( "Shipped parsers preserve their import and URL contracts", "[downloader][parser-contracts]" )
-{
-	std::string entry {};
-	SECTION( "e621 posts, siblings and galleries" )
-	{
-		entry = "e621Contract";
-	}
-	SECTION( "Gelbooru tag categories and credentials" )
-	{
-		entry = "gelbooruContract";
-	}
-	SECTION( "Pixiv pages and artist galleries" )
-	{
-		entry = "pixivContract";
-	}
-	SECTION( "HyShare hostnames, redirects and identity" )
-	{
-		entry = "hyshareContract";
-	}
-	SECTION( "pawchive attachments and creator pagination" )
-	{
-		entry = "pawchiveContract";
-	}
-	SECTION( "Shared import and response helpers" )
-	{
-		entry = "helpersContract";
-	}
-
-	Harness harness {};
-	copyPackages( harness );
-	const std::filesystem::path source { IDHAN_SOURCE_DIR };
-	for ( const std::string_view name : { "e621.js", "gelbooru.js", "hyshare.js", "pawchive.js", "pixiv.js" } )
-	{
-		std::filesystem::copy_file( source / "IDHANDownloader/premade" / name, harness.parsers.root() / name );
-	}
 	std::filesystem::copy_file(
-		source / "tests/downloader/testdata/parser-contracts.js", harness.parsers.root() / "test.js" );
-	harness.parsers.write( "packages/pawchive-api.js", R"JS(
-export class ApiClient {
-    constructor() { this.defaultHeaders = {}; }
-}
-function response(args) {
-    globalThis.pawchiveCalls.push(args);
-    if (globalThis.pawchiveResponses.length === 0) throw new Error("Unexpected pawchive API call");
-    return Promise.resolve(globalThis.pawchiveResponses.shift());
-}
-export class PostsApi {
-    serviceUserCreatorIdGet(...args) { return response(args); }
-    serviceUserCreatorIdPostPostIdGet(...args) { return response(args); }
-}
-)JS" );
-	harness.configure( std::format( R"([{{"export":"{}","path":"/page"}}])", entry ) );
-	const auto session { harness.session( harness.server.url( "/page" ) ) };
-	REQUIRE( session->submit( harness.server.url( "/page" ) ).has_value() );
-	session->wait();
-	idhan::test::checkNoFailures( harness.observer );
-	CHECK( harness.observer.completed.size() == 1 );
-}
-
-TEST_CASE( "HyShare assigns tags to the full source hostname", "[downloader][modules][hyshare]" )
-{
-	Harness harness {};
-	copyPackages( harness );
-	std::filesystem::copy_file(
-		std::filesystem::path { IDHAN_DOWNLOADER_PARSER_DIR } / "hyshare.js", harness.parsers.root() / "hyshare.js" );
-	harness.parsers.write( "test.js", R"JS(
-import {post} from "./hyshare.js";
-
-const hash = "a".repeat(64);
-
-function mockHost(expectedHostname) {
-    return {
-        imports: 0,
-        async request(request) {
-            return {status: 200, url: request.url, body: JSON.stringify({
-                hash, ext: ".png",
-                tag_services_to_tags: {one: ["landscape"], two: ["landscape", "favorite"]},
-            })};
-        },
-        import(options) {
-            const domains = Object.keys(options.tags);
-            if (domains.length !== 1 || domains[0] !== expectedHostname) {
-                throw new Error(`Wrong tag domains: ${JSON.stringify(domains)}`);
-            }
-            if (options.tags[expectedHostname].slice().sort().join(",") !== "favorite,landscape") {
-                throw new Error("HyShare tags were lost or duplicated");
-            }
-            this.imports += 1;
-        },
-    };
-}
-
-export async function page() {
-    const cases = [
-        ["https://testing.mydomain.com:8443", "testing.mydomain.com"],
-        ["https://other.mydomain.com", "other.mydomain.com"],
-        ["https://user:password@testing.example.co.uk:8443", "testing.example.co.uk"],
-        ["http://127.0.0.1:9000", "127.0.0.1"],
-    ];
-    for (const [base, hostname] of cases) {
-        const host = mockHost(hostname);
-        await post({url: `${base}/view/${hash}?source=example#fragment`}, host);
-        if (host.imports !== 1) throw new Error("HyShare did not import the file");
-    }
-}
-)JS" );
+		std::filesystem::path { IDHAN_DOWNLOADER_TEST_PARSER_DIR } / "packages/contracts.js",
+		packages / "contracts.js" );
+	harness.parsers.write(
+		"test.js",
+		std::format(
+			R"JS(
+import {{ runContract }} from "./packages/contracts.js";
+export async function page() {{ await runContract("{}"); }}
+)JS",
+			name ) );
 	harness.configure( R"([{"export":"page","path":"/page"}])" );
 	const auto session { harness.session( harness.server.url( "/page" ) ) };
 	REQUIRE( session->submit( harness.server.url( "/page" ) ).has_value() );
-	session->wait();
+	folly::coro::blockingWait( session->wait() );
 	idhan::test::checkNoFailures( harness.observer );
 	CHECK( harness.observer.completed.size() == 1 );
 }
@@ -166,7 +81,7 @@ export async function page(input, idhan) {
 	idhan::test::checkNoFailures( harness.observer );
 }
 
-TEST_CASE( "A parser can validate response JSON with bundled Zod", "[downloader][modules]" )
+TEST_CASE( "A parser validates response JSON with the TypeScript SDK", "[downloader][modules]" )
 {
 	Harness harness {};
 	harness.server.route(
@@ -180,16 +95,13 @@ TEST_CASE( "A parser can validate response JSON with bundled Zod", "[downloader]
 
 	copyPackages( harness );
 	harness.parsers.write( "test.js", R"JS(
-import {parseResponse, z} from "validation";
-
-const responseSchema = z.object({
-    name: z.string(),
-    values: z.array(z.number()),
-});
-
+import * as v from "./packages/sdk/validation.js";
+function decode(value, label) {
+    const data = v.object(value, label);
+    return {name: v.string(data.name, label + ".name"), values: v.array(data.values, v.number, label + ".values")};
+}
 export async function page(input, idhan) {
-    const response = await idhan.request({url: input.url, responseType: "json"});
-    parseResponse(responseSchema, response.body, "fixture API");
+    await v.requestJson(idhan, {url: input.url, responseType: "text"}, decode, "fixture API");
 }
 )JS" );
 	harness.configure( R"([{"export":"page","path":"/valid"},{"export":"page","path":"/invalid"}])" );
@@ -223,13 +135,10 @@ TEST_CASE( "A parser reports the status before it parses a body", "[downloader][
 
 	copyPackages( harness );
 	harness.parsers.write( "test.js", R"JS(
-import {parseJsonResponse, z} from "validation";
-
-const responseSchema = z.object({name: z.string()});
-
+import * as v from "./packages/sdk/validation.js";
 export async function page(input, idhan) {
-    const response = await idhan.request({url: input.url, responseType: "text"});
-    parseJsonResponse(responseSchema, response, "fixture API");
+    const response = await idhan.request({url: input.url, responseType: "text", allowHttpErrors: true});
+    v.parseJson(response, v.object, "fixture API");
 }
 )JS" );
 	harness.configure( R"([{"export":"page","path":"/denied"}])" );
@@ -242,8 +151,6 @@ export async function page(input, idhan) {
 
 	const std::string& error { harness.observer.failures.front().second };
 	CHECK( error.contains( "fixture API returned HTTP 403" ) );
-	CHECK( error.contains( "text/html" ) );
-	CHECK( error.contains( "<html> <body>Access denied</body> </html>" ) );
 }
 
 TEST_CASE( "A module escaping the parser directory is refused", "[downloader][modules]" )

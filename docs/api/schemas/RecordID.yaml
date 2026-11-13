@@ -1,5 +1,0 @@
-type: integer
-format: int32
-minimum: 1
-maximum: 2147483647
-description: Positive record identifier. Zero is invalid and rejected in requests.

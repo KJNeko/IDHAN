@@ -5,12 +5,9 @@
 namespace idhan
 {
 
-//! Character separating a tag's namespace from its subtag (the ':' in "creator:foo").
 constexpr char TAG_NAMESPACE_DELIMTER { ':' };
 
-//! Splits a "namespace:subtag" tag into its two parts.
-//! \param str Full tag; only the first delimiter splits, so any later ':' stays in the subtag.
-//! \return {namespace, subtag}; the namespace is empty when no delimiter is present.
+//! Returns {namespace, subtag}, splitting at the first ':'. No delimiter means an empty namespace.
 std::pair< std::string, std::string > splitTag( const std::string_view str );
 
 //! \copydoc splitTag(const std::string_view)
@@ -23,7 +20,7 @@ inline std::pair< std::string, std::string > splitTag( const std::string& str )
 namespace tags
 {
 
-//! Convenience alias for idhan::splitTag; splits "namespace:subtag" into {namespace, subtag}.
+//! \copydoc idhan::splitTag(const std::string_view)
 inline std::pair< std::string, std::string > split( const std::string_view str )
 {
 	return splitTag( str );

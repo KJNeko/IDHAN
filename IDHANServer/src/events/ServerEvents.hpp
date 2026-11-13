@@ -1,6 +1,6 @@
 #pragma once
 
-#include "idhan/http/SSEEventHub.hpp"
+#include "idhan/http/streaming/SSEEventHub.hpp"
 
 namespace idhan::server
 {

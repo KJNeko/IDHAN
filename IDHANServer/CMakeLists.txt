@@ -19,10 +19,6 @@ target_link_libraries(IDHANServer PRIVATE IDHAN IDHANDownloader)
 target_link_libraries(IDHANServer PRIVATE IDHANHttp IDHANDb)
 target_link_libraries(IDHANServer PUBLIC IDHANModules IDHANModuleIPC IDHANMigration)
 target_compile_definitions(IDHANServer PUBLIC IDHAN_USE_STD_FORMAT)
-target_compile_definitions(
-		IDHANServer
-		PRIVATE IDHAN_DOWNLOADER_DEFAULT_PARSER_DIRECTORY="${IDHAN_DOWNLOADER_PARSER_DIR}")
-
 add_dependencies(IDHANServer IDHANDownloaderAssets)
 
 if (IDHAN_HARDEN)
@@ -60,25 +56,6 @@ foreach (PAGE ${PAGE_FILES})
 
 endforeach ()
 
-file(GLOB_RECURSE API_SPEC_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/../docs/api/*")
-
-foreach (SPEC ${API_SPEC_FILES})
-
-	file(RELATIVE_PATH REL_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../docs/api ${SPEC})
-
-	set(OUT_PATH ${CMAKE_BINARY_DIR}/bin/static/api/${REL_PATH})
-
-	add_custom_command(
-			OUTPUT ${OUT_PATH}
-			COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SPEC} ${OUT_PATH}
-			DEPENDS ${SPEC}
-			COMMENT "Copying ${SPEC} to ${OUT_PATH}"
-	)
-
-	list(APPEND PAGE_OUTPUTS ${OUT_PATH})
-
-endforeach ()
-
 add_custom_target(IDHANPages DEPENDS ${PAGE_OUTPUTS})
 add_dependencies(IDHANServer IDHANPages)
 
@@ -100,3 +77,5 @@ add_dependencies(IDHANServer IDHANModuleRunner)
 
 add_subdirectory(runtime)
 add_subdirectory(contracts)
+
+include(cmake/CompileOpenAPI.cmake)

@@ -11,7 +11,7 @@
 <div id="swagger-ui"></div>
 <script crossorigin src="https://unpkg.com/swagger-ui-dist@5.33.1/swagger-ui-bundle.js"></script>
 <script>
-    const url = new URL('/api/index.yaml', window.location.origin).href;
+    const url = new URL('/openapi.json', window.location.origin).href;
 
     window.onload = () => {
         window.ui = SwaggerUIBundle({

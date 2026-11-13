@@ -1,36 +1,11 @@
 #include "tagHelpers.hpp"
 
 #include <algorithm>
-#include <charconv>
 #include <format>
 #include <limits>
 
 namespace idhan::httpapi
 {
-
-template < typename T >
-[[nodiscard]] static http::PathParameter integerPathParameter( std::string name )
-{
-	auto validate = [ name ]( const std::string_view value ) -> std::expected< void, http::ParseError >
-	{
-		T id {};
-		const auto result { std::from_chars( value.data(), value.data() + value.size(), id ) };
-		if ( result.ec != std::errc {} || result.ptr != value.data() + value.size() || id <= 0 )
-			return std::unexpected( http::ParseError { name, "must be a positive integer" } );
-		return {};
-	};
-	return http::PathParameter { std::move( name ), std::move( validate ) };
-}
-
-http::PathParameter tagIdPathParameter( std::string name )
-{
-	return integerPathParameter< TagID >( std::move( name ) );
-}
-
-http::PathParameter tagDomainIdPathParameter( std::string name )
-{
-	return integerPathParameter< TagDomainID >( std::move( name ) );
-}
 
 runtime::Task< std::optional< TagDomainInfo > > findTagDomain( const TagDomainID id, db::DBContext& db )
 {
@@ -70,7 +45,7 @@ runtime::Task< std::optional< TagDomainInfo > > findTagDomain( const std::string
 runtime::Task< std::vector< TagDomainInfo > > listTagDomains( db::DBContext& db )
 {
 	const auto rows { co_await db.query( "SELECT tag_domain_id, domain_name FROM tag_domains ORDER BY tag_domain_id" )
-		                  .rows< TagDomainID, std::string >() };
+	                      .rows< TagDomainID, std::string >() };
 
 	std::vector< TagDomainInfo > domains {};
 	domains.reserve( rows.size() );
@@ -78,17 +53,6 @@ runtime::Task< std::vector< TagDomainInfo > > listTagDomains( db::DBContext& db 
 	for ( const auto& [ domain_id, domain_name ] : rows ) domains.push_back( TagDomainInfo { domain_id, domain_name } );
 
 	co_return domains;
-}
-
-std::expected< TagDomainID, http::Response > tagDomainIdParameter( const http::RequestParameters& parameters )
-{
-	const auto value_e { parameters.scalar< std::int64_t >( "tag_domain_id" ) };
-	if ( !value_e ) return std::unexpected( http::Response::error( 400, "tag_domain_id not supplied in query" ) );
-
-	if ( *value_e <= 0 || *value_e > std::numeric_limits< TagDomainID >::max() )
-		return std::unexpected( http::Response::error( 400, "Invalid tag_domain_id: out of range" ) );
-
-	return static_cast< TagDomainID >( *value_e );
 }
 
 runtime::Task< std::expected< void, http::Response > > validateRelationshipIds(

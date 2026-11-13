@@ -113,7 +113,7 @@ function TagDomainManagerPanel({ host }: PanelProps) {
 export const tagDomainManagerPanel = {
   type: 'tag-domain-manager',
   title: 'Tag Domain Manager',
-  description: 'List, create, and delete tag service domains.',
+	description: 'Tag domains.',
   component: TagDomainManagerPanel,
   configVersion: 1,
   singleton: true,

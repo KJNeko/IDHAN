@@ -1,6 +1,6 @@
 /**
  * Renders host.ui.toast() messages. Subscribes to the global toast stream and auto-dismisses each
- * after its timeout. Mounted once near the app root.
+ * after a positive timeout. Errors remain until dismissed. Mounted once near the app root.
  */
 
 import { useEffect, useState } from 'react';
@@ -10,12 +10,21 @@ export function ToastHost() {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   useEffect(() => {
-    return globalServices.toasts.subscribe((toast) => {
+      const timers = new Set<number>();
+      const unsubscribe = globalServices.toasts.subscribe((toast) => {
       setToasts((current) => [...current, toast]);
-      window.setTimeout(() => {
-        setToasts((current) => current.filter((t) => t.id !== toast.id));
-      }, toast.timeoutMs);
+          if (toast.timeoutMs > 0) {
+              const timer = window.setTimeout(() => {
+                  timers.delete(timer);
+                  setToasts((current) => current.filter((t) => t.id !== toast.id));
+              }, toast.timeoutMs);
+              timers.add(timer);
+          }
     });
+      return () => {
+          unsubscribe();
+          for (const timer of timers) window.clearTimeout(timer);
+      };
   }, []);
 
   if (toasts.length === 0) return null;
@@ -23,8 +32,12 @@ export function ToastHost() {
   return (
     <div className="toast-host">
       {toasts.map((toast) => (
-        <div key={toast.id} className={`toast toast-${toast.kind}`} role="status">
-          {toast.message}
+          <div key={toast.id} className={`toast toast-${toast.kind}`}
+               role={toast.kind === 'error' ? 'alert' : 'status'}>
+              <span>{toast.message}</span>
+              <button type="button" className="toast-dismiss" aria-label="Dismiss notification"
+                      onClick={() => setToasts(current => current.filter(entry => entry.id !== toast.id))}>×
+              </button>
         </div>
       ))}
     </div>

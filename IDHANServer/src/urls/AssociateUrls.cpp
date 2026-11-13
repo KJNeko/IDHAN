@@ -1,7 +1,7 @@
 #include "AssociateUrls.hpp"
 
+#include <map>
 #include <utility>
-#include <IDHANDownloader/UrlComparison.hpp>
 
 #include "UrlDomain.hpp"
 #include "idhan/db/DBContext.hpp"
@@ -9,27 +9,44 @@
 namespace idhan::helpers
 {
 
-runtime::Task< std::vector< UrlID > > findEquivalentUrls(
-	std::string url,
-	std::vector< std::string > ephemeral_query,
+runtime::Task< std::expected< void, std::string > > setUrlTypes(
+	std::vector< std::pair< std::string, std::string > > types,
 	db::DBContext& db )
 {
-	db::DBBindings bindings {};
-	bindings.bind( downloader::urlComparisonBase( url ) );
-	const auto candidates {
+	try
+	{
+		std::map< std::string, std::string > unique;
+		for ( auto& [ url, type ] : types ) unique[ std::move( url ) ] = std::move( type );
+
+		std::vector< std::string > urls, domains, values;
+		for ( const auto& [ url, type ] : unique )
+		{
+			urls.push_back( url );
+			domains.push_back( extractDomain( url ) );
+			values.push_back( type );
+		}
+		if ( urls.empty() ) co_return std::expected< void, std::string > {};
+
+		db::DBBindings bindings;
+		bindings.bind( urls );
+		bindings.bind( domains );
+		bindings.bind( values );
 		co_await db
 			.query(
-				"SELECT url_id, url FROM urls WHERE split_part(split_part(url, '#', 1), '?', 1) = $1",
+				"WITH input AS MATERIALIZED (SELECT * FROM unnest($1::text[], $2::text[], $3::text[]) AS i(url, domain, type)), "
+				"domains AS (INSERT INTO url_domains (url_domain) SELECT DISTINCT domain FROM input "
+				"ON CONFLICT (url_domain) DO UPDATE SET url_domain = EXCLUDED.url_domain RETURNING url_domain_id, url_domain) "
+				"INSERT INTO urls (url, url_domain_id, url_type) SELECT i.url, d.url_domain_id, i.type::UrlType "
+				"FROM input i JOIN domains d ON d.url_domain = i.domain "
+				"ON CONFLICT (url) DO UPDATE SET url_type = EXCLUDED.url_type",
 				std::move( bindings ) )
-			.rows< UrlID, std::string >()
-	};
-	const auto key { downloader::urlComparisonKey( url, ephemeral_query ) };
-	std::vector< UrlID > matches {};
-	for ( const auto& [ id, stored_url ] : candidates )
-	{
-		if ( downloader::urlComparisonKey( stored_url, ephemeral_query ) == key ) matches.emplace_back( id );
+			.result();
+		co_return std::expected< void, std::string > {};
 	}
-	co_return matches;
+	catch ( const std::exception& e )
+	{
+		co_return std::unexpected( std::string { e.what() } );
+	}
 }
 
 runtime::Task< std::expected< void, std::string > > setUrlType( std::string url, std::string type, db::DBContext& db )

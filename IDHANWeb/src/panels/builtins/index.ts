@@ -4,6 +4,7 @@
  */
 
 import { registerPanel } from '../registry';
+import {bandwidthPanel} from './BandwidthPanel';
 import { serverStatusPanel } from './ServerStatusPanel';
 import { selectionInspectorPanel } from './SelectionInspectorPanel';
 import { searchPanel } from './SearchPanel';
@@ -16,7 +17,9 @@ import { tagEditorPanel } from './TagEditorPanel';
 import { urlListPanel } from './UrlListPanel';
 import { notesPanel } from './NotesPanel';
 import { importPanel } from './ImportPanel';
+import {advancedImportPanel} from './AdvancedImportPanel';
 import {downloadsPanel} from './DownloadsPanel';
+import {subscriptionsPanel} from './SubscriptionsPanel';
 import { jobMonitorPanel } from './JobMonitorPanel';
 import { logViewerPanel } from './LogViewerPanel';
 import { clusterManagerPanel } from './ClusterManagerPanel';
@@ -26,7 +29,6 @@ import { tagRelationshipsPanel } from './TagRelationshipsPanel';
 import {embeddingsPanel} from './EmbeddingsPanel';
 import {embeddingSearchPanel} from './EmbeddingSearchPanel';
 import {embeddingComparePanel} from './EmbeddingComparePanel';
-import {debugPanel} from './DebugPanel';
 import {downloaderSecretsPanel} from './DownloaderSecretsPanel';
 
 let registered = false;
@@ -44,12 +46,15 @@ export function registerBuiltinPanels(): void {
   registerPanel(urlListPanel);
   registerPanel(notesPanel);
   registerPanel(importPanel);
+    registerPanel(advancedImportPanel);
     registerPanel(downloadsPanel);
+	registerPanel(subscriptionsPanel);
   registerPanel(jobMonitorPanel);
   registerPanel(logViewerPanel);
   registerPanel(clusterManagerPanel);
     registerPanel(downloaderSecretsPanel);
   registerPanel(databaseStatsPanel);
+	registerPanel(bandwidthPanel);
   registerPanel(tagDomainManagerPanel);
   registerPanel(tagRelationshipsPanel);
     registerPanel(embeddingsPanel);
@@ -57,5 +62,4 @@ export function registerBuiltinPanels(): void {
   registerPanel(embeddingComparePanel);
   registerPanel(serverStatusPanel);
   registerPanel(selectionInspectorPanel);
-    registerPanel(debugPanel);
 }

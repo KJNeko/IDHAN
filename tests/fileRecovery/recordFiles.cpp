@@ -330,42 +330,32 @@ TEST_CASE_METHOD(
 	CHECK( found_notifications == 0 );
 }
 
-TEST_CASE_METHOD( RecordFilesFixture, "Direct URL lookup compares normalized identities", "[recovery][url-comparison]" )
+TEST_CASE_METHOD(
+	RecordFilesFixture,
+	"Direct URL lookup matches the normalized URL exactly",
+	"[recovery][url-normalization]" )
 {
-	const std::string stored { "https://files.example/download?b=2&a=1&is=stable&ex=old&hm=old&" };
+	// Spellings are unified by the downloader's normalizeUrl before they reach the database.
+	const std::string stored { "https://files.example/download?a=1&b=2&is=stable" };
 	execute( "UPDATE urls SET url = '" + stored + "' WHERE url_id = 1" );
-	const std::string reordered { "https://files.example/download?hm=old&ex=old&is=stable&a=1&b=2" };
-	CHECK( run( db::findStoredDirectRecordByUrl( context(), reordered ) ) == 1 );
-	const std::string refreshed { "https://files.example/download?hm=new&ex=new&is=stable&a=1&b=2" };
-	CHECK_FALSE( run( db::findStoredDirectRecordByUrl( context(), refreshed ) ).has_value() );
-	CHECK( run( db::findStoredDirectRecordByUrl( context(), refreshed, { "ex", "hm" } ) ) == 1 );
-	CHECK_FALSE( run( db::findStoredDirectRecordByUrl(
-						  context(), "https://files.example/download?is=different&a=1&b=2", { "ex", "hm" } ) )
+	CHECK( run( db::findStoredDirectRecordByUrl( context(), stored ) ) == 1 );
+	CHECK_FALSE( run( db::findStoredDirectRecordByUrl( context(), "https://files.example/download?b=2&a=1&is=stable" ) )
 	                 .has_value() );
 	CHECK( urlType( stored ) == "file" );
 
-	SECTION( "Multiple spellings mapped to one record remain unambiguous" )
-	{
-		REQUIRE( run( helpers::associateUrls( 1, { refreshed }, context() ) ).has_value() );
-		run( db::markDirectUrls( context(), { refreshed } ) );
-		CHECK( run( db::findStoredDirectRecordByUrl( context(), refreshed, { "ex", "hm" } ) ) == 1 );
-		CHECK( urlType( stored ) == "file" );
-		CHECK( urlType( refreshed ) == "file" );
-	}
 	SECTION( "Conflicting record mappings prevent reuse" )
 	{
 		execute( "INSERT INTO url_mappings VALUES (1, 2)" );
-		CHECK_FALSE( run( db::findStoredDirectRecordByUrl( context(), refreshed, { "ex", "hm" } ) ).has_value() );
+		CHECK_FALSE( run( db::findStoredDirectRecordByUrl( context(), stored ) ).has_value() );
 	}
-	SECTION( "A differently classified alias cannot hide a conflicting record" )
+	SECTION( "A URL that is not a direct file is not reused" )
 	{
-		REQUIRE( run( helpers::associateUrls( 2, { refreshed }, context() ) ).has_value() );
-		CHECK( urlType( refreshed ) == "unknown" );
-		CHECK_FALSE( run( db::findStoredDirectRecordByUrl( context(), refreshed, { "ex", "hm" } ) ).has_value() );
+		REQUIRE( run( helpers::setUrlType( stored, "post", context() ) ).has_value() );
+		CHECK_FALSE( run( db::findStoredDirectRecordByUrl( context(), stored ) ).has_value() );
 	}
-	SECTION( "Normalized lookup still detects and records a disappeared file" )
+	SECTION( "Lookup still detects and records a disappeared file" )
 	{
-		const auto record { run( db::findStoredDirectRecordByUrl( context(), refreshed, { "ex", "hm" } ) ) };
+		const auto record { run( db::findStoredDirectRecordByUrl( context(), stored ) ) };
 		REQUIRE( record.has_value() );
 		REQUIRE( std::filesystem::remove( file ) );
 		const auto present { run( filesystem::findPresentRecordFilePath( context(), *record ) ) };
@@ -373,7 +363,7 @@ TEST_CASE_METHOD( RecordFilesFixture, "Direct URL lookup compares normalized ide
 		CHECK_FALSE( present->has_value() );
 		CHECK( missing() );
 		CHECK( missing_notifications == 1 );
-		CHECK_FALSE( run( db::findStoredDirectRecordByUrl( context(), refreshed, { "ex", "hm" } ) ).has_value() );
+		CHECK_FALSE( run( db::findStoredDirectRecordByUrl( context(), stored ) ).has_value() );
 	}
 }
 

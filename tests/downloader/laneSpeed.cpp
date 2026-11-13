@@ -6,7 +6,7 @@
 
 using namespace idhan::downloader;
 
-TEST_CASE( "Lane download speed aggregates received bytes and expires idle samples", "[downloader][lane]" )
+TEST_CASE( "Lane download speed uses one-second differences in cumulative bytes", "[downloader][lane]" )
 {
 	IoPool pool { 1 };
 	LanePolicy policy { "host", LaneSettings {} };
@@ -17,23 +17,39 @@ TEST_CASE( "Lane download speed aggregates received bytes and expires idle sampl
 	lane->fill( snapshot, start );
 	CHECK( snapshot.download_bytes_per_second == 0 );
 
-	lane->onBytesReceived( 1024, start );
-	lane->onBytesReceived( 2048, start + std::chrono::milliseconds { 50 } );
-	lane->onBytesReceived( 4096, start + std::chrono::milliseconds { 500 } );
+	lane->onBytesReceived( 1024 );
+	lane->onBytesReceived( 2048 );
+	lane->onBytesReceived( 4096 );
 	lane->fill( snapshot, start + std::chrono::milliseconds { 500 } );
-	CHECK( snapshot.download_bytes_per_second == 7168 );
-
-	lane->fill( snapshot, start + std::chrono::seconds { 1 } );
-	CHECK( snapshot.download_bytes_per_second == 4096 );
-
-	lane->onBytesReceived( 512, start + std::chrono::seconds { 1 } );
-	lane->fill( snapshot, start + std::chrono::seconds { 1 } );
-	CHECK( snapshot.download_bytes_per_second == 4608 );
-
-	lane->fill( snapshot, start + std::chrono::seconds { 2 } );
 	CHECK( snapshot.download_bytes_per_second == 0 );
 
-	lane->onBytesReceived( 256, start + std::chrono::seconds { 30 } );
+	lane->fill( snapshot, start + std::chrono::seconds { 1 } );
+	CHECK( snapshot.download_bytes_per_second == 7168 );
+
+	lane->onBytesReceived( 512 );
+	lane->fill( snapshot, start + std::chrono::seconds { 1 } );
+	CHECK( snapshot.download_bytes_per_second == 7168 );
+
+	lane->fill( snapshot, start + std::chrono::seconds { 2 } );
+	CHECK( snapshot.download_bytes_per_second == 512 );
+
+	lane->fill( snapshot, start + std::chrono::seconds { 3 } );
+	CHECK( snapshot.download_bytes_per_second == 0 );
+	lane->onBytesReceived( 256 );
 	lane->fill( snapshot, start + std::chrono::seconds { 30 } );
-	CHECK( snapshot.download_bytes_per_second == 256 );
+	CHECK( snapshot.download_bytes_per_second == 9 );
+}
+
+TEST_CASE( "Download speed normalizes counter deltas over complete sampling intervals", "[downloader][bandwidth]" )
+{
+	using Clock = std::chrono::steady_clock;
+	const Clock::time_point start { std::chrono::seconds { 100 } };
+	DownloadSpeed speed { start };
+	CHECK( speed.sample( 500, start + std::chrono::milliseconds { 500 } ) == 0 );
+	CHECK( speed.sample( 1000, start + std::chrono::seconds { 1 } ) == 1000 );
+	CHECK( speed.sample( 1000, start + std::chrono::milliseconds { 1500 } ) == 1000 );
+	CHECK( speed.sample( 1000, start + std::chrono::seconds { 2 } ) == 0 );
+	CHECK( speed.sample( 5000, start + std::chrono::seconds { 4 } ) == 2000 );
+	CHECK( speed.sample( 10, start + std::chrono::seconds { 5 } ) == 0 );
+	CHECK( speed.sample( 110, start + std::chrono::seconds { 6 } ) == 100 );
 }

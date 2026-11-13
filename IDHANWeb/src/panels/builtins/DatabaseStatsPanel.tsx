@@ -368,7 +368,7 @@ function Section({
 }) {
   return (
     <div className="dbstat-section">
-      <button type="button" className="dbstat-section-head" onClick={onToggle}>
+        <button type="button" className="dbstat-section-head" aria-expanded={open} onClick={onToggle}>
         <span className="dbstat-caret">{open ? '▾' : '▸'}</span>
         <span className="dbstat-section-title">{title}</span>
         {summary && <span className="muted dbstat-section-summary">{summary}</span>}
@@ -412,10 +412,13 @@ function DatabaseStatsPanel({ host }: PanelProps) {
       if (clustersRes.status === 'fulfilled') setClusters(clustersRes.value);
       if (versionRes.status === 'fulfilled') setVersion(versionRes.value);
 
-      const failed = [dbRes, storageRes, clustersRes, versionRes].find((r) => r.status === 'rejected');
-      if (failed && failed.status === 'rejected') {
-        setError(failed.reason instanceof Error ? failed.reason.message : String(failed.reason));
-      }
+        const failures = [dbRes, storageRes, clustersRes, versionRes].flatMap((result, index) => {
+            if (result.status !== 'rejected') return [];
+            const source = ['Database counts', 'Database storage', 'File clusters', 'Server version'][index];
+            const message = result.reason instanceof Error ? result.reason.message : String(result.reason);
+            return [`${source}: ${message}`];
+        });
+        setError(failures.length > 0 ? failures.join(' · ') : null);
       setLoading(false);
     },
     [host],
@@ -481,7 +484,7 @@ function DatabaseStatsPanel({ host }: PanelProps) {
         )}
       </div>
 
-      {error && <p className="error">{error}</p>}
+        {error && <p className="error" role="alert">{error}</p>}
 
       <Section
         title="Overview"
@@ -512,6 +515,15 @@ function DatabaseStatsPanel({ host }: PanelProps) {
         {grand === 0 ? (
           <p className="muted">No table storage reported.</p>
         ) : (
+			<div>
+				<label className="panel-row">Table details
+					<select aria-label="Table details" value={selectedTable ?? ''}
+			                onChange={event => setSelectedTable(event.target.value || null)}>
+						<option value="">All tables</option>
+						{[...major, ...minor].map(table => <option key={table.name}
+				                                                   value={table.name}>{table.name}</option>)}
+					</select>
+				</label>
           <div className="dbstat-donut-panel">
             <Donut outer={storageRing} inner={storageInnerRing} selectedLabel={selectedTable} onSelect={selectTable} onHover={setStorageHover} />
             <div className="dbstat-donut-side">
@@ -519,7 +531,7 @@ function DatabaseStatsPanel({ host }: PanelProps) {
                 {readoutText(
                   storageHover,
                   formatBytes,
-                    selectedTableObj ? `${selectedTableObj.name} selected. Click its segment again to close.` : 'Click a segment for its heap and index breakdown.',
+					selectedTableObj ? `${selectedTableObj.name}: ${formatBytes(selectedTableObj.footprint)}` : `${formatBytes(grand)} total`,
                 )}
               </p>
               <DonutLegend ring={storageRing} format={formatBytes} selectedLabel={selectedTable} onSelect={selectTable} onHover={setStorageHover} />
@@ -531,6 +543,7 @@ function DatabaseStatsPanel({ host }: PanelProps) {
               )}
             </div>
           </div>
+			</div>
         )}
       </Section>
 
@@ -551,7 +564,7 @@ function DatabaseStatsPanel({ host }: PanelProps) {
             <Donut outer={clustersRing} inner={mimeBytesRing} onHover={setClusterHover} />
             <div className="dbstat-donut-side">
               <p className="dbstat-donut-readout muted">
-                {readoutText(clusterHover, formatBytes, 'Hover or focus a segment for details.')}
+				  {readoutText(clusterHover, formatBytes, `${formatBytes(clustersRing.total)} total`)}
               </p>
               <DonutLegend ring={clustersRing} format={formatBytes} onHover={setClusterHover} />
               {mimeBytesRing && mimeBytesRing.total > 0 && (
@@ -584,7 +597,7 @@ function StatRow({ label, value, sub }: { label: string; value: string; sub?: st
 export const databaseStatsPanel = {
   type: 'sunburst-stats',
   title: 'Database Stats',
-  description: 'Database counts, PostgreSQL storage by table, clusters, and content by type.',
+	description: 'Database and storage totals.',
   component: DatabaseStatsPanel,
   configVersion: 1,
   singleton: true,

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <optional>
 #include <span>
 #include <string_view>
 
@@ -10,7 +11,11 @@
 namespace idhan::mime
 {
 
-[[nodiscard]] runtime::Task< MimeID > identifyMime( std::span< const std::byte > bytes, std::string_view filename );
+//! `descriptor` must contain `bytes` and remain valid until the task completes.
+[[nodiscard]] runtime::Task< MimeID > identifyMime(
+	std::span< const std::byte > bytes,
+	std::string_view filename,
+	std::optional< int > descriptor = std::nullopt );
 
 [[nodiscard]] runtime::Task< MimeID > identifyMimeForPath( const std::filesystem::path& path );
 

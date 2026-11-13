@@ -1,5 +1,6 @@
 #pragma once
 
+#include <folly/coro/Task.h>
 #include <spdlog/spdlog.h>
 
 #include <exception>
@@ -50,4 +51,52 @@ auto hostOperation( Function&& function ) -> std::invoke_result_t< Function >
 
 	return std::move( *result );
 }
+
+// Coroutine adapters retain the task until completion and catch errors after suspension.
+template < typename T >
+folly::coro::Task< std::expected< T, std::string > > hostOperation(
+	folly::coro::Task< std::expected< T, std::string > > operation )
+{
+	try
+	{
+		co_return co_await std::move( operation );
+	}
+	catch ( const std::exception& error )
+	{
+		co_return std::unexpected( std::string { error.what() } );
+	}
+	catch ( ... )
+	{
+		co_return std::unexpected( "Unknown host callback exception" );
+	}
+}
+
+inline folly::coro::Task< std::expected< void, std::string > > hostCallback( folly::coro::Task< void > operation )
+{
+	try
+	{
+		co_await std::move( operation );
+		co_return std::expected< void, std::string > {};
+	}
+	catch ( const std::exception& error )
+	{
+		co_return std::unexpected( std::string { error.what() } );
+	}
+	catch ( ... )
+	{
+		co_return std::unexpected( "Unknown host callback exception" );
+	}
+}
+
+inline void reportHostTaskResult( folly::Try< void >&& result )
+{
+	if ( result.hasException() ) spdlog::error( "Downloader coroutine failed: {}", result.exception().what() );
+}
+
+inline folly::coro::Task< void > logHostTaskErrors( folly::coro::Task< void > operation )
+{
+	const auto completed_e { co_await hostCallback( std::move( operation ) ) };
+	if ( !completed_e.has_value() ) spdlog::error( "Downloader coroutine failed: {}", completed_e.error() );
+}
+
 } // namespace idhan::downloader

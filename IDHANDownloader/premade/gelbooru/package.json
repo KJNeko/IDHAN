@@ -1,0 +1,13 @@
+{
+  "name": "@idhan/parser-gelbooru",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "idhanParser": "index.ts",
+  "dependencies": {
+    "he": "2.0.0"
+  },
+  "devDependencies": {
+    "@types/he": "1.2.3"
+  }
+}

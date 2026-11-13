@@ -1,6 +1,12 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {DownloadOptions} from './DownloadOptions';
+import {DownloadRateLimits} from './DownloadRateLimits';
+import {DownloadParserCache} from './DownloadParserCache';
+import {ParserInfo} from './ParserInfo';
+import type {DownloadSettings} from '../../api/types';
 import {api, watchDownloadSessions} from '../../api/client';
 import type {
+    DownloadFailureStage,
     DownloadSessionError,
     DownloadSessionErrorLog,
     DownloadSessionInfo,
@@ -15,7 +21,35 @@ import {RecordInfoView, type RecordInfo} from './RecordInfoView';
 import {useRecordMenu} from './recordActions';
 import {ImportStorageNotice, useImportStorage} from './importStorage';
 
-const TERMINAL = new Set(['completed', 'failed', 'skipped']);
+const TERMINAL = new Set<DownloadSessionUrlState>([
+    'completed', 'imported', 'imported_previously', 'skipped_no_url_class', 'skipped_already_seen',
+    'skipped_already_imported', 'failed', 'cancelled',
+]);
+
+/** The states the server lets a URL be retried from. */
+const RETRYABLE = new Set<DownloadSessionUrlState>(['completed', 'imported', 'imported_previously', 'failed']);
+
+const ACTIVE = new Set<DownloadSessionUrlState>(['downloading', 'processing', 'importing']);
+
+const SKIPPED = new Set<DownloadSessionUrlState>([
+    'skipped_no_url_class', 'skipped_already_seen', 'skipped_already_imported',
+]);
+
+const STATE_LABELS: Partial<Record<string, string>> = {
+    'pending-children': 'pending children',
+    imported_previously: 'already imported',
+    skipped_no_url_class: 'skipped (No URL Class)',
+    skipped_already_seen: 'skipped (Already Seen)',
+    skipped_already_imported: 'skipped (Already Imported)',
+};
+
+const STAGE_LABELS: Record<DownloadFailureStage, string> = {
+    route: 'No URL Class',
+    download: 'Download Failed',
+    parser: 'Parser Error',
+    import: 'Import Failed',
+    closed: 'Session Closed',
+};
 
 export type DownloadDisplayState = DownloadSessionUrlState | 'pending-children';
 
@@ -35,7 +69,7 @@ export function flatDisplayState(entry: DownloadSessionUrlFlat): DownloadDisplay
 }
 
 export function stateLabel(state: DownloadDisplayState): string {
-    return state === 'pending-children' ? 'pending children' : state;
+    return STATE_LABELS[state] ?? state;
 }
 
 function collectSubtreeRecords(node: DownloadSessionUrlNode, into: number[], seen: Set<number>): void {
@@ -84,10 +118,10 @@ function countImportOutcomes(
     into: { processed: number; newlyImported: number },
 ): void {
     for (const node of nodes) {
-        if (node.state === 'completed' && node.record_id !== null) {
-            if (node.note === null) into.newlyImported += 1;
-            else into.processed += 1;
-        }
+        if (node.state === 'imported') into.newlyImported += 1;
+
+        if (node.state === 'imported_previously') into.processed += 1;
+
 
         countImportOutcomes(node.children, into);
     }
@@ -96,26 +130,58 @@ function countImportOutcomes(
 export function summarizeDownloadSession(nodes: DownloadSessionUrlNode[]) {
     const records = new Set<number>();
     const newRecords = new Set<number>();
+    const sizes = new Map<number, number>();
     const counts = {pending: 0, processing: 0, failed: 0, skipped: 0};
     const remaining = [...nodes];
 
     while (remaining.length > 0) {
         const node = remaining.pop()!;
         remaining.push(...node.children);
-        if (node.state !== 'completed') counts[node.state] += 1;
+        if (node.state === 'pending') counts.pending += 1;
+
+        if (ACTIVE.has(node.state)) counts.processing += 1;
+
+        if (node.state === 'failed') counts.failed += 1;
+
+        if (SKIPPED.has(node.state)) counts.skipped += 1;
 
         if (node.record_id === null) continue;
 
         records.add(node.record_id);
-        if (node.state === 'completed' && !isImportedMarker(node.note)) newRecords.add(node.record_id);
+        if (node.size !== null) sizes.set(node.record_id, node.size);
+
+        if (node.state === 'imported') newRecords.add(node.record_id);
+    }
+
+    // A record counts as new if any URL imported it, even when other URLs matched it afterwards.
+    let newBytes = 0;
+    let existingBytes = 0;
+    for (const [record, size] of sizes) {
+        if (newRecords.has(record)) newBytes += size;
+        else existingBytes += size;
     }
 
     return {
         files: records.size,
         newlyImported: newRecords.size,
         existing: records.size - newRecords.size,
+        newBytes,
+        existingBytes,
         ...counts,
     };
+}
+
+function formatDownloadBytes(bytes: number): string {
+    if (bytes < 1000) return `${bytes} B`;
+    if (bytes < 1_000_000) return `${(bytes / 1000).toFixed(1)} KB`;
+    if (bytes < 1_000_000_000) return `${(bytes / 1_000_000).toFixed(1)} MB`;
+    return `${(bytes / 1_000_000_000).toFixed(1)} GB`;
+}
+
+function formatNetworkSpeed(bytes: number): string {
+    if (bytes < 1000) return `${bytes} B/s`;
+    if (bytes < 1_000_000) return `${(bytes / 1000).toFixed(1)} KB/s`;
+    return `${(bytes / 1_000_000).toFixed(1)} MB/s`;
 }
 
 function DownloadSessionSummary({nodes}: { nodes: DownloadSessionUrlNode[] | undefined }) {
@@ -124,17 +190,17 @@ function DownloadSessionSummary({nodes}: { nodes: DownloadSessionUrlNode[] | und
 
     return (
         <dl className="download-session-summary" aria-label="Download session summary">
-            <div title="Unique files identified so far. Pending URLs are counted separately.">
+			<div>
                 <dt>Files found</dt>
                 <dd>{counts.files.toLocaleString()}</dd>
             </div>
-            <div className="download-session-summary-new" title="Unique files newly imported during this session.">
-                <dt>New</dt>
-                <dd>{counts.newlyImported.toLocaleString()}</dd>
+			<div className="download-session-summary-new">
+				<dt>New files</dt>
+                <dd>{counts.newlyImported.toLocaleString()} ({formatDownloadBytes(counts.newBytes)})</dd>
             </div>
-            <div title="Unique files that were already in the library.">
-                <dt>Existing</dt>
-                <dd>{counts.existing.toLocaleString()}</dd>
+			<div>
+				<dt>Existing files</dt>
+                <dd>{counts.existing.toLocaleString()} ({formatDownloadBytes(counts.existingBytes)})</dd>
             </div>
             {counts.pending > 0 && <div>
                 <dt>URLs queued</dt>
@@ -210,7 +276,7 @@ export function toggleStatus(selected: StatusFilter, status: number | null): (nu
 function shortUrl(url: string): string {
     try {
         const parsed = new URL(url);
-        return `${parsed.host}${parsed.pathname}${parsed.search}`;
+		return `${parsed.host}${parsed.pathname}${parsed.search}${parsed.hash}`;
     } catch {
         return url;
     }
@@ -220,29 +286,29 @@ function openDownloadUrl(url: string): void {
     window.open(url, '_blank', 'noopener,noreferrer');
 }
 
-function isKnownUrlMarker(note: string | null): boolean {
-    return note !== null && /^already (seen|in the database|imported earlier in this session)/i.test(note);
-}
-
-function isImportedMarker(note: string | null): boolean {
-    return note !== null && /^already (in the database|imported earlier in this session)/i.test(note);
-}
-
-function rowStatusLabel(
-    state: DownloadDisplayState,
-    note: string | null,
-): string {
-    if (state === 'skipped' && note !== null && /^already seen/i.test(note)) {
-        return 'skipped (Already Seen)';
-    }
+function rowStatusLabel(state: DownloadDisplayState, stage: DownloadFailureStage | null): string {
+    if (state === 'failed' && stage !== null) return `failed (${STAGE_LABELS[stage]})`;
 
     return stateLabel(state);
 }
 
-function downloadRowRank(state: DownloadDisplayState, note: string | null): number {
-    if (state === 'pending' || state === 'processing' || state === 'pending-children') return 0;
-    if (state === 'skipped' && note !== null && /^already seen/i.test(note)) return 3;
-    if (state === 'completed') return 1;
+function transferLabel(row: DownloadSessionUrlJob): string | null {
+    if (row.state !== 'downloading' || row.bytes === undefined) return null;
+
+    if (row.total === undefined) return formatDownloadBytes(row.bytes);
+
+    return `${formatDownloadBytes(row.bytes)} / ${formatDownloadBytes(row.total)}`;
+}
+
+function isSettledImport(state: DownloadDisplayState): boolean {
+    return state === 'completed' || state === 'imported' || state === 'imported_previously';
+}
+
+function downloadRowRank(state: DownloadDisplayState): number {
+    if (state === 'pending' || state === 'pending-children') return 0;
+    if (ACTIVE.has(state as DownloadSessionUrlState)) return 0;
+    if (state === 'skipped_already_seen') return 3;
+    if (isSettledImport(state)) return 1;
     return 2;
 }
 
@@ -261,8 +327,8 @@ function sortDownloadRows<T extends DownloadSessionUrlJob>(
     return rows
         .map((row, index) => ({row, index}))
         .sort((left, right) => (
-            downloadRowRank(getState(left.row), left.row.note) - downloadRowRank(getState(right.row), right.row.note)
-            || (getState(left.row) === 'completed' && getState(right.row) === 'completed'
+            downloadRowRank(getState(left.row)) - downloadRowRank(getState(right.row))
+            || (isSettledImport(getState(left.row)) && isSettledImport(getState(right.row))
                 ? completedUrlGroup(left.row.url).localeCompare(completedUrlGroup(right.row.url))
                 || left.row.url.localeCompare(right.row.url)
                 : 0)
@@ -280,7 +346,9 @@ export function parseNewlineUrlList(value: string): string[] {
 
 interface ErrorLogProps {
     count: number;
+	failures?: DownloadSessionUrlJob[];
     log: DownloadSessionErrorLog | undefined;
+    loadError?: string;
     selected: StatusFilter;
     open: boolean;
     onToggle: () => void;
@@ -288,23 +356,81 @@ interface ErrorLogProps {
     onClearStatuses: () => void;
 }
 
-function ErrorLog({count, log, selected, open, onToggle, onToggleStatus, onClearStatuses}: ErrorLogProps) {
+export function ErrorLog({
+                             count,
+							 failures = [],
+                             log,
+                             loadError,
+                             selected,
+                             open,
+                             onToggle,
+                             onToggleStatus,
+                             onClearStatuses
+                         }: ErrorLogProps) {
+    const [page, setPage] = useState(0);
+	const [failurePage, setFailurePage] = useState(0);
+	useEffect(() => setFailurePage(0), [open]);
+    const filterKey = JSON.stringify(selected);
+    useEffect(() => setPage(0), [filterKey, open]);
+    const pageSize = 50;
+    const total = log?.errors.length ?? 0;
+    const lastPage = Math.max(0, Math.ceil(total / pageSize) - 1);
+    const currentPage = Math.min(page, lastPage);
+    const start = currentPage * pageSize;
+	const lastFailurePage = Math.max(0, Math.ceil(failures.length / pageSize) - 1);
+	const currentFailurePage = Math.min(failurePage, lastFailurePage);
+	const failureStart = currentFailurePage * pageSize;
+	const totalCount = count + failures.length;
     return (
         <div className="download-error-log">
             <button
                 type="button"
-                className={`download-error-toggle${count > 0 ? ' has-errors' : ''}`}
-                disabled={count === 0}
+				className={`download-error-toggle${totalCount > 0 ? ' has-errors' : ''}`}
+				disabled={totalCount === 0 && !open}
+                aria-expanded={open}
                 onClick={onToggle}
             >
-                {open ? '▾' : '▸'} Errors ({count})
+				{open ? '▾' : '▸'} Errors ({totalCount})
             </button>
+			{open && failures.length > 0 && <section aria-label="Failed URLs">
+                <p className="muted">Failed URLs ({failures.length})</p>
+                <ul className="download-error-list">
+					{failures.slice(failureStart, failureStart + pageSize).map(node => (
+						<li key={node.id} className="download-error-item">
+							<div className="download-error-head">
+								<span className="download-error-status">{rowStatusLabel('failed', node.stage)}</span>
+							</div>
+							<span className="download-error-url" title={node.url}>{shortUrl(node.url)}</span>
+							<details className="download-error-detail">
+								<summary>{(node.error || 'The download failed without a reason').split('\n')[0]?.slice(0, 160)}</summary>
+								<pre
+							        className="download-error-message">{node.error || 'The download failed without a reason'}</pre>
+							</details>
+						</li>
+					))}
+                </ul>
+				{failures.length > pageSize && <nav className="download-error-pages" aria-label="Failed URL pages">
+                    <button type="button" disabled={currentFailurePage === 0}
+                            onClick={() => setFailurePage(currentFailurePage - 1)}>Previous
+                    </button>
+                    <span className="muted" role="status">
+                        {failureStart + 1}–{Math.min(failureStart + pageSize, failures.length)} of {failures.length.toLocaleString()}
+                    </span>
+                    <button type="button" disabled={currentFailurePage === lastFailurePage}
+                            onClick={() => setFailurePage(currentFailurePage + 1)}>Next
+                    </button>
+                </nav>}
+            </section>}
+			{open && <p className="muted">Request errors ({count})</p>}
+            {open && loadError && <p className="error" role="alert">{loadError}</p>}
+            {open && !loadError && log === undefined && <p className="muted" role="status">Loading errors…</p>}
             {open && log !== undefined && (
                 <>
                     <div className="download-error-filters">
                         <button
                             type="button"
                             className={selected.length === 0 ? 'is-active' : ''}
+                            aria-pressed={selected.length === 0}
                             onClick={onClearStatuses}
                         >
                             All
@@ -314,6 +440,7 @@ function ErrorLog({count, log, selected, open, onToggle, onToggleStatus, onClear
                                 key={statusLabel(tally.status)}
                                 type="button"
                                 className={selected.includes(tally.status) ? 'is-active' : ''}
+                                aria-pressed={selected.includes(tally.status)}
                                 onClick={() => onToggleStatus(tally.status)}
                             >
                                 {statusLabel(tally.status)} ({tally.count})
@@ -324,7 +451,7 @@ function ErrorLog({count, log, selected, open, onToggle, onToggleStatus, onClear
                         <p className="muted">Nothing logged for this filter.</p>
                     ) : (
                         <ul className="download-error-list">
-                            {log.errors.map((entry: DownloadSessionError) => (
+                            {log.errors.slice(start, start + pageSize).map((entry: DownloadSessionError) => (
                                 <li key={entry.id} className="download-error-item">
                                     <div className="download-error-head">
                                         <span className="download-error-status">{statusLabel(entry.status)}</span>
@@ -334,11 +461,24 @@ function ErrorLog({count, log, selected, open, onToggle, onToggleStatus, onClear
                                         </time>
                                     </div>
                                     <span className="download-error-url" title={entry.url}>{shortUrl(entry.url)}</span>
-                                    {entry.message && <pre className="download-error-message">{entry.message}</pre>}
+                                    {entry.message && <details className="download-error-detail">
+                                        <summary>{entry.message.split('\n')[0]?.slice(0, 160)}</summary>
+                                        <pre className="download-error-message">{entry.message}</pre>
+                                    </details>}
                                 </li>
                             ))}
                         </ul>
                     )}
+                    {total > pageSize && <nav className="download-error-pages" aria-label="Error pages">
+                        <button type="button" disabled={currentPage === 0}
+                                onClick={() => setPage(currentPage - 1)}>Previous
+                        </button>
+                        <span className="muted"
+                              role="status">{start + 1}–{Math.min(start + pageSize, total)} of {total.toLocaleString()}</span>
+                        <button type="button" disabled={currentPage === lastPage}
+                                onClick={() => setPage(currentPage + 1)}>Next
+                        </button>
+                    </nav>}
                 </>
             )}
         </div>
@@ -349,7 +489,7 @@ interface TreeRowProps {
     node: DownloadSessionUrlNode;
     depth: number;
     selectedId: number | null;
-    expanded: Set<number>;
+	expanded: ReadonlySet<number> | undefined;
     info: Record<number, RecordInfo>;
     thumbnailUrl: (id: RecordId, size?: number) => string;
     onToggle: (id: number) => void;
@@ -374,7 +514,7 @@ function TreeRow({
                      onOpenMedia,
                      onRecordMenu,
                  }: TreeRowProps) {
-    const open = expanded.has(node.id);
+	const open = expanded?.has(node.id) ?? false;
     const hasChildren = node.children.length > 0;
     const expandable = hasChildren || node.record_id !== null;
     const state = displayState(node);
@@ -408,11 +548,12 @@ function TreeRow({
                     onDoubleClick={() => openDownloadUrl(node.url)}
                 >
                     <span className="download-tree-url-text">{shortUrl(node.url)}</span>
-                    {isImportedMarker(node.note) && <span className="download-tree-url-marker">Already Imported</span>}
                 </button>
                 {node.record_id !== null && <span className="download-tree-record">#{node.record_id}</span>}
-                <span className="download-tree-state">{rowStatusLabel(state, node.note)}</span>
-                {TERMINAL.has(node.state) && (
+                {node.size !== null && <span className="download-tree-size">{formatDownloadBytes(node.size)}</span>}
+                {transferLabel(node) !== null && <span className="download-tree-progress">{transferLabel(node)}</span>}
+                <span className="download-tree-state">{rowStatusLabel(state, node.stage)}</span>
+                {RETRYABLE.has(node.state) && (
                     <button type="button" className="download-tree-retry" disabled={retryDisabled}
                             onClick={() => onRetry(node.id)}>
                         Retry
@@ -422,11 +563,6 @@ function TreeRow({
             {node.error && (
                 <li className="download-tree-detail" style={{paddingLeft: `${1.9 + depth * 0.85}rem`}}>
                     <pre className="download-tree-error">{node.error}</pre>
-                </li>
-            )}
-            {node.note && !isKnownUrlMarker(node.note) && (
-                <li className="download-tree-detail" style={{paddingLeft: `${1.9 + depth * 0.85}rem`}}>
-                    <span className="muted">{node.note}</span>
                 </li>
             )}
             {open && node.record_id !== null && (
@@ -475,22 +611,52 @@ function TreeRow({
     );
 }
 
+function flattenDownloadRoot(root: DownloadSessionUrlNode): DownloadSessionUrlFlat {
+    const urls: DownloadSessionUrlNode[] = [];
+    const pending = [...root.children].reverse();
+    while (pending.length) {
+        const row = pending.pop()!;
+        urls.push(row);
+        pending.push(...[...row.children].reverse());
+    }
+    return {...root, urls, record_ids: subtreeRecords(root)};
+}
+
+interface DownloadUrlSelection {
+	sessionId: number;
+	urlId: number;
+}
+
 function DownloadsPanel({host}: PanelProps) {
     const storage = useImportStorage(host);
     const {canImport, check: checkStorage} = storage;
     const [sessions, setSessions] = useState<DownloadSessionInfo[]>([]);
     const [trees, setTrees] = useState<Record<number, DownloadSessionUrlNode[]>>({});
-    const [flat, setFlat] = useState<Record<number, DownloadSessionUrlFlat[]>>({});
+    const flat = useMemo(() => {
+        const result: Record<number, DownloadSessionUrlFlat[]> = {};
+        for (const [id, roots] of Object.entries(trees)) result[Number(id)] = roots.map(flattenDownloadRoot);
+        return result;
+    }, [trees]);
+	const failures = useMemo(() => Object.fromEntries(
+		Object.entries(flat).map(([sessionId, roots]) => [sessionId,
+			roots.flatMap(root => [root, ...root.urls]).filter(node => node.state === 'failed'),
+		]),
+	), [flat]);
     const [errorLogs, setErrorLogs] = useState<Record<number, DownloadSessionErrorLog>>({});
     const [errorFilters, setErrorFilters] = useState<Record<number, StatusFilter>>({});
+    const [errorLogFailures, setErrorLogFailures] = useState<Record<number, string>>({});
     const [openErrors, setOpenErrors] = useState<Set<number>>(new Set());
-    const [expanded, setExpanded] = useState<Set<number>>(new Set());
-    const [selectedId, setSelectedId] = useState<number | null>(null);
+	const [expanded, setExpanded] = useState<Record<number, ReadonlySet<number>>>({});
+	const [selectedUrl, setSelectedUrl] = useState<DownloadUrlSelection | null>(null);
     const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
     const [flatten, setFlatten] = useState(false);
     const [draft, setDraft] = useState('');
+    const [downloadSettings, setDownloadSettings] = useState<DownloadSettings>({});
     const [busy, setBusy] = useState(false);
     const [live, setLive] = useState(false);
+	const [downloadSpeed, setDownloadSpeed] = useState(0);
+	const [sessionDownloadSpeeds, setSessionDownloadSpeeds] = useState<Record<number, number>>({});
+    const [streamError, setStreamError] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [info, setInfo] = useState<Record<number, RecordInfo>>({});
     const {openRecordMenu, recordMenu} = useRecordMenu(host);
@@ -499,7 +665,8 @@ function DownloadsPanel({host}: PanelProps) {
         host.results.set({ids: Int32Array.from(new Set(ids)), queryMs: 0, query: [label]});
         host.selection.set([]);
     }, [host]);
-    const selectedIdRef = useRef<number | null>(null);
+    const streamedTrees = useRef<Record<number, DownloadSessionUrlNode[]>>({});
+	const selectedUrlRef = useRef<DownloadUrlSelection | null>(null);
     const selectedSessionIdRef = useRef<number | null>(null);
     const showRecordsRef = useRef(showRecords);
     showRecordsRef.current = showRecords;
@@ -512,25 +679,43 @@ function DownloadsPanel({host}: PanelProps) {
     useEffect(() => watchDownloadSessions({
         onOpen: () => {
             setLive(true);
-            setError(null);
+			setDownloadSpeed(0);
+			setSessionDownloadSpeeds({});
+            setStreamError(null);
+            streamedTrees.current = {};
+            setSessions([]);
+            setTrees({});
         },
+		onBandwidth: (bandwidth) => {
+			setDownloadSpeed(bandwidth.download_bytes_per_second);
+			setSessionDownloadSpeeds(Object.fromEntries(
+				bandwidth.sessions.map(session => [session.session_id, session.download_bytes_per_second]),
+			));
+		},
         onSession: (session, urls) => {
-            forgetMetadata(sessionRecords(urls));
+            const urlsChanged = streamedTrees.current[session.id] !== urls;
+            if (urlsChanged) {
+                streamedTrees.current[session.id] = urls;
+                forgetMetadata(sessionRecords(urls));
+                setTrees((previous) => ({...previous, [session.id]: urls}));
+            }
             setSessions((previous) => {
                 const rest = previous.filter((entry) => entry.id !== session.id);
                 return [session, ...rest].sort((a, b) => b.last_used_at - a.last_used_at || b.id - a.id);
             });
-            setTrees((previous) => ({...previous, [session.id]: urls}));
+            if (!urlsChanged) return;
 
             if (selectedSessionIdRef.current === session.id) {
                 showRecordsRef.current(sessionRecords(urls), `download session: ${session.name}`);
                 return;
             }
 
-            const selectedId = selectedIdRef.current;
-            if (selectedId === null) return;
+			const selectedUrl = selectedUrlRef.current;
+			if (selectedUrl === null) return;
 
-            const selectedNode = findDownloadNode(urls, selectedId);
+			if (selectedUrl.sessionId !== session.id) return;
+
+			const selectedNode = findDownloadNode(urls, selectedUrl.urlId);
             if (!selectedNode) return;
 
             showRecordsRef.current(
@@ -539,12 +724,23 @@ function DownloadsPanel({host}: PanelProps) {
             );
         },
         onRemoved: (sessionId) => {
+            delete streamedTrees.current[sessionId];
+			setExpanded((previous) => {
+				const next = {...previous};
+				delete next[sessionId];
+				return next;
+			});
             setSessions((previous) => previous.filter((entry) => entry.id !== sessionId));
             setTrees((previous) => {
                 const next = {...previous};
                 delete next[sessionId];
                 return next;
             });
+			if (selectedUrlRef.current?.sessionId === sessionId) {
+				selectedUrlRef.current = null;
+				setSelectedUrl(null);
+			}
+
             if (selectedSessionIdRef.current === sessionId) {
                 selectedSessionIdRef.current = null;
                 setSelectedSessionId(null);
@@ -552,47 +748,40 @@ function DownloadsPanel({host}: PanelProps) {
         },
         onError: (message) => {
             setLive(false);
-            setError(message);
+			setDownloadSpeed(0);
+			setSessionDownloadSpeeds({});
+            setStreamError(message);
         },
     }), []);
-
-    useEffect(() => {
-        if (!flatten) return;
-        let cancelled = false;
-
-        const load = async () => {
-            const next: Record<number, DownloadSessionUrlFlat[]> = {};
-            for (const session of sessions) next[session.id] = await api.downloadSessions.urlsFlat(session.id);
-            if (!cancelled) setFlat(next);
-        };
-
-        void load().catch((caught) => {
-            if (!cancelled) setError(caught instanceof Error ? caught.message : String(caught));
-        });
-
-        return () => {
-            cancelled = true;
-        };
-    }, [flatten, sessions, trees]);
 
     useEffect(() => {
         if (openErrors.size === 0) return;
         let cancelled = false;
 
-        const load = async () => {
-            const next: Record<number, DownloadSessionErrorLog> = {};
-            for (const sessionId of openErrors) {
-                next[sessionId] = await api.downloadSessions.errors(sessionId, errorFilters[sessionId] ?? []);
+        const controller = new AbortController();
+        const load = async (sessionId: number) => {
+            try {
+                const log = await api.downloadSessions.errors(sessionId, errorFilters[sessionId] ?? [], controller.signal);
+                if (cancelled) return;
+                setErrorLogs(previous => ({...previous, [sessionId]: log}));
+                setErrorLogFailures(previous => {
+                    const next = {...previous};
+                    delete next[sessionId];
+                    return next;
+                });
+            } catch (caught) {
+                if (cancelled) return;
+                setErrorLogFailures(previous => ({
+                    ...previous,
+                    [sessionId]: `Could not load errors: ${caught instanceof Error ? caught.message : String(caught)}`
+                }));
             }
-            if (!cancelled) setErrorLogs((previous) => ({...previous, ...next}));
         };
-
-        void load().catch((caught) => {
-            if (!cancelled) setError(caught instanceof Error ? caught.message : String(caught));
-        });
+        void Promise.all([...openErrors].map(load));
 
         return () => {
             cancelled = true;
+            controller.abort();
         };
     }, [openErrors, errorFilters, trees]);
 
@@ -604,13 +793,28 @@ function DownloadsPanel({host}: PanelProps) {
         });
     }, []);
 
-    const toggleErrorStatus = useCallback((sessionId: number, status: number | null) => {
-        setErrorFilters((previous) => ({...previous, [sessionId]: toggleStatus(previous[sessionId] ?? [], status)}));
+    const clearErrorLog = useCallback((sessionId: number) => {
+        setErrorLogs(previous => {
+            const next = {...previous};
+            delete next[sessionId];
+            return next;
+        });
+        setErrorLogFailures(previous => {
+            const next = {...previous};
+            delete next[sessionId];
+            return next;
+        });
     }, []);
 
+    const toggleErrorStatus = useCallback((sessionId: number, status: number | null) => {
+        clearErrorLog(sessionId);
+        setErrorFilters((previous) => ({...previous, [sessionId]: toggleStatus(previous[sessionId] ?? [], status)}));
+    }, [clearErrorLog]);
+
     const clearErrorStatuses = useCallback((sessionId: number) => {
+        clearErrorLog(sessionId);
         setErrorFilters((previous) => ({...previous, [sessionId]: []}));
-    }, []);
+    }, [clearErrorLog]);
 
     const queue = useCallback(async () => {
         if (!canImport || busy) return;
@@ -625,8 +829,11 @@ function DownloadsPanel({host}: PanelProps) {
             if (!await checkStorage()) return;
             for (const url of urls) {
                 try {
-                    const created = await api.downloadSessions.submitUrlSession(url);
-                    setExpanded((previous) => new Set(previous).add(created.url.id));
+                    const created = await api.downloadSessions.submitUrlSession(url, undefined, undefined, downloadSettings);
+					setExpanded((previous) => ({
+						...previous,
+						[created.session.id]: new Set(previous[created.session.id]).add(created.url.id),
+					}));
                 } catch (caught) {
                     failedUrls.push(url);
                     errors.push(`${url}: ${caught instanceof Error ? caught.message : String(caught)}`);
@@ -651,7 +858,7 @@ function DownloadsPanel({host}: PanelProps) {
         } finally {
             setBusy(false);
         }
-    }, [draft, host, refresh, canImport, checkStorage, busy]);
+    }, [draft, host, refresh, canImport, checkStorage, busy, downloadSettings]);
 
     const retry = useCallback(async (sessionId: number, urlId: number) => {
         if (!canImport) return;
@@ -669,6 +876,11 @@ function DownloadsPanel({host}: PanelProps) {
         setError(null);
         try {
             await api.downloadSessions.destroy(session.id);
+			if (selectedUrlRef.current?.sessionId === session.id) {
+				selectedUrlRef.current = null;
+				setSelectedUrl(null);
+			}
+
             if (selectedSessionIdRef.current === session.id) {
                 selectedSessionIdRef.current = null;
                 setSelectedSessionId(null);
@@ -679,11 +891,11 @@ function DownloadsPanel({host}: PanelProps) {
         }
     }, [refresh]);
 
-    const toggle = useCallback((id: number) => {
+	const toggle = useCallback((sessionId: number, id: number) => {
         setExpanded((previous) => {
-            const next = new Set(previous);
+			const next = new Set(previous[sessionId]);
             if (!next.delete(id)) next.add(id);
-            return next;
+			return {...previous, [sessionId]: next};
         });
     }, []);
 
@@ -693,13 +905,15 @@ function DownloadsPanel({host}: PanelProps) {
 
     useEffect(() => {
         const wanted = new Set<number>();
-        const walk = (node: DownloadSessionUrlNode) => {
-            if (expanded.has(node.id) && node.record_id !== null) {
+		const walk = (node: DownloadSessionUrlNode, sessionExpanded: ReadonlySet<number> | undefined) => {
+			if (sessionExpanded?.has(node.id) && node.record_id !== null) {
                 wanted.add(node.record_id);
             }
-            for (const child of node.children) walk(child);
+			for (const child of node.children) walk(child, sessionExpanded);
         };
-        for (const roots of Object.values(trees)) for (const root of roots) walk(root);
+		for (const [sessionId, roots] of Object.entries(trees)) {
+			for (const root of roots) walk(root, expanded[Number(sessionId)]);
+		}
         if (wanted.size === 0) return;
 
         let cancelled = false;
@@ -718,25 +932,27 @@ function DownloadsPanel({host}: PanelProps) {
         };
     }, [expanded, trees, host]);
 
-    const select = useCallback((node: DownloadSessionUrlNode) => {
+	const select = useCallback((sessionId: number, node: DownloadSessionUrlNode) => {
         selectedSessionIdRef.current = null;
         setSelectedSessionId(null);
-        selectedIdRef.current = node.id;
-        setSelectedId(node.id);
+		const selection = {sessionId, urlId: node.id};
+		selectedUrlRef.current = selection;
+		setSelectedUrl(selection);
         showRecords(subtreeRecords(node), `download: ${shortUrl(node.url)}`);
     }, [showRecords]);
 
-    const selectFlat = useCallback((entry: DownloadSessionUrlFlat) => {
+	const selectFlat = useCallback((sessionId: number, entry: DownloadSessionUrlFlat) => {
         selectedSessionIdRef.current = null;
         setSelectedSessionId(null);
-        selectedIdRef.current = entry.id;
-        setSelectedId(entry.id);
+		const selection = {sessionId, urlId: entry.id};
+		selectedUrlRef.current = selection;
+		setSelectedUrl(selection);
         showRecords(entry.record_ids, `download: ${shortUrl(entry.url)}`);
     }, [showRecords]);
 
     const selectSession = useCallback(async (session: DownloadSessionInfo) => {
-        selectedIdRef.current = null;
-        setSelectedId(null);
+		selectedUrlRef.current = null;
+		setSelectedUrl(null);
         selectedSessionIdRef.current = session.id;
         setSelectedSessionId(session.id);
         setError(null);
@@ -763,6 +979,10 @@ function DownloadsPanel({host}: PanelProps) {
     return (
         <div className="downloads-panel">
             <ImportStorageNotice storage={storage}/>
+            <form onSubmit={event => {
+                event.preventDefault();
+                void queue();
+            }}>
             <div className="download-session-row">
         <textarea
             value={draft}
@@ -770,16 +990,23 @@ function DownloadsPanel({host}: PanelProps) {
             placeholder="Paste one URL per line"
             disabled={busy || !canImport}
         />
-                <button type="button" disabled={busy || !canImport || parseNewlineUrlList(draft).length === 0}
-                        onClick={() => void queue()}>Download URL(s)
+                <button type="submit" disabled={busy || !canImport || parseNewlineUrlList(draft).length === 0}>Download
+                    URL(s)
                 </button>
             </div>
+                <DownloadOptions settings={downloadSettings} onChange={setDownloadSettings}
+                                 disabled={busy || !canImport}/>
+            </form>
+			<ParserInfo/>
+			<DownloadRateLimits/>
+			<DownloadParserCache/>
             <div className="download-tree-toolbar">
                 <label>
                     <input type="checkbox" checked={flatten} onChange={(event) => setFlatten(event.target.checked)}/>
                     Flat list
                 </label>
                 <span className={live ? 'download-tree-live' : 'muted'}>{live ? 'Live' : 'Reconnecting'}</span>
+				<span aria-label="Global download speed">Download: {formatNetworkSpeed(downloadSpeed)}</span>
                 <span
                     className="download-tree-tally">{importOutcomes.processed} Processed, {importOutcomes.newlyImported} New</span>
                 {summary.map(([state, count]) => (
@@ -789,8 +1016,10 @@ function DownloadsPanel({host}: PanelProps) {
                 ))}
             </div>
 
+            {streamError && <p className="error" role="alert">{streamError}</p>}
+            {error && <p className="error" role="alert">{error}</p>}
             <div className="download-tree-scroll">
-                {sessions.length === 0 && <p className="muted">No downloads yet. Paste a URL above to start one.</p>}
+                {sessions.length === 0 && <p className="muted">No downloads yet.</p>}
 
                 {sessions.map((session) => (
                     <section key={session.id}
@@ -806,10 +1035,19 @@ function DownloadsPanel({host}: PanelProps) {
                             </button>
                             <button type="button" onClick={() => void destroy(session)}>Delete</button>
                         </header>
+                        {session.downloading !== undefined && <p className="muted" aria-label="Session network stats">
+                            Downloading {session.downloading} ·
+                            Waiting: {session.waiting_parsers ?? 0} Parser, {session.waiting_requests ?? 0} Requests
+							{' · '}Download: {formatNetworkSpeed(sessionDownloadSpeeds[session.id] ?? 0)}
+                            {' · '}Downloaded: {formatDownloadBytes(session.downloaded_bytes ?? 0)}
+                            {' · '}Avg/import: {formatDownloadBytes(session.average_import_bytes ?? 0)}
+                        </p>}
                         <DownloadSessionSummary nodes={trees[session.id]}/>
                         <ErrorLog
                             count={session.error_count}
+							failures={failures[session.id]}
                             log={errorLogs[session.id]}
+                            loadError={errorLogFailures[session.id]}
                             selected={errorFilters[session.id] ?? []}
                             open={openErrors.has(session.id)}
                             onToggle={() => toggleErrors(session.id)}
@@ -822,23 +1060,21 @@ function DownloadsPanel({host}: PanelProps) {
                                     <li key={entry.id} className="download-tree-flat">
                                         <button
                                             type="button"
-                                            className={`download-tree-url${selectedId === entry.id ? ' is-selected' : ''}`}
+											className={`download-tree-url${selectedUrl?.sessionId === session.id && selectedUrl.urlId === entry.id ? ' is-selected' : ''}`}
                                             title={entry.url}
                                             onClick={(event) => {
                                                 if (event.ctrlKey) {
                                                     openDownloadUrl(entry.url);
                                                     return;
                                                 }
-                                                selectFlat(entry);
+												selectFlat(session.id, entry);
                                             }}
                                             onDoubleClick={() => openDownloadUrl(entry.url)}
                                         >
                                             <span className="download-tree-url-text">{shortUrl(entry.url)}</span>
-                                            {isImportedMarker(entry.note) &&
-                                                <span className="download-tree-url-marker">Already Imported</span>}
                                         </button>
                                         <span className="download-tree-state">
-                                            {rowStatusLabel(flatDisplayState(entry), entry.note)}
+                                            {rowStatusLabel(flatDisplayState(entry), entry.stage)}
                                         </span>
                                         <p className="muted">
                                             {entry.urls.length} discovered, {entry.record_ids.length} imported
@@ -856,13 +1092,11 @@ function DownloadsPanel({host}: PanelProps) {
                                                     >
                                                         <span
                                                             className="download-tree-url-text">{shortUrl(child.url)}</span>
-                                                        {isImportedMarker(child.note) && <span
-                                                            className="download-tree-url-marker">Already Imported</span>}
                                                     </span>
                                                     {child.record_id !== null && <span
                                                         className="download-tree-record">#{child.record_id}</span>}
                                                     <span
-                                                        className="download-tree-state">{rowStatusLabel(child.state, child.note)}</span>
+                                                        className="download-tree-state">{rowStatusLabel(child.state, child.stage)}</span>
                                                 </li>
                                             ))}
                                         </ul>
@@ -876,12 +1110,12 @@ function DownloadsPanel({host}: PanelProps) {
                                         key={root.id}
                                         node={root}
                                         depth={0}
-                                        selectedId={selectedId}
-                                        expanded={expanded}
+										selectedId={selectedUrl?.sessionId === session.id ? selectedUrl.urlId : null}
+										expanded={expanded[session.id]}
                                         info={info}
                                         thumbnailUrl={(id, size) => host.records.thumbnailUrl(id, size)}
-                                        onToggle={toggle}
-                                        onSelect={select}
+										onToggle={(id) => toggle(session.id, id)}
+										onSelect={(node) => select(session.id, node)}
                                         onRetry={(id) => void retry(session.id, id)}
                                         retryDisabled={!canImport}
                                         onOpenMedia={openMedia}
@@ -894,7 +1128,6 @@ function DownloadsPanel({host}: PanelProps) {
                 ))}
             </div>
 
-            {error && <p className="error">{error}</p>}
             {recordMenu}
         </div>
     );
@@ -903,7 +1136,7 @@ function DownloadsPanel({host}: PanelProps) {
 export const downloadsPanel = {
     type: 'downloads',
     title: 'Downloads',
-    description: 'Queue URLs and follow what the downloader found, imported and skipped.',
+	description: 'Download sessions.',
     component: DownloadsPanel,
     configVersion: 1,
 } as const;

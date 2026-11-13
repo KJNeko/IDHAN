@@ -124,7 +124,7 @@ runtime::Task< void > ClusterManager::reloadClusters( db::DBContext& db, const b
 				if ( !marker ) failures += std::format( "\nCluster {}: {}", cluster_id, marker.error() );
 			}
 		}
-		const auto access { ClusterAccess::open( folder_path, uuid, read_only ) };
+		const auto access { ClusterAccess::openSync( folder_path, uuid, read_only ) };
 		if ( !access )
 			failures += std::format( "\nCluster {} at {}: {}", cluster_id, folder_path.string(), access.error() );
 	}

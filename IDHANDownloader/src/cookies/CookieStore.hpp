@@ -1,5 +1,7 @@
 #pragma once
 
+#include <folly/coro/Mutex.h>
+
 #include <chrono>
 #include <mutex>
 #include <optional>
@@ -9,7 +11,7 @@
 
 #include "Cookie.hpp"
 #include "CookieOverlay.hpp"
-#include "IDHANDownloader/CookiePersistence.hpp"
+#include "IDHANDownloader/cookies/CookiePersistence.hpp"
 
 namespace idhan::downloader
 {
@@ -22,6 +24,7 @@ class HttpHeaders;
 class CookieStore
 {
 	mutable std::mutex m_mutex {};
+	folly::coro::Mutex m_write_mutex {};
 	std::vector< Cookie > m_cookies {};
 	CookiePersistence* m_persistence {};
 
@@ -31,9 +34,9 @@ class CookieStore
 	CookieStore( const CookieStore& ) = delete;
 	CookieStore& operator=( const CookieStore& ) = delete;
 
-	void load();
-	void set( Cookie cookie );
-	void erase( std::string_view name, std::string_view domain, std::string_view path );
+	folly::coro::Task< void > load();
+	folly::coro::Task< void > set( Cookie cookie );
+	folly::coro::Task< void > erase( std::string name, std::string domain, std::string path );
 	void appendMatching(
 		std::string_view host,
 		std::string_view path,

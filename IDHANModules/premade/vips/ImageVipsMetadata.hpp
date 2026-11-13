@@ -16,6 +16,7 @@ class ImageVipsMetadata final : public idhan::MetadataModuleI
 	ImageVipsMetadata() = delete;
 
 	[[nodiscard]] std::vector< idhan::MimeID > handleableMimes() override;
+	[[nodiscard]] std::vector< idhan::MimeID > phashMimes() override;
 	[[nodiscard]] std::expected< idhan::MetadataInfo, idhan::ModuleError > parseFile( idhan::ModuleCallData& data )
 		override;
 

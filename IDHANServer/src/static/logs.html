@@ -1,0 +1,200 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>IDHAN Log</title>
+</head>
+<body bgcolor="#000000" text="#cccccc">
+<h3>IDHAN Log</h3>
+<p>Status: <b id="status">Connecting</b></p>
+<p>
+    Filter: <input id="search" type="text">
+    <input id="invert" type="checkbox"> invert
+    Level:
+    <select id="minLevel">
+        <option value="trace">trace</option>
+        <option value="debug">debug</option>
+        <option value="info">info</option>
+        <option value="warning">warning</option>
+        <option value="error">error</option>
+    </select>
+    <input id="follow" type="checkbox"> follow
+    <input id="pause" type="checkbox"> pause
+    <a href="#" id="ready">jump to ready</a>
+</p>
+<p id="counts"></p>
+<hr>
+<pre id="log"></pre>
+
+<script>
+    var LEVELS = ["trace", "debug", "info", "warning", "error", "critical"];
+    var COLORS = {
+        trace: "#777777", debug: "#6688ff", info: "#cccccc",
+        warning: "#ffcc00", error: "#ff5555", critical: "#ff00ff"
+    };
+
+    var entries = [];
+    var lastMicros = 0;
+    var readyAt = null;
+    var drawn = 0;
+    var signature = "";
+    var log = document.getElementById("log");
+
+    function $(id) {
+        return document.getElementById(id);
+    }
+
+    function pad(value, width) {
+        return String(value).padStart(width || 2, "0");
+    }
+
+    function formatTime(micros) {
+        var d = new Date(micros / 1000);
+        return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + " "
+            + pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds()) + "." + pad(d.getMilliseconds(), 3);
+    }
+
+    function normalize(level) {
+        return level === "warn" ? "warning" : level === "err" ? "error" : level;
+    }
+
+    function setStatus(text, color) {
+        $("status").textContent = text;
+        $("status").style.color = color;
+    }
+
+    function apiKey() {
+        return new URLSearchParams(location.search).get("idhan_key");
+    }
+
+    async function fetchEntries() {
+        var query = new URLSearchParams({level: "trace"});
+        if (lastMicros > 0) query.set("after", String(lastMicros));
+
+        var headers = {};
+        var key = apiKey();
+        if (key) headers["X-API-Key"] = key;
+
+        var response;
+        try {
+            response = await fetch("/log/pretty/entries?" + query, {headers: headers, cache: "no-store"});
+        } catch (error) {
+            setStatus("Cannot reach the log feed: " + error, "#ff5555");
+            return;
+        }
+
+        if (!response.ok) {
+            var detail = "";
+            try {
+                detail = (await response.text()).trim().slice(0, 120);
+            } catch (e) {
+            }
+            setStatus("HTTP " + response.status + (detail ? ": " + detail : ""), "#ff5555");
+            return;
+        }
+
+        var body;
+        try {
+            body = await response.json();
+        } catch (error) {
+            setStatus("Invalid response from the log feed", "#ff5555");
+            return;
+        }
+
+        readyAt = body.ready_at;
+
+        for (var i = 0; i < body.entries.length; ++i) {
+            var entry = body.entries[i];
+            entry.level = normalize(entry.level);
+            entries.push(entry);
+            if (entry.t > lastMicros) lastMicros = entry.t;
+    }
+
+        if (readyAt !== null) setStatus("READY, accepting requests since " + formatTime(readyAt), "#44ff44");
+        else setStatus("Starting up, not accepting requests yet", "#ffcc00");
+    }
+
+    function makeLine(entry) {
+        var span = document.createElement("span");
+        span.style.color = COLORS[entry.level] || COLORS.info;
+        span.textContent = "[" + formatTime(entry.t) + "] [" + entry.level + "] [thread " + entry.thread + "] "
+            + entry.message + "\n";
+        return span;
+    }
+
+    function makeBanner(entry) {
+        var span = document.createElement("span");
+        span.className = "ready";
+        span.style.color = "#44ff44";
+        span.style.fontWeight = "bold";
+        span.textContent = "==== SERVER READY, ACCEPTING REQUESTS (" + formatTime(entry.t) + ") ====\n";
+        return span;
+    }
+
+    function render() {
+        var text = $("search").value.toLowerCase();
+        var invert = $("invert").checked;
+        var minimum = LEVELS.indexOf($("minLevel").value);
+        var current = [text, invert, minimum].join("|");
+        var rebuild = current !== signature || entries.length < drawn;
+        var fragment = document.createDocumentFragment();
+        var start = rebuild ? 0 : drawn;
+        var shown = rebuild ? 0 : log.childNodes.length;
+
+        for (var i = start; i < entries.length; ++i) {
+            var entry = entries[i];
+
+            if (entry.marker === "ready") {
+                fragment.append(makeBanner(entry));
+                shown++;
+                continue;
+        }
+
+            if (LEVELS.indexOf(entry.level) < minimum) continue;
+
+            if (text !== "") {
+                var hit = entry.message.toLowerCase().includes(text);
+                if (invert ? hit : !hit) continue;
+            }
+
+            fragment.append(makeLine(entry));
+            shown++;
+        }
+
+        if (rebuild) log.replaceChildren(fragment);
+        else log.append(fragment);
+
+        var added = entries.length !== drawn || rebuild;
+        drawn = entries.length;
+        signature = current;
+
+        $("counts").textContent = shown + " of " + entries.length + " entries";
+
+        if (added && $("follow").checked) window.scrollTo(0, document.body.scrollHeight);
+    }
+
+    async function tick() {
+        if (!$("pause").checked) {
+            await fetchEntries();
+            render();
+        }
+
+        setTimeout(tick, 2000);
+    }
+
+    $("search").addEventListener("input", render);
+    $("invert").addEventListener("change", render);
+    $("minLevel").addEventListener("change", render);
+
+    $("ready").addEventListener("click", function (event) {
+        event.preventDefault();
+        var banner = log.querySelector(".ready");
+        if (banner === null) return;
+        $("follow").checked = false;
+        banner.scrollIntoView();
+    });
+
+    tick();
+</script>
+</body>
+</html>

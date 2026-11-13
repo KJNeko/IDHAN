@@ -1,9 +1,11 @@
 #include "heartbeat.hpp"
 
 #include <chrono>
+#include "downloader/DownloadSessionEventHub.hpp"
+#include "logging/log.hpp"
 #include <utility>
 
-#include "idhan/http/SSEEventHub.hpp"
+#include "idhan/http/streaming/SSEEventHub.hpp"
 
 namespace idhan::httpapi
 {
@@ -11,14 +13,28 @@ namespace idhan::httpapi
 void HeartbeatService::run( const std::stop_token stop_token )
 {
 	std::unique_lock lock { m_timer_mutex };
+	auto next_heartbeat { std::chrono::steady_clock::now() };
 	while ( !stop_token.stop_requested() )
 	{
 		m_timer_wakeup.wait_for(
-			lock, stop_token, std::chrono::seconds { 10 }, [ &stop_token ] { return stop_token.stop_requested(); } );
+			lock, stop_token, std::chrono::seconds { 1 }, [ &stop_token ] { return stop_token.stop_requested(); } );
 
 		if ( stop_token.stop_requested() ) break;
 
-		http::SSEEventHub::heartbeatAll();
+		try
+		{
+			downloader::DownloadSessionEventHub::instance().flush();
+		}
+		catch ( const std::exception& error )
+		{
+			log::error( "Session event flush failed: {}", error.what() );
+		}
+		const auto now { std::chrono::steady_clock::now() };
+		if ( now >= next_heartbeat )
+		{
+			http::SSEEventHub::heartbeatAll();
+			next_heartbeat = now + std::chrono::seconds { 10 };
+		}
 	}
 }
 

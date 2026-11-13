@@ -388,7 +388,7 @@ function CompareInfo(
                 {best && (
                     <span
                         className={`file-relationship-side-best${tiebreak ? ' is-tiebreak' : ''}`}
-                        title={tiebreak ? 'The same picture either way, and this is the smaller file' : undefined}
+						title={tiebreak ? 'Smaller identical image' : undefined}
                     >
                         {tiebreak ? 'Smaller' : 'Best'}
                     </span>
@@ -669,7 +669,6 @@ type CompareLayout = 'flip' | 'side-by-side';
 interface PairCompareProps extends CompareProps {
     layout: CompareLayout;
     side: 'a' | 'b';
-    diffKey: boolean;
     blank: boolean;
     marks: MarkState;
     aMetadata?: RecordMetadata;
@@ -696,7 +695,7 @@ interface PairCompareProps extends CompareProps {
 function PairCompare(
     {
         host, a, b, aBounds, bBounds, layout, side, onSide, aMetadata, bMetadata, bDetail, verdict, pixelDuplicate,
-        matchScale, diffKey, blank, marks, onMatchScale, onMenu,
+		matchScale, blank, marks, onMatchScale, onMenu,
     }: PairCompareProps,
 ) {
     const frame = frameFor(aBounds, bBounds);
@@ -705,11 +704,6 @@ function PairCompare(
 
     useEffect(() => setZoom(NO_ZOOM), [a, b]);
 
-    const keyHelp =
-        'Hold ctrl while scrolling to zoom both, plus and minus to zoom from the keyboard, '
-        + '0 or a double click to reset. On the keypad, 4 and 6 pick a side, 7 and 9 call that '
-        + 'side better, 5 pairs them as alternatives, 2 marks them unrelated, 3 switches layout '
-        + 'and 1 shows the difference.';
 
     function image(which: 'a' | 'b') {
         const id = which === 'a' ? a : b;
@@ -748,7 +742,7 @@ function PairCompare(
                                 zoom={zoom}
                                 setZoom={setZoom}
                                 label={
-                                    `Record ${which === 'a' ? a : b}, side ${which.toUpperCase()}. ${keyHelp}`
+									`Record ${which === 'a' ? a : b}, side ${which.toUpperCase()}`
                                 }
                                 active={side === which}
                                 blank={blank}
@@ -764,7 +758,7 @@ function PairCompare(
                         <CompareFrame
                             zoom={zoom}
                             setZoom={setZoom}
-                            label={`Flip between record ${a} and record ${b}. Scroll, or use the arrow keys. ${keyHelp}`}
+							label={`Records ${a} and ${b}`}
                             active={false}
                             blank={blank}
                             marks={marks}
@@ -789,6 +783,22 @@ function PairCompare(
                 />
             </div>
             <div className="file-relationship-flip-bar">
+				<div className="comparison-zoom-controls" role="group" aria-label="Zoom">
+					<button type="button" className="toolbar-button" aria-label="Zoom out" disabled={zoom.scale <= 1}
+							onClick={() => setZoom(current => ({
+			                    scale: scaledBy(current, 1 / ZOOM_STEP),
+			                    x: 0,
+			                    y: 0
+		                    }))}>−
+		            </button>
+					<span>{zoom.scale}×</span>
+					<button type="button" className="toolbar-button" aria-label="Zoom in"
+		                    disabled={zoom.scale >= ZOOM_MAX}
+							onClick={() => setZoom(current => ({scale: scaledBy(current, ZOOM_STEP), x: 0, y: 0}))}>+
+		            </button>
+					<button type="button" className="toolbar-button" onClick={() => setZoom(NO_ZOOM)}>Reset zoom
+		            </button>
+				</div>
                 {(['a', 'b'] as const).map((which) => {
                     const id = which === 'a' ? a : b;
                     const bounds = which === 'a' ? aBounds : bBounds;
@@ -827,10 +837,7 @@ function PairCompare(
                     </span>
                 )}
             </div>
-            <p className="file-relationship-flip-keys muted">
-                Keypad: 4/6 side · 7/9 better · 5 alternatives · 2 unrelated · 3 layout
-                {diffKey && ' · 1 difference'}
-            </p>
+
         </div>
     );
 }
@@ -908,16 +915,15 @@ function verdictOf(survey: DiffSurvey): string {
     const verdict = classifyDifference(survey);
     switch (verdict.kind) {
         case 'identical':
-            return 'Every pixel matches, alpha included.';
+			return 'Identical pixels';
         case 'noise':
-            return `${verdict.changed.toLocaleString()} pixels differ, none of them by more than `
-                + `${NOTABLE_DELTA} of 255: the same image re-encoded.`;
+			return `${verdict.changed.toLocaleString()} changed pixels · maximum difference `
+				+ `${NOTABLE_DELTA}/255`;
         case 'near-identical':
-            return `${percent(verdict.share)} of pixels match, with ${verdict.regions} `
-                + `${verdict.regions === 1 ? 'region' : 'regions'} changed.`;
+			return `${percent(verdict.share)} matching pixels · ${verdict.regions} `
+				+ `${verdict.regions === 1 ? 'region' : 'regions'}`;
         case 'different':
-            return `${percent(verdict.share)} of pixels match, spread across the frame rather than `
-                + 'gathered into a few edits.';
+			return `${percent(verdict.share)} matching pixels`;
     }
 }
 
@@ -1051,19 +1057,9 @@ function DiffCompare({host, a, b}: CompareProps) {
                 )}
                 {state.status === 'error' && <p className="file-relationship-none error">{state.message}</p>}
             </div>
-            <p className="file-relationship-diff-note muted">
-                {survey === null ? (
-                    'Read at full resolution: nothing is scaled down before it is compared.'
-                ) : (
-                    <>
-                        {verdictOf(survey)} Compared at {survey.width} x {survey.height}
-                        {region === null
-                            ? '; the map takes the largest difference in each block, so one changed pixel still shows. Click it to zoom.'
-                            : ', and this region is drawn one output pixel per real pixel.'}
-                        {' '}Keypad 3, 4 or 6 goes back to the images.
-                    </>
-                )}
-            </p>
+			{survey !== null && <p className="file-relationship-diff-note muted">
+				{verdictOf(survey)} · {survey.width} × {survey.height}
+            </p>}
         </div>
     );
 }
@@ -1529,10 +1525,7 @@ function FileRelationshipsPanel({host}: PanelProps) {
     if (focused === null) {
         return (
             <div className="panel-body file-relationships-empty">
-                <p className="muted">
-                    Right click a record in the thumbnail grid and choose "Send to Relationships View" to find
-                    files that look like it.
-                </p>
+				<p className="muted">No record selected.</p>
                 <button
                     type="button"
                     className="file-relationship-action"
@@ -1612,8 +1605,8 @@ function FileRelationshipsPanel({host}: PanelProps) {
                                 className="file-relationship-toggle"
                                 title={
                                     comparable
-                                        ? 'Box every area where the two differ, read at full resolution'
-                                        : 'The two are different resolutions, so their pixels do not line up'
+										? 'Highlight differences'
+										: 'Different image dimensions'
                                 }
                             >
                                 <input
@@ -1714,7 +1707,6 @@ function FileRelationshipsPanel({host}: PanelProps) {
                                 bDetail={sideBRelation}
                                 verdict={verdict}
                                 pixelDuplicate={pixels.status === 'identical'}
-                                diffKey={comparable}
                                 blank={busy}
                                 marks={marks}
                                 onMenu={onCardMenu}
@@ -1724,11 +1716,7 @@ function FileRelationshipsPanel({host}: PanelProps) {
                             && (comparable ? (
                                 <DiffCompare host={host} a={sides.a} b={sides.b} aBounds={aBounds} bBounds={bBounds}/>
                             ) : (
-                                <p className="file-relationship-none muted">
-                                    These two are different resolutions, so there is no pixel difference to show.
-                                    Compare
-                                    them side by side or by flipping instead.
-                                </p>
+								<p className="file-relationship-none muted">Different image dimensions.</p>
                             ))}
                         <div className="file-relationship-actions">
                             <button
@@ -1756,7 +1744,7 @@ function FileRelationshipsPanel({host}: PanelProps) {
                                 title={`Pair records ${sides.a} and ${sides.b} as alternatives (keypad 5)`}
                                 onClick={() => ruleAlternatives(sides.a, sides.b)}
                             >
-                                Set Alternatives
+								Mark as alternatives
                             </button>
                             <button
                                 type="button"
@@ -1765,7 +1753,7 @@ function FileRelationshipsPanel({host}: PanelProps) {
                                 title={`Mark records ${sides.a} and ${sides.b} as coincidental lookalikes (keypad 2)`}
                                 onClick={() => ruleUnrelated(sides.a, sides.b)}
                             >
-                                Set Unrelated
+								Mark as unrelated
                             </button>
                             <button
                                 type="button"
@@ -1863,8 +1851,7 @@ function FileRelationshipsPanel({host}: PanelProps) {
 export const fileRelationshipsPanel = {
     type: 'file-relationships',
     title: 'File Relationships',
-    description:
-        'Find perceptually similar files to the selected record, compare them side by side, and mark them as duplicates or alternatives.',
+	description: 'Duplicates and alternatives.',
     component: FileRelationshipsPanel,
     configVersion: 1,
 } as const;

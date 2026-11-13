@@ -60,7 +60,7 @@ inline void vipsInit( const char* const name )
 {
 	constexpr auto VIPS_LOG_DOMAIN { "VIPS" };
 	g_log_set_handler( VIPS_LOG_DOMAIN, G_LOG_LEVEL_MASK, &vipsLogHandler, nullptr );
-	g_logv( VIPS_LOG_DOMAIN, G_LOG_LEVEL_INFO, "VIPS Logger taken over", nullptr );
+	g_log( VIPS_LOG_DOMAIN, G_LOG_LEVEL_INFO, "VIPS Logger taken over" );
 
 	if ( vips_init( name ) != 0 )
 	{

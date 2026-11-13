@@ -94,7 +94,7 @@ function NotesPanel({ host }: PanelProps) {
 
   return (
     <div className="panel-body notes-panel">
-      {focused === null && <p className="muted">Select a record to see its notes.</p>}
+		{focused === null && <p className="muted">No record selected.</p>}
 
       {focused !== null && (
         <>
@@ -141,7 +141,7 @@ function NotesPanel({ host }: PanelProps) {
 export const notesPanel = {
   type: 'notes',
   title: 'Notes',
-  description: 'Free-text notes attached to the focused record.',
+	description: 'Record notes.',
   component: NotesPanel,
   configVersion: 1,
 } as const;

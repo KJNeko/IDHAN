@@ -42,8 +42,10 @@ struct ImportOutcome
 
 //! Imports already-buffered file bytes: dedupes on the hash, creates the record, writes the file
 //! into a cluster and scans its metadata. Shared by the /file/import route and the downloader.
+//! `descriptor` must contain `data` and remain valid until the task completes.
 [[nodiscard]] runtime::Task< std::expected< ImportOutcome, ImportError > > importFile(
 	std::span< const std::byte > data,
+	std::optional< int > descriptor,
 	const SHA256& sha256,
 	std::string filename,
 	bool force_import,

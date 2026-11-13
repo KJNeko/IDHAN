@@ -27,18 +27,6 @@ struct ModuleDescriptor
 	std::uint32_t dimensions { 0 };
 };
 
-struct ModuleQueueSnapshot
-{
-	std::size_t library_index { 0 };
-	std::size_t module_index { 0 };
-	std::string library {};
-	std::string name {};
-	ipc::ModuleActivity activity {};
-	std::size_t workers { 0 };
-	bool reporting { false };
-	bool thread_safe { false };
-};
-
 class ModuleLoader
 {
 	std::vector< std::shared_ptr< WorkerPool > > m_pools {};
@@ -46,6 +34,7 @@ class ModuleLoader
 	std::vector< std::shared_ptr< RemoteModule > > m_modules {};
 
 	std::unordered_map< MimeID, std::vector< std::size_t > > m_by_mime_metadata {};
+	std::unordered_map< MimeID, std::vector< std::size_t > > m_by_mime_phash {};
 	std::unordered_map< MimeID, std::vector< std::size_t > > m_by_mime_thumbnailer {};
 	std::unordered_map< MimeID, std::vector< std::size_t > > m_by_mime_generator {};
 	std::unordered_map< MimeID, std::vector< std::size_t > > m_by_mime_parser {};
@@ -87,10 +76,11 @@ class ModuleLoader
 	void maintainWorkers();
 
 	//! Aggregates heartbeat samples across persistent, single-run and isolated workers.
-	[[nodiscard]] std::vector< ModuleQueueSnapshot > queueSnapshots() const;
 
 	[[nodiscard]] std::vector< std::shared_ptr< RemoteModule > > getThumbnailerFor( MimeID mime_id ) const;
 	[[nodiscard]] std::vector< std::shared_ptr< RemoteModule > > getParserFor( MimeID mime_id ) const;
+	[[nodiscard]] std::vector< std::shared_ptr< RemoteModule > > getPhashParserFor( MimeID mime_id ) const;
+	[[nodiscard]] std::vector< MimeID > phashMimes() const;
 	[[nodiscard]] std::vector< std::shared_ptr< RemoteModule > > getGeneratorsFor( MimeID mime_id ) const;
 	[[nodiscard]] std::vector< std::shared_ptr< RemoteModule > > getMimeParserFor( MimeID mime_id ) const;
 

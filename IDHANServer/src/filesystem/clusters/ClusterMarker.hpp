@@ -1,6 +1,8 @@
 #pragma once
 
 #include <boost/uuid/uuid.hpp>
+
+#include "idhan/runtime/Task.hpp"
 #include <json/value.h>
 
 #include <expected>
@@ -18,7 +20,10 @@ struct ClusterMarker
 	Json::Value document;
 };
 
-[[nodiscard]] std::expected< std::optional< ClusterMarker >, std::string > readClusterMarker( int root_fd );
+[[nodiscard]] std::expected< ClusterMarker, std::string > parseClusterMarker( std::string_view text );
+[[nodiscard]] std::expected< std::optional< ClusterMarker >, std::string > readClusterMarkerSync( int root_fd );
+[[nodiscard]] runtime::Task< std::expected< std::optional< ClusterMarker >, std::string > > readClusterMarker(
+	int root_fd );
 // Installs a complete marker atomically without replacing any existing entry.
 // A racing creator's valid marker is returned instead of being overwritten.
 [[nodiscard]] std::expected< ClusterMarker, std::string > initializeClusterMarker(

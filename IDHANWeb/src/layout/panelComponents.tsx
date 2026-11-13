@@ -34,10 +34,8 @@ function makeTombstone(type: string): FC<DockPanelProps> {
     return (
       <div className="panel-body tombstone">
         <p className="error">Unknown panel type “{type}”.</p>
-        <p className="muted">
-          Its saved settings are preserved. Install the plugin that provides this panel to restore it.
-        </p>
-      </div>
+
+	  </div>
     );
   };
 }

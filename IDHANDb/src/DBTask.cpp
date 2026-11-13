@@ -1,4 +1,5 @@
 #include <stdexcept>
+#include <string>
 #include <utility>
 
 #include "IDHANDB.hpp"
@@ -6,6 +7,7 @@
 
 namespace idhan::db
 {
+
 DBTask::DBTask( std::shared_ptr< DBOperation > operation ) : m_operation( std::move( operation ) )
 {
 	if ( !m_operation ) throw std::invalid_argument( "DBTask requires an operation" );

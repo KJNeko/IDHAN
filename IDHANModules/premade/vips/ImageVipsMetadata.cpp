@@ -19,6 +19,11 @@ std::vector< idhan::MimeID > ImageVipsMetadata::handleableMimes()
 	return vipsHandleable();
 }
 
+std::vector< idhan::MimeID > ImageVipsMetadata::phashMimes()
+{
+	return { VIPS_STATIC_IMAGE_MIMES.begin(), VIPS_STATIC_IMAGE_MIMES.end() };
+}
+
 std::expected< MetadataInfo, ModuleError > ImageVipsMetadata::parseFile( ModuleCallData& data )
 {
 	if ( !VIPS_MIMES.contains( data.mime_id ) ) return std::unexpected( ModuleError { "Unsupported mime type" } );

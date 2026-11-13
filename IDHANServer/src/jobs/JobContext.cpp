@@ -15,8 +15,6 @@ inline static std::atomic< idhan::JobID > job_id_counter { 1 };
 
 constexpr auto job_retention_period { std::chrono::hours( 1 ) };
 
-//! How often cleanup() sweeps finished jobs. Also the practical upper bound on how long a completed
-//! job's result remains fetchable while job_retention_period is zero.
 constexpr auto job_cleanup_interval { std::chrono::seconds( 10 ) };
 
 using namespace idhan;
@@ -47,7 +45,7 @@ void JobRuntime::runner()
 	{
 		if ( m_soft_stop.load( std::memory_order_acquire ) )
 		{
-			// the queue must not be inspected without the mutex; enqueue() mutates it concurrently
+			// enqueue() can mutate the queue concurrently.
 			std::lock_guard lock { m_queue_mtx };
 			if ( m_queue.empty() ) break;
 		}
@@ -113,6 +111,11 @@ std::shared_ptr< JobContext > JobRuntime::getJob( idhan::JobID id )
 	return nullptr;
 }
 
+idhan::http::SSEInitialEvent JobRuntime::eventSnapshot()
+{
+	return m_events->snapshotEvent();
+}
+
 std::vector< std::shared_ptr< JobContext > > JobRuntime::getAllJobs()
 {
 	std::lock_guard lock { m_queue_mtx };
@@ -129,12 +132,10 @@ JobRuntime::JobRuntime() : m_pool( nullptr ), m_queue_mtx(), m_cv(), m_queue(), 
 {
 	const auto hardware { std::max( std::thread::hardware_concurrency(), 1u ) };
 
-	// 25% of the hardware threads are for jobs, with a min of 2
 	auto job_thread_count { idhan::config::getSilentDefault< std::size_t >(
 		"server", "job_threads", std::max< std::size_t >( hardware / 4, 2 ) ) };
 
-	// Zero asks for the whole machine, as it does everywhere else. Taken literally it would build a
-	// pool with no loops in it, and getNextLoop() hands back nullptr.
+	// Zero selects all hardware threads.
 	if ( job_thread_count == 0 ) job_thread_count = hardware;
 
 	job_thread_count = std::max< std::size_t >( job_thread_count, 2 );

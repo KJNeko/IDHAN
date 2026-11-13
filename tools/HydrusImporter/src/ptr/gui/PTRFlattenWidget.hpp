@@ -48,7 +48,7 @@ class PTRFlattenWidget : public QWidget
 	void onProgress( const QString& status );
 	void onSubProgress( int current, int total, const QString& status );
 	void onStatsUpdated( const idhan::hydrus::ptr::FlattenLiveStats& stats );
-	void onFinished( bool success, const QString& message );
+	void onFinishedSync( bool success, const QString& message );
 
   private:
 

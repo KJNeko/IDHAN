@@ -1,12 +1,12 @@
 #include "ImportFile.hpp"
 
 #include <algorithm>
+#include <cstring>
+#include <fcntl.h>
 #include <filesystem>
 #include <format>
-#include <fstream>
 #include <span>
 #include <string_view>
-#include <system_error>
 #include <utility>
 #include <vector>
 
@@ -17,6 +17,7 @@
 #include "filesystem/clusters/ClusterManager.hpp"
 #include "filesystem/clusters/clusterIdentity.hpp"
 #include "filesystem/hashFile.hpp"
+#include "filesystem/io/IOUring.hpp"
 #include "filesystem/recordFilePath.hpp"
 #include "httpapi/fileMetadata.hpp"
 #include "httpapi/records.hpp"
@@ -44,7 +45,7 @@ namespace idhan::imports
 	try
 	{
 		const auto actual { co_await filesystem::hashFile( path.path() ) };
-		const auto valid { path.verify() };
+		const auto valid { path.verifySync() };
 		if ( !valid ) co_return std::unexpected( ImportError { 503, valid.error() } );
 
 		co_return actual == expected_sha256;
@@ -156,36 +157,53 @@ struct ImportTarget
 	co_return std::get< 0 >( rows.row( 0 ) ).value_or( std::string {} );
 }
 
-[[nodiscard]] static std::expected< void, ImportError > writeFileToCluster(
-	const std::filesystem::path& cluster_path,
+[[nodiscard]] static runtime::Task< std::expected< void, ImportError > > writeFileToCluster(
+	const std::filesystem::path cluster_path,
 	const bool read_only,
-	const SHA256& sha256,
+	const SHA256 sha256,
 	const std::span< const std::byte > data,
-	const std::string_view extension )
+	const std::string extension )
 {
-	if ( read_only ) return std::unexpected( ImportError { 500, "Refusing to write into a read-only cluster" } );
+	if ( read_only ) co_return std::unexpected( ImportError { 500, "Refusing to write into a read-only cluster" } );
 
 	const auto path {
 		std::filesystem::absolute( cluster_path ) / filesystem::getClusterRelativePath( sha256, extension )
 	};
 
-	std::error_code error_code {};
-	std::filesystem::create_directories( path.parent_path(), error_code );
-	if ( error_code )
-		return std::unexpected(
-			ImportError { 500, std::format( "Failed to create cluster directory: {}", error_code.message() ) } );
+	int created { co_await IOUring::getInstance().createDirectories( path.parent_path() ) };
 
-	std::ofstream stream( path, std::ios::binary );
-	if ( !stream )
-		return std::unexpected(
-			ImportError { 500, std::format( "Failed to open file {} for writing!", path.string() ) } );
+	if ( created < 0 )
+		co_return std::unexpected(
+			ImportError { 500, std::format( "Failed to create cluster directory: {}", std::strerror( -created ) ) } );
 
-	stream.write( reinterpret_cast< const char* >( data.data() ), static_cast< std::streamsize >( data.size() ) );
-	stream.close();
-	if ( !stream )
-		return std::unexpected( ImportError { 500, std::format( "Failed to write file {}", path.string() ) } );
+	int descriptor { co_await IOUring::getInstance().openFile( path, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0666 ) };
 
-	return {};
+	if ( descriptor < 0 )
+		co_return std::unexpected(
+			ImportError {
+				500,
+				std::format(
+					"Failed to open file {} for writing: {}", path.string(), std::strerror( -descriptor ) ) } );
+
+	FileIOUring file { descriptor, 0, FileIOUring::ReadWrite };
+	try
+	{
+		co_await file.write( data );
+	}
+	catch ( const std::exception& error )
+	{
+		co_return std::unexpected(
+			ImportError { 500, std::format( "Failed to write file {}: {}", path.string(), error.what() ) } );
+	}
+
+	int closed { co_await file.close() };
+
+	if ( closed < 0 )
+		co_return std::unexpected(
+			ImportError {
+				500, std::format( "Failed to close file {}: {}", path.string(), std::strerror( -closed ) ) } );
+
+	co_return {};
 }
 
 [[nodiscard]] static runtime::Task< std::expected< void, ImportError > > storeRecordFile(
@@ -226,10 +244,12 @@ struct ImportTarget
 	auto extension_e { co_await recordBestExtension( db, record_id ) };
 	if ( !extension_e ) co_return std::unexpected( std::move( extension_e.error() ) );
 
-	const auto valid_before_write { target.access.verify() };
+	const auto valid_before_write { target.access.verifySync() };
 	if ( !valid_before_write ) co_return std::unexpected( ImportError { 503, valid_before_write.error() } );
 
-	auto written { writeFileToCluster( target.access.root(), target.access.readonly(), sha256, data, *extension_e ) };
+	auto written {
+		co_await writeFileToCluster( target.access.root(), target.access.readonly(), sha256, data, *extension_e )
+	};
 	if ( !written ) co_return std::unexpected( std::move( written.error() ) );
 
 	db::DBBindings update_bindings {};
@@ -247,6 +267,7 @@ struct ImportTarget
 
 runtime::Task< std::expected< ImportOutcome, ImportError > > importFile(
 	const std::span< const std::byte > data,
+	const std::optional< int > descriptor,
 	const SHA256& sha256,
 	std::string filename,
 	const bool force_import,
@@ -294,7 +315,7 @@ runtime::Task< std::expected< ImportOutcome, ImportError > > importFile(
 		}
 	}
 
-	const auto mime_id { co_await mime::identifyMime( data, filename ) };
+	const auto mime_id { co_await mime::identifyMime( data, filename, descriptor ) };
 
 	if ( mime_id == mime_ids::UNKNOWN && !force_import )
 		co_return ImportOutcome { .status = Failed, .failure = UnknownMime };

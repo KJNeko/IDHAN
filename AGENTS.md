@@ -23,6 +23,14 @@ Proxygen/Folly, libpq (libpqxx in legacy code/tests), Qt6, and a React WebUI.
 - `dependencies/` and `3rd-party/`: vendored dependencies; avoid modifying
   them unless the task explicitly requires it.
 
+## WebUI disclosure (strict requirement)
+
+- The WebUI must visibly and clearly label itself as
+  "Vibecoded slop" in the main toolbar.
+- Preserve this disclosure during all UI reviews, redesigns, and text cleanup.
+  Do not remove it, soften it to a generic label such as "Preview", or move it
+  exclusively into a tooltip, settings screen, or documentation.
+
 ## Git workflow
 
 - Target `dev` for features and fixes; `master` is release-only.
@@ -70,6 +78,9 @@ Build output is in `<build-dir>/bin/`. Options and defaults are declared in
 
 ## C++ conventions
 
+- Coroutine APIs use unsuffixed names. Use `Sync` for explicit synchronous
+  counterparts; keep `Async` only when required by an external API or when the
+  distinction has a concrete benefit.
 - Do not use anonymous namespaces. Place helpers in the appropriate named
   project namespace and assume names within our namespaces do not collide.
 - Use the underlying library's types and APIs directly where they fit. Avoid
@@ -110,11 +121,23 @@ Build output is in `<build-dir>/bin/`. Options and defaults are declared in
 
 ## HTTP and coroutines
 
+- Synchronous I/O is prohibited on primary code paths. Use the asynchronous backend
+  and await completion. Synchronous I/O is permitted only in an explicit fallback
+  when the asynchronous operation is unavailable, or for a concrete, documented
+  reason that makes asynchronous I/O inappropriate. Wrapping a synchronous call
+  in a coroutine or running it on another thread does not make it asynchronous I/O.
+
 - Native routes live in `IDHANServer/src/httpapi/`, namespace `idhan::httpapi`.
-  Handlers return `http::HTTPTask<http::Response>`. Register `http::RouteDefinition`
+  JSON handlers declare their payload with `http::JsonResponse<T>` or
+  `http::JsonResult<T>` inside `http::HTTPTask`. Register `http::RouteDefinition`
   with route metadata and `apiAuthValidation(db)` for authenticated endpoints.
-- Use the existing parameter declarations and `readValidatedJsonBody` helpers.
-  New HTTP JSON uses simdjson; check types/error codes before accessing values.
+- Use the existing parameter declarations and reflected `http::JsonBody<T>`
+  helpers; use `readValidatedJsonBody` when the input needs dynamic parsing.
+  Prefer reflected request/response structs for simple HTTP JSON data. Use
+  simdjson directly only when dynamic parsing or building provides a concrete
+  benefit; check types/error codes before accessing values. Declare primary
+  success responses through handler return types, with JSON and status 200 as
+  defaults; reserve Output annotations for additional error responses.
   Return errors with `http::Response::error(status, message)`; the old
   `createBadRequest` helper family is gone. Where JsonCpp remains, validate types
   before `as*()` and construct arrays as `Json::Value { Json::arrayValue }`.

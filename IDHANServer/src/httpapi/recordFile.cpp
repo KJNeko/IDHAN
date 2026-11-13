@@ -14,7 +14,8 @@
 #include "filesystem/recordFilePath.hpp"
 #include "idhan/SHA256.hpp"
 #include "idhan/db/DBContext.hpp"
-#include "idhan/http/FileResponse.hpp"
+#include "idhan/http/response/FileResponse.hpp"
+#include "idhan/http/routing/ReflectedRoutes.hpp"
 #include "recordValidator.hpp"
 
 namespace idhan::httpapi
@@ -37,11 +38,9 @@ namespace idhan::httpapi
 http::HTTPTask< http::Response > recordFileResponse(
 	db::DBContext& db,
 	http::RequestContext& context,
-	const RecordID record_id )
+	const RecordID record_id,
+	const FetchRecordFileQuery& parameters )
 {
-	const auto download_e { context.parameters().optional< bool >( "download" ) };
-	if ( !download_e ) co_return http::Response::error( 400, download_e.error().message );
-
 	db::DBBindings bindings {};
 	bindings.bind( record_id );
 
@@ -130,33 +129,21 @@ http::HTTPTask< http::Response > recordFileResponse(
 		.content_type = mime_name.value_or( "application/octet-stream" ),
 		.filename = sanitizeFilename( filename ),
 		.immutable = true,
-		.attachment = download_e->value_or( false ),
+		.attachment = parameters.download.value_or( false ),
 	};
 
 	co_return co_await http::FileResponse::create( context, std::move( file ), std::move( metadata ) );
 }
 
-static http::HTTPTask< http::Response > fetchRecordFile( db::DBContext& db, http::RequestContext context )
+http::HTTPTask< http::EncodedResult< http::RequestBody, "*/*" > > fetchRecordFile(
+	db::DBContext& db,
+	http::RequestContext context,
+	http::Query< FetchRecordFileQuery > query )
 {
-	const auto record_id_e { context.parameters().scalar< RecordID >( "record_id" ) };
-	if ( !record_id_e ) co_return http::Response::error( 400, record_id_e.error().message );
+	const auto record_id { *context.parameters().scalar< RecordID >( "record_id" ) };
 
-	co_return co_await recordFileResponse( db, context, *record_id_e );
-}
-
-http::RouteDefinition recordFileRoute( db::DBContext& db, std::string path )
-{
-	auto handler = [ &db ]( http::RequestContext context ) -> http::HTTPTask< http::Response >
-	{ co_return co_await fetchRecordFile( db, std::move( context ) ); };
-
-	return http::RouteDefinition {
-		http::RouteMetadata {
-			proxygen::HTTPMethod::GET,
-			std::move( path ),
-			{ recordIdPathParameter() },
-			{ apiAuthValidation( db ), recordExistsValidation( db ) } },
-		std::move( handler )
-	};
+	co_return http::encodedResponse< http::RequestBody, "*/*" >(
+		co_await recordFileResponse( db, context, record_id, query.value ) );
 }
 
 } // namespace idhan::httpapi

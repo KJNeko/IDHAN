@@ -6,7 +6,7 @@
 #include <optional>
 
 #include "idhan/db/DBConfig.hpp"
-#include "idhan/http/HTTPConfig.hpp"
+#include "idhan/http/server/HTTPConfig.hpp"
 #include "modules/ModuleRuntime.hpp"
 
 namespace idhan::server

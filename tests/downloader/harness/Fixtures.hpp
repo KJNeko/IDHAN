@@ -1,15 +1,16 @@
 #pragma once
 
 #include <IDHANDownloader/DownloaderContext.hpp>
-#include <IDHANDownloader/ImportSink.hpp>
-#include <IDHANDownloader/SecretProvider.hpp>
-#include <IDHANDownloader/SessionObserver.hpp>
+#include <IDHANDownloader/imports/ImportSink.hpp>
+#include <IDHANDownloader/secrets/SecretProvider.hpp>
+#include <IDHANDownloader/session/SessionObserver.hpp>
 
 #include <algorithm>
 #include <atomic>
 #include <filesystem>
 #include <fstream>
 #include <mutex>
+#include <map>
 #include <random>
 #include <string>
 #include <vector>
@@ -28,6 +29,8 @@ class ParserFixture
 		std::random_device device {};
 		m_root = std::filesystem::temp_directory_path() / std::format( "idhan-downloader-test-{}", device() );
 		std::filesystem::create_directories( m_root );
+		// Router-only tests still bind to a real module, even when no work is executed.
+		write( "test.js", "export function page() {}" );
 	}
 
 	ParserFixture( const ParserFixture& ) = delete;
@@ -74,21 +77,26 @@ class RecordingObserver final : public downloader::SessionObserver
 	std::optional< std::string > url_type_error {};
 	std::vector< std::pair< downloader::WorkID, std::string > > failures {};
 	std::vector< std::pair< std::string, std::string > > import_failures {};
+	std::vector< downloader::FailureStage > import_failure_stages {};
 	std::atomic_size_t finished {};
 
-	void onStarted( const downloader::WorkInfo& info ) override
+	folly::coro::Task< void > onStarted( downloader::WorkInfo info ) override
 	{
 		const std::scoped_lock lock { m_mutex };
 		started.emplace_back( info );
+
+		co_return;
 	}
 
-	void onRequest( const downloader::RequestInfo& info ) override
+	folly::coro::Task< void > onRequest( downloader::RequestInfo info ) override
 	{
 		const std::scoped_lock lock { m_mutex };
 		requests.emplace_back( info );
+
+		co_return;
 	}
 
-	void onImported( const downloader::ImportInfo& info ) override
+	folly::coro::Task< void > onImported( downloader::ImportInfo info ) override
 	{
 		const std::scoped_lock lock { m_mutex };
 		imports.emplace_back(
@@ -98,42 +106,69 @@ class RecordingObserver final : public downloader::SessionObserver
 				.record_id = info.record_id,
 				.size = info.size,
 				.content_type = info.content_type } );
+
+		co_return;
 	}
 
-	void onCompleted( const downloader::WorkInfo& info ) override
+	folly::coro::Task< void > onCompleted( downloader::WorkInfo info ) override
 	{
 		const std::scoped_lock lock { m_mutex };
 		completed.emplace_back( info );
+
+		co_return;
 	}
 
-	void onFollowed( const downloader::WorkInfo& info, const downloader::FollowStatus status ) override
+	folly::coro::Task< void > onFollowed( downloader::WorkInfo info, const downloader::FollowStatus status ) override
 	{
 		const std::scoped_lock lock { m_mutex };
 		follows.emplace_back( info.url, status );
+
+		co_return;
 	}
 
-	std::expected< void, std::string > onUrlTypeSet( const std::string& url, const std::string& type ) override
+	folly::coro::Task< std::expected< void, std::string > > onUrlTypeSet( std::string url, std::string type ) override
 	{
 		const std::scoped_lock lock { m_mutex };
-		if ( url_type_error ) return std::unexpected( *url_type_error );
+		if ( url_type_error ) co_return std::unexpected( *url_type_error );
 
 		url_types.emplace_back( url, type );
-		return {};
+		co_return std::expected< void, std::string > {};
 	}
 
-	void onFailed( const downloader::WorkInfo& info, const std::string& error ) override
+	folly::coro::Task< void > onFailed( downloader::WorkInfo info, std::string error ) override
 	{
 		const std::scoped_lock lock { m_mutex };
 		failures.emplace_back( info.id, error );
+
+		co_return;
 	}
 
-	void onImportFailed( const downloader::WorkInfo&, const std::string& url, const std::string& error ) override
+	folly::coro::Task< void > onImportFailed( downloader::WorkInfo, std::string url, std::string error ) override
 	{
 		const std::scoped_lock lock { m_mutex };
 		import_failures.emplace_back( url, error );
+
+		co_return;
 	}
 
-	void onFinished() override { finished.fetch_add( 1 ); }
+	folly::coro::Task< void > onImportFailure(
+		downloader::WorkInfo info,
+		std::string url,
+		downloader::WorkFailure failure ) override
+	{
+		{
+			const std::scoped_lock lock { m_mutex };
+			import_failure_stages.push_back( failure.stage );
+		}
+		co_await onImportFailed( info, url, failure.message );
+		co_return;
+	}
+
+	folly::coro::Task< void > onFinished() override
+	{
+		finished.fetch_add( 1 );
+		co_return;
+	}
 
 	[[nodiscard]] bool hasCompleted( const downloader::WorkID work ) const
 	{
@@ -169,25 +204,43 @@ class MemoryImportFactory final : public downloader::ImportSinkFactory
 	{
 		MemoryImportFactory& m_owner;
 		std::string m_bytes {};
+		downloader::ImportRequest m_request {};
 
 	  public:
 
-		explicit Sink( MemoryImportFactory& owner ) : m_owner( owner ) {}
+		Sink( MemoryImportFactory& owner, downloader::ImportRequest request ) :
+		  m_owner( owner ),
+		  m_request( std::move( request ) )
+		{}
 
-		std::expected< void, std::string > write( const std::span< const std::byte > bytes ) override
+		folly::coro::Task< std::expected< void, std::string > > write( std::span< const std::byte > bytes ) override
 		{
+			m_owner.async_writes.fetch_add( 1 );
 			m_bytes.append( reinterpret_cast< const char* >( bytes.data() ), bytes.size() );
-			return {};
+			co_return std::expected< void, std::string > {};
 		}
 
-		std::expected< downloader::ImportResult, std::string > finish( const downloader::ImportMetadata& metadata )
-			override
+		folly::coro::Task< std::expected< downloader::ImportResult, std::string > > finish(
+			downloader::ImportMetadata metadata ) override
 		{
 			const std::scoped_lock lock { m_owner.m_mutex };
+			if ( m_owner.finish_error.has_value() ) co_return std::unexpected( m_owner.finish_error.value() );
+
+			const auto failure { m_owner.finish_errors.find( m_request.url ) };
+			if ( failure != m_owner.finish_errors.end() ) co_return std::unexpected( failure->second );
+
+			m_owner.finished_requests.emplace_back( m_request );
+			m_owner.metadata.emplace_back( metadata );
+			if ( m_request.stored_record.has_value() )
+			{
+				co_return downloader::ImportResult {
+					.record_id = m_request.stored_record.value(), .note = "Already in the database", .existing = true
+				};
+			}
+
 			const RecordID id { m_owner.m_next++ };
 			m_owner.stored.emplace_back( id, std::move( m_bytes ) );
-			m_owner.metadata.emplace_back( metadata );
-			return downloader::ImportResult { .record_id = id };
+			co_return downloader::ImportResult { .record_id = id };
 		}
 
 		void abort() override { m_owner.aborted.fetch_add( 1 ); }
@@ -201,24 +254,31 @@ class MemoryImportFactory final : public downloader::ImportSinkFactory
 	std::vector< std::pair< RecordID, std::string > > stored {};
 	std::vector< downloader::ImportMetadata > metadata {};
 	std::atomic_size_t aborted {};
-	std::optional< downloader::ImportResult > reusable {};
-	std::optional< std::string > reuse_error {};
-	std::vector< downloader::ImportRequest > reuse_requests {};
+	std::atomic_size_t async_writes {};
+	std::optional< RecordID > stored_record {};
+	std::optional< std::string > finish_error {};
+	std::map< std::string, std::string > finish_errors {};
+	std::vector< downloader::ImportRequest > opened_requests {};
+	std::vector< downloader::ImportRequest > finished_requests {};
+	std::optional< std::string > lookup_error {};
+	std::vector< downloader::ImportRequest > lookup_requests {};
 
-	std::expected< std::optional< downloader::ImportResult >, std::string > reuse(
+	folly::coro::Task< std::expected< std::optional< RecordID >, std::string > > findStoredRecord(
+		downloader::ImportRequest request ) override
+	{
+		const std::scoped_lock lock { m_mutex };
+		lookup_requests.emplace_back( request );
+		if ( lookup_error ) co_return std::unexpected( *lookup_error );
+
+		co_return stored_record;
+	}
+
+	std::expected< std::unique_ptr< downloader::ImportSink >, std::string > open(
 		const downloader::ImportRequest& request ) override
 	{
 		const std::scoped_lock lock { m_mutex };
-		reuse_requests.emplace_back( request );
-		if ( reuse_error ) return std::unexpected( *reuse_error );
-
-		return reusable;
-	}
-
-	std::expected< std::unique_ptr< downloader::ImportSink >, std::string > open( const downloader::ImportRequest& )
-		override
-	{
-		return std::make_unique< Sink >( *this );
+		opened_requests.emplace_back( request );
+		return std::make_unique< Sink >( *this, request );
 	}
 };
 
@@ -226,13 +286,13 @@ class MapSecrets final : public downloader::SecretProvider
 {
   public:
 
-	std::unordered_map< std::string, std::string > values {};
+	std::unordered_map< std::string, Json::Value > values {};
 
-	std::optional< std::string > secret( const std::string_view name ) override
+	std::expected< Json::Value, std::string > secrets( const std::string_view domain ) override
 	{
-		const auto found { values.find( std::string { name } ) };
+		const auto found { values.find( std::string { domain } ) };
 
-		return found == values.end() ? std::nullopt : std::optional { found->second };
+		return found == values.end() ? Json::Value { Json::objectValue } : found->second;
 	}
 };
 

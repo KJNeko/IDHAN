@@ -1,15 +1,15 @@
 #include <concepts>
 
-#include "idhan/http/AccessLogger.hpp"
-#include "idhan/http/Compression.hpp"
-#include "idhan/http/FileBodySource.hpp"
-#include "idhan/http/FileResponse.hpp"
-#include "idhan/http/HTTPServer.hpp"
-#include "idhan/http/JsonBodySource.hpp"
-#include "idhan/http/JsonSerializer.hpp"
-#include "idhan/http/Middleware.hpp"
-#include "idhan/http/SSEBodySource.hpp"
-#include "idhan/http/UploadPipeline.hpp"
+#include "idhan/http/server/AccessLogger.hpp"
+#include "idhan/http/server/Compression.hpp"
+#include "idhan/http/response/FileBodySource.hpp"
+#include "idhan/http/response/FileResponse.hpp"
+#include "idhan/http/server/HTTPServer.hpp"
+#include "idhan/http/streaming/JsonBodySource.hpp"
+#include "idhan/http/json/JsonSerializer.hpp"
+#include "idhan/http/routing/Middleware.hpp"
+#include "idhan/http/streaming/SSEBodySource.hpp"
+#include "idhan/http/request/UploadPipeline.hpp"
 
 using namespace idhan::http;
 static_assert( !std::is_abstract_v< HTTPServer > );

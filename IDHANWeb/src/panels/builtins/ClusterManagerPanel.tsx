@@ -330,10 +330,10 @@ function ClusterManagerPanel({ host }: PanelProps) {
                     type="button"
                     className="toolbar-button"
                     disabled={busy}
-                    title="Hash only, skips mime and metadata"
+					title="Import files without metadata parsing"
                     onClick={() => fastScan(c)}
                   >
-                    Fast scan
+					  Import without metadata
                   </button>
                   <button type="button" className="toolbar-button danger" disabled={busy} onClick={() => void remove(c)}>
                     Remove
@@ -350,18 +350,18 @@ function ClusterManagerPanel({ host }: PanelProps) {
           <div className="scan-modal" onClick={(e) => e.stopPropagation()}>
             <div className="scan-modal-title">Scan cluster “{scanTarget.name}”</div>
             {scanTarget.readonly && (
-                <div className="muted">This cluster is read-only, so file-modifying options are disabled.</div>
+				<div className="muted">Read-only cluster</div>
             )}
             <button
               type="button"
               className="toolbar-button scan-modal-preset"
               disabled={busy}
-              title="Hash only, skips mime and metadata"
+			  title="Import files without metadata parsing"
               onClick={() => {
                 if (scanTarget) fastScan(scanTarget);
               }}
             >
-              Fast scan (hash only)
+				Import without metadata (hash only)
             </button>
             <div className="scan-modal-grid">
               {scanCheck('scan_mime', 'Scan mime')}
@@ -374,7 +374,6 @@ function ClusterManagerPanel({ host }: PanelProps) {
               {scanCheck('stop_on_fail', 'Stop on fail')}
             </div>
             <div className="scan-modal-advanced">
-              <span className="muted">Advanced</span>
               <div className="scan-modal-grid">
                   {!scanTarget.readonly && scanCheck('remove_missing_files', 'Track missing files')}
                 {!scanTarget.readonly && scanCheck('readonly', 'Force read-only')}
@@ -398,7 +397,7 @@ function ClusterManagerPanel({ host }: PanelProps) {
 export const clusterManagerPanel = {
   type: 'cluster-manager',
   title: 'Cluster Manager',
-  description: 'Manage on-disk storage clusters: add, rename, cap, scan, and remove.',
+	description: 'Storage clusters.',
   component: ClusterManagerPanel,
   configVersion: 1,
   singleton: true,

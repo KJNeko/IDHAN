@@ -15,10 +15,10 @@ class DBContext;
 namespace idhan::helpers
 {
 
-// Returns every stored spelling with the same comparison key, preserving the original URL rows.
-[[nodiscard]] runtime::Task< std::vector< UrlID > > findEquivalentUrls(
-	std::string url,
-	std::vector< std::string > ephemeral_query,
+// Every URL passed to these helpers must already come from normalizeUrls.
+
+[[nodiscard]] runtime::Task< std::expected< void, std::string > > setUrlTypes(
+	std::vector< std::pair< std::string, std::string > > types,
 	db::DBContext& db );
 
 // Creates the URL and domain if necessary, then records its PostgreSQL UrlType value.

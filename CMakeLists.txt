@@ -40,7 +40,6 @@ option(IDHAN_ENABLE_TRACE "Enable trace log level" ON)
 option(BUILD_IDHAN_TOOLS "Builds all tools" ON)
 option(BUILD_HYDRUS_IMPORTER "Builds the hydrus importer" ON)
 option(BUILD_IDHAN_DOWNLOADER_TESTER "Builds the downloader script testing program" ON)
-option(BUILD_IDHAN_DOWNLOADER_SPECS "Generates the downloader API clients from IDHANDownloader/specs" ON)
 
 function(idhan_require_option DEPENDENT DEPENDENCY)
 	if (${DEPENDENT} AND NOT ${DEPENDENCY})

@@ -5,29 +5,20 @@
 
 #include "idhan/db/DBContext.hpp"
 #include "notifications/MissingFiles.hpp"
-#include "urls/AssociateUrls.hpp"
 
 namespace idhan::db
 {
 
-runtime::Task< std::optional< RecordID > > findStoredDirectRecordByUrl(
-	DBContext& db,
-	std::string url,
-	std::vector< std::string > ephemeral_query )
+runtime::Task< std::optional< RecordID > > findStoredDirectRecordByUrl( DBContext& db, std::string url )
 {
-	const auto matches { co_await helpers::findEquivalentUrls( std::move( url ), std::move( ephemeral_query ), db ) };
-	if ( matches.empty() ) co_return std::nullopt;
-
 	DBBindings bindings {};
-	bindings.bind( matches );
+	bindings.bind( std::move( url ) );
 	const auto rows {
 		co_await db
 			.query(
 				"SELECT DISTINCT mappings.record_id, fi.cluster_id IS NOT NULL AND fi.cluster_delete_time IS NULL AND fi.cluster_store_time IS NOT NULL "
 				"FROM urls JOIN url_mappings mappings USING (url_id) "
-				"LEFT JOIN file_info fi USING (record_id) WHERE urls.url_id = ANY($1::integer[]) "
-				"AND EXISTS (SELECT 1 FROM urls typed WHERE typed.url_id = ANY($1::integer[]) "
-				"AND typed.url_type = 'file') LIMIT 2",
+				"LEFT JOIN file_info fi USING (record_id) WHERE urls.url = $1 AND urls.url_type = 'file' LIMIT 2",
 				std::move( bindings ) )
 			.rows< RecordID, std::optional< bool > >()
 	};
@@ -37,6 +28,28 @@ runtime::Task< std::optional< RecordID > > findStoredDirectRecordByUrl(
 	if ( !stored.value_or( false ) ) co_return std::nullopt;
 
 	co_return record_id;
+}
+
+runtime::Task< std::vector< SHA256 > > storedRecordHashesForUrl( DBContext& db, std::string url )
+{
+	DBBindings bindings {};
+	bindings.bind( std::move( url ) );
+	const auto rows {
+		co_await db
+			.query(
+				"SELECT DISTINCT r.sha256 FROM urls u JOIN url_mappings m USING (url_id) "
+				"JOIN records r USING (record_id) JOIN file_info fi USING (record_id) "
+				"WHERE u.url = $1 AND fi.cluster_id IS NOT NULL "
+				"AND fi.cluster_store_time IS NOT NULL AND fi.cluster_delete_time IS NULL "
+				"ORDER BY r.sha256",
+				std::move( bindings ) )
+			.rows< std::span< const std::byte > >()
+	};
+	std::vector< SHA256 > hashes {};
+	hashes.reserve( rows.size() );
+	for ( const auto& [ bytes ] : rows ) hashes.emplace_back( SHA256::fromBuffer( bytes ) );
+
+	co_return hashes;
 }
 
 runtime::Task< std::optional< RecordID > > findMissingRecordForHash( DBContext& db, const SHA256& hash )

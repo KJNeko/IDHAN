@@ -1,16 +1,14 @@
 #include "tags.hpp"
 
-#include <folly/io/IOBuf.h>
-
 #include <algorithm>
 #include <format>
 #include <simdjson.h>
 
-#include "apiAuth.hpp"
 #include "db/tagDomainCounts.hpp"
-#include "idhan/db/DBContext.hpp"
-#include "jsonBody.hpp"
 #include "idValidation.hpp"
+#include "idhan/db/DBContext.hpp"
+#include "idhan/http/routing/ReflectedRoutes.hpp"
+#include "jsonBody.hpp"
 #include "logging/format_ns.hpp"
 #include "logging/log.hpp"
 #include "tagHelpers.hpp"
@@ -20,10 +18,9 @@ namespace idhan::httpapi
 
 static http::HTTPTask< std::expected< std::vector< TagDomainID >, http::Response > > tagCountDomains(
 	db::DBContext& db,
-	const http::RequestParameters& parameters,
-	bool accept_singular = false );
+	std::vector< TagDomainID > domains );
 
-static http::HTTPTask< http::Response > getTagInfo(
+static http::HTTPTask< http::JsonResult< TagInfoResponse > > getTagInfo(
 	db::DBContext& db,
 	const TagID tag_id,
 	std::vector< TagDomainID > domains )
@@ -62,82 +59,40 @@ static http::HTTPTask< http::Response > getTagInfo(
 		display_count = std::max( display_count, count.display_count );
 	}
 
-	simdjson::builder::string_builder builder;
-	builder.start_object();
-	builder.append_key_value( "tag_id", tag_id );
-	builder.append_comma();
-	builder.escape_and_append_with_quotes( "namespace" );
-	builder.append_colon();
-	builder.start_object();
-	builder.append_key_value( "id", namespace_id );
-	builder.append_comma();
-	builder.append_key_value( "text", namespace_text );
-	builder.end_object();
-	builder.append_comma();
-	builder.escape_and_append_with_quotes( "subtag" );
-	builder.append_colon();
-	builder.start_object();
-	builder.append_key_value( "text", subtag_text );
-	builder.end_object();
-	builder.append_comma();
-	builder.append_key_value( "storage_count", storage_count );
-	builder.append_comma();
-	builder.append_key_value( "display_count", display_count );
-	builder.append_comma();
-	builder.escape_and_append_with_quotes( "domain_counts" );
-	builder.append_colon();
-	builder.start_array();
-	bool first { true };
+	TagInfoResponse response {
+		tag_id, { namespace_id, namespace_text }, { subtag_text }, storage_count, display_count, {}
+	};
+	response.domain_counts.reserve( counts.size() );
 	for ( const auto& count : counts )
-	{
-		if ( !first ) builder.append_comma();
-		first = false;
-		builder.start_object();
-		builder.append_key_value( "tag_domain_id", count.domain_id );
-		builder.append_comma();
-		builder.append_key_value( "storage_count", count.storage_count );
-		builder.append_comma();
-		builder.append_key_value( "display_count", count.display_count );
-		builder.end_object();
-	}
-	builder.end_array();
-	builder.end_object();
+		response.domain_counts.push_back( { count.domain_id, count.storage_count, count.display_count } );
 
-	auto json { builder.view() };
-	if ( json.error() ) throw std::runtime_error( simdjson::error_message( json.error() ) );
-
-	co_return http::Response::json( 200, folly::IOBuf::copyBuffer( *json ) );
+	co_return http::JsonResponse< TagInfoResponse > { std::move( response ) };
 }
 
-static http::HTTPTask< http::Response > getTagInfoFromPath( db::DBContext& db, http::RequestContext context )
+http::HTTPTask< http::JsonResult< TagInfoResponse > > getTagInfoFromPath(
+	db::DBContext& db,
+	http::RequestContext context,
+	http::Query< GetTagInfoFromPathQuery > query )
 {
-	const auto tag_id_e { context.parameters().scalar< TagID >( "tag_id" ) };
-	if ( !tag_id_e ) co_return http::Response::error( 400, tag_id_e.error().message );
+	const auto tag_id { *context.parameters().scalar< TagID >( "tag_id" ) };
 
-	auto domains { co_await tagCountDomains( db, context.parameters() ) };
+	auto domains { co_await tagCountDomains( db, std::move( query.value.tag_domains ) ) };
 	if ( !domains ) co_return std::move( domains.error() );
 
-	co_return co_await getTagInfo( db, *tag_id_e, std::move( *domains ) );
+	co_return co_await getTagInfo( db, tag_id, std::move( *domains ) );
 }
 
-static http::HTTPTask< http::Response > getTagInfoFromQuery( db::DBContext& db, http::RequestContext context )
+http::HTTPTask< http::JsonResult< TagInfoResponse > > getTagInfoFromQuery(
+	db::DBContext& db,
+	http::Query< GetTagInfoFromQueryQuery > query )
 {
-	auto tag_id_e { context.parameters().optional< TagID >( "tag_id" ) };
-	if ( !tag_id_e ) co_return http::Response::error( 400, tag_id_e.error().message );
+	const auto tag_id { query.value.tag_id ? query.value.tag_id : query.value.tag_ids };
+	if ( !tag_id ) co_return http::Response::error( 400, "tag_id or tag_ids query parameter is required" );
 
-	if ( !*tag_id_e )
-	{
-		auto tag_ids_e { context.parameters().optional< TagID >( "tag_ids" ) };
-		if ( !tag_ids_e ) co_return http::Response::error( 400, tag_ids_e.error().message );
-		tag_id_e = *tag_ids_e;
-	}
-
-	if ( !*tag_id_e ) co_return http::Response::error( 400, "tag_id or tag_ids query parameter is required" );
-
-	auto domains { co_await tagCountDomains( db, context.parameters() ) };
+	auto domains { co_await tagCountDomains( db, std::move( query.value.tag_domains ) ) };
 	if ( !domains ) co_return std::move( domains.error() );
 
-	co_return co_await getTagInfo( db, **tag_id_e, std::move( *domains ) );
+	co_return co_await getTagInfo( db, *tag_id, std::move( *domains ) );
 }
 
 static http::HTTPTask< std::vector< TagID > > relationshipQuery(
@@ -159,25 +114,9 @@ static http::HTTPTask< std::vector< TagID > > relationshipQuery(
 	co_return ids;
 }
 
-static void appendTagIdArray(
-	simdjson::builder::string_builder& builder,
-	const std::string_view key,
-	const std::vector< TagID >& ids )
-{
-	builder.escape_and_append_with_quotes( key );
-	builder.append_colon();
-	builder.start_array();
-	bool first { true };
-	for ( const auto id : ids )
-	{
-		if ( !first ) builder.append_comma();
-		builder.append( id );
-		first = false;
-	}
-	builder.end_array();
-}
-
-static http::HTTPTask< http::Response > getTagRelationships( db::DBContext& db, http::RequestContext context )
+http::HTTPTask< http::JsonResult< TagRelationshipsResponse > > getTagRelationships(
+	db::DBContext& db,
+	http::RequestContext context )
 {
 	const auto domain_id_e { context.parameters().scalar< TagDomainID >( "domain_id" ) };
 	if ( !domain_id_e ) co_return http::Response::error( 400, domain_id_e.error().message );
@@ -187,47 +126,35 @@ static http::HTTPTask< http::Response > getTagRelationships( db::DBContext& db, 
 	const auto tag_id { *tag_id_e };
 	const auto tag_domain_id { *domain_id_e };
 
-	const auto parents { co_await relationshipQuery(
+	auto parents { co_await relationshipQuery(
 		db, "SELECT parent_id FROM tag_parents WHERE child_id = $1 AND tag_domain_id = $2", tag_id, tag_domain_id ) };
-	const auto children { co_await relationshipQuery(
+	auto children { co_await relationshipQuery(
 		db, "SELECT child_id FROM tag_parents WHERE parent_id = $1 AND tag_domain_id = $2", tag_id, tag_domain_id ) };
-	const auto older_siblings { co_await relationshipQuery(
+	auto older_siblings { co_await relationshipQuery(
 		db, "SELECT older_id FROM tag_siblings WHERE younger_id = $1 AND tag_domain_id = $2", tag_id, tag_domain_id ) };
-	const auto younger_siblings { co_await relationshipQuery(
+	auto younger_siblings { co_await relationshipQuery(
 		db, "SELECT younger_id FROM tag_siblings WHERE older_id = $1 AND tag_domain_id = $2", tag_id, tag_domain_id ) };
-	const auto aliases { co_await relationshipQuery(
+	auto aliases { co_await relationshipQuery(
 		db, "SELECT alias_id FROM tag_aliases WHERE aliased_id = $1 AND tag_domain_id = $2", tag_id, tag_domain_id ) };
-	const auto aliased { co_await relationshipQuery(
+	auto aliased { co_await relationshipQuery(
 		db, "SELECT aliased_id FROM tag_aliases WHERE alias_id = $1 AND tag_domain_id = $2", tag_id, tag_domain_id ) };
 
-	simdjson::builder::string_builder builder;
-	builder.start_object();
-	appendTagIdArray( builder, "parents", parents );
-	builder.append_comma();
-	appendTagIdArray( builder, "children", children );
-	builder.append_comma();
-	appendTagIdArray( builder, "older_siblings", older_siblings );
-	builder.append_comma();
-	appendTagIdArray( builder, "younger_siblings", younger_siblings );
-	builder.append_comma();
-	appendTagIdArray( builder, "aliases", aliases );
-	builder.append_comma();
-	appendTagIdArray( builder, "aliased", aliased );
-	builder.end_object();
-
-	auto json { builder.view() };
-	if ( json.error() ) throw std::runtime_error( simdjson::error_message( json.error() ) );
-
-	co_return http::Response::json( 200, folly::IOBuf::copyBuffer( *json ) );
+	co_return http::JsonResponse< TagRelationshipsResponse > {
+		{ std::move( parents ),
+		  std::move( children ),
+		  std::move( older_siblings ),
+		  std::move( younger_siblings ),
+		  std::move( aliases ),
+		  std::move( aliased ) }
+	};
 }
 
-static http::HTTPTask< http::Response > search( db::DBContext& db, http::RequestContext context )
+http::HTTPTask< http::JsonResult< TagSearchResponse > > searchNativeTags(
+	db::DBContext& db,
+	http::Query< TagSearchParameters > query )
 {
-	const auto tag_text_e { context.parameters().scalar< std::string >( "tag" ) };
-	if ( !tag_text_e ) co_return http::Response::error( 400, tag_text_e.error().message );
-
 	db::DBBindings bindings {};
-	bindings.bind( *tag_text_e );
+	bindings.bind( query.value.tag );
 
 	const auto rows {
 		co_await db
@@ -235,22 +162,9 @@ static http::HTTPTask< http::Response > search( db::DBContext& db, http::Request
 			.rows< TagID >()
 	};
 
-	simdjson::builder::string_builder builder;
-	builder.start_object();
-	if ( !rows.empty() )
-	{
-		builder.append_key_value( "tag_id", std::get< 0 >( rows.row( 0 ) ) );
-		builder.append_comma();
-		builder.append_key_value( "found", true );
-	}
-	else
-		builder.append_key_value( "found", false );
-	builder.end_object();
+	if ( !rows.empty() ) co_return http::JsonResponse< TagSearchResponse > { { std::get< 0 >( rows.row( 0 ) ), true } };
 
-	auto json { builder.view() };
-	if ( json.error() ) throw std::runtime_error( simdjson::error_message( json.error() ) );
-
-	co_return http::Response::json( 200, folly::IOBuf::copyBuffer( *json ) );
+	co_return http::JsonResponse< TagSearchResponse > {};
 }
 
 http::HTTPTask< std::vector< SimilarTag > > getSimilarTags(
@@ -297,7 +211,7 @@ http::HTTPTask< std::vector< SimilarTag > > getSimilarTags(
 	bindings.bind( include_unused );
 
 	const auto rows { co_await db.query( std::string { query }, std::move( bindings ) )
-		                  .rows< std::string, TagID, double, std::int64_t >() };
+	                      .rows< std::string, TagID, double, std::int64_t >() };
 
 	std::vector< SimilarTag > out {};
 	out.reserve( rows.size() );
@@ -309,29 +223,13 @@ http::HTTPTask< std::vector< SimilarTag > > getSimilarTags(
 
 static http::HTTPTask< std::expected< std::vector< TagDomainID >, http::Response > > tagCountDomains(
 	db::DBContext& db,
-	const http::RequestParameters& parameters,
-	const bool accept_singular )
+	std::vector< TagDomainID > domains )
 {
-	auto domains { parameters.vector< TagDomainID >( "tag_domains" ) };
-	if ( !domains ) co_return std::unexpected( http::Response::error( 400, domains.error().message ) );
+	std::ranges::sort( domains );
+	const auto duplicates { std::ranges::unique( domains ) };
+	domains.erase( duplicates.begin(), duplicates.end() );
 
-	if ( accept_singular )
-	{
-		if ( domains->empty() )
-		{
-			auto legacy_domain { parameters.optional< TagDomainID >( "tag_domain" ) };
-			if ( !legacy_domain )
-				co_return std::unexpected( http::Response::error( 400, legacy_domain.error().message ) );
-
-			if ( *legacy_domain ) domains->push_back( **legacy_domain );
-		}
-	}
-
-	std::ranges::sort( *domains );
-	const auto duplicates { std::ranges::unique( *domains ) };
-	domains->erase( duplicates.begin(), duplicates.end() );
-
-	for ( const auto domain_id : *domains )
+	for ( const auto domain_id : domains )
 	{
 		if ( domain_id <= 0 )
 			co_return std::unexpected( http::Response::error( 400, "tag_domains must contain positive IDs" ) );
@@ -342,63 +240,33 @@ static http::HTTPTask< std::expected< std::vector< TagDomainID >, http::Response
 				http::Response::error( 404, std::format( "Tag domain {} does not exist", domain_id ) ) );
 	}
 
-	co_return std::move( *domains );
+	co_return domains;
 }
 
-static http::HTTPTask< http::Response > autocomplete( db::DBContext& db, http::RequestContext context )
+http::HTTPTask< http::JsonResult< std::vector< SimilarTag > > > autocomplete(
+	db::DBContext& db,
+	http::Query< AutocompleteQuery > query )
 {
-	const auto tag_text_e { context.parameters().scalar< std::string >( "tag" ) };
-	if ( !tag_text_e ) co_return http::Response::error( 400, tag_text_e.error().message );
+	auto selected_domains { std::move( query.value.tag_domains ) };
+	if ( selected_domains.empty() && query.value.tag_domain ) selected_domains.push_back( *query.value.tag_domain );
 
-	const auto display_type_e { context.parameters().optional< std::string >( "tag_display_type" ) };
-	if ( !display_type_e ) co_return http::Response::error( 400, display_type_e.error().message );
-
-	const auto display_type { display_type_e->value_or( "display" ) };
-	if ( display_type != "storage" && display_type != "display" )
-		co_return http::Response::error( 400, "Invalid tag display type" );
-
-	const auto limit_e { context.parameters().optional< std::size_t >( "limit" ) };
-	if ( !limit_e ) co_return http::Response::error( 400, limit_e.error().message );
-
-	const auto include_unused_e { context.parameters().optional< bool >( "include_unused" ) };
-	if ( !include_unused_e ) co_return http::Response::error( 400, include_unused_e.error().message );
-
-	const bool include_unused { include_unused_e->value_or( true ) };
-
-	auto domains { co_await tagCountDomains( db, context.parameters(), true ) };
+	auto domains { co_await tagCountDomains( db, std::move( selected_domains ) ) };
 	if ( !domains ) co_return std::move( domains.error() );
 
-	const auto display { display_type == "storage" ? HydrusDisplayType::STORED : HydrusDisplayType::DISPLAY };
-	const auto results { co_await getSimilarTags(
-		db, *tag_text_e, limit_e->value_or( 10 ), include_unused, display, std::move( *domains ) ) };
+	const auto display {
+		query.value.tag_display_type == TagCountDisplayType::storage ?
+			HydrusDisplayType::STORED :
+			HydrusDisplayType::DISPLAY
+	};
+	auto results { co_await getSimilarTags(
+		db, query.value.tag, query.value.limit, query.value.include_unused, display, std::move( *domains ) ) };
 
-	simdjson::builder::string_builder builder;
-	builder.start_array();
-	bool first { true };
-	for ( const auto& tag : results )
-	{
-		if ( !first ) builder.append_comma();
-		first = false;
-
-		builder.start_object();
-		builder.append_key_value( "tag_text", tag.tag_text );
-		builder.append_comma();
-		builder.append_key_value( "similarity", tag.similarity );
-		builder.append_comma();
-		builder.append_key_value( "tag_id", tag.tag_id );
-		builder.append_comma();
-		builder.append_key_value( "count", tag.count );
-		builder.end_object();
-	}
-	builder.end_array();
-
-	auto json { builder.view() };
-	if ( json.error() ) throw std::runtime_error( simdjson::error_message( json.error() ) );
-
-	co_return http::Response::json( 200, folly::IOBuf::copyBuffer( *json ) );
+	co_return http::JsonResponse< std::vector< SimilarTag > > { std::move( results ) };
 }
 
-static http::HTTPTask< http::Response > createTagsFromRequest( db::DBContext& db, http::RequestContext context )
+http::HTTPTask< http::JsonResult< std::vector< CreatedTagResponse > > > createTagsFromRequest(
+	db::DBContext& db,
+	http::RequestContext context )
 {
 	auto body_e { readValidatedJsonBody( context ) };
 	if ( !body_e ) co_return std::move( body_e.error() );
@@ -428,38 +296,19 @@ static http::HTTPTask< http::Response > createTagsFromRequest( db::DBContext& db
 		tag_pairs.emplace_back( tag_namespace, subtag );
 	}
 
-	auto tag_ids { co_await createTagsFromPairs( std::move( tag_pairs ), db ) };
-	if ( !tag_ids ) co_return std::move( tag_ids.error() );
+	auto tag_ids_e { co_await createTagsFromPairs( std::move( tag_pairs ), db ) };
+	if ( !tag_ids_e.has_value() ) co_return std::move( tag_ids_e.error() );
 
-	simdjson::builder::string_builder builder;
-	builder.start_array();
-	bool first { true };
-	for ( const auto tag_id : *tag_ids )
-	{
-		if ( !first ) builder.append_comma();
-		first = false;
-		builder.start_object();
-		builder.append_key_value( "tag_id", tag_id );
-		builder.end_object();
-	}
-	builder.end_array();
+	// value() requires a copyable error type; Response is move-only.
+	const auto& tag_ids { *tag_ids_e };
+	std::vector< CreatedTagResponse > created;
+	created.reserve( tag_ids.size() );
+	for ( const auto tag_id : tag_ids ) created.push_back( { tag_id } );
 
-	auto json { builder.view() };
-	if ( json.error() ) throw std::runtime_error( simdjson::error_message( json.error() ) );
-
-	co_return http::Response::json( 200, folly::IOBuf::copyBuffer( *json ) );
+	co_return http::JsonResponse< std::vector< CreatedTagResponse > > { std::move( created ) };
 }
 
-static void appendDomainJson( simdjson::builder::string_builder& builder, const TagDomainInfo& domain )
-{
-	builder.start_object();
-	builder.append_key_value( "tag_domain_id", domain.id );
-	builder.append_comma();
-	builder.append_key_value( "domain_name", domain.name );
-	builder.end_object();
-}
-
-static http::HTTPTask< http::Response > createTagDomain( db::DBContext& db, http::RequestContext context )
+http::HTTPTask< http::JsonResult< TagDomainInfo > > createTagDomain( db::DBContext& db, http::RequestContext context )
 {
 	auto body_e { readValidatedJsonBody( context ) };
 	if ( !body_e ) co_return std::move( body_e.error() );
@@ -479,16 +328,12 @@ static http::HTTPTask< http::Response > createTagDomain( db::DBContext& db, http
 		co_return http::Response::error( 400, e.what() );
 	}
 
-	if ( const auto existing { co_await findTagDomain( name, db ) }; existing )
+	const auto existing { co_await findTagDomain( name, db ) };
+	if ( existing.has_value() )
 	{
 		log::debug( "Found existing tag domain with name '{}'", name );
 
-		simdjson::builder::string_builder builder;
-		appendDomainJson( builder, *existing );
-		auto json { builder.view() };
-		if ( json.error() ) throw std::runtime_error( simdjson::error_message( json.error() ) );
-
-		co_return http::Response::json( 409, folly::IOBuf::copyBuffer( *json ) );
+		co_return http::serializeResponse( http::JsonResponse< TagDomainInfo, 409 > { existing.value() } );
 	}
 
 	db::DBBindings bindings {};
@@ -510,38 +355,19 @@ static http::HTTPTask< http::Response > createTagDomain( db::DBContext& db, http
 	if ( !created )
 		co_return http::Response::error( 500, std::format( "Error creating new domain with name {}", name ) );
 
-	simdjson::builder::string_builder builder;
-	appendDomainJson( builder, *created );
-	auto json { builder.view() };
-	if ( json.error() ) throw std::runtime_error( simdjson::error_message( json.error() ) );
-
-	co_return http::Response::json( 200, folly::IOBuf::copyBuffer( *json ) );
+	co_return http::JsonResponse< TagDomainInfo > { created.value() };
 }
 
-static http::HTTPTask< http::Response > getTagDomains(
+http::HTTPTask< http::JsonResult< std::vector< TagDomainInfo > > > getTagDomains(
 	db::DBContext& db,
 	[[maybe_unused]] http::RequestContext context )
 {
-	const auto domains { co_await listTagDomains( db ) };
+	auto domains { co_await listTagDomains( db ) };
 
-	simdjson::builder::string_builder builder;
-	builder.start_array();
-	bool first { true };
-	for ( const auto& domain : domains )
-	{
-		if ( !first ) builder.append_comma();
-		first = false;
-		appendDomainJson( builder, domain );
-	}
-	builder.end_array();
-
-	auto json { builder.view() };
-	if ( json.error() ) throw std::runtime_error( simdjson::error_message( json.error() ) );
-
-	co_return http::Response::json( 200, folly::IOBuf::copyBuffer( *json ) );
+	co_return http::JsonResponse< std::vector< TagDomainInfo > > { std::move( domains ) };
 }
 
-static http::HTTPTask< http::Response > getTagDomainInfo( db::DBContext& db, http::RequestContext context )
+http::HTTPTask< http::JsonResult< TagDomainInfo > > getTagDomainInfo( db::DBContext& db, http::RequestContext context )
 {
 	const auto tag_domain_id_e { context.parameters().scalar< TagDomainID >( "tag_domain_id" ) };
 	if ( !tag_domain_id_e ) co_return http::Response::error( 400, tag_domain_id_e.error().message );
@@ -550,15 +376,12 @@ static http::HTTPTask< http::Response > getTagDomainInfo( db::DBContext& db, htt
 	if ( !domain )
 		co_return http::Response::error( 404, std::format( "Domain id {} does not exist", *tag_domain_id_e ) );
 
-	simdjson::builder::string_builder builder;
-	appendDomainJson( builder, *domain );
-	auto json { builder.view() };
-	if ( json.error() ) throw std::runtime_error( simdjson::error_message( json.error() ) );
-
-	co_return http::Response::json( 200, folly::IOBuf::copyBuffer( *json ) );
+	co_return http::JsonResponse< TagDomainInfo > { domain.value() };
 }
 
-static http::HTTPTask< http::Response > deleteTagDomain( db::DBContext& db, http::RequestContext context )
+http::HTTPTask< http::JsonResult< DeletedTagDomainResponse > > deleteTagDomain(
+	db::DBContext& db,
+	http::RequestContext context )
 {
 	const auto tag_domain_id_e { context.parameters().scalar< TagDomainID >( "tag_domain_id" ) };
 	if ( !tag_domain_id_e ) co_return http::Response::error( 400, tag_domain_id_e.error().message );
@@ -575,29 +398,18 @@ static http::HTTPTask< http::Response > deleteTagDomain( db::DBContext& db, http
 	if ( rows.empty() )
 		co_return http::Response::error( 404, std::format( "Failed to find tag domain by id {}", *tag_domain_id_e ) );
 
-	simdjson::builder::string_builder builder;
-	builder.start_object();
-	builder.append_key_value( "tag_domain_id", std::get< 0 >( rows.row( 0 ) ) );
-	builder.end_object();
-
-	auto json { builder.view() };
-	if ( json.error() ) throw std::runtime_error( simdjson::error_message( json.error() ) );
-
-	co_return http::Response::json( 200, folly::IOBuf::copyBuffer( *json ) );
+	co_return http::JsonResponse< DeletedTagDomainResponse > { { std::get< 0 >( rows.row( 0 ) ) } };
 }
 
-static http::HTTPTask< http::Response > createRelationshipPairs(
+static http::HTTPTask< http::JsonResult< TagUpdateResponse > > createRelationshipPairs(
 	db::DBContext& db,
 	http::RequestContext context,
+	const TagDomainID tag_domain_id,
 	const std::string_view a_key,
 	const std::string_view b_key,
 	std::string insert_sql,
 	const std::string_view action )
 {
-	auto tag_domain_id_e { tagDomainIdParameter( context.parameters() ) };
-	if ( !tag_domain_id_e ) co_return std::move( tag_domain_id_e.error() );
-	const auto tag_domain_id { *tag_domain_id_e };
-
 	auto body_e { readValidatedJsonBody( context ) };
 	if ( !body_e ) co_return std::move( body_e.error() );
 
@@ -667,20 +479,17 @@ static http::HTTPTask< http::Response > createRelationshipPairs(
 		co_return http::Response::error( 500, std::format( "Error adding {}s: {}", action, e.what() ) );
 	}
 
-	co_return http::Response::json( 200, folly::IOBuf::copyBuffer( std::string_view { "{}" } ) );
+	co_return http::JsonResponse< TagUpdateResponse > {};
 }
 
-static http::HTTPTask< http::Response > removeRelationshipPairs(
+static http::HTTPTask< http::JsonResult< TagUpdateResponse > > removeRelationshipPairs(
 	db::DBContext& db,
 	http::RequestContext context,
+	const TagDomainID tag_domain_id,
 	const std::string_view a_key,
 	const std::string_view b_key,
 	std::string delete_sql )
 {
-	auto tag_domain_id_e { tagDomainIdParameter( context.parameters() ) };
-	if ( !tag_domain_id_e ) co_return std::move( tag_domain_id_e.error() );
-	const auto tag_domain_id { *tag_domain_id_e };
-
 	auto body_e { readValidatedJsonBody( context ) };
 	if ( !body_e ) co_return std::move( body_e.error() );
 
@@ -733,14 +542,18 @@ static http::HTTPTask< http::Response > removeRelationshipPairs(
 		co_return http::Response::error( 500, std::format( "Error removing relationship: {}", e.what() ) );
 	}
 
-	co_return http::Response::json( 200, folly::IOBuf::copyBuffer( std::string_view { "{}" } ) );
+	co_return http::JsonResponse< TagUpdateResponse > {};
 }
 
-static http::HTTPTask< http::Response > createTagParents( db::DBContext& db, http::RequestContext context )
+http::HTTPTask< http::JsonResult< TagUpdateResponse > > createTagParents(
+	db::DBContext& db,
+	http::RequestContext context,
+	http::Query< CreateTagParentsQuery > query )
 {
 	co_return co_await createRelationshipPairs(
 		db,
 		std::move( context ),
+		query.value.tag_domain_id,
 		"parent_id",
 		"child_id",
 		"INSERT INTO tag_parents (tag_domain_id, parent_id, child_id) VALUES ($1, $2, $3) "
@@ -748,11 +561,15 @@ static http::HTTPTask< http::Response > createTagParents( db::DBContext& db, htt
 		"parent" );
 }
 
-static http::HTTPTask< http::Response > createTagAliases( db::DBContext& db, http::RequestContext context )
+http::HTTPTask< http::JsonResult< TagUpdateResponse > > createTagAliases(
+	db::DBContext& db,
+	http::RequestContext context,
+	http::Query< CreateTagAliasesQuery > query )
 {
 	co_return co_await createRelationshipPairs(
 		db,
 		std::move( context ),
+		query.value.tag_domain_id,
 		"aliased_id",
 		"alias_id",
 		"INSERT INTO tag_aliases (tag_domain_id, aliased_id, alias_id) VALUES ($1, $2, $3) "
@@ -760,88 +577,46 @@ static http::HTTPTask< http::Response > createTagAliases( db::DBContext& db, htt
 		"alias" );
 }
 
-static http::HTTPTask< http::Response > createTagSiblings(
+http::HTTPTask< http::Response > createTagSiblings(
 	[[maybe_unused]] db::DBContext& db,
 	[[maybe_unused]] http::RequestContext context )
 {
 	co_return http::Response::error( 501, "Tag siblings are not currently resolved; this endpoint is disabled" );
 }
 
-static http::HTTPTask< http::Response > removeTagParents( db::DBContext& db, http::RequestContext context )
+http::HTTPTask< http::JsonResult< TagUpdateResponse > > removeTagParents(
+	db::DBContext& db,
+	http::RequestContext context,
+	http::Query< RemoveTagParentsQuery > query )
 {
 	co_return co_await removeRelationshipPairs(
 		db,
 		std::move( context ),
+		query.value.tag_domain_id,
 		"parent_id",
 		"child_id",
 		"DELETE FROM tag_parents WHERE tag_domain_id = $1 AND parent_id = $2 AND child_id = $3" );
 }
 
-static http::HTTPTask< http::Response > removeTagSiblings(
+http::HTTPTask< http::Response > removeTagSiblings(
 	[[maybe_unused]] db::DBContext& db,
 	[[maybe_unused]] http::RequestContext context )
 {
 	co_return http::Response::error( 501, "Tag siblings are not currently resolved; this endpoint is disabled" );
 }
 
-static http::HTTPTask< http::Response > removeTagAliases( db::DBContext& db, http::RequestContext context )
+http::HTTPTask< http::JsonResult< TagUpdateResponse > > removeTagAliases(
+	db::DBContext& db,
+	http::RequestContext context,
+	http::Query< RemoveTagAliasesQuery > query )
 {
 	co_return co_await removeRelationshipPairs(
 		db,
 		std::move( context ),
+		query.value.tag_domain_id,
 		"aliased_id",
 		"alias_id",
 		"DELETE FROM tag_aliases WHERE tag_domain_id = $1 AND aliased_id = $2 AND alias_id = $3" );
-}
-
-std::vector< http::RouteDefinition > tagRoutes( db::DBContext& db )
-{
-	std::vector< http::RouteDefinition > routes {};
-
-	const auto add =
-		[ &routes, &db ](
-			const proxygen::HTTPMethod method,
-			std::string path,
-			std::vector< http::PathParameter > path_parameters,
-			http::HTTPTask< http::Response > ( *handler )( db::DBContext&, http::RequestContext ) )
-	{
-		auto bound = [ &db, handler ]( http::RequestContext context ) -> http::HTTPTask< http::Response >
-		{ co_return co_await handler( db, std::move( context ) ); };
-
-		routes.push_back(
-			http::RouteDefinition {
-				http::RouteMetadata {
-					method, std::move( path ), std::move( path_parameters ), { apiAuthValidation( db ) } },
-				std::move( bound ) } );
-	};
-
-	add( proxygen::HTTPMethod::GET, "/tags/{tag_id}/info", { tagIdPathParameter( "tag_id" ) }, getTagInfoFromPath );
-	add( proxygen::HTTPMethod::GET, "/tags/info", {}, getTagInfoFromQuery );
-	add( proxygen::HTTPMethod::GET,
-	     "/tags/{domain_id}/{tag_id}/relationships",
-	     { tagDomainIdPathParameter( "domain_id" ), tagIdPathParameter( "tag_id" ) },
-	     getTagRelationships );
-	add( proxygen::HTTPMethod::GET, "/tags/search", {}, search );
-	add( proxygen::HTTPMethod::GET, "/tags/autocomplete", {}, autocomplete );
-	add( proxygen::HTTPMethod::POST, "/tags/create", {}, createTagsFromRequest );
-	add( proxygen::HTTPMethod::POST, "/tags/domain/create", {}, createTagDomain );
-	add( proxygen::HTTPMethod::GET, "/tags/domain/list", {}, getTagDomains );
-	add( proxygen::HTTPMethod::GET,
-	     "/tags/domain/{tag_domain_id}/info",
-	     { tagDomainIdPathParameter( "tag_domain_id" ) },
-	     getTagDomainInfo );
-	add( proxygen::HTTPMethod::DELETE,
-	     "/tags/domain/{tag_domain_id}/delete",
-	     { tagDomainIdPathParameter( "tag_domain_id" ) },
-	     deleteTagDomain );
-	add( proxygen::HTTPMethod::POST, "/tags/parents/create", {}, createTagParents );
-	add( proxygen::HTTPMethod::POST, "/tags/alias/create", {}, createTagAliases );
-	add( proxygen::HTTPMethod::POST, "/tags/siblings/create", {}, createTagSiblings );
-	add( proxygen::HTTPMethod::POST, "/tags/parents/remove", {}, removeTagParents );
-	add( proxygen::HTTPMethod::POST, "/tags/siblings/remove", {}, removeTagSiblings );
-	add( proxygen::HTTPMethod::POST, "/tags/alias/remove", {}, removeTagAliases );
-
-	return routes;
 }
 
 } // namespace idhan::httpapi

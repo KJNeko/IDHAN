@@ -1,4 +1,0 @@
-type: string
-description: The half of a tag before the colon.
-examples:
-  - character

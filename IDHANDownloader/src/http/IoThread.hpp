@@ -50,12 +50,14 @@ class IoThread
 
   private:
 
+	std::size_t m_index;
 	folly::EventBase m_event_base {};
 	std::unordered_map< IoSource*, std::unique_ptr< SourceState > > m_sources {};
 	std::vector< std::unique_ptr< SocketHandler > > m_retired_sockets {};
 	bool m_cleanup_scheduled { false };
 	std::atomic_size_t m_load {};
 	std::atomic< std::thread::id > m_thread_id {};
+	std::atomic_bool m_stopping {};
 	std::jthread m_thread {};
 
 	void run();
@@ -67,7 +69,7 @@ class IoThread
 
   public:
 
-	IoThread();
+	explicit IoThread( std::size_t index );
 	IoThread( const IoThread& ) = delete;
 	IoThread& operator=( const IoThread& ) = delete;
 	~IoThread();
@@ -83,6 +85,7 @@ class IoThread
 	[[nodiscard]] std::size_t load() const { return m_load.load( std::memory_order_relaxed ); }
 
 	void stop();
+	void join();
 };
 
 } // namespace idhan::downloader

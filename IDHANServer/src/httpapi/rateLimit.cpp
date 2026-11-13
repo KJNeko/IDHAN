@@ -1,14 +1,15 @@
 #include "rateLimit.hpp"
 
-#include <folly/io/IOBuf.h>
-
 #include <chrono>
-#include <simdjson.h>
+#include <limits>
+
+#include "db/bandwidth.hpp"
+#include "downloader/BandwidthTree.hpp"
 
 #include "apiAuth.hpp"
 #include "downloader/DownloadSessionManager.hpp"
-#include "downloader/RateLimitEventHub.hpp"
 #include "idhan/db/DBContext.hpp"
+#include "idhan/http/routing/ReflectedRoutes.hpp"
 
 namespace idhan::httpapi
 {
@@ -20,88 +21,58 @@ namespace idhan::httpapi
 	return std::chrono::ceil< std::chrono::milliseconds >( value ).count();
 }
 
-static http::HTTPTask< http::Response > list( [[maybe_unused]] http::RequestContext context )
+http::HTTPTask< http::JsonResult< std::vector< RateLimitResponse > > > list(
+	[[maybe_unused]] http::RequestContext context )
 {
-	simdjson::builder::string_builder builder;
-	builder.start_array();
-
-	bool first { true };
+	std::vector< RateLimitResponse > response;
 	for ( const auto& lane : downloader::downloadSessionManager().laneSnapshots() )
 	{
-		if ( !first ) builder.append_comma();
-		first = false;
-
-		builder.start_object();
-		builder.append_key_value( "lane", lane.key );
-		builder.append_comma();
-		builder.append_key_value( "group", lane.group.value_or( "" ) );
-		builder.append_comma();
-		builder.append_key_value( "throttled", lane.throttled );
-		builder.append_comma();
-		builder.append_key_value( "requests", lane.rate_requests );
-		builder.append_comma();
-		builder.append_key_value( "seconds", lane.rate_seconds );
-		builder.append_comma();
-		builder.append_key_value( "effective_interval_ms", milliseconds( lane.effective_interval ) );
-		builder.append_comma();
-		builder.append_key_value( "remaining_ms", milliseconds( lane.remaining ) );
-		builder.append_comma();
-		builder.append_key_value( "consecutive_failures", lane.consecutive_failures );
-		builder.append_comma();
-		builder.append_key_value( "backed_off", lane.backed_off );
-		builder.append_comma();
-		builder.append_key_value( "in_flight", static_cast< std::uint64_t >( lane.in_flight ) );
-		builder.append_comma();
-		builder.append_key_value( "queued", static_cast< std::uint64_t >( lane.queued ) );
-		builder.append_comma();
-		builder.append_key_value( "shards", static_cast< std::uint64_t >( lane.shards ) );
-		builder.append_comma();
-		builder.append_key_value( "download_bytes_per_second", lane.download_bytes_per_second );
-		builder.append_comma();
-		builder.append_key_value( "active", lane.active );
-		builder.end_object();
+		response.push_back(
+			{ lane.key,
+			  lane.group,
+			  lane.rate.requests,
+			  lane.rate.seconds,
+			  milliseconds( lane.remaining ),
+			  lane.backed_off,
+			  lane.in_flight,
+			  lane.concurrency_limit,
+			  lane.dispatched,
+			  lane.dispatch_wait,
+			  lane.queued,
+			  lane.download_bytes_per_second,
+			  lane.active,
+			  lane.rate_limit_hits,
+			  lane.rate_limited,
+			  lane.advertised_limits,
+			  lane.rate.spread,
+			  lane.parser_error_hits,
+			  lane.parser_limited,
+			  lane.disabled } );
 	}
-
-	builder.end_array();
-
-	auto json { builder.view() };
-	if ( json.error() ) throw std::runtime_error( simdjson::error_message( json.error() ) );
-
-	co_return http::Response::json( 200, folly::IOBuf::copyBuffer( *json ) );
+	co_return http::JsonResponse< std::vector< RateLimitResponse > > { std::move( response ) };
 }
 
-static http::HTTPTask< http::Response > reset( http::RequestContext context )
+http::HTTPTask< http::JsonResult< ResetRateLimitResponse > > reset( http::Query< ResetQuery > query )
 {
-	const auto lane_e { context.parameters().optional< std::string >( "lane" ) };
-	if ( !lane_e ) co_return http::Response::error( 400, lane_e.error().message );
-
-	const auto lane { lane_e->value_or( "" ) };
-	const auto result { downloader::downloadSessionManager().resetBackoff( lane ) };
+	const auto lane { query.value.lane.value_or( "" ) };
+	const auto result { co_await downloader::downloadSessionManager().resetBackoff( lane ) };
 
 	if ( !result ) co_return http::Response::error( 400, result.error() );
 
-	simdjson::builder::string_builder builder;
-	builder.start_object();
-	builder.append_key_value( "reset", lane );
-	builder.end_object();
-
-	auto json { builder.view() };
-	if ( json.error() ) throw std::runtime_error( simdjson::error_message( json.error() ) );
-
-	co_return http::Response::json( 200, folly::IOBuf::copyBuffer( *json ) );
+	co_return http::JsonResponse< ResetRateLimitResponse > { { lane } };
 }
 
-http::RouteDefinition rateLimitListRoute( db::DBContext& db )
+http::HTTPTask< http::JsonResult< std::vector< BandwidthResponse > > > listBandwidth(
+	db::DBContext& db,
+	http::Query< BandwidthRequest > query )
 {
-	return http::RouteDefinition {
-		http::RouteMetadata { proxygen::HTTPMethod::GET, "/rate_limits", {}, { apiAuthValidation( db ) } }, list
-	};
-}
+	const auto start { query.value.start.value_or( std::numeric_limits< std::int64_t >::min() ) };
+	const auto end { query.value.end.value_or( std::numeric_limits< std::int64_t >::max() ) };
+	if ( start >= end ) co_return http::Response::error( 400, "start must be before end (Unix seconds)" );
 
-http::RouteDefinition rateLimitResetRoute( db::DBContext& db )
-{
-	return http::RouteDefinition {
-		http::RouteMetadata { proxygen::HTTPMethod::POST, "/rate_limits/reset", {}, { apiAuthValidation( db ) } }, reset
+	const auto totals { co_await db::bandwidthTotals( db, start, end ) };
+	co_return http::JsonResponse< std::vector< BandwidthResponse > > {
+		downloader::bandwidthTree< BandwidthResponse >( totals )
 	};
 }
 

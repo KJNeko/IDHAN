@@ -19,7 +19,7 @@ runtime::Task< std::expected< ClusterAccess, std::string > > openCluster(
 {
 	const auto info { ClusterManager::getInstance().find( id ) };
 	if ( !info ) co_return std::unexpected( "Cluster does not exist" );
-	co_return ClusterAccess::open( info->path, info->uuid, info->read_only );
+	co_return co_await ClusterAccess::open( info->path, info->uuid, info->read_only );
 }
 
 runtime::Task< std::expected< std::optional< ClusterAccess >, std::string > > openRecordCluster(

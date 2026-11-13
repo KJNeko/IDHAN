@@ -8,7 +8,7 @@
 #include <string>
 
 #include "IDHANTypes.hpp"
-#include "idhan/http/TemporaryUpload.hpp"
+#include "idhan/http/request/TemporaryUpload.hpp"
 #include "idhan/runtime/Task.hpp"
 
 namespace idhan::db
@@ -23,7 +23,7 @@ class ModuleRuntime;
 
 namespace idhan::server
 {
-class AsyncFileService;
+class FileService;
 class ClusterService;
 enum class ImportStatus : std::uint8_t
 {
@@ -48,7 +48,7 @@ class ImportService
 
   public:
 
-	ImportService( db::DBContext&, ClusterService&, AsyncFileService&, modules::ModuleRuntime& );
+	ImportService( db::DBContext&, ClusterService&, FileService&, modules::ModuleRuntime& );
 	~ImportService();
 	ImportService( const ImportService& ) = delete;
 	ImportService& operator=( const ImportService& ) = delete;

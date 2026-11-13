@@ -327,7 +327,7 @@ runtime::Task< std::expected< void, MetadataError > > storeRecordMetadata(
 	std::filesystem::path path,
 	const MetadataInfo& metadata )
 {
-	const auto valid_after_parse { cluster.verify() };
+	const auto valid_after_parse { cluster.verifySync() };
 	if ( !valid_after_parse ) co_return std::unexpected( MetadataError( 503, valid_after_parse.error() ) );
 
 	// Parsing runs outside the transaction; all writes for its result share one connection and commit.
@@ -339,7 +339,7 @@ runtime::Task< std::expected< void, MetadataError > > storeRecordMetadata(
 		co_return std::unexpected( std::move( written.error() ) );
 	}
 
-	const auto valid_before_commit { cluster.verify() };
+	const auto valid_before_commit { cluster.verifySync() };
 	if ( !valid_before_commit )
 	{
 		co_await transaction.rollback();

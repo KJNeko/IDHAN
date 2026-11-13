@@ -1,0 +1,146 @@
+[
+  {
+    "name": "AES-CTR",
+    "length": 1,
+    "iv": "ffffffffffffffffffffffffffffffff",
+    "key": "000102030405060708090a0b0c0d0e0f",
+    "input": "00070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9",
+    "output": "3c431127d224a8125ce8e4d45a0bd97ac6c2bc5da1184eae67e16e496aa54537"
+  },
+  {
+    "name": "AES-CTR",
+    "length": 7,
+    "iv": "ffffffffffffffffffffffffffffffff",
+    "key": "000102030405060708090a0b0c0d0e0f",
+    "input": "00070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2",
+    "output": "3c431127d224a8125ce8e4d45a0bd97a3552c1e671c1108834d19aa584785a1f9f29268fec2f0d60190880a1dc5af58b3fd9794fee2f03e895c7d1acdc9bfa"
+  },
+  {
+    "name": "AES-CTR",
+    "length": 64,
+    "iv": "ffffffffffffffffffffffffffffffff",
+    "key": "000102030405060708090a0b0c0d0e0f",
+    "input": "00070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2",
+    "output": "3c431127d224a8125ce8e4d45a0bd97a55a397cd31cd8837076f093acd91a091c61299fdc61426977e257321219c7807a721df27e567aff615a2fa8a1ad17d"
+  },
+  {
+    "name": "AES-CTR",
+    "length": 128,
+    "iv": "ffffffffffffffffffffffffffffffff",
+    "key": "000102030405060708090a0b0c0d0e0f",
+    "input": "00070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2",
+    "output": "3c431127d224a8125ce8e4d45a0bd97ab6d645b20b1cc123c7e037df65030aa093a1fd6069c3be0f51649bce51cf6f431981d936f5e8dc0d6b06ecf5c42a02"
+  },
+  {
+    "name": "AES-CBC",
+    "length": 128,
+    "iv": "ffffffffffffffffffffffffffffffff",
+    "key": "000102030405060708090a0b0c0d0e0f",
+    "input": "00070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2",
+    "output": "50c368e7ed9de0293921990b94711cca3106e35ca3691f87ecaee3632a43e01bb092d08154e6dcd8c3ecb7a22aa28eb73926477051a3e14216f84d4bd8423547"
+  },
+  {
+    "name": "AES-GCM",
+    "length": 128,
+    "iv": "ffffffffffffffffffffffff",
+    "key": "000102030405060708090a0b0c0d0e0f",
+    "input": "00070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2",
+    "output": "f1c923c1975dfbb0edaeda5d63b2fa249b2af4fd7f16f561182abdc832cc72c832699596dfb9d6d1f4528ac6ea7a6b2f3c0dc0ed05c94932b5d0ee2e92209f0e083fb95dadc0c0f7e8370e11a38b7c"
+  },
+  {
+    "name": "AES-CTR",
+    "length": 1,
+    "iv": "ffffffffffffffffffffffffffffffff",
+    "key": "000102030405060708090a0b0c0d0e0f1011121314151617",
+    "input": "00070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9",
+    "output": "01dff78f0588bbc114399176a67feae1532c69bb11c820aa575784cb8c646ec6"
+  },
+  {
+    "name": "AES-CTR",
+    "length": 7,
+    "iv": "ffffffffffffffffffffffffffffffff",
+    "key": "000102030405060708090a0b0c0d0e0f1011121314151617",
+    "input": "00070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2",
+    "output": "01dff78f0588bbc114399176a67feae1fb130c3d36d47d573b307562253e16eee0fb723309a67ad33572ce50ed879d536b956deec2f34186aed9626f932acf"
+  },
+  {
+    "name": "AES-CTR",
+    "length": 64,
+    "iv": "ffffffffffffffffffffffffffffffff",
+    "key": "000102030405060708090a0b0c0d0e0f1011121314151617",
+    "input": "00070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2",
+    "output": "01dff78f0588bbc114399176a67feae1a156ed3bb1c9d4124ff446988669aae8743bbe8ba55793cf1abe2a55749a87748b5a2c8fb64ae4aac364af046ba447"
+  },
+  {
+    "name": "AES-CTR",
+    "length": 128,
+    "iv": "ffffffffffffffffffffffffffffffff",
+    "key": "000102030405060708090a0b0c0d0e0f1011121314151617",
+    "input": "00070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2",
+    "output": "01dff78f0588bbc114399176a67feae1e1152f0790e03f836b39609afcca44dea9a9d6afb73ca5a60bf5ca853c59255e8b544ceedb3e5ead0bcdd4bb536197"
+  },
+  {
+    "name": "AES-CBC",
+    "length": 128,
+    "iv": "ffffffffffffffffffffffffffffffff",
+    "key": "000102030405060708090a0b0c0d0e0f1011121314151617",
+    "input": "00070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2",
+    "output": "6c426b2d472f4c68403a10d2382682088d28d5eeace14fc3e19b463e62eb04aaec9a0cbfcb52f0a05da4317fbebd155f74c738df1742c73d05b11e71982ac6da"
+  },
+  {
+    "name": "AES-GCM",
+    "length": 128,
+    "iv": "ffffffffffffffffffffffff",
+    "key": "000102030405060708090a0b0c0d0e0f1011121314151617",
+    "input": "00070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2",
+    "output": "5ef5cbbe51c972bb2c8043736f302e4349a21ba567ffaa6eaf001c16371333235af68d1038916364d3bf00ed4c904b513b0316e62b938a75fada94dbae42fd512843896fd8fe3dd6018ace4f133a3b"
+  },
+  {
+    "name": "AES-CTR",
+    "length": 1,
+    "iv": "ffffffffffffffffffffffffffffffff",
+    "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+    "input": "00070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9",
+    "output": "e99eea0850845aeb6bb8573609d435871392ca87398dd27c52424f635d07f59d"
+  },
+  {
+    "name": "AES-CTR",
+    "length": 7,
+    "iv": "ffffffffffffffffffffffffffffffff",
+    "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+    "input": "00070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2",
+    "output": "e99eea0850845aeb6bb8573609d43587470eef0a141864354e44fdc6863ffe89fb038695cafa0b1250a7e2c7142f7bcf20fadfa4549afb9b6eadf626a1d29d"
+  },
+  {
+    "name": "AES-CTR",
+    "length": 64,
+    "iv": "ffffffffffffffffffffffffffffffff",
+    "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+    "input": "00070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2",
+    "output": "e99eea0850845aeb6bb8573609d43587e112f3f2673a75ef82e2e0a4020a546e30ab1d2853eb53a5b98636896f866a1132fbdf7490ce393f7cd644b30b2873"
+  },
+  {
+    "name": "AES-CTR",
+    "length": 128,
+    "iv": "ffffffffffffffffffffffffffffffff",
+    "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+    "input": "00070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2",
+    "output": "e99eea0850845aeb6bb8573609d4358782e77e33a6da0571015c2cd719e5a55910ba985bb6ba95f4bee9bd1c7cf974745eebebbbd95ff93c80273fa8bc8723"
+  },
+  {
+    "name": "AES-CBC",
+    "length": 128,
+    "iv": "ffffffffffffffffffffffffffffffff",
+    "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+    "input": "00070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2",
+    "output": "42e35326ac1b40f7edd5fb4dbe797bae1ea2d88bccd6c4870d638b3814b2e5dc1dff1384a5a6b5cf98a3ef0b5cc13a07d505137c4ef8dffd91cdf2f57c7298ea"
+  },
+  {
+    "name": "AES-GCM",
+    "length": 128,
+    "iv": "ffffffffffffffffffffffff",
+    "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+    "input": "00070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2",
+    "output": "3a86e1dc7c98f4f7b361e89c7875c125c0a49d977bd7a5409cf30970286fcd9ca7f4aa19124c716d4b30e2190f56327d85c83fb0d8567d4d8e7252a98e3ca4dab6f634d673f8f9ed13005d2057b008"
+  }
+]

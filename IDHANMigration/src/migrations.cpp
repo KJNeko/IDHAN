@@ -37,14 +37,17 @@ void updateMigrations( pqxx::nontransaction& tx, const std::string_view schema )
 		}
 	}
 
-	if ( current_id > 0 )
+	const bool has_pending_migrations { current_id <= latestMigrationId() };
+
+	if ( current_id > 0 && has_pending_migrations )
 	{
-		spdlog::warn( "================================================================" );
-		spdlog::warn( "  Applying database migrations to an EXISTING database." );
-		spdlog::warn( "  Some migrations rebuild large tables from scratch and can take" );
-		spdlog::warn( "  a noticeable amount of time on databases with a lot of data." );
-		spdlog::warn( "  Do NOT interrupt the server while this is in progress." );
-		spdlog::warn( "================================================================" );
+		spdlog::warn(
+			"================================================================\n"
+			"  Applying database migrations to an EXISTING database.\n"
+			"  Some migrations rebuild large tables from scratch and can take\n"
+			"  a noticeable amount of time on databases with a lot of data.\n"
+			"  Do NOT interrupt the server while this is in progress.\n"
+			"================================================================" );
 	}
 
 	doMigration( tx, current_id );

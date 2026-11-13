@@ -92,7 +92,7 @@ function LogViewerPanel({ host }: PanelProps) {
 export const logViewerPanel = {
   type: 'log-viewer',
   title: 'Log Viewer',
-  description: "The server's in-memory log ring buffer, filtered by level.",
+	description: 'Server logs.',
   component: LogViewerPanel,
   configVersion: 1,
   singleton: true,

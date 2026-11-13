@@ -1,0 +1,11 @@
+{
+  "name": "@idhan/parser-mega",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "idhanParser": "index.ts",
+  "dependencies": {
+    "abort-controller": "3.0.0",
+    "megajs": "1.3.10"
+  }
+}

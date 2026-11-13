@@ -7,6 +7,7 @@ class ImportSinkFactory;
 class CookiePersistence;
 class SecretProvider;
 class LaneObserver;
+class ParserHostPersistence;
 
 struct DownloaderHost
 {
@@ -14,6 +15,7 @@ struct DownloaderHost
 	CookiePersistence* cookies {};
 	SecretProvider* secrets {};
 	LaneObserver* lanes {};
+	ParserHostPersistence* parser_hosts {};
 };
 
 } // namespace idhan::downloader

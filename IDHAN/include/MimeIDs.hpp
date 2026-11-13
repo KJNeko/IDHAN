@@ -6,16 +6,12 @@
 
 #include "IDHANTypes.hpp"
 
-//! The closed set of mime ids IDHAN recognises.
-//!
-//! Ids are allocated in blocks of 1000, one per SimpleMimeType category. A file's mime is resolved in
-//! two stages: a pre-scan settles the base type, then a parser registered for that base may refine it
-//! into a more specific id. A refined id reports the same mime string as its base, so this map is
-//! many-to-one and cannot be inverted.
+//! IDs use blocks of 1000 per SimpleMimeType. A pre-scan identifies the base type; a parser may
+//! refine it. Refined IDs share their base's MIME string, so the mapping cannot be inverted.
 namespace idhan::mime_ids
 {
 
-//! Not a mime. The absence of one.
+//! No MIME assigned.
 constexpr MimeID INVALID { 0 };
 
 //! A file whose bytes matched no identifier.
@@ -38,7 +34,7 @@ constexpr MimeID ANIMATION_BLOCK { 3000 };
 constexpr MimeID ANIMATION_GIF { 3000 };
 constexpr MimeID ANIMATION_APNG { 3001 };
 
-//! Reserved. table_audio_metadata is still in progress and will fill this block.
+//! Reserved for table_audio_metadata.
 constexpr MimeID AUDIO_BLOCK { 4000 };
 
 constexpr MimeID ARCHIVE_BLOCK { 5000 };
@@ -62,7 +58,7 @@ constexpr MimeID FIRST_UNRESERVED { 10000 };
 	return static_cast< SimpleMimeType >( mime_id / 1000 );
 }
 
-//! Every declared mime id. INVALID is excluded: it names the absence of a mime.
+//! Excludes INVALID, which represents an absent MIME.
 inline constexpr std::array< MimeID, 17 > ALL_MIME_IDS {
 	{ UNKNOWN,
 	  IMAGE_JPEG,
@@ -83,7 +79,7 @@ inline constexpr std::array< MimeID, 17 > ALL_MIME_IDS {
 	  APPLICATION_CLIP }
 };
 
-//! Mime id to the string it reports. Many-to-one: a refined id repeats its base's string.
+//! Multiple IDs can share a MIME string.
 inline const std::unordered_map< MimeID, std::string_view > mime_names {
 	{ UNKNOWN, "unknown/unknown" },
 	{ IMAGE_JPEG, "image/jpeg" },
@@ -104,7 +100,7 @@ inline const std::unordered_map< MimeID, std::string_view > mime_names {
 	{ APPLICATION_CLIP, "application/x-clip-studio" },
 };
 
-//! Best file extension per mime id. Seeded into mime.best_extension, which is NOT NULL.
+//! Seeds the NOT NULL mime.best_extension column.
 inline const std::unordered_map< MimeID, std::string_view > mime_extensions {
 	{ UNKNOWN, "" },
 	{ IMAGE_JPEG, "jpg" },
@@ -125,9 +121,8 @@ inline const std::unordered_map< MimeID, std::string_view > mime_extensions {
 	{ APPLICATION_CLIP, "clip" },
 };
 
-//! The id a bare mime string resolves to, which is the lowest id declared with that name. Ids
-//! sharing a name are ordered generic first, so a plain "application/zip" never resolves to the
-//! Ugoira that also reports it. INVALID when no id carries \p name.
+//! Returns the lowest matching ID (generic before refined), or INVALID if unknown.
+//! For example, "application/zip" resolves to APPLICATION_ZIP rather than PIXIV_UGOIRA.
 [[nodiscard]] inline MimeID canonicalIDForName( const std::string_view name )
 {
 	MimeID canonical { INVALID };

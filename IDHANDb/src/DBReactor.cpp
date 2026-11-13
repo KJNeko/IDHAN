@@ -75,6 +75,7 @@ void DBReactor::request( const std::shared_ptr< Watch >& watch )
 {
 	watch->pending.store( true, std::memory_order_release );
 	if ( watch->scheduled.exchange( true, std::memory_order_acq_rel ) ) return;
+
 	m_workers->add(
 		[ watch ]
 		{

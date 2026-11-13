@@ -115,12 +115,21 @@ scan_concurrency = 12
 [downloader]
 # Download known direct URLs again instead of reusing their stored file.
 #force_download = false
-# Directory containing parser JavaScript modules. The packaged server uses its bundled parsers.
-#parser_directory = "/usr/share/idhan/downloader"
-# URL-class routing directory or legacy JSON file. Defaults to url-classes in parser_directory.
-#url_classes = "/usr/share/idhan/downloader/url-classes"
+# Directory containing precompiled JavaScript parser bundles. Compile TypeScript externally.
+# Every parser, and any module that only exports URL class policy, lives here.
+# Relative paths resolve against the working directory; native builds stage ./downloaders/parsers.
+#parser_directory = "./downloaders/parsers"
+# Reload changed JavaScript bundles and configured URL-class JSON automatically.
+#watch_scripts = true
+#script_watch_interval_ms = 500
+#script_watch_debounce_ms = 250
+# Typed overrides keyed by parser ID; also IDHAN_DOWNLOADER_OPTIONS_JSON.
+#options_json = '{"gelbooru":{"pageLimit":10,"followSource":false,"tagBlacklist":[]}}'
+# Optional extra URL-class JSON file or directory, e.g. to add hosts to a parser's classes.
+# Parsers already supply their own classes, so this is unset by default.
+#url_classes = ""
 # URL classes without requestRate are limited to one request every five seconds.
-# Set requestRate to false for an explicitly unthrottled class or host.
+# Set requestRate to false for a class or host with unlimited request starts.
 # Wire version offered to sites: "1.1", "2", or "3". HTTP/3 is preferred and falls back when unavailable.
 #http_version = "3"
 
@@ -129,24 +138,26 @@ scan_concurrency = 12
 # How long a lane keeps its connections open after the last request was queued for its host.
 # Keeping them open is what lets HTTP/2 and HTTP/3 multiplex the next batch over one connection.
 #lane_keep_alive_seconds = 30
-# A request that fails stops its whole lane for this long before anything else is dispatched to the
-# host. Failures arriving during the pause join it rather than extending it. Repeated failures past
-# the pause widen it exponentially. 0 keeps only that widening.
+# Cooldown for parser errors and statuses listed in lane.backoffStatuses. Failures already in flight
+# share an open pause. HTTP 429 instead honors Retry-After, or doubles its fallback delay from 1s
+# to 60s; another 429 after the maximum fallback pause disables the lane until explicitly enabled.
+# Ten consecutive HTTP 2xx responses recover one request per window, up to the configured rate.
 #lane_error_backoff_seconds = 30
-# A busy unthrottled lane spreads across this many connections so one fast host is not capped by a
-# single IO thread. Rate limited lanes always stay at one.
-#max_shards_per_lane = 4
+# Occupied slots per lane, including downloads awaiting bounded import finalization.
+# Request-rate limits cap starts independently; URL class/host concurrency overrides these.
+#lane_concurrency = 1
 # In-flight HTTP requests per download session before the session stops starting new scripts.
 #session_inflight_requests = 64
-# Memory budget for one script worker's runtime, covering every script in flight on that worker.
-# The whole downloader is bounded by script_threads times this, not by the number of sessions.
+# Memory budget per parser runtime. All sessions share each parser's instances;
+# increasing parser_instances can multiply memory use.
 #worker_memory_limit = 268435456
-# Stack ceiling for one script worker's runtime.
+# Stack ceiling per parser runtime.
 #worker_stack_limit = 1048576
-# Threads that execute parser JavaScript, shared by every session. Each owns one script runtime,
-# and a work item stays on the thread whose runtime holds its realm. A script awaiting a request
-# leaves its thread free, so this bounds concurrent JavaScript, not concurrent downloads.
-#script_threads = 4
+# Maximum QuickJS instances per parser across all sessions, allocated lazily.
+# Each instance owns a dedicated thread; there is no fixed global thread pool.
+#parser_instances = 1
+# Worker count in each of the import preparation, disk writer, and file finalization pools.
+#import_threads = 4
 # Bounds one uninterrupted run of JavaScript, excluding synchronous host callbacks such as
 # database operations. Time awaiting an HTTP request is also excluded.
 #script_burst_timeout_ms = 5000
@@ -157,19 +168,10 @@ scan_concurrency = 12
 #user_agent = ""
 # Existing tag domain used for parser-supplied tags.
 #tag_domain = "default"
-# Secrets exposed through idhan.secret() live in the downloader_secrets table, not in this file.
-# Set them by POSTing an object of string values to /downloader/secrets and read them back with
-# GET /downloader/secrets. The shipped gelbooru parser needs two, both from the site's account
-# options page:
-#   {"gelbooru.apiKey": "...", "gelbooru.userID": "..."}
-# Gelbooru accepts these only as query parameters, so they appear in downloader request logs and in
-# the debug panel's pending request URLs. Keep that in mind when sharing either.
-
-# Overrides for the flags a parser declares in its manifest. Keys are flag names, so they must be
-# quoted. Anything left out keeps the parser's own default.
-[downloader.flags]
-# Submit a gelbooru post's source URL back to the pipeline. On by default.
-"gelbooru.followSource" = true
+# Secrets exposed through session.secrets are JSON objects keyed by configured root domain.
+# POST an object of domain objects to /downloader/secrets; GET returns the saved objects.
+# The configured root domain and its subdomains share one object; unrelated domains do not.
+#   {"gelbooru.com": {"apiKey": "...", "userID": "..."}}
 
 [parser.cbz]
 # Falls back to the .cbz extension when the archive's contents are inconclusive.

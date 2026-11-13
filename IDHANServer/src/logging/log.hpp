@@ -9,11 +9,18 @@
 
 #include <memory>
 #include <string>
+#include <string_view>
 
 #include "logging/format_ns.hpp"
 
 namespace idhan::log
 {
+//! Logged once the HTTP server is listening. The log viewer keys its ready banner off this text.
+inline constexpr std::string_view ready_marker { "==== IDHAN READY: accepting requests ====" };
+
+//! The formatter for every server sink: "[date time] [level] [thread N] message". Lines after the first in
+//! a message are indented to sit under the first, so any message containing '\n' stays aligned.
+[[nodiscard]] std::unique_ptr< spdlog::formatter > makeServerFormatter();
 
 //! The logger IDHAN created and the ring buffer sink attached to it, as direct typed pointers set
 //! once at startup by ServerContext::createLogger(). Endpoints reaching into these (/log) must use

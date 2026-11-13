@@ -3,6 +3,7 @@
 #include <spdlog/spdlog.h>
 
 #include <pthread.h>
+#include <format>
 #include <utility>
 
 #include "http/IoPool.hpp"
@@ -37,7 +38,7 @@ void IoThread::SourceState::timeoutExpired() noexcept
 	thread.act( *this, CURL_SOCKET_TIMEOUT, 0 );
 }
 
-IoThread::IoThread()
+IoThread::IoThread( const std::size_t index ) : m_index( index )
 {
 	IoPool::initialiseCurl();
 
@@ -47,13 +48,20 @@ IoThread::IoThread()
 IoThread::~IoThread()
 {
 	stop();
-
-	if ( m_thread.joinable() ) m_thread.join();
+	join();
 }
 
 void IoThread::stop()
 {
-	m_event_base.terminateLoopSoon();
+	if ( m_stopping.exchange( true ) ) return;
+
+	// Earlier shard cleanup callbacks must run before the event loop exits.
+	post( [ this ] { m_event_base.terminateLoopSoon(); } );
+}
+
+void IoThread::join()
+{
+	if ( m_thread.joinable() ) m_thread.join();
 }
 
 void IoThread::post( Task task )
@@ -187,7 +195,8 @@ void IoThread::act( SourceState& state, const curl_socket_t socket, const int ev
 void IoThread::run()
 {
 	m_thread_id.store( std::this_thread::get_id() );
-	::pthread_setname_np( ::pthread_self(), "downloader-io" );
+	const auto name { std::format( "dl-network {}", m_index ) };
+	::pthread_setname_np( ::pthread_self(), name.c_str() );
 
 	m_event_base.loopForever();
 }

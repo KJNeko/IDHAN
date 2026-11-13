@@ -191,8 +191,7 @@ function EmbeddingsPanel({host}: PanelProps) {
             {models === null ? (
                 <p className="muted">Loading…</p>
             ) : models.length === 0 ? (
-                <p className="muted">No embedding models registered. Load a module that provides one and restart the
-                    server.</p>
+				<p className="muted">No embedding models available.</p>
             ) : (
                 <ul className="embed-list">
                     {models.map((model) => {
@@ -237,7 +236,7 @@ function EmbeddingsPanel({host}: PanelProps) {
                                             {typeof model.embedding_estimate === 'number'
                                                 ? `about ${model.embedding_estimate.toLocaleString()} embeddings`
                                                 : 'every embedding it holds'}
-                                            ? This cannot be undone; regenerating them means another full backfill.
+											?
                                         </span>
                                         <button type="button" className="toolbar-button"
                                                 onClick={() => setConfirming(null)}>
@@ -262,7 +261,7 @@ function EmbeddingsPanel({host}: PanelProps) {
 export const embeddingsPanel = {
     type: 'embeddings',
     title: 'Embeddings',
-    description: 'View registered embedding models and run backfills to fill in vectors.',
+	description: 'Embedding models.',
     component: EmbeddingsPanel,
     configVersion: 1,
     singleton: true,

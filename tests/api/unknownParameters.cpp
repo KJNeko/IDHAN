@@ -36,7 +36,7 @@ TEST_CASE_METHOD( ServerFixture, "Declared names and free-form request data rema
 	CHECK( info.json[ "record_id" ].asInt() == record_id );
 
 	Json::Value secrets { Json::objectValue };
-	secrets[ "arbitrary_secret_name" ] = "secret_payload_is_not_a_parameter";
+	secrets[ "arbitrary.example" ][ "arbitrary_secret_name" ] = "secret_payload_is_not_a_parameter";
 	CHECK( api().post( "/downloader/secrets", secrets ).status == 200 );
 	const auto log { api().get( "/log", { { "level", "warning" } } ) };
 	REQUIRE( log.status == 200 );

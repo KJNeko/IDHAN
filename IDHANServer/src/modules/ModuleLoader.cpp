@@ -191,7 +191,7 @@ bool ModuleLoader::registerLibrary( const std::filesystem::path& path )
 			return false;
 		}
 
-		auto manifest { interrogator->awaitManifest(
+		auto manifest { interrogator->awaitManifestSync(
 			std::chrono::seconds { config::get< std::size_t >( "modules", "describe_timeout_sec", 10 ) } ) };
 
 		if ( !manifest )
@@ -249,11 +249,10 @@ bool ModuleLoader::registerLibrary( const std::filesystem::path& path )
 	}
 
 	log::info(
-		"Module library {} runs {} concurrent call(s), each allowed {} render thread(s){}",
+		"Module library {}: {} concurrent call(s), {} thread(s) per call",
 		path.filename().string(),
 		settings.pool_threads,
-		settings.render_threads,
-		folds_render_threads ? " (single-threaded: the render budget went to the pool)" : "" );
+		settings.render_threads );
 
 	const auto library_index { m_pools.size() };
 
@@ -311,6 +310,8 @@ bool ModuleLoader::registerLibrary( const std::filesystem::path& path )
 			}
 		}
 
+		for ( const auto mime_id : entry.phash_mimes ) m_by_mime_phash[ mime_id ].emplace_back( slot );
+
 		for ( const auto mime_id : entry.mimes )
 		{
 			if ( ( entry.type & ModuleTypeFlags::METADATA ) != 0 ) m_by_mime_metadata[ mime_id ].emplace_back( slot );
@@ -350,6 +351,7 @@ void ModuleLoader::unloadModules()
 	for ( const auto& pool : m_pools ) pool->shutdown();
 
 	m_by_mime_metadata.clear();
+	m_by_mime_phash.clear();
 	m_by_mime_thumbnailer.clear();
 	m_by_mime_generator.clear();
 	m_by_mime_parser.clear();
@@ -386,6 +388,19 @@ std::vector< std::shared_ptr< RemoteModule > > ModuleLoader::getThumbnailerFor( 
 std::vector< std::shared_ptr< RemoteModule > > ModuleLoader::getParserFor( const MimeID mime_id ) const
 {
 	return lookup( m_by_mime_metadata, mime_id );
+}
+
+std::vector< std::shared_ptr< RemoteModule > > ModuleLoader::getPhashParserFor( const MimeID mime_id ) const
+{
+	return lookup( m_by_mime_phash, mime_id );
+}
+
+std::vector< MimeID > ModuleLoader::phashMimes() const
+{
+	std::vector< MimeID > mimes;
+	mimes.reserve( m_by_mime_phash.size() );
+	for ( const auto& [ mime_id, slots ] : m_by_mime_phash ) mimes.push_back( mime_id );
+	return mimes;
 }
 
 std::shared_ptr< RemoteModule > ModuleLoader::getEmbedderFor( const std::string_view model_name ) const
@@ -593,36 +608,6 @@ void ModuleLoader::serviceCallback( std::shared_ptr< WorkerProcess > worker, ipc
 	folly::coro::co_withExecutor(
 		folly::getGlobalCPUExecutor(), runCallback( std::move( worker ), std::move( frame ) ) )
 		.start();
-}
-
-std::vector< ModuleQueueSnapshot > ModuleLoader::queueSnapshots() const
-{
-	std::vector< WorkerPoolSnapshot > pools {};
-	pools.reserve( m_pools.size() );
-	for ( const auto& pool : m_pools ) pools.emplace_back( pool->snapshot() );
-
-	std::vector< ModuleQueueSnapshot > snapshots {};
-	snapshots.reserve( m_descriptors.size() );
-	for ( const auto& descriptor : m_descriptors )
-	{
-		const auto& pool { pools[ descriptor.library_index ] };
-		const auto activity {
-			descriptor.module_index < pool.modules.size() ?
-				pool.modules[ descriptor.module_index ] :
-				ipc::ModuleActivity {}
-		};
-		snapshots.emplace_back(
-			ModuleQueueSnapshot {
-				.library_index = descriptor.library_index,
-				.module_index = descriptor.module_index,
-				.library = m_pools[ descriptor.library_index ]->library().filename().string(),
-				.name = descriptor.name,
-				.activity = activity,
-				.workers = pool.workers,
-				.reporting = pool.reporting,
-				.thread_safe = descriptor.thread_safe } );
-	}
-	return snapshots;
 }
 
 } // namespace idhan::modules

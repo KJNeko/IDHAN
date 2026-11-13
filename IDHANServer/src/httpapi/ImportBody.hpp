@@ -1,11 +1,14 @@
 #pragma once
 
 #include <expected>
+#include <folly/File.h>
+
 #include <memory>
+#include <optional>
 #include <span>
 #include <string>
 
-#include "idhan/http/RequestContext.hpp"
+#include "idhan/http/request/RequestContext.hpp"
 
 namespace idhan::httpapi
 {
@@ -22,6 +25,7 @@ class ImportBody
 
 	std::unique_ptr< folly::IOBuf > m_buffer {};
 	std::unique_ptr< const std::byte, Unmap > m_mapping { nullptr, Unmap {} };
+	folly::File m_file {};
 	SHA256 m_hash {};
 
 	ImportBody() = default;
@@ -35,6 +39,8 @@ class ImportBody
 	// Borrowed until this ImportBody is destroyed or assigned to.
 	[[nodiscard]] std::span< const std::byte > bytes() const noexcept;
 	[[nodiscard]] SHA256 hash() const;
+
+	[[nodiscard]] std::optional< int > descriptor() const;
 };
 
 } // namespace idhan::httpapi

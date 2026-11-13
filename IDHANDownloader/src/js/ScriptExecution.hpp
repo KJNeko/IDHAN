@@ -6,7 +6,7 @@
 #include <quickjs.h>
 #include <string>
 
-#include "IDHANDownloader/SessionObserver.hpp"
+#include "IDHANDownloader/session/SessionObserver.hpp"
 #include "scripts/ScriptRegistry.hpp"
 
 namespace idhan::downloader
@@ -23,10 +23,11 @@ enum class ScriptStage : std::uint8_t
 struct ScriptExecution
 {
 	ScriptSession* session {};
-	std::size_t worker {};
+	std::size_t runtime {};
 	WorkID work_id {};
 	std::optional< WorkID > parent_id {};
 	std::string parser_url {};
+	Json::Value tags { Json::objectValue };
 	ScriptRoute route {};
 
 	JSContext* context {};
@@ -35,9 +36,12 @@ struct ScriptExecution
 	JSModuleDef* module {};
 	ScriptStage stage { ScriptStage::MODULE };
 	std::size_t outstanding {};
+	bool start_reserved {};
 	bool settled {};
 	bool failed {};
 	std::string error {};
+	//! The most recent rejection a failed request handed to the script.
+	std::string request_failure {};
 };
 
 [[nodiscard]] inline ScriptExecution* executionFor( JSContext* context )

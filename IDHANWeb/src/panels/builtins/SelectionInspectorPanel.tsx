@@ -44,7 +44,7 @@ function SelectionInspectorPanel({ host }: PanelProps) {
 export const selectionInspectorPanel = {
   type: 'selection-inspector',
   title: 'Selection Inspector',
-  description: 'Shows the current cross-panel record selection.',
+	description: 'Selected record IDs.',
   component: SelectionInspectorPanel,
   defaultConfig: { showIds: true } satisfies Config,
   configVersion: 1,

@@ -202,6 +202,32 @@ TEST_CASE_METHOD(
 
 TEST_CASE_METHOD(
 	ClusterMarkerFixture,
+	"Spilled uploads retain their descriptor through MIME specialization",
+	"[api][import][spilled-upload]" )
+{
+	create();
+	std::string bytes { "PK\x03\x04", 4 };
+	// Exceed the 8 MiB request memory limit. The archive module specializes ZIP to CBZ
+	// from the filename, so this also detects a failure to pass the spilled descriptor.
+	bytes.resize( 9 * 1024 * 1024, '\0' );
+	bytes += name;
+
+	const auto imported { api().postOctets( "/file/import", bytes, { { "filename", "spilled.cbz" } } ) };
+	REQUIRE( imported.status == 200 );
+	REQUIRE( imported.json[ "status" ].asInt() == 1 );
+	const RecordID record_id { imported.json[ "record_id" ].as< RecordID >() };
+	CHECK( api().get( std::format( "/records/{}/file", record_id ) ).body == bytes );
+
+	pqxx::read_transaction transaction { db() };
+	const auto rows {
+		transaction.exec( "SELECT mime_id FROM file_info WHERE record_id = $1", pqxx::params { record_id } )
+	};
+	REQUIRE( rows.size() == 1 );
+	CHECK( rows[ 0 ][ 0 ].as< MimeID >() == mime_ids::COMICBOOK_ZIP );
+}
+
+TEST_CASE_METHOD(
+	ClusterMarkerFixture,
 	"Missing and mismatched markers block media access without detaching records",
 	"[api][cluster-markers]" )
 {
@@ -396,7 +422,7 @@ TEST_CASE_METHOD(
 	}
 	REQUIRE( storing );
 	CHECK_FALSE( status[ "completed" ].asBool() );
-	const auto streamed { events.waitFor( "update", queued.json[ "job_id" ].as< JobID >(), "storing_metadata" ) };
+	const auto streamed { events.waitFor( "status", queued.json[ "job_id" ].as< JobID >(), "storing_metadata" ) };
 	REQUIRE_FALSE( streamed.isNull() );
 	CHECK_FALSE( streamed[ "completed" ].asBool() );
 	blocked.commit();

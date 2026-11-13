@@ -137,7 +137,9 @@ TEST_CASE_METHOD(
 	auto locker { otherConnection() };
 	pqxx::work held { *locker };
 	held.exec( "SELECT record_id FROM hamming_distance_queue WHERE record_id = $1 FOR UPDATE", pqxx::params { first } );
-	const auto batch { run( hamming::processQueueBatch( context(), *through ) ) };
+	auto index { run( db::loadPhashIndex( context() ) ) };
+	REQUIRE( index.size() == 35 );
+	const auto batch { run( hamming::processQueueBatch( context(), index, *through ) ) };
 	REQUIRE( batch.has_value() );
 	CHECK( batch->processed_records == 32 );
 	REQUIRE( count( "hamming_distance_queue" ) == 3 );
@@ -145,6 +147,25 @@ TEST_CASE_METHOD(
 	CHECK( run( hamming::runQueueSweep( context() ) ) == 3 );
 	REQUIRE( count( "hamming_distance_queue" ) == 0 );
 	REQUIRE( count( "hamming_distance" ) == 35 * 34 / 2 );
+}
+
+TEST_CASE_METHOD(
+	HashMaintenanceSchema,
+	"A batch compares claimed records by their current hash, not the loaded one",
+	"[maintenance][phash]" )
+{
+	const auto a { image( 1 ) };
+	image( 2 );
+	run( hamming::runQueueSweep( context() ) );
+	REQUIRE( count( "hamming_distance" ) == 1 );
+	auto index { run( db::loadPhashIndex( context() ) ) };
+	execute( "UPDATE image_metadata SET phash = 'xffffffffffffffff' WHERE record_id = " + std::to_string( a ) );
+	const auto through { run( db::queuedHammingHighWater( context() ) ) };
+	REQUIRE( through == a );
+	const auto batch { run( hamming::processQueueBatch( context(), index, *through ) ) };
+	REQUIRE( batch.has_value() );
+	CHECK( index.find( a ) == 0xFFFF'FFFF'FFFF'FFFFull );
+	REQUIRE( count( "hamming_distance" ) == 0 );
 }
 
 TEST_CASE_METHOD(
@@ -264,9 +285,9 @@ TEST_CASE_METHOD(
 	const auto active { cluster( "/unused-test-cluster" ) };
 	const auto relocated { cluster( "/unused-other-cluster" ) };
 	assign( id, active );
-	const auto through { run( db::missingPhashHighWater( context() ) ) };
+	const auto through { run( db::missingPhashHighWater( context(), { mime_ids::IMAGE_PNG } ) ) };
 	REQUIRE( through == id );
-	const auto selected { run( db::missingPhashBatch( context(), {}, *through, 8 ) ) };
+	const auto selected { run( db::missingPhashBatch( context(), {}, *through, 8, { mime_ids::IMAGE_PNG } ) ) };
 	REQUIRE( selected.size() == 1 );
 	const PerceptualHash computed { std::byte { 0x80 }, {}, {}, {}, {}, {}, {}, std::byte { 1 } };
 	SECTION( "a foreground hash wins" )
@@ -287,7 +308,7 @@ TEST_CASE_METHOD(
 	{
 		execute( "UPDATE file_info SET cluster_delete_time = now()" );
 		CHECK_FALSE( run( db::updateMissingPhash( context(), selected.front(), computed ) ) );
-		CHECK_FALSE( run( db::missingPhashHighWater( context() ) ) );
+		CHECK_FALSE( run( db::missingPhashHighWater( context(), { mime_ids::IMAGE_PNG } ) ) );
 	}
 	SECTION( "a changed MIME invalidates the parse" )
 	{
@@ -308,4 +329,43 @@ TEST_CASE_METHOD(
 	}
 }
 
+} // namespace idhan::test
+
+namespace idhan::test
+{
+TEST_CASE_METHOD(
+	HashMaintenanceSchema,
+	"Backfill selects only missing hashes supported by loaded parsers",
+	"[maintenance][phash][capabilities]" )
+{
+	const auto active { cluster( "/unused-capability-test-cluster" ) };
+	const auto png { image( 1, false ) };
+	const auto gif { image( 2, false ) };
+	const auto unknown { image( 3, false ) };
+	assign( png, active );
+	assign( gif, active );
+	assign( unknown, active );
+	execute(
+		"UPDATE file_info SET mime_id = " + std::to_string( mime_ids::ANIMATION_GIF )
+	    + " WHERE record_id = " + std::to_string( gif ) );
+	execute(
+		"UPDATE file_info SET mime_id = " + std::to_string( mime_ids::APPLICATION_PSD )
+	    + " WHERE record_id = " + std::to_string( unknown ) );
+
+	CHECK_FALSE( run( db::missingPhashHighWater( context(), {} ) ) );
+	CHECK( run( db::missingPhashBatch( context(), {}, unknown, 8, {} ) ).empty() );
+	const auto through { run( db::missingPhashHighWater( context(), { mime_ids::IMAGE_PNG } ) ) };
+	REQUIRE( through == png );
+	const auto batch { run( db::missingPhashBatch( context(), {}, unknown, 1, { mime_ids::IMAGE_PNG } ) ) };
+	REQUIRE( batch.size() == 1 );
+	CHECK( batch.front().record_id == png );
+	CHECK( run( db::missingPhashBatch( context(), png, unknown, 1, { mime_ids::IMAGE_PNG } ) ).empty() );
+
+	// A newly installed parser makes previously unsupported records eligible without a migration.
+	const auto expanded {
+		run( db::missingPhashBatch( context(), png, unknown, 1, { mime_ids::IMAGE_PNG, mime_ids::ANIMATION_GIF } ) )
+	};
+	REQUIRE( expanded.size() == 1 );
+	CHECK( expanded.front().record_id == gif );
+}
 } // namespace idhan::test

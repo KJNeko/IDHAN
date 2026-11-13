@@ -59,7 +59,7 @@ function ServerStatusPanel({ host }: PanelProps) {
 export const serverStatusPanel = {
   type: 'server-status',
   title: 'Server Status',
-  description: 'IDHAN server version and build information.',
+	description: 'Server version.',
   component: ServerStatusPanel,
   singleton: true,
 } as const;

@@ -1,45 +1,56 @@
 #include "downloaderSecrets.hpp"
 
-#include <folly/io/IOBuf.h>
-
 #include <format>
 #include <simdjson.h>
 #include <string>
 #include <string_view>
 #include <unordered_map>
 
-#include "apiAuth.hpp"
+#include "IDHANDownloader/secrets/SecretDomain.hpp"
 #include "downloader/DownloadSessionManager.hpp"
 #include "idhan/db/DBContext.hpp"
-#include "jsonBody.hpp"
+#include "idhan/http/routing/ReflectedRoutes.hpp"
 
 namespace idhan::httpapi
 {
 
-[[nodiscard]] static http::Response secretsResponse( const std::unordered_map< std::string, std::string >& secrets )
+[[nodiscard]] static std::expected< DownloaderSecrets, std::string > decodeStoredSecrets(
+	const std::unordered_map< std::string, std::string >& secrets )
 {
-	simdjson::builder::string_builder builder;
-	builder.start_object();
-
-	bool first { true };
+	DownloaderSecrets document;
+	simdjson::dom::parser parser;
 	for ( const auto& [ name, value ] : secrets )
 	{
-		if ( !first ) builder.append_comma();
-		first = false;
-		builder.append_key_value( name, value );
+		simdjson::dom::element object;
+		const auto error { parser.parse( value ).get( object ) };
+		if ( error != simdjson::SUCCESS ) return std::unexpected( "Stored downloader secrets contain invalid JSON" );
+
+		auto values_e { http::decodeJson< DownloaderJsonObject >( object ) };
+		if ( !values_e.has_value() ) return std::unexpected( values_e.error().message );
+
+		document.emplace( name, std::move( values_e.value() ) );
 	}
 
-	builder.end_object();
+	return document;
+}
 
-	auto json { builder.view() };
-	if ( json.error() ) throw std::runtime_error( simdjson::error_message( json.error() ) );
+[[nodiscard]] static http::JsonResult< DownloaderSecrets > secretsResponse(
+	const std::unordered_map< std::string, std::string >& secrets )
+{
+	auto document_e { decodeStoredSecrets( secrets ) };
+	if ( !document_e.has_value() )
+	{
+		auto response { http::Response::error( 500, document_e.error() ) };
+		response.message.getHeaders().set( "Cache-Control", "no-store" );
+		return response;
+	}
 
-	auto response { http::Response::json( 200, folly::IOBuf::copyBuffer( *json ) ) };
-	response.message.getHeaders().set( "Cache-Control", "no-store" );
+	http::JsonResponse< DownloaderSecrets > response { std::move( document_e.value() ) };
+	response.headers.set( "Cache-Control", "no-store" );
 	return response;
 }
 
-static http::HTTPTask< http::Response > listSecrets( [[maybe_unused]] http::RequestContext context )
+http::HTTPTask< http::JsonResult< DownloaderSecrets > > listSecrets( [[maybe_unused]] http::RequestContext context )
 {
 	const auto secrets { co_await downloader::downloadSessionManager().secrets() };
 	if ( !secrets )
@@ -49,37 +60,19 @@ static http::HTTPTask< http::Response > listSecrets( [[maybe_unused]] http::Requ
 	co_return secretsResponse( *secrets );
 }
 
-static http::HTTPTask< http::Response > setSecrets( http::RequestContext context )
+http::HTTPTask< http::JsonResult< DownloaderSecrets > > setSecrets( http::JsonBody< DownloaderSecrets > body )
 {
-	auto body_e { readValidatedJsonBody( context ) };
-	if ( !body_e ) co_return std::move( body_e.error() );
-
-	std::unordered_map< std::string, std::string > values {};
-
-	simdjson::dom::parser parser;
-	try
+	std::unordered_map< std::string, std::string > values;
+	for ( const auto& [ name, object ] : body.value )
 	{
-		const simdjson::dom::element root { parser.parse( *body_e ) };
-		simdjson::dom::object object {};
-		if ( !root.is_object() || root.get_object().get( object ) != simdjson::SUCCESS )
-			co_return http::Response::error(
-				400, "Request body must be a JSON object mapping secret keys to string values" );
+		const auto domain_e { downloader::secretDomain( name ) };
+		if ( !domain_e.has_value() ) co_return http::Response::error( 400, domain_e.error() );
 
-		for ( const simdjson::dom::key_value_pair field : object )
-		{
-			if ( field.key.empty() ) co_return http::Response::error( 400, "Downloader secret keys must not be empty" );
+		auto text_e { http::serializeJson( object ) };
+		if ( !text_e.has_value() ) co_return http::Response::error( 400, text_e.error().message );
 
-			std::string_view text {};
-			if ( field.value.get_string().get( text ) != simdjson::SUCCESS )
-				co_return http::Response::error(
-					400, std::format( "Downloader secret '{}' must have a string value", field.key ) );
-
-			values.emplace( std::string { field.key }, std::string { text } );
-		}
-	}
-	catch ( const simdjson::simdjson_error& e )
-	{
-		co_return http::Response::error( 400, e.what() );
+		if ( !values.emplace( domain_e.value(), std::move( text_e.value() ) ).second )
+			co_return http::Response::error( 400, "Duplicate normalized secret domain" );
 	}
 
 	const auto updated { co_await downloader::downloadSessionManager().setSecrets( std::move( values ) ) };
@@ -92,22 +85,6 @@ static http::HTTPTask< http::Response > setSecrets( http::RequestContext context
 			500, std::format( "Unable to fetch downloader secrets: {}", secrets.error() ) );
 
 	co_return secretsResponse( *secrets );
-}
-
-http::RouteDefinition downloaderSecretsListRoute( db::DBContext& db )
-{
-	return http::RouteDefinition {
-		http::RouteMetadata { proxygen::HTTPMethod::GET, "/downloader/secrets", {}, { apiAuthValidation( db ) } },
-		listSecrets
-	};
-}
-
-http::RouteDefinition downloaderSecretsSetRoute( db::DBContext& db )
-{
-	return http::RouteDefinition {
-		http::RouteMetadata { proxygen::HTTPMethod::POST, "/downloader/secrets", {}, { apiAuthValidation( db ) } },
-		setSecrets
-	};
 }
 
 } // namespace idhan::httpapi

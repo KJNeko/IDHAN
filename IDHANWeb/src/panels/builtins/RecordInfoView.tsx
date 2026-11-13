@@ -10,14 +10,14 @@ export type RecordInfo = RecordMetadata;
 
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
-  const units = ['KB', 'MB', 'GB', 'TB'];
+    const units = ['KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB'];
   let value = bytes / 1024;
   let unit = 0;
   while (value >= 1024 && unit < units.length - 1) {
     value /= 1024;
     unit++;
   }
-    return `${value.toFixed(2)} ${units[unit]}`;
+    return `${value.toLocaleString(undefined, {maximumFractionDigits: 2})} ${units[unit]}`;
 }
 
 export function formatDuration(seconds: number): string {
@@ -62,8 +62,7 @@ const SIMPLE_TYPE_LABELS: Record<string, string> = {
 };
 
 /**
- * Fields the list renders itself. Anything else scalar on the object is appended generically, so a
- * new server field shows up without a WebUI change.
+ * Fields rendered explicitly. Other scalar module fields follow the standard metadata rows.
  */
 const KNOWN = new Set([
     'record_id',
@@ -122,7 +121,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-const num = (value: unknown): number | undefined => (typeof value === 'number' ? value : undefined);
+const num = (value: unknown): number | undefined => (typeof value === 'number' && Number.isFinite(value) ? value : undefined);
 const bool = (value: unknown): boolean | undefined => (typeof value === 'boolean' ? value : undefined);
 
 export function RecordInfoView({ info }: { info: RecordInfo }) {
@@ -172,95 +171,90 @@ export function RecordInfoView({ info }: { info: RecordInfo }) {
 
     const urls = info.urls ?? [];
 
-  return (
-    <dl className="info-list">
-      <Row label="Record">#{info.record_id}</Row>
-      {typeof info.mime === 'string' && <Row label="Type">{info.mime}</Row>}
-        {typeof info.simple_type === 'string' && (
-            <Row label="Category">{SIMPLE_TYPE_LABELS[info.simple_type] ?? info.simple_type}</Row>
-        )}
-      {typeof info.extension === 'string' && <Row label="Extension">.{info.extension}</Row>}
-      {size !== undefined && (
-        <Row label="Size">
-          {formatBytes(size)} <span className="muted">({size.toLocaleString()} B)</span>
-        </Row>
-      )}
-        {fileModified !== undefined && <Row label="File modified">{formatFileTimestamp(fileModified)}</Row>}
-        {fileCreated !== undefined && <Row label="File created">{formatFileTimestamp(fileCreated)}</Row>}
+    const encoding = [
+        lossless === undefined ? null : lossless ? 'Lossless' : 'Lossy',
+        quality === undefined ? null : `q${quality}`,
+        typeof info.chroma_subsampling === 'string' ? info.chroma_subsampling : null,
+        progressive === undefined ? null : progressive ? 'Progressive' : 'Baseline',
+    ].filter(Boolean);
+    const category = typeof info.simple_type === 'string' ? SIMPLE_TYPE_LABELS[info.simple_type] ?? info.simple_type : null;
 
-        {width !== undefined && height !== undefined && (
-            <Row label="Dimensions">
-                {width} x {height}
-            </Row>
-        )}
-        {channels !== undefined && <Row label="Channels">{channels}</Row>}
-        {lossless !== undefined && <Row label="Encoding">{lossless ? 'Lossless' : 'Lossy'}</Row>}
-        {quality !== undefined && <Row label="Quality">q{quality}</Row>}
-        {typeof info.chroma_subsampling === 'string' && (
-            <Row label="Subsampling">{info.chroma_subsampling}</Row>
-        )}
-        {progressive !== undefined && <Row label="Scan">{progressive ? 'Progressive' : 'Baseline'}</Row>}
-        {typeof info.comment === 'string' && info.comment !== '' && <Row label="Comment">{info.comment}</Row>}
-        {embeddedKnown && (
-            <Row label="Embedded">
-                {embedded.length > 0 ? embedded.join(', ') : <span className="muted">None</span>}
-            </Row>
-        )}
-        {layers !== undefined && <Row label="Layers">{layers}</Row>}
+    return (
+        <div className="record-info-view">
+            <div className="record-info-overview">
+                <strong>#{info.record_id}</strong>
+                {(info.mime || category) && <span className="muted">{info.mime || category}</span>}
+                {info.mime && (info.simple_type === 'animation' || info.simple_type === 'image_project') &&
+                    <span className="muted">{category}</span>}
+                {size !== undefined && <span title={`${size.toLocaleString()} bytes`}>{formatBytes(size)}</span>}
+                {width !== undefined && height !== undefined && (
+                    <span aria-label="Dimensions">{width.toLocaleString()} × {height.toLocaleString()}</span>
+                )}
+                {duration !== undefined && (
+                    <span aria-label="Duration" title={`${duration} seconds`}>{formatDuration(duration)}</span>
+                )}
+                {framerate !== undefined && <span>{Number(framerate.toFixed(2))} fps</span>}
+            </div>
+            {info.parsed === false &&
+                <p className="record-info-pending muted" role="status">Metadata not yet parsed</p>}
 
-        {duration !== undefined && (
-            <Row label="Duration">
-                {formatDuration(duration)} <span className="muted">({duration.toFixed(2)} s)</span>
-            </Row>
-        )}
-        {framerate !== undefined && <Row label="Framerate">{framerate.toFixed(2)} fps</Row>}
-        {frameCount !== undefined && <Row label="Frames">{frameCount.toLocaleString()}</Row>}
-        {loops !== undefined && <Row label="Loops">{loops ? 'Yes' : 'No'}</Row>}
-        {bitrate !== undefined && <Row label="Bitrate">{formatBitrate(bitrate)}</Row>}
-        {sampleRate !== undefined && <Row label="Sample rate">{sampleRate.toLocaleString()} Hz</Row>}
-        {hasAudio !== undefined && <Row label="Audio">{hasAudio ? 'Yes' : 'No'}</Row>}
+            <dl className="info-list">
+                {encoding.length > 0 && <Row label="Encoding">{encoding.join(' · ')}</Row>}
+                {embeddedKnown && (
+                    <Row label="Embedded">{embedded.length > 0 ? embedded.join(', ') :
+                        <span className="muted">None</span>}</Row>
+                )}
+                {channels !== undefined && <Row label="Channels">{channels}</Row>}
+                {layers !== undefined && <Row label="Layers">{layers}</Row>}
+                {frameCount !== undefined && <Row label="Frames">{frameCount.toLocaleString()}</Row>}
+                {loops !== undefined && <Row label="Loops">{loops ? 'Yes' : 'No'}</Row>}
+                {bitrate !== undefined && <Row label="Bitrate">{formatBitrate(bitrate)}</Row>}
+                {sampleRate !== undefined && <Row label="Sample rate">{sampleRate.toLocaleString()} Hz</Row>}
+                {hasAudio !== undefined && <Row label="Audio">{hasAudio ? 'Yes' : 'No'}</Row>}
+                {archiveId !== undefined && <Row label="Archive">#{archiveId}</Row>}
+                {fileCount !== undefined && <Row label="Contains">{fileCount.toLocaleString()} files</Row>}
+                {encrypted !== undefined && <Row label="Encrypted">{encrypted ? 'Yes' : 'No'}</Row>}
 
-        {archiveId !== undefined && <Row label="Archive">#{archiveId}</Row>}
-        {fileCount !== undefined && <Row label="Contains">{fileCount.toLocaleString()} files</Row>}
-        {encrypted !== undefined && <Row label="Encrypted">{encrypted ? 'Yes' : 'No'}</Row>}
-
-      {sha256 && (
-        <Row label="SHA-256">
-          <span className="mono">{sha256}</span>
-        </Row>
-      )}
-
-        {[...tagDomains].map(([domain, texts]) => (
-            <Row key={`tags:${domain}`} label={tagDomains.size === 1 ? 'Tags' : `Tags (${domain})`}>
-                {texts.join(', ')}
-            </Row>
-        ))}
-
-        {urls.length > 0 && (
-            <Row label={urls.length === 1 ? 'Source' : 'Sources'}>
-                {urls.map((url) => (
-                    <a key={url} className="info-source" href={url} target="_blank" rel="noreferrer noopener">
-                        {url}
-                    </a>
+                {[...tagDomains].map(([domain, texts]) => (
+                    <Row key={`tags:${domain}`} label={`Tags (${domain})`}>
+                        <ul className="info-tags" aria-label={`Tags in ${domain}`}>
+                            {texts.map((text, index) => <li key={`${text}:${index}`}>{text}</li>)}
+                        </ul>
+                    </Row>
                 ))}
-            </Row>
-        )}
-        {info.parsed === false && (
-            <Row label="Metadata">
-                <span className="muted">Not yet parsed</span>
-            </Row>
-        )}
+                {urls.length > 0 && (
+                    <Row label={urls.length === 1 ? 'Source' : `Sources (${urls.length})`}>
+                        <ul className="info-sources">
+                            {urls.map((url, index) => <li key={`${url}:${index}`}><SourceUrl url={url}/></li>)}
+                        </ul>
+                    </Row>
+                )}
+                {typeof info.extension === 'string' && info.extension !== '' && <Row
+                    label="Extension">{info.extension.startsWith('.') ? info.extension : `.${info.extension}`}</Row>}
+                {size !== undefined &&
+                    <Row label="Size"><span title={`${size.toLocaleString()} bytes`}>{formatBytes(size)}</span></Row>}
+                {fileModified !== undefined && <Row label="File modified">{formatFileTimestamp(fileModified)}</Row>}
+                {fileCreated !== undefined && <Row label="File created">{formatFileTimestamp(fileCreated)}</Row>}
+                {sha256 && <Row label="SHA-256"><span className="mono info-hash">{sha256}</span></Row>}
+                {typeof info.comment === 'string' && info.comment !== '' && <Row label="Comment">{info.comment}</Row>}
+                {extraEntries.map(([key, value]) => <Row key={`extra:${key}`} label={key}>{String(value)}</Row>)}
+                {unknownEntries.map(([key, value]) => <Row key={key} label={key}>{String(value)}</Row>)}
+            </dl>
+        </div>
+    );
+}
 
-        {extraEntries.map(([key, value]) => (
-            <Row key={`extra:${key}`} label={key}>
-                {String(value)}
-            </Row>
-        ))}
-        {unknownEntries.map(([key, value]) => (
-        <Row key={key} label={key}>
-          {String(value)}
-        </Row>
-      ))}
-    </dl>
-  );
+function SourceUrl({url}: { url: string }) {
+    let source: URL;
+    try {
+        source = new URL(url);
+    } catch {
+        return <span className="info-source">{url}</span>;
+    }
+    if (source.protocol !== 'http:' && source.protocol !== 'https:') {
+        return <span className="info-source">{url}</span>;
+    }
+    return <a className="info-source" href={url} title={url} target="_blank" rel="noreferrer noopener">
+        {source.host}{source.pathname}{source.search}{source.hash}
+    </a>;
 }

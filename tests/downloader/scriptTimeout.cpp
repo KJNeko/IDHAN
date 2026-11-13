@@ -1,3 +1,4 @@
+#include <folly/coro/BlockingWait.h>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 
@@ -9,6 +10,7 @@
 #include "HostCallback.hpp"
 #include "harness/Harness.hpp"
 #include "js/ScriptContext.hpp"
+#include "js/ScriptActivity.hpp"
 #include "js/bindings/IdhanBindings.hpp"
 #include "scripts/BytecodeCache.hpp"
 
@@ -23,27 +25,39 @@ class DelayedImportObserver final : public downloader::SessionObserver
 	std::size_t queued {};
 	bool reject {};
 
-	std::expected< void, std::string > onImportQueued( const downloader::WorkInfo& ) override
+	folly::coro::Task< std::expected< void, std::string > > onImportQueued( downloader::WorkInfo ) override
 	{
 		++queued;
 		std::this_thread::sleep_for( std::chrono::milliseconds { 300 } );
 		if ( reject ) throw std::runtime_error( "delayed database failure" );
 
-		return {};
+		co_return std::expected< void, std::string > {};
 	}
 
-	void onCompleted( const downloader::WorkInfo& info ) override { recording.onCompleted( info ); }
-
-	void onFailed( const downloader::WorkInfo& info, const std::string& error ) override
+	folly::coro::Task< void > onCompleted( downloader::WorkInfo info ) override
 	{
-		recording.onFailed( info, error );
+		co_await recording.onCompleted( info );
+		co_return;
 	}
 
-	void onImported( const downloader::ImportInfo& info ) override { recording.onImported( info ); }
-
-	void onImportFailed( const downloader::WorkInfo& info, const std::string& url, const std::string& error ) override
+	folly::coro::Task< void > onFailed( downloader::WorkInfo info, std::string error ) override
 	{
-		recording.onImportFailed( info, url, error );
+		co_await recording.onFailed( info, error );
+
+		co_return;
+	}
+
+	folly::coro::Task< void > onImported( downloader::ImportInfo info ) override
+	{
+		co_await recording.onImported( info );
+		co_return;
+	}
+
+	folly::coro::Task< void > onImportFailed( downloader::WorkInfo info, std::string url, std::string error ) override
+	{
+		co_await recording.onImportFailed( info, url, error );
+
+		co_return;
 	}
 };
 
@@ -62,10 +76,10 @@ TEST_CASE( "Blocking import callbacks do not consume the JavaScript budget", "[d
 			return TestResponse { .body = "file" };
 		} );
 	harness.parsers.write( "test.js", R"JS(
-export async function run(input, idhan) {
+export async function execute(input, idhan) {
     await idhan.request({url: input.url});
     for (let i = 0; i < 3; ++i) {
-        idhan.import({request: {url: input.url}});
+        idhan.queueImport({request: {url: input.url}});
         // Exercise interrupt polling after every blocking callback, as Gelbooru's tag parser does.
         for (let tag = 0; tag < 20000; ++tag) "cat blue_eyes".split(" ");
     }
@@ -73,7 +87,7 @@ export async function run(input, idhan) {
 }
 )JS" );
 	harness.configure(
-		R"([{"export":"run","path":"/file"}])",
+		R"([{"export":"execute","path":"/file"}])",
 		downloader::DownloaderConfig { .script_burst_timeout = std::chrono::milliseconds { 200 } } );
 	const auto session { harness.context->createSession( downloader::SessionOptions { .observer = &observer } ) };
 	REQUIRE( session->submit( harness.server.url( "/file" ) ).has_value() );
@@ -89,7 +103,7 @@ export async function run(input, idhan) {
 	REQUIRE( waitUntil( [ & ] { return session->idle(); } ) );
 	REQUIRE( observer.recording.failures.size() == 1 );
 	CHECK( observer.recording.failures.front().second.contains( "interrupted" ) );
-	harness.context->shutdown();
+	folly::coro::blockingWait( harness.context->shutdown() );
 }
 
 void rememberTimeoutRejection(
@@ -109,9 +123,17 @@ void rememberTimeoutRejection(
 
 TEST_CASE( "Endless promise chains still exhaust the JavaScript budget", "[downloader][timeout]" )
 {
+	bool scheduled {};
+	SECTION( "Continuous execution" )
+	{}
+	SECTION( "Bounded batches retain their budget between worker turns" )
+	{
+		scheduled = true;
+	}
 	ParserFixture parsers {};
 	downloader::BytecodeCache bytecode { parsers.root() };
-	downloader::ScriptContext scripts { { .burst_timeout = std::chrono::milliseconds { 200 } }, bytecode };
+	auto activity { std::make_shared< downloader::ScriptActivity >() };
+	downloader::ScriptContext scripts { { .burst_timeout = std::chrono::milliseconds { 200 } }, bytecode, activity };
 	downloader::JSContextPtr context { JS_NewContext( scripts.runtime() ) };
 	REQUIRE( context != nullptr );
 	JSValue rejection { JS_UNDEFINED };
@@ -127,7 +149,31 @@ again();
 	REQUIRE_FALSE( JS_IsException( evaluated ) );
 	JS_FreeValue( context.get(), evaluated );
 	std::string error {};
-	scripts.pumpJobs( error );
+	std::atomic_bool observed_running {};
+	std::jthread sampler {
+		[ activity, &observed_running ]( const std::stop_token stop )
+		{
+			while ( !stop.stop_requested() )
+			{
+				if ( activity->snapshot().executing ) observed_running.store( true );
+
+				std::this_thread::sleep_for( std::chrono::milliseconds { 1 } );
+			}
+		}
+	};
+	if ( scheduled )
+	{
+		const auto deadline { std::chrono::steady_clock::now() + std::chrono::seconds { 3 } };
+		while ( JS_IsJobPending( scripts.runtime() ) && std::chrono::steady_clock::now() < deadline )
+			scripts.runReadyMicrotasks( error, 64, std::chrono::milliseconds { 2 } );
+	}
+	else
+		scripts.runReadyMicrotasks( error );
+	sampler.request_stop();
+	sampler.join();
+	CHECK( observed_running.load() );
+	CHECK_FALSE( activity->snapshot().executing );
+	CHECK( activity->snapshot().busy_ns > 0 );
 	INFO( error );
 	const std::string rejection_text { downloader::scriptValueString( context.get(), rejection ) };
 	INFO( rejection_text );

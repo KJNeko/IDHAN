@@ -1,0 +1,53 @@
+{
+  "text": "MEGA direct import fixture\n",
+  "key": "AAAAAAAAAAA_kQSUWUE6iQcHBwcHBwcHOJYDk15GPY4",
+  "at": "7mycJV2CRFjepQ_TmN0a20NL0TVcS16Z7DH_sJUwsuU",
+  "bytes": [
+    129,
+    197,
+    216,
+    242,
+    35,
+    218,
+    111,
+    183,
+    125,
+    119,
+    123,
+    190,
+    200,
+    133,
+    0,
+    41,
+    36,
+    109,
+    44,
+    93,
+    253,
+    24,
+    62,
+    111,
+    103,
+    183,
+    5
+  ],
+  "folderKey": "BQUFBQUFBQUFBQUFBQUFBQ",
+  "folderResponse": {
+    "f": [
+      {
+        "h": "root",
+        "t": 1,
+        "k": "root:Qj70c6InKQT91ol8WGux8Q",
+        "a": "8AOxw6t0ddoX6VBHs49B7cNiPHO_IeUqkIApYHWT6Qw"
+      },
+      {
+        "h": "child",
+        "p": "root",
+        "t": 0,
+        "s": 27,
+        "k": "root:SZ22SUbfC3DRbjUGGQ4ysDpwiUOVQDchfEm5f5f6D3c",
+        "a": "7mycJV2CRFjepQ_TmN0a20NL0TVcS16Z7DH_sJUwsuU"
+      }
+    ]
+  }
+}

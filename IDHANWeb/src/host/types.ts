@@ -85,6 +85,7 @@ export interface ThemeApi {
 
 export interface ToastOptions {
   kind?: 'info' | 'success' | 'error';
+    /** Zero keeps the notification visible until dismissed. Errors default to zero. */
   timeoutMs?: number;
 }
 

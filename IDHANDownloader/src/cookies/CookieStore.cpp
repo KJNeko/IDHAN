@@ -1,11 +1,12 @@
 #include "cookies/CookieStore.hpp"
 
+
 #include <ada.h>
 #include <algorithm>
 #include <ranges>
 
 #include "HostCallback.hpp"
-#include "URLUtils.hpp"
+#include "urls/URLUtils.hpp"
 #include "http/HttpMessage.hpp"
 
 namespace idhan::downloader
@@ -116,12 +117,12 @@ std::vector< Cookie > CookieOverlay::cookies() const
 CookieStore::CookieStore( CookiePersistence* persistence ) : m_persistence( persistence )
 {}
 
-void CookieStore::load()
+folly::coro::Task< void > CookieStore::load()
 {
-	if ( m_persistence == nullptr ) return;
+	if ( m_persistence == nullptr ) co_return;
 
-	m_persistence->pruneExpired();
-	auto loaded { m_persistence->loadAll() };
+	co_await m_persistence->pruneExpired();
+	auto loaded { co_await m_persistence->loadAll() };
 
 	const auto now { std::chrono::system_clock::now() };
 	const std::scoped_lock lock { m_mutex };
@@ -143,10 +144,20 @@ void CookieStore::load()
 	}
 }
 
-void CookieStore::set( Cookie cookie )
+folly::coro::Task< void > CookieStore::set( Cookie cookie )
 {
-	if ( !cookie.expires.has_value() ) return;
+	if ( !cookie.expires.has_value() ) co_return;
 
+	auto write_lock { co_await m_write_mutex.co_scoped_lock() };
+	{
+		const std::scoped_lock lock { m_mutex };
+		for ( const auto& stored : m_cookies )
+		{
+			if ( stored.sameIdentity( cookie ) && stored.value == cookie.value && stored.secure == cookie.secure
+			     && stored.host_only == cookie.host_only && stored.expires == cookie.expires )
+				co_return;
+		}
+	}
 	const PersistedCookie persisted {
 		.name = cookie.name,
 		.domain = cookie.domain,
@@ -157,22 +168,41 @@ void CookieStore::set( Cookie cookie )
 		.expires = *cookie.expires
 	};
 
+	if ( m_persistence != nullptr )
 	{
-		const std::scoped_lock lock { m_mutex };
-		upsert( m_cookies, std::move( cookie ) );
+		const auto saved_e { co_await hostCallback( m_persistence->upsert( persisted ) ) };
+		if ( !saved_e.has_value() )
+		{
+			spdlog::error( "Unable to persist downloader cookie: {}", saved_e.error() );
+			co_return;
+		}
 	}
-
-	if ( m_persistence != nullptr ) (void)hostCallback( [ & ] { m_persistence->upsert( persisted ); } );
+	const std::scoped_lock lock { m_mutex };
+	upsert( m_cookies, std::move( cookie ) );
 }
 
-void CookieStore::erase( const std::string_view name, const std::string_view domain, const std::string_view path )
+folly::coro::Task< void > CookieStore::erase( std::string name, std::string domain, std::string path )
 {
+	auto write_lock { co_await m_write_mutex.co_scoped_lock() };
 	{
 		const std::scoped_lock lock { m_mutex };
-		remove( m_cookies, name, domain, path );
+		const bool present { std::ranges::any_of(
+			m_cookies,
+			[ & ]( const Cookie& cookie )
+			{ return cookie.name == name && cookie.domain == domain && cookie.path == path; } ) };
+		if ( !present ) co_return;
 	}
-
-	if ( m_persistence != nullptr ) (void)hostCallback( [ & ] { m_persistence->erase( name, domain, path ); } );
+	if ( m_persistence != nullptr )
+	{
+		const auto erased_e { co_await hostCallback( m_persistence->erase( name, domain, path ) ) };
+		if ( !erased_e.has_value() )
+		{
+			spdlog::error( "Unable to erase downloader cookie: {}", erased_e.error() );
+			co_return;
+		}
+	}
+	const std::scoped_lock lock { m_mutex };
+	remove( m_cookies, name, domain, path );
 }
 
 void CookieStore::appendMatching(

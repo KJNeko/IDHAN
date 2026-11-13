@@ -43,7 +43,6 @@ inline constexpr auto OK { "ok" };
 inline constexpr auto ERROR { "error" };
 inline constexpr auto RSS_KB { "rss_kb" };
 inline constexpr auto ACTIVE_CALLS { "active_calls" };
-inline constexpr auto MODULE_ACTIVITY { "module_activity" };
 inline constexpr auto QUEUED { "queued" };
 inline constexpr auto RUNNING { "running" };
 inline constexpr auto MODULES { "modules" };
@@ -58,6 +57,7 @@ inline constexpr auto SINGLE_THREADED { "single_threaded" };
 inline constexpr auto RESIDENCY { "residency" };
 inline constexpr auto RSS_CEILING_MB { "rss_ceiling_mb" };
 inline constexpr auto MIMES { "mimes" };
+inline constexpr auto PHASH_MIMES { "phash_mimes" };
 inline constexpr auto METADATA { "metadata" };
 inline constexpr auto THUMBNAIL { "thumbnail" };
 inline constexpr auto CAPABILITY { "capability" };
@@ -370,6 +370,7 @@ struct ManifestEntry
 	//! queries up front instead of discovering it from a failed call. False is a normal
 	//! configuration: an image-only export, or a text tower that failed its parity check.
 	bool supports_text { false };
+	std::vector< MimeID > phash_mimes {};
 };
 
 [[nodiscard]] Json::Value toJson( const ManifestEntry& entry );

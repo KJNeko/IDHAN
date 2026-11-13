@@ -17,7 +17,6 @@ class Task;
 namespace detail
 {
 
-//! final_suspend awaiter.
 struct FinalAwaiter
 {
 	[[nodiscard]] bool await_ready() const noexcept { return false; }
@@ -115,11 +114,8 @@ class TaskBase
 } // namespace detail
 
 //! Lazy, move-only coroutine return type without an executor dependency.
-//! \warning Like IDHANTask, this is lazy. Never build one from a capturing lambda and store it to
-//!          await later: the closure is destroyed before the body runs, leaving the captures
-//!          dangling. Use a captureless lambda or a free function and pass state as parameters,
-//!          which are copied into the coroutine frame.
-//! \tparam T The co_returned value type. A void specialisation follows.
+//! \warning A stored capturing coroutine lambda can outlive its closure, leaving dangling captures.
+//!          Pass state as parameters to a captureless lambda or free function instead.
 template < typename T >
 class [[nodiscard]] Task : public detail::TaskBase< detail::TaskPromise< T > >
 {
@@ -137,7 +133,6 @@ class [[nodiscard]] Task : public detail::TaskBase< detail::TaskPromise< T > >
 
 		[[nodiscard]] bool await_ready() const noexcept { return false; }
 
-		//! Records the awaiting coroutine and symmetric-transfers into the task body, starting it.
 		[[nodiscard]] std::coroutine_handle<> await_suspend( std::coroutine_handle<> awaiting ) const noexcept
 		{
 			m_coro.promise().m_continuation = awaiting;

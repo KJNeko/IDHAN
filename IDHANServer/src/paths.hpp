@@ -46,7 +46,6 @@ std::filesystem::path getModuleRunnerPath();
 
 std::filesystem::path getStaticPath();
 
-std::filesystem::path getApiDocsPath();
 std::filesystem::path getThumbnailsPath();
 
 //! Requests outside `[thumbnails] cacheable_sizes` are generated but not cached. Read live per miss.

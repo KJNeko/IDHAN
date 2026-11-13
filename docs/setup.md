@@ -69,15 +69,21 @@ when you only want to check files already registered in the database.
 Hash verification is a separate option and defaults to off. Enable it to check that each file's contents match the
 SHA-256 in its filename. Review the scan results for validation failures; adopting orphans does not bypass validation.
 
-## Where did my imported files go?
+## How to see imported files
 
 Currently there is no proper workflow system for imported files. That will be coming later. But for now you can view
 EVERY file by simply doing an empty search with no tags. You can then sort by imported time.
 
-## Swagger Docs
+## Hydrus Companion
 
-If you are interested in using the API endpoints directly. There is a swagger docs built and available at the `/api`
-endpoint. If you don't know what this means then it's probably not for you.
+Set Companion's Hydrus API URL to `http://<host>:16609/hyapi` and use your IDHAN API key.
+Sending a URL creates a download session using IDHAN's installed parsers and direct-file downloader.
+Companion's imported-file badges and link highlighting use stored file hashes associated with the
+page, source, or direct file URL. Unknown URLs return an empty status list; records without a stored
+file are not reported as imported. URL matching ignores fragments and query parameter order.
+
+This integration supports sending URLs and checking imported status. Companion's extra tags,
+Hydrus page targeting, cookie sharing, and header sharing are not implemented.
 
 ## Getting hydrui/hyweb to work
 

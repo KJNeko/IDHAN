@@ -4,7 +4,7 @@ export async function gallery(input, idhan) {
 
     idhan.follow({url: `${input.url}/child`});
     idhan.follow({url: `${input.url}/child`});
-    idhan.import({
+    idhan.queueImport({
         request: {url: `${input.url}/file`},
         filename: "fixture.png",
         urls: [{url: input.url, type: "gallery"}],

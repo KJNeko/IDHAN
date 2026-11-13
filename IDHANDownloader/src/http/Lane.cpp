@@ -1,8 +1,10 @@
 #include "http/Lane.hpp"
 
+#include <algorithm>
 #include <utility>
 
 #include "HostCallback.hpp"
+#include "IDHANDownloader/http/LaneObserver.hpp"
 #include "http/IoPool.hpp"
 #include "http/LanePolicy.hpp"
 #include "http/LaneShard.hpp"
@@ -10,12 +12,13 @@
 namespace idhan::downloader
 {
 
-Lane::Lane( std::string key, LanePolicy& policy, IoPool& pool, const Config config ) :
+Lane::Lane( std::string key, LanePolicy& policy, IoPool& pool, const Config config, LaneObserver* observer ) :
   m_key( std::move( key ) ),
   m_policy( policy ),
   m_pool( pool ),
   m_timer_thread( pool.leastLoaded() ),
-  m_config( config )
+  m_config( config ),
+  m_observer( observer )
 {}
 
 Lane::~Lane()
@@ -30,7 +33,7 @@ void Lane::submit( TransferRequest request, TransferCallback callback )
 
 		if ( m_stopped )
 		{
-			if ( request.sink ) (void)hostCallback( [ & ] { request.sink->abort(); } );
+			if ( request.buffered_sink ) (void)hostCallback( [ & ] { request.buffered_sink->abort(); } );
 
 			callback(
 				std::unexpected(
@@ -39,7 +42,10 @@ void Lane::submit( TransferRequest request, TransferCallback callback )
 		}
 
 		m_last_enqueued = std::chrono::steady_clock::now();
-		m_queue.emplace_back( Pending { .request = std::move( request ), .callback = std::move( callback ) } );
+		if ( request.progress ) request.progress->stampQueued();
+
+		auto& queue { request.buffered_sink ? m_import_queue : m_queue };
+		queue.emplace_back( Pending { .request = std::move( request ), .callback = std::move( callback ) } );
 	}
 
 	pump( shared_from_this() );
@@ -48,37 +54,41 @@ void Lane::submit( TransferRequest request, TransferCallback callback )
 void Lane::cancel( const std::shared_ptr< std::atomic_bool >& cancellation )
 {
 	std::deque< Pending > cancelled {};
-	std::vector< std::shared_ptr< LaneShard > > shards {};
+	std::shared_ptr< LaneShard > shard {};
 
 	{
 		const std::scoped_lock lock { m_mutex };
 
-		for ( auto entry { m_queue.begin() }; entry != m_queue.end(); )
+		for ( auto* queue : { &m_import_queue, &m_queue } )
 		{
-			if ( entry->request.cancellation != cancellation )
+			for ( auto entry { queue->begin() }; entry != queue->end(); )
 			{
-				++entry;
-				continue;
-			}
+				if ( entry->request.cancellation != cancellation )
+				{
+					++entry;
+					continue;
+				}
 
-			cancelled.emplace_back( std::move( *entry ) );
-			entry = m_queue.erase( entry );
+				cancelled.emplace_back( std::move( *entry ) );
+				entry = queue->erase( entry );
+			}
 		}
 
-		shards = m_shards;
+		shard = m_shard;
 	}
 
 	for ( Pending& pending : cancelled )
 	{
-		if ( pending.request.sink ) (void)hostCallback( [ & ] { pending.request.sink->abort(); } );
+		if ( pending.request.buffered_sink ) (void)hostCallback( [ & ] { pending.request.buffered_sink->abort(); } );
 
 		pending.callback(
 			std::unexpected(
 				TransferError { .code = TransferErrorCode::CANCELLED, .message = "Transfer cancelled" } ) );
 	}
 
-	for ( const auto& shard : shards )
-		shard->thread().post( [ shard, cancellation ] { shard->cancel( cancellation ); } );
+	if ( shard ) shard->thread().post( [ shard, cancellation ] { shard->cancel( cancellation ); } );
+
+	publish();
 }
 
 void Lane::wake()
@@ -97,41 +107,9 @@ void Lane::onTransferFinished()
 	pump( shared_from_this() );
 }
 
-void Lane::growIfNeeded()
+void Lane::onTransferFinalizing()
 {
-	if ( m_shards.empty() )
-	{
-		auto shard {
-			std::make_shared< LaneShard >( weak_from_this(), m_pool.leastLoaded(), m_config.unthrottled_concurrency )
-		};
-		shard->thread().post( [ shard ] { shard->thread().attach( *shard ); } );
-		m_shards.emplace_back( std::move( shard ) );
-		return;
-	}
-
-	if ( m_policy.throttled() || m_shards.size() >= m_config.max_shards ) return;
-
-	const std::size_t load { m_in_flight + m_queue.size() };
-
-	if ( load <= m_shards.size() * m_config.shard_growth_threshold ) return;
-
-	auto shard {
-		std::make_shared< LaneShard >( weak_from_this(), m_pool.leastLoaded(), m_config.unthrottled_concurrency )
-	};
-	shard->thread().post( [ shard ] { shard->thread().attach( *shard ); } );
-	m_shards.emplace_back( std::move( shard ) );
-}
-
-std::shared_ptr< LaneShard > Lane::pickShard()
-{
-	auto* best { &m_shards.front() };
-
-	for ( auto& shard : m_shards )
-	{
-		if ( shard->inFlight() < ( *best )->inFlight() ) best = &shard;
-	}
-
-	return *best;
+	publish();
 }
 
 void Lane::arm( const std::shared_ptr< Lane >& lane, const std::chrono::steady_clock::duration wait )
@@ -165,33 +143,84 @@ void Lane::arm( const std::shared_ptr< Lane >& lane, const std::chrono::steady_c
 void Lane::pump( const std::shared_ptr< Lane >& lane )
 {
 	Lane& self { *lane };
-	const std::scoped_lock lock { self.m_mutex };
-
-	const std::size_t ceiling {
-		self.m_policy.concurrency( self.m_config.unthrottled_concurrency, self.m_config.throttled_concurrency )
-	};
-
-	while ( !self.m_stopped && !self.m_queue.empty() && self.m_in_flight < ceiling )
+	std::deque< Pending > rejected {};
 	{
-		if ( const auto wait { self.m_policy.claim() }; wait.has_value() )
+		const std::scoped_lock lock { self.m_mutex };
+		const std::size_t ceiling { self.m_policy.concurrency( self.m_config.concurrency ) };
+
+		while ( !self.m_stopped )
 		{
-			self.arm( lane, *wait );
-			return;
+			if ( self.m_import_queue.empty() && self.m_queue.empty() ) break;
+
+			const bool disabled { self.m_policy.disabled() };
+			if ( !disabled && self.m_in_flight >= ceiling ) break;
+
+			const auto wait {
+				disabled ? std::optional { std::chrono::steady_clock::duration::max() } : self.m_policy.claim()
+			};
+			if ( wait.has_value() )
+			{
+				if ( wait.value() == std::chrono::steady_clock::duration::max() )
+				{
+					rejected.swap( self.m_queue );
+					for ( auto& pending : self.m_import_queue ) rejected.emplace_back( std::move( pending ) );
+
+					self.m_import_queue.clear();
+					self.m_gate.armed = false;
+				}
+				else
+					self.arm( lane, wait.value() );
+
+				break;
+			}
+
+			if ( !self.m_shard )
+			{
+				self.m_shard = std::make_shared< LaneShard >( lane, self.m_pool.leastLoaded(), ceiling );
+				auto shard { self.m_shard };
+				shard->thread().post( [ shard ] { shard->thread().attach( *shard ); } );
+			}
+
+			auto shard { self.m_shard };
+			auto& queue { self.m_import_queue.empty() ? self.m_queue : self.m_import_queue };
+			Pending pending { std::move( queue.front() ) };
+			queue.pop_front();
+			if ( pending.request.progress )
+			{
+				pending.request.progress->phase = NetworkActivity::Phase::DOWNLOADING;
+				pending.request.progress->beginDownloading();
+			}
+
+			++self.m_in_flight;
+			++self.m_dispatched;
+			shard->reserve();
+			shard->thread().post( [ shard, moved = std::move( pending ) ]() mutable
+			                      { shard->start( std::move( moved.request ), std::move( moved.callback ) ); } );
 		}
-
-		self.growIfNeeded();
-
-		if ( self.m_shards.empty() ) break;
-
-		auto shard { self.pickShard() };
-		Pending pending { std::move( self.m_queue.front() ) };
-		self.m_queue.pop_front();
-		++self.m_in_flight;
-		shard->reserve();
-
-		shard->thread().post( [ shard, moved = std::move( pending ) ]() mutable
-		                      { shard->start( std::move( moved.request ), std::move( moved.callback ) ); } );
 	}
+	for ( Pending& pending : rejected )
+	{
+		if ( pending.request.buffered_sink ) (void)hostCallback( [ & ] { pending.request.buffered_sink->abort(); } );
+
+		pending.callback(
+			std::unexpected(
+				TransferError {
+					.code = TransferErrorCode::RATE_LIMITED,
+					.message = "Lane disabled after repeated HTTP 429 responses; enable the lane to retry" } ) );
+	}
+
+	// Timer-driven starts and completions must be visible between the pool's periodic sweeps.
+	self.publish();
+}
+
+void Lane::publish() const
+{
+	if ( m_observer == nullptr ) return;
+
+	LaneSnapshot snapshot;
+	m_policy.fill( snapshot );
+	fill( snapshot );
+	(void)hostCallback( [ & ] { m_observer->onLaneChanged( snapshot ); } );
 }
 
 bool Lane::retirable(
@@ -200,41 +229,42 @@ bool Lane::retirable(
 {
 	const std::scoped_lock lock { m_mutex };
 
-	return m_queue.empty() && m_in_flight == 0 && now - m_last_enqueued >= keep_alive;
+	return m_queue.empty() && m_import_queue.empty() && m_in_flight == 0 && now - m_last_enqueued >= keep_alive;
 }
 
-void Lane::onBytesReceived( const std::size_t bytes, const std::chrono::steady_clock::time_point now )
+void Lane::onBytesReceived( const std::size_t bytes )
 {
-	const auto bucket { std::chrono::floor< std::chrono::milliseconds >( now ).time_since_epoch().count() / 100 };
-	const auto timestamp { std::chrono::steady_clock::time_point { std::chrono::milliseconds { bucket * 100 } } };
 	const std::scoped_lock lock { m_mutex };
-	auto& sample { m_download_samples[ static_cast< std::size_t >( bucket ) % m_download_samples.size() ] };
-
-	if ( sample.bucket != timestamp ) sample = DownloadSample { .bucket = timestamp };
-
-	sample.bytes += bytes;
+	m_downloaded_bytes += bytes;
 }
 
 void Lane::fill( LaneSnapshot& snapshot, const std::chrono::steady_clock::time_point now ) const
 {
 	const std::scoped_lock lock { m_mutex };
 	snapshot.in_flight = m_in_flight;
-	snapshot.queued = m_queue.size();
-	snapshot.shards = m_shards.size();
-	snapshot.active = true;
-	snapshot.download_bytes_per_second = 0;
-
-	for ( const auto& sample : m_download_samples )
+	snapshot.concurrency_limit = m_policy.concurrency( m_config.concurrency );
+	snapshot.dispatched = m_dispatched;
+	snapshot.dispatch_wait = snapshot.disabled ? "disabled" : "idle";
+	if ( !snapshot.disabled && ( !m_queue.empty() || !m_import_queue.empty() ) )
 	{
-		if ( now >= sample.bucket && now - sample.bucket < std::chrono::seconds { 1 } )
-			snapshot.download_bytes_per_second += sample.bytes;
+		if ( snapshot.backed_off && snapshot.remaining > std::chrono::steady_clock::duration::zero() )
+			snapshot.dispatch_wait = "backoff";
+		else if ( m_in_flight >= snapshot.concurrency_limit )
+			snapshot.dispatch_wait = "concurrency";
+		else if ( snapshot.remaining > std::chrono::steady_clock::duration::zero() )
+			snapshot.dispatch_wait = "rate_limit";
+		else
+			snapshot.dispatch_wait = "ready";
 	}
+	snapshot.queued = m_queue.size() + m_import_queue.size();
+	snapshot.active = !m_stopped;
+	snapshot.download_bytes_per_second = m_download_speed.sample( m_downloaded_bytes, now );
 }
 
 void Lane::shutdown()
 {
 	std::deque< Pending > queued {};
-	std::vector< std::shared_ptr< LaneShard > > shards {};
+	std::shared_ptr< LaneShard > shard {};
 
 	{
 		const std::scoped_lock lock { m_mutex };
@@ -242,13 +272,18 @@ void Lane::shutdown()
 		if ( m_stopped ) return;
 
 		m_stopped = true;
+		// EventBase teardown can invoke cancelled timer callbacks after the policy is destroyed.
+		m_gate.armed = false;
 		queued.swap( m_queue );
-		shards.swap( m_shards );
+		for ( auto& pending : m_import_queue ) queued.emplace_back( std::move( pending ) );
+
+		m_import_queue.clear();
+		shard = std::move( m_shard );
 	}
 
 	for ( Pending& pending : queued )
 	{
-		if ( pending.request.sink ) (void)hostCallback( [ & ] { pending.request.sink->abort(); } );
+		if ( pending.request.buffered_sink ) (void)hostCallback( [ & ] { pending.request.buffered_sink->abort(); } );
 
 		pending.callback(
 			std::unexpected(
@@ -256,7 +291,7 @@ void Lane::shutdown()
 	}
 
 	// curl cleanup must run on the shard's IO thread.
-	for ( auto& shard : shards )
+	if ( shard )
 	{
 		IoThread& thread { shard->thread() };
 		thread.post(

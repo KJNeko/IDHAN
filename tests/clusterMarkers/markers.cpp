@@ -88,7 +88,7 @@ TEST_CASE( "Invalid cluster markers and symlinks are rejected without overwritin
 			file << invalid;
 		}
 		const auto original { markerContents( marker_path ) };
-		CHECK_FALSE( filesystem::readClusterMarker( root.fd() ) );
+		CHECK_FALSE( filesystem::readClusterMarkerSync( root.fd() ) );
 		CHECK_FALSE( filesystem::initializeClusterMarker( root.fd(), uuid ) );
 		CHECK( markerContents( marker_path ) == original );
 	}
@@ -98,7 +98,7 @@ TEST_CASE( "Invalid cluster markers and symlinks are rejected without overwritin
 			std::ofstream file { marker_path };
 			file << invalid;
 		}
-		CHECK_FALSE( filesystem::readClusterMarker( root.fd() ) );
+		CHECK_FALSE( filesystem::readClusterMarkerSync( root.fd() ) );
 	}
 	std::filesystem::remove( marker_path );
 	const auto target { directory.path / "user.json" };
@@ -141,44 +141,44 @@ TEST_CASE( "Verified cluster access pins the root and rejects later marker loss"
 		std::ofstream file { configured / "sentinel" };
 		file << "original";
 	}
-	auto access { filesystem::ClusterAccess::open( configured, uuid, false ) };
+	auto access { filesystem::ClusterAccess::openSync( configured, uuid, false ) };
 	REQUIRE( access );
 	std::filesystem::rename( configured, moved );
 	std::filesystem::create_directory( configured );
 	CHECK( markerContents( access->root() / "sentinel" ) == "original" );
-	CHECK_FALSE( filesystem::ClusterAccess::open( configured, uuid, false ) );
-	CHECK( access->verify() );
+	CHECK_FALSE( filesystem::ClusterAccess::openSync( configured, uuid, false ) );
+	CHECK( access->verifySync() );
 	std::filesystem::remove( moved / filesystem::clusterMarkerFilename );
-	CHECK_FALSE( access->verify() );
+	CHECK_FALSE( access->verifySync() );
 	REQUIRE( filesystem::initializeClusterMarker( root.fd(), boost::uuids::random_generator {}() ) );
-	CHECK_FALSE( access->verify() );
+	CHECK_FALSE( access->verifySync() );
 }
 
 TEST_CASE( "Readonly access permits absent markers but rejects conflicting identities", "[cluster-markers]" )
 {
 	MarkerDirectory directory;
 	const auto uuid { boost::uuids::random_generator {}() };
-	auto access_e { filesystem::ClusterAccess::open( directory.path, uuid, true ) };
+	auto access_e { filesystem::ClusterAccess::openSync( directory.path, uuid, true ) };
 	REQUIRE( access_e.has_value() );
 	auto& access { access_e.value() };
-	CHECK( access.verify().has_value() );
+	CHECK( access.verifySync().has_value() );
 	CHECK( std::filesystem::is_empty( directory.path ) );
-	CHECK_FALSE( filesystem::ClusterAccess::open( directory.path, uuid, false ).has_value() );
+	CHECK_FALSE( filesystem::ClusterAccess::openSync( directory.path, uuid, false ).has_value() );
 
 	folly::File root { directory.path.c_str(), O_RDONLY | O_DIRECTORY };
 	REQUIRE( filesystem::initializeClusterMarker( root.fd(), uuid ).has_value() );
-	CHECK( access.verify().has_value() );
+	CHECK( access.verifySync().has_value() );
 	std::filesystem::remove( directory.path / filesystem::clusterMarkerFilename );
-	CHECK( access.verify().has_value() );
+	CHECK( access.verifySync().has_value() );
 	REQUIRE( filesystem::initializeClusterMarker( root.fd(), boost::uuids::random_generator {}() ).has_value() );
-	CHECK_FALSE( access.verify().has_value() );
-	CHECK_FALSE( filesystem::ClusterAccess::open( directory.path, uuid, true ).has_value() );
+	CHECK_FALSE( access.verifySync().has_value() );
+	CHECK_FALSE( filesystem::ClusterAccess::openSync( directory.path, uuid, true ).has_value() );
 	{
 		std::ofstream marker { directory.path / filesystem::clusterMarkerFilename };
 		marker << "invalid JSON";
 	}
-	CHECK_FALSE( access.verify().has_value() );
-	CHECK_FALSE( filesystem::ClusterAccess::open( directory.path / "absent", uuid, true ).has_value() );
+	CHECK_FALSE( access.verifySync().has_value() );
+	CHECK_FALSE( filesystem::ClusterAccess::openSync( directory.path / "absent", uuid, true ).has_value() );
 }
 
 TEST_CASE( "Recovery acknowledgements reset persistently while preserving config text", "[cluster-markers][config]" )
