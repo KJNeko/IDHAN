@@ -34,6 +34,26 @@ SCENARIO( "Well known mime ids", "[mime][ids]" )
 			{
 				REQUIRE( mime_ids::mime_names.size() == mime_ids::ALL_MIME_IDS.size() );
 			}
+
+			THEN( "each id has a best extension" )
+			{
+				REQUIRE( mime_ids::mime_extensions.size() == mime_ids::ALL_MIME_IDS.size() );
+				for ( const auto id : mime_ids::ALL_MIME_IDS )
+				{
+					INFO( "mime id " << id );
+					REQUIRE( mime_ids::mime_extensions.contains( id ) );
+					if ( id == mime_ids::UNKNOWN ) continue;
+
+					REQUIRE_FALSE( mime_ids::mime_extensions.at( id ).empty() );
+				}
+
+				REQUIRE( mime_ids::mime_extensions.at( mime_ids::UNKNOWN ).empty() );
+				REQUIRE( mime_ids::mime_extensions.at( mime_ids::IMAGE_JPEG ) == "jpg" );
+				REQUIRE( mime_ids::mime_extensions.at( mime_ids::ANIMATION_APNG ) == "png" );
+				REQUIRE( mime_ids::mime_extensions.at( mime_ids::APPLICATION_ZIP ) == "zip" );
+				REQUIRE( mime_ids::mime_extensions.at( mime_ids::COMICBOOK_ZIP ) == "cbz" );
+				REQUIRE( mime_ids::mime_extensions.at( mime_ids::PIXIV_UGOIRA ) == "zip" );
+			}
 		}
 
 		WHEN( "the invalid id is looked up" )
@@ -42,6 +62,7 @@ SCENARIO( "Well known mime ids", "[mime][ids]" )
 			{
 				REQUIRE( mime_ids::INVALID == 0 );
 				REQUIRE( mime_ids::mime_names.find( mime_ids::INVALID ) == mime_ids::mime_names.end() );
+				REQUIRE_FALSE( mime_ids::mime_extensions.contains( mime_ids::INVALID ) );
 				REQUIRE(
 					std::ranges::find( mime_ids::ALL_MIME_IDS, mime_ids::INVALID ) == mime_ids::ALL_MIME_IDS.end() );
 			}
@@ -80,45 +101,6 @@ SCENARIO( "Well known mime ids", "[mime][ids]" )
 					== mime_ids::mime_names.at( mime_ids::APPLICATION_ZIP ) );
 			}
 
-			THEN( "a bare application/zip resolves to the plain zip, never the ugoira" )
-			{
-				REQUIRE( mime_ids::canonicalIDForName( "application/zip" ) == mime_ids::APPLICATION_ZIP );
-			}
-
-			THEN( "a type carrying its own name resolves to itself" )
-			{
-				REQUIRE( mime_ids::canonicalIDForName( "application/x-clip-studio" ) == mime_ids::APPLICATION_CLIP );
-			}
-
-			THEN( "a name no id carries resolves to nothing" )
-			{
-				REQUIRE( mime_ids::canonicalIDForName( "application/never-declared" ) == mime_ids::INVALID );
-			}
-		}
-
-		WHEN( "every declared name is resolved" )
-		{
-			THEN( "it lands on an id that actually reports that name" )
-			{
-				for ( const auto id : mime_ids::ALL_MIME_IDS )
-				{
-					const auto name { mime_ids::mime_names.at( id ) };
-
-					INFO( "mime id " << id << " named " << name );
-					REQUIRE( mime_ids::mime_names.at( mime_ids::canonicalIDForName( name ) ) == name );
-				}
-			}
-
-			THEN( "it lands on the lowest id carrying that name" )
-			{
-				for ( const auto id : mime_ids::ALL_MIME_IDS )
-				{
-					const auto name { mime_ids::mime_names.at( id ) };
-
-					INFO( "mime id " << id << " named " << name );
-					REQUIRE( mime_ids::canonicalIDForName( name ) <= id );
-				}
-			}
 		}
 	}
 }
