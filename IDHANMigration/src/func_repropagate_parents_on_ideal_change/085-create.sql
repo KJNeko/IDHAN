@@ -1,4 +1,3 @@
-
 CREATE OR REPLACE FUNCTION repropagate_parents_on_ideal_change()
     RETURNS TRIGGER AS
 $$
@@ -10,14 +9,13 @@ BEGIN
         RETURN NEW;
     END IF;
 
-    IF NOT EXISTS (
-        SELECT 1
-        FROM active_tag_mappings other
-        WHERE other.record_id = OLD.record_id
-          AND other.tag_domain_id = OLD.tag_domain_id
-          AND COALESCE(other.ideal_tag_id, other.tag_id) = old_effective
-    ) THEN
-        DELETE FROM active_tag_mappings_parents
+    IF NOT EXISTS (SELECT 1
+                   FROM active_tag_mappings other
+                   WHERE other.record_id = OLD.record_id
+                     AND other.tag_domain_id = OLD.tag_domain_id
+                     AND COALESCE(other.ideal_tag_id, other.tag_id) = old_effective) THEN
+        DELETE
+        FROM active_tag_mappings_parents
         WHERE record_id = OLD.record_id
           AND origin_id = old_effective
           AND tag_domain_id = OLD.tag_domain_id
@@ -43,5 +41,5 @@ CREATE TRIGGER trg_repropagate_parents_on_ideal_change
     AFTER UPDATE
     ON active_tag_mappings
     FOR EACH ROW
-    WHEN ( COALESCE( OLD.ideal_tag_id, OLD.tag_id ) IS DISTINCT FROM COALESCE( NEW.ideal_tag_id, NEW.tag_id ) )
+    WHEN ( COALESCE(OLD.ideal_tag_id, OLD.tag_id) IS DISTINCT FROM COALESCE(NEW.ideal_tag_id, NEW.tag_id) )
 EXECUTE FUNCTION repropagate_parents_on_ideal_change();

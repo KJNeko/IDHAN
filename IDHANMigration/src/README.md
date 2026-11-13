@@ -19,8 +19,8 @@ Inside a directory, each file is one change: `NNN-<description>.sql`, e.g. `013-
 
 ## Ordering
 
-`NNN` is a **global, zero-padded** migration number. Files run in ascending numeric order across
-**all** directories. Ordering is computed from the numeric prefix of the filename (see
+`NNN` is a **global, zero-padded** migration number. Files run in ascending numeric order across **all** directories.
+Ordering is computed from the numeric prefix of the filename (see
 `../cmake_modules/GenerateMigrations.cmake`), Two files sharing a number is invalid. Non-Concurrent numbers are allowed.
 
 ## Adding a migration

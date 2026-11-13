@@ -19,8 +19,11 @@ namespace idhan::test
 //! Creates a domain, along with the tag_mappings, tag_aliases and tag_parents partitions it needs.
 inline int insertDomain( pqxx::transaction_base& tx, const std::string_view name )
 {
-	return tx.exec( "INSERT INTO tag_domains (domain_name) VALUES ($1) RETURNING tag_domain_id", pqxx::params { name } )
-	    .one_row()[ 0 ]
+	return tx.exec( "INSERT INTO tag_domains (domain_name)\n"
+					"    VALUES ($1)\n"
+					"RETURNING tag_domain_id",
+					pqxx::params{ name } )
+			 .one_row()[ 0 ]
 	    .as< int >();
 }
 
@@ -41,15 +44,22 @@ inline int insertRecord( pqxx::transaction_base& tx, const int seed )
 {
 	const auto record_id {
 		tx.exec(
-			  "INSERT INTO records (sha256) VALUES (decode($1, 'hex')) RETURNING record_id",
+			  "INSERT INTO records (sha256)\n"
+			  "    VALUES (decode($1, 'hex'))\n"
+			  "RETURNING record_id",
 			  pqxx::params { hashFor( seed ) } )
 			.one_row()[ 0 ]
 			.as< int >()
 	};
 
 	tx.exec(
-		"INSERT INTO file_info (record_id, size, mime_id, cluster_delete_time) "
-		"VALUES ($1, 0, (SELECT mime_id FROM mime WHERE name = 'image/png'), now())",
+		"INSERT INTO file_info (record_id, size, mime_id, cluster_delete_time)\n"
+		"    VALUES ($1, 0, (\n"
+		"            SELECT\n"
+		"                mime_id\n"
+		"            FROM mime\n"
+		"            WHERE name = 'image/png'\n"
+		"    ), now())",
 		pqxx::params { record_id } );
 
 	return record_id;
@@ -60,7 +70,9 @@ inline int insertRecordWithoutFile( pqxx::transaction_base& tx, const int seed )
 {
 	return tx
 	    .exec(
-			"INSERT INTO records (sha256) VALUES (decode($1, 'hex')) RETURNING record_id",
+			"INSERT INTO records (sha256)\n"
+			"    VALUES (decode($1, 'hex'))\n"
+			"RETURNING record_id",
 			pqxx::params { hashFor( seed ) } )
 	    .one_row()[ 0 ]
 	    .as< int >();
@@ -69,43 +81,53 @@ inline int insertRecordWithoutFile( pqxx::transaction_base& tx, const int seed )
 inline void insertMapping( pqxx::transaction_base& tx, const int record_id, const int tag_id, const int tag_domain_id )
 {
 	tx.exec(
-		"INSERT INTO tag_mappings (record_id, tag_id, tag_domain_id) VALUES ($1, $2, $3)",
+		"INSERT INTO tag_mappings (record_id, tag_id, tag_domain_id)\n"
+		"    VALUES ($1, $2, $3)",
 		pqxx::params { record_id, tag_id, tag_domain_id } );
 }
 
 inline void removeMapping( pqxx::transaction_base& tx, const int record_id, const int tag_id, const int tag_domain_id )
 {
 	tx.exec(
-		"DELETE FROM tag_mappings WHERE record_id = $1 AND tag_id = $2 AND tag_domain_id = $3",
+		"DELETE FROM tag_mappings\n"
+		"WHERE record_id = $1\n"
+		"    AND tag_id = $2\n"
+		"    AND tag_domain_id = $3",
 		pqxx::params { record_id, tag_id, tag_domain_id } );
 }
 
-//! Points aliased_id at alias_id, so anything holding the aliased tag should resolve to the alias.
 inline void insertAlias( pqxx::transaction_base& tx, const int tag_domain_id, const int aliased_id, const int alias_id )
 {
 	tx.exec(
-		"INSERT INTO tag_aliases (aliased_id, alias_id, tag_domain_id) VALUES ($1, $2, $3)",
+		"INSERT INTO tag_aliases (aliased_id, alias_id, tag_domain_id)\n"
+		"    VALUES ($1, $2, $3)",
 		pqxx::params { aliased_id, alias_id, tag_domain_id } );
 }
 
 inline void removeAlias( pqxx::transaction_base& tx, const int tag_domain_id, const int aliased_id )
 {
 	tx.exec(
-		"DELETE FROM tag_aliases WHERE aliased_id = $1 AND tag_domain_id = $2",
+		"DELETE FROM tag_aliases\n"
+		"WHERE aliased_id = $1\n"
+		"    AND tag_domain_id = $2",
 		pqxx::params { aliased_id, tag_domain_id } );
 }
 
 inline void insertParent( pqxx::transaction_base& tx, const int tag_domain_id, const int parent_id, const int child_id )
 {
 	tx.exec(
-		"INSERT INTO tag_parents (parent_id, child_id, tag_domain_id) VALUES ($1, $2, $3)",
+		"INSERT INTO tag_parents (parent_id, child_id, tag_domain_id)\n"
+		"    VALUES ($1, $2, $3)",
 		pqxx::params { parent_id, child_id, tag_domain_id } );
 }
 
 inline void removeParent( pqxx::transaction_base& tx, const int tag_domain_id, const int parent_id, const int child_id )
 {
 	tx.exec(
-		"DELETE FROM tag_parents WHERE parent_id = $1 AND child_id = $2 AND tag_domain_id = $3",
+		"DELETE FROM tag_parents\n"
+		"WHERE parent_id = $1\n"
+		"    AND child_id = $2\n"
+		"    AND tag_domain_id = $3",
 		pqxx::params { parent_id, child_id, tag_domain_id } );
 }
 
@@ -115,15 +137,19 @@ inline std::vector< int > finalTagRows( pqxx::transaction_base& tx, const int re
 	std::vector< int > tags {};
 
 	for ( const auto& row : tx.exec(
-			  "SELECT tag_id FROM active_tag_mappings_final WHERE record_id = $1 AND tag_domain_id = $2 "
-			  "ORDER BY tag_id",
+			  "SELECT\n"
+			  "    tag_id\n"
+			  "FROM active_tag_mappings_final\n"
+			  "WHERE record_id = $1\n"
+			  "    AND tag_domain_id = $2\n"
+			  "ORDER BY\n"
+			  "    tag_id",
 			  pqxx::params { record_id, tag_domain_id } ) )
 		tags.emplace_back( row[ 0 ].as< int >() );
 
 	return tags;
 }
 
-//! What a reader of the final view sees the record tagged with.
 inline std::vector< int > finalTags( pqxx::transaction_base& tx, const int record_id, const int tag_domain_id )
 {
 	auto tags { finalTagRows( tx, record_id, tag_domain_id ) };
@@ -139,8 +165,12 @@ inline std::optional< int > effectiveTag(
 	const int tag_domain_id )
 {
 	const auto result { tx.exec(
-		"SELECT COALESCE(ideal_tag_id, tag_id) FROM active_tag_mappings "
-		"WHERE record_id = $1 AND tag_id = $2 AND tag_domain_id = $3",
+		"SELECT\n"
+		"    COALESCE(ideal_tag_id, tag_id)\n"
+		"FROM active_tag_mappings\n"
+		"WHERE record_id = $1\n"
+		"    AND tag_id = $2\n"
+		"    AND tag_domain_id = $3",
 		pqxx::params { record_id, tag_id, tag_domain_id } ) };
 
 	if ( result.empty() ) return std::nullopt;
@@ -163,8 +193,16 @@ inline std::vector< ParentRow > parentRows( pqxx::transaction_base& tx, const in
 	std::vector< ParentRow > rows {};
 
 	for ( const auto& row : tx.exec(
-			  "SELECT tag_id, origin_id, internal_count FROM active_tag_mappings_parents "
-			  "WHERE record_id = $1 AND tag_domain_id = $2 ORDER BY tag_id, origin_id",
+			  "SELECT\n"
+			  "    tag_id,\n"
+			  "    origin_id,\n"
+			  "    internal_count\n"
+			  "FROM active_tag_mappings_parents\n"
+			  "WHERE record_id = $1\n"
+			  "    AND tag_domain_id = $2\n"
+			  "ORDER BY\n"
+			  "    tag_id,\n"
+			  "    origin_id",
 			  pqxx::params { record_id, tag_domain_id } ) )
 		rows.emplace_back( row[ 0 ].as< int >(), row[ 1 ].as< int >(), row[ 2 ].as< int >() );
 
@@ -179,8 +217,13 @@ inline std::optional< int > internalCount(
 	const int tag_domain_id )
 {
 	const auto result { tx.exec(
-		"SELECT internal_count FROM active_tag_mappings_parents "
-		"WHERE record_id = $1 AND tag_id = $2 AND origin_id = $3 AND tag_domain_id = $4",
+		"SELECT\n"
+		"    internal_count\n"
+		"FROM active_tag_mappings_parents\n"
+		"WHERE record_id = $1\n"
+		"    AND tag_id = $2\n"
+		"    AND origin_id = $3\n"
+		"    AND tag_domain_id = $4",
 		pqxx::params { record_id, tag_id, origin_id, tag_domain_id } ) };
 
 	if ( result.empty() ) return std::nullopt;
@@ -188,7 +231,6 @@ inline std::optional< int > internalCount(
 	return result[ 0 ][ 0 ].as< int >();
 }
 
-//! Sorted so an expectation can be written in whatever order reads best.
 inline std::vector< int > sorted( std::vector< int > tags )
 {
 	std::sort( tags.begin(), tags.end() );

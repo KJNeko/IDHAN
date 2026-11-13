@@ -2,10 +2,12 @@
 
 #include <moc_UrlServiceWorker.cpp>
 
-#include <QFutureSynchronizer>
+#include <QFuture>
+#include <QUrl>
 
 #include <idhan/IDHANClient.hpp>
 
+#include <exception>
 #include <optional>
 #include <ranges>
 #include <unordered_set>
@@ -32,9 +34,12 @@ void UrlServiceWorker::preprocess()
 		std::size_t url_counter { 0 };
 		std::size_t unique_url_counter { 0 };
 
-		// Use COUNT for more efficient counting
 		idhan::hydrus::Query< std::size_t, std::size_t > count_query {
-			client_tr, "SELECT COUNT(*), COUNT(DISTINCT url_id) FROM url_map"
+			client_tr,
+			"SELECT\n"
+			"    COUNT(*),\n"
+			"    COUNT(DISTINCT url_id)\n"
+			"FROM url_map"
 		};
 
 		for ( const auto& [ count, unique_count ] : count_query )
@@ -67,11 +72,15 @@ void UrlServiceWorker::process()
 
 		emit statusMessage( "Reading and ordering URL IDs from Hydrus" );
 
-		// Collect all unique url_ids (single query)
 		std::vector< int > all_url_ids {};
 		{
 			idhan::hydrus::Query< int > url_ids_query {
-				client_tr, "SELECT DISTINCT url_id FROM url_map ORDER BY url_id DESC"
+				client_tr,
+				"SELECT DISTINCT\n"
+				"    url_id\n"
+				"FROM url_map\n"
+				"ORDER BY\n"
+				"    url_id DESC"
 			};
 			for ( const auto& [ url_id ] : url_ids_query )
 			{
@@ -79,7 +88,6 @@ void UrlServiceWorker::process()
 			}
 		}
 
-		// Process in chunks, using batched queries per chunk
 		for ( std::size_t chunk_offset = 0; chunk_offset < all_url_ids.size(); chunk_offset += URL_MAX )
 		{
 			const auto chunk_end = std::min( chunk_offset + URL_MAX, all_url_ids.size() );
@@ -90,10 +98,12 @@ void UrlServiceWorker::process()
 			                        .arg( chunk_offset / URL_MAX + 1 )
 			                        .arg( ( all_url_ids.size() + URL_MAX - 1 ) / URL_MAX ) );
 
-			// Batch query urls table: get url text for all url_ids in this chunk
 			std::unordered_map< int, std::string > url_text_map {};
 			{
-				std::string sql = "SELECT url_id, url FROM urls WHERE url_id IN (";
+				std::string sql = "SELECT url_id,\n"
+				"       url\n"
+				"FROM urls\n"
+				"WHERE url_id IN (";
 				for ( std::size_t i = 0; i < chunk_size; ++i )
 				{
 					if ( i > 0 ) sql += ", ";
@@ -108,13 +118,26 @@ void UrlServiceWorker::process()
 					binder << all_url_ids[ chunk_offset + i ];
 				}
 				binder >> [ & ]( int url_id, std::string_view url )
-				{ url_text_map.emplace( url_id, std::string( url ) ); };
+				{
+					// Rough stand-in for the server's ada parse; catches invalid hosts such as "file://a (1).png".
+					const QUrl parsed { QString::fromUtf8( url.data(), url.size() ), QUrl::TolerantMode };
+					if ( !parsed.isValid() )
+					{
+						idhan::logging::warn(
+							"Skipping invalid Hydrus URL {}: {}", url, parsed.errorString().toStdString() );
+						return;
+					}
+
+					url_text_map.emplace( url_id, std::string( url ) );
+				};
 			}
 
-			// Batch query url_map: get hash_ids for all url_ids in this chunk
 			std::unordered_map< int, std::vector< int > > url_hash_map {};
 			{
-				std::string sql = "SELECT url_id, hash_id FROM url_map WHERE url_id IN (";
+				std::string sql = "SELECT url_id,\n"
+				"       hash_id\n"
+				"FROM url_map\n"
+				"WHERE url_id IN (";
 				for ( std::size_t i = 0; i < chunk_size; ++i )
 				{
 					if ( i > 0 ) sql += ", ";
@@ -131,7 +154,6 @@ void UrlServiceWorker::process()
 				binder >> [ & ]( int url_id, int hash_id ) { url_hash_map[ url_id ].push_back( hash_id ); };
 			}
 
-			// Build current_urls map from batched data in memory
 			std::size_t records_processed = 0;
 			for ( const auto& [ url_id, hash_ids ] : url_hash_map )
 			{
@@ -145,7 +167,6 @@ void UrlServiceWorker::process()
 				}
 			}
 
-			// Flush this chunk to server
 			total_records_processed += records_processed;
 			if ( !current_urls.empty() ) flushUrls( current_urls, client );
 
@@ -165,7 +186,6 @@ void UrlServiceWorker::flushUrls(
 {
 	if ( current_urls.empty() ) return;
 
-	// Only map hashes we haven't already resolved on a previous chunk.
 	std::vector< idhan::hydrus::HashID > uncached;
 	uncached.reserve( current_urls.size() );
 
@@ -183,7 +203,6 @@ void UrlServiceWorker::flushUrls(
 			m_record_cache.insert_or_assign( hy_hash_id, idhan_id );
 	}
 
-	// Only hashes that resolved to a record are sent, so count those and nothing else.
 	std::size_t mapping_count { 0 };
 	std::size_t record_count { 0 };
 	std::unordered_set< std::string > unique_urls;
@@ -204,20 +223,33 @@ void UrlServiceWorker::flushUrls(
 	                        .arg( unique_urls.size() )
 	                        .arg( record_count ) );
 
-	// Use QFutureSynchronizer for proper parallel processing
-	QFutureSynchronizer< void > synchronizer;
+	std::vector< QFuture< void > > futures {};
+	futures.reserve( record_count );
 
 	for ( auto& [ hash_id, urls ] : current_urls )
 	{
 		const auto itter { m_record_cache.find( hash_id ) };
 		if ( itter == m_record_cache.end() ) continue; // hash could not be mapped to a record
 
-		synchronizer.addFuture( client.addUrls( itter->second, std::move( urls ) ) );
+		futures.emplace_back( client.addUrls( itter->second, std::move( urls ) ) );
 	}
 
-	synchronizer.waitForFinished();
+	std::exception_ptr first_failure {};
+	for ( auto& future : futures )
+	{
+		try
+		{
+			future.waitForFinished();
+		}
+		catch ( ... )
+		{
+			if ( !first_failure ) first_failure = std::current_exception();
+		}
+	}
 
 	current_urls.clear();
+
+	if ( first_failure ) std::rethrow_exception( first_failure );
 }
 
 void UrlServiceWorker::run()

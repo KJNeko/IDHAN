@@ -24,7 +24,6 @@ struct VipsImageDeleter
 
 using VipsImagePtr = std::unique_ptr< VipsImage, VipsImageDeleter >;
 
-//! How to read ThumbnailInfo::m_pixel_data.
 enum class ThumbnailFormat : std::uint8_t
 {
 	RGB, //!< Raw interleaved RGB, width * height * 3 bytes.
@@ -32,15 +31,13 @@ enum class ThumbnailFormat : std::uint8_t
 	ENCODED, //!< A complete encoded still image; width and height describe it.
 };
 
-//! A generated thumbnail. m_format says whether m_pixel_data is raw RGB pixels or an encoded image.
 struct ThumbnailInfo
 {
 	std::vector< std::byte > m_pixel_data {}; //!< The thumbnail bytes; interpretation depends on m_format.
-	std::size_t width, height; //!< Thumbnail dimensions in pixels.
-	bool cache_thumbnail { true }; //!< Whether the host should persist this thumbnail to its cache.
-	ThumbnailFormat m_format { ThumbnailFormat::RGB }; //!< How to read m_pixel_data.
+	std::size_t width, height;
+	bool cache_thumbnail{ true };
+	ThumbnailFormat m_format{ ThumbnailFormat::RGB };
 
-	//! Convenience value for the cache_thumbnail argument, expressing "do not cache".
 	static constexpr auto NOCACHE { false };
 
 	ThumbnailInfo() : width( 0 ), height( 0 ) {}

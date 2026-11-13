@@ -1,8 +1,3 @@
-/**
- * Binds a panel instance's SettingsApi to the layout store. get/set read and write that instance's
- * config entry; subscribe fires when it changes (e.g. the panel itself, or a layout load).
- */
-
 import type { SettingsApi } from '../host/types';
 import { useLayoutStore } from './store';
 

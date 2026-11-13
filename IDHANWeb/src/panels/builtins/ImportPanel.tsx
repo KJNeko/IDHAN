@@ -6,22 +6,14 @@
  */
 
 import {useCallback, useEffect, useRef, useState, type DragEvent} from 'react';
-import {api, readApiError} from '../../api/client';
+import {api} from '../../api/client';
 import type {DownloadSessionInfo, DownloadSessionUrlNode} from '../../api/types';
 import type { PanelProps, RecordId } from '../../host/types';
 import { RecordInfoView, type RecordInfo } from './RecordInfoView';
 import {useRecordMenu} from './recordActions';
 import {ImportStorageNotice, useImportStorage} from './importStorage';
-
-const MAX_CONCURRENT = 3;
-
-/** Mirrors ImportStatus in IDHAN/include/codes/ImportCodes.hpp. */
-const ImportStatus = {
-  Success: 1,
-  Exists: 2,
-  Deleted: 3,
-  Failed: 4,
-} as const;
+import {captureDroppedFiles, collectImportFiles, describeImportError, type ImportSelection} from './importFiles';
+import {runImportPool, uploadImportFile} from './fileImport';
 
 type ItemState = 'pending' | 'uploading' | 'done' | 'skipped' | 'error';
 
@@ -30,35 +22,10 @@ interface Item {
   name: string;
   size: number;
   state: ItemState;
-  /** Short text on the status line, e.g. "#412" or "already present". */
   detail?: string;
-  /** Full server message for a failure or skip, wrapped on its own line under the name. */
   reason?: string;
   recordId?: RecordId;
-    /** Metadata fetched after a successful import, shown inline. */
   info?: RecordInfo;
-}
-
-/** Successful HTTP responses can still report a failed or skipped import. */
-interface ImportResponse {
-  record_id?: number;
-  status?: number;
-    /** Kept for application-level errors in a successful HTTP response. */
-  error?: string;
-  /** Set on a 200 that still failed, currently only an unidentifiable mime. */
-  reason?: string;
-}
-
-/** Run `worker` over `items` with at most `limit` in flight at once. */
-async function pool<T>(items: T[], limit: number, worker: (item: T, index: number) => Promise<void>): Promise<void> {
-  let next = 0;
-  const runners = Array.from({ length: Math.min(limit, items.length) }, async () => {
-    while (next < items.length) {
-      const index = next++;
-      await worker(items[index]!, index);
-    }
-  });
-  await Promise.all(runners);
 }
 
 export function parseNewlineUrlList(value: string): string[] {
@@ -84,6 +51,11 @@ function ImportPanel({ host }: PanelProps) {
   const [forceImport, setForceImport] = useState(false);
   const [busy, setBusy] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
+    const folderInput = useRef<HTMLInputElement>(null);
+    const importPending = useRef(false);
+    const [reading, setReading] = useState(false);
+    const [readErrors, setReadErrors] = useState<string[]>([]);
+    const [emptySelection, setEmptySelection] = useState(false);
   const nextId = useRef(0);
 
     const {openRecordMenu, recordMenu} = useRecordMenu(host);
@@ -128,12 +100,15 @@ function ImportPanel({ host }: PanelProps) {
                 if (controller.signal.aborted) return;
 
                 setUrlJobs(jobs);
-                const nextCompleted = new Set(jobs.filter((job) => job.state === 'completed').map((job) => job.id));
+                const finished = (job: DownloadSessionUrlNode) => job.state === 'completed' || job.state === 'imported'
+                    || job.state === 'imported_previously';
+                const nextCompleted = new Set(jobs.filter(finished).map((job) => job.id));
                 const gainedCompletion = [...nextCompleted].some((id) => !completed.has(id));
                 completed = nextCompleted;
 
                 if (gainedCompletion) await loadSessionRecords(activeSession);
-                if (jobs.some((job) => job.state === 'pending' || job.state === 'processing')) {
+                const unfinished = ['pending', 'downloading', 'processing', 'importing'];
+                if (jobs.some((job) => unfinished.includes(job.state))) {
                     timeout = setTimeout(() => void poll(), 1500);
                 }
             } catch (error) {
@@ -201,8 +176,9 @@ function ImportPanel({ host }: PanelProps) {
                         created_at: Math.floor(Date.now() / 1000),
                         finished_at: null,
                         error: null,
-                        note: null,
+                        stage: null,
                         record_id: null,
+                        size: null,
                         children: [],
                     }, ...previous]);
                 } catch (error) {
@@ -268,101 +244,68 @@ function ImportPanel({ host }: PanelProps) {
   }, []);
 
   const importFiles = useCallback(
-    async (files: File[]) => {
-      if (files.length === 0) return;
-        if (!canImport || busy) return;
-        setBusy(true);
-        if (!await checkStorage()) {
-            setBusy(false);
-            return;
-        }
-      const queued: Item[] = files.map((file) => ({
-        id: nextId.current++,
-        name: file.name,
-        size: file.size,
-        state: 'pending',
-      }));
-      setItems((prev) => [...queued, ...prev]);
-
-      const imported: RecordId[] = [];
-
-        // the name is what tells the server a zip is a comic book zip; nothing in the bytes does
-        const queryFor = (file: File) => {
-            const params = new URLSearchParams({filename: file.name});
-            if (forceImport) params.set('force_import', 'true');
-            return `?${params.toString()}`;
-        };
-
-      await pool(
-        files.map((file, i) => ({ file, item: queued[i]! })),
-        MAX_CONCURRENT,
-        async ({ file, item }) => {
-          patch(item.id, { state: 'uploading' });
+      async (selection: ImportSelection) => {
+          if (!canImport || importPending.current) return;
+          importPending.current = true;
+          setBusy(true);
+          setReadErrors([]);
+          setEmptySelection(false);
           try {
-              const res = await host.http.fetch(`/file/import${queryFor(file)}`, {
-              method: 'POST',
-              headers: { 'Content-Type': file.type || 'application/octet-stream' },
-              body: file,
-            });
-            if (!res.ok) {
-                throw await readApiError(res, 'POST /file/import');
-            }
-              const data = (await res.json()) as ImportResponse;
-
-            const recordId = typeof data.record_id === 'number' ? data.record_id : undefined;
-
-            if (data.status === ImportStatus.Failed) {
-              patch(item.id, { state: 'error', detail: 'failed', reason: data.reason ?? 'not imported' });
-              return;
-            }
-            if (recordId === undefined) {
-              patch(item.id, { state: 'error', detail: 'failed', reason: data.reason ?? data.error ?? 'not imported' });
-              return;
-            }
-
-            // Exists and Deleted both carry a record id but stored nothing, so neither is an import.
-            if (data.status === ImportStatus.Exists || data.status === ImportStatus.Deleted) {
+              if (!await checkStorage()) return;
+              setReading(true);
+              const collected = await collectImportFiles(selection);
+              setReading(false);
+              setReadErrors(collected.errors);
+              setEmptySelection(collected.files.length === 0 && collected.errors.length === 0);
+              const files = collected.files;
+              const queued: Item[] = files.map(({file}) => ({
+                  id: nextId.current++, name: file.name, size: file.size, state: 'pending',
+              }));
+              setItems(previous => [...queued, ...previous]);
+              const imported: RecordId[] = [];
+              await runImportPool(files.map(({file}, index) => ({file, item: queued[index]!})), async ({
+                                                                                                           file,
+                                                                                                           item
+                                                                                                       }) => {
+                  patch(item.id, {state: 'uploading'});
+          try {
+              const result = await uploadImportFile(host, file, forceImport);
+              const recordId = result.recordId;
+              if (result.outcome === 'imported') imported.push(recordId);
               patch(item.id, {
-                state: 'skipped',
-                detail: `#${recordId}`,
-                reason: data.status === ImportStatus.Exists ? 'already present' : 'previously deleted',
-                recordId,
+                  state: result.outcome === 'imported' ? 'done' : 'skipped', detail: `#${recordId}`, recordId,
+                  reason: result.outcome === 'exists' ? 'already present' : result.outcome === 'deleted' ? 'previously deleted' : undefined,
               });
-            } else {
-              imported.push(recordId);
-              patch(item.id, { state: 'done', detail: `#${recordId}`, recordId });
-            }
-
-            // Best-effort: a failure just leaves the row without the detail block.
             try {
-              const infoRes = await host.http.fetch(`/records/${recordId}/info`);
-              if (infoRes.ok) patch(item.id, { info: (await infoRes.json()) as RecordInfo });
-            } catch {
-              /* ignore */
+                const response = await host.http.fetch(`/records/${recordId}/info`);
+                if (response.ok) patch(item.id, {info: await response.json() as RecordInfo});
+            } catch { /* Optional metadata does not change the outcome of the import. */
             }
           } catch (error) {
-            patch(item.id, {
-              state: 'error',
-              detail: 'failed',
-              reason: error instanceof Error ? error.message : String(error),
-            });
+              patch(item.id, {state: 'error', detail: 'failed', reason: describeImportError(error)});
           }
-        },
-      );
+              });
 
-      setBusy(false);
-      if (imported.length > 0) {
-        host.selection.set(imported);
-        host.ui.toast(`Imported ${imported.length} file${imported.length === 1 ? '' : 's'}`, { kind: 'success' });
+              if (imported.length > 0) {
+                  host.selection.set(imported);
+                  host.ui.toast(`Imported ${imported.length} file${imported.length === 1 ? '' : 's'}`, {kind: 'success'});
+              }
+          } catch (error) {
+              setReadErrors(previous => [...previous, `Could not prepare files for import: ${describeImportError(error)}`]);
+          } finally {
+              importPending.current = false;
+              setReading(false);
+              setBusy(false);
       }
     },
-      [host, forceImport, patch, canImport, checkStorage, busy],
+      [host, forceImport, patch, canImport, checkStorage],
   );
 
   function onDrop(event: DragEvent) {
     event.preventDefault();
     setDragOver(false);
-    void importFiles(Array.from(event.dataTransfer.files));
+      if (!canImport || importPending.current) return;
+      void importFiles(captureDroppedFiles(event.dataTransfer));
   }
 
   const done = items.filter((i) => i.state === 'done').length;
@@ -373,9 +316,10 @@ function ImportPanel({ host }: PanelProps) {
     <div className="panel-body import-panel">
         <ImportStorageNotice storage={storage}/>
         <section className="download-session-panel">
-            <h3>URL download session</h3>
             <div className="download-session-row">
                 <select
+                    aria-label="Download session"
+                    title="Show imported files in the grid"
                     value={activeSessionId ?? ''}
                     disabled={sessionBusy || sessions.length === 0}
                     onChange={(event) => void chooseSession(Number(event.target.value))}
@@ -413,8 +357,6 @@ function ImportPanel({ host }: PanelProps) {
                         onClick={() => void queueUrl()}>Queue URL(s)
                 </button>
             </div>
-            <p className="muted">Paste one URL per line. Selecting a session loads its imported files into the image
-                grid.</p>
             {urlJobs.length > 0 && (
                 <ul className="download-session-jobs" aria-label="URL download queue">
                     {urlJobs.map((job) => (
@@ -422,7 +364,7 @@ function ImportPanel({ host }: PanelProps) {
                             <div className="download-session-job-head">
                                 <span className="grow" title={job.url}>{job.url}</span>
                                 <span className="download-session-job-state">{job.state}</span>
-                                {(job.state === 'completed' || job.state === 'failed') && (
+                                {['completed', 'imported', 'imported_previously', 'failed'].includes(job.state) && (
                                     <button
                                         type="button"
                                         className="download-session-job-retry"
@@ -447,6 +389,11 @@ function ImportPanel({ host }: PanelProps) {
           e.preventDefault();
             if (canImport && !busy) setDragOver(true);
         }}
+          onKeyDown={event => {
+              if (event.key !== 'Enter' && event.key !== ' ') return;
+              event.preventDefault();
+              if (canImport && !busy) fileInput.current?.click();
+          }}
         onDragLeave={() => setDragOver(false)}
         onDrop={onDrop}
           onClick={() => {
@@ -456,19 +403,41 @@ function ImportPanel({ host }: PanelProps) {
           aria-disabled={!canImport || busy}
           tabIndex={canImport && !busy ? 0 : -1}
       >
-        <p>Drop files here, or click to choose.</p>
+		  <span>Choose files…</span>
         <input
           ref={fileInput}
           type="file"
           multiple
           hidden
+          onClick={event => event.stopPropagation()}
           disabled={!canImport || busy}
           onChange={(e) => {
-            void importFiles(Array.from(e.target.files ?? []));
+              void importFiles({sources: Array.from(e.target.files ?? [])});
             e.target.value = '';
           }}
         />
       </div>
+
+        <div className="panel-row">
+            <button type="button" className="toolbar-button" disabled={!canImport || busy}
+                    onClick={() => folderInput.current?.click()}>Choose folder…
+            </button>
+            <input type="file" multiple hidden aria-label="Import folder"
+                   ref={node => {
+                       folderInput.current = node;
+                       if (node) node.webkitdirectory = true;
+                   }}
+                   disabled={!canImport || busy}
+                   onChange={event => {
+                       void importFiles({sources: Array.from(event.target.files ?? [])});
+                       event.target.value = '';
+                   }}/>
+            {reading && <span className="muted" role="status">Reading files and folders…</span>}
+        </div>
+        {readErrors.length > 0 && <ul className="import-read-errors" role="alert">
+            {readErrors.map((error, index) => <li key={index}>{error}</li>)}
+        </ul>}
+        {emptySelection && <p className="muted" role="status">No files found in the selected folders.</p>}
 
       <label className="import-force">
           <input type="checkbox" checked={forceImport} disabled={!canImport || busy}
@@ -497,7 +466,7 @@ function ImportPanel({ host }: PanelProps) {
                 </span>
               </div>
               {item.reason && (item.state === 'error' || item.state === 'skipped') && (
-                <p className="import-reason">{item.reason}</p>
+                  <p className="import-reason" role={item.state === 'error' ? 'alert' : undefined}>{item.reason}</p>
               )}
               {item.info && (
                 <div className="import-meta">
@@ -529,7 +498,7 @@ function ImportPanel({ host }: PanelProps) {
 export const importPanel = {
   type: 'import',
   title: 'Import',
-  description: 'Drag-and-drop files to import them into IDHAN.',
+	description: 'Import files and URLs.',
   component: ImportPanel,
   configVersion: 1,
 } as const;

@@ -8,4 +8,4 @@ CREATE TABLE webui_layouts
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE UNIQUE INDEX webui_layouts_name_lower_idx ON webui_layouts ( lower(name) );
+CREATE UNIQUE INDEX webui_layouts_name_lower_idx ON webui_layouts (lower(name));

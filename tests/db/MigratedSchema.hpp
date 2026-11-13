@@ -11,6 +11,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <cctype>
+#include <format>
 #include <string>
 #include <string_view>
 
@@ -51,8 +52,13 @@ class MigratedSchema
 	{
 		for ( const auto id : mime_ids::ALL_MIME_IDS )
 			tx.exec(
-				"INSERT INTO mime (mime_id, name, best_extension) VALUES ($1, $2, $3) "
-				"ON CONFLICT (mime_id) DO NOTHING",
+				//language=postgresql
+				R"SQL(
+					INSERT INTO mime (mime_id, name, best_extension)
+					    VALUES ($1, $2, $3)
+					ON CONFLICT (mime_id)
+					    DO NOTHING
+				)SQL",
 				pqxx::params { id,
 			                   std::string { mime_ids::mime_names.at( id ) },
 			                   std::string { mime_ids::mime_extensions.at( id ) } } );
@@ -69,11 +75,26 @@ class MigratedSchema
 	MigratedSchema()
 	{
 		pqxx::nontransaction tx { m_connection };
-		tx.exec( "DROP SCHEMA IF EXISTS " + tx.quote_name( m_schema ) + " CASCADE" );
-		tx.exec( "CREATE SCHEMA " + tx.quote_name( m_schema ) );
+		tx.exec( std::format(
+			//language=postgresql
+			R"SQL(
+				DROP SCHEMA IF EXISTS {} CASCADE
+			)SQL",
+			tx.quote_name( m_schema ) ) );
+		tx.exec(
+			//language=postgresql
+			R"SQL(
+				CREATE SCHEMA
+			)SQL"
+			+ tx.quote_name( m_schema ) );
 		// the extensions the migrations lean on (pg_trgm, vector) live in public, so the scratch schema
 		// alone is not enough of a search_path
-		tx.exec( "SET search_path = " + db::makeSearchPath( m_schema ) );
+		tx.exec(
+			//language=postgresql
+			R"SQL(
+				SET search_path =
+			)SQL"
+			+ db::makeSearchPath( m_schema ) );
 
 		db::updateMigrations( tx, m_schema );
 		seedMimeTable( tx );
@@ -87,7 +108,12 @@ class MigratedSchema
 		try
 		{
 			pqxx::nontransaction tx { m_connection };
-			tx.exec( "DROP SCHEMA IF EXISTS " + tx.quote_name( m_schema ) + " CASCADE" );
+			tx.exec( std::format(
+				//language=postgresql
+				R"SQL(
+					DROP SCHEMA IF EXISTS {} CASCADE
+				)SQL",
+				tx.quote_name( m_schema ) ) );
 		}
 		catch ( const std::exception& e )
 		{

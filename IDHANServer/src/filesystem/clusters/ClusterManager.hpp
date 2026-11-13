@@ -27,8 +27,9 @@ class ClusterManager
 	ClusterManager();
 	[[nodiscard]] std::optional< ClusterInfo > find( ClusterID id ) const;
 	[[nodiscard]] std::vector< ClusterInfo > list() const;
-	// Configuration writers serialize through commit and cache publication.
-	// Readers retain immutable snapshots and never wait for a database transaction.
+
+	//! Configuration writers serialize through commit and cache publication.
+	//! Readers retain immutable snapshots and never wait for a database transaction.
 	[[nodiscard]] runtime::Task< ClusterWrite > beginWrite( db::DBContext& db );
 	runtime::Task<> reloadClusters( db::DBContext& db, bool recreate_missing_markers = false );
 	static ClusterManager& getInstance();

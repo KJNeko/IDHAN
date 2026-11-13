@@ -1,15 +1,3 @@
-/**
- * File Relationships: searches the perceptual-hash neighbourhood of one record, sent here from the
- * thumbnail grid's context menu. Picking a neighbour pins it as a B-side comparison against that
- * record, and the pair can then be marked as duplicates or alternatives.
- *
- * Neither the A side nor the B side touches the app-wide selection, so the grid and viewer stay
- * where the user left them while a duplicate queue is worked through here.
- *
- * The record's existing relationships are fetched only to annotate results and to disable actions
- * that are already in force, so they never block the search from rendering.
- */
-
 import {useEffect, useRef, useState} from 'react';
 import type {
     Dispatch,
@@ -66,7 +54,6 @@ const DISTANCE_OPTIONS = [
 
 const DEFAULT_DISTANCE = 4;
 
-/** Pairs kept behind the Back button. */
 const HISTORY_LIMIT = 32;
 
 const TILE_THUMBNAIL = 256;
@@ -76,7 +63,6 @@ const LOOKAHEAD_PAIRS = 2;
 /** Retain the current pair, lookahead pairs, and previous pair. */
 const CACHE_LIMIT = (LOOKAHEAD_PAIRS + 2) * 2;
 
-/** A pair that has been on screen, in A/B order. */
 interface ComparedPair {
     a: RecordId;
     b: RecordId;
@@ -90,10 +76,8 @@ const COMPARE_VIEWS = [
     {value: 'diff', label: 'Difference'},
 ] as const;
 
-/** How a record already relates to the selected one, if at all. */
 type Relation = 'superior' | 'inferior' | 'alternative' | 'unrelated';
 
-/** Invert the stored relation when quality ordering swaps A and B. */
 function flipRelation(relation: Relation | undefined): Relation | undefined {
     if (relation === 'superior') return 'inferior';
     if (relation === 'inferior') return 'superior';
@@ -141,7 +125,6 @@ function boundsOf(metadata?: RecordMetadata): Bounds | null {
     return {width: metadata.width, height: metadata.height};
 }
 
-/** Two files can only be compared pixel by pixel when they are the same size to begin with. */
 function sameResolution(aBounds: Bounds | null, bBounds: Bounds | null): boolean {
     if (!aBounds || !bBounds) return false;
     return aBounds.width === bBounds.width && aBounds.height === bBounds.height;
@@ -167,7 +150,6 @@ interface FileCardProps {
     active?: boolean;
     /** Replaces the dimensions in the meta row, e.g. `alternative (4 bits)`. */
     detail?: string;
-    /** An existing relationship to the selected record, marked by the preview's background colour. */
     relation?: Relation;
     thumbnail?: boolean;
 
@@ -247,7 +229,6 @@ function frameFor(aBounds: Bounds | null, bBounds: Bounds | null): Bounds | null
     };
 }
 
-/** Both sides filling the frame, so the smaller copy is drawn at the larger one's size. */
 const MATCHED_SHARE = {width: '100%', height: '100%'} as const;
 
 function shareOf(frame: Bounds | null, bounds: Bounds | null): { width: string; height: string } | undefined {
@@ -258,11 +239,9 @@ function shareOf(frame: Bounds | null, bounds: Bounds | null): { width: string; 
     };
 }
 
-/** A field of a record worth weighing one side of a comparison against the other by. */
 interface InfoRow {
     label: string;
     value: string;
-    /** Bigger of the two, where bigger is a thing this field can be. */
     greater?: boolean;
 }
 
@@ -322,7 +301,6 @@ interface CompareInfoProps {
     id: RecordId;
     metadata?: RecordMetadata;
     other?: RecordMetadata;
-    /** How this side already relates to the other, when it does. */
     detail?: string;
     /** The two decode to the same pixels. Shown on both sides, since it is a fact about the pair. */
     pixelDuplicate: boolean;
@@ -363,7 +341,6 @@ function advantagesOf(verdict: QualityVerdict, which: 'a' | 'b'): QualityReason[
     return verdict.reasons.filter((reason) => (which === 'a' ? reason.points > 0 : reason.points < 0));
 }
 
-/** The side-by-side facts a duplicate call is actually made on, embedded blocks first. */
 function CompareInfo(
     {which, id, metadata, other, detail, pixelDuplicate, active, advantages = [], best = false, tiebreak = false}:
         CompareInfoProps,
@@ -388,7 +365,7 @@ function CompareInfo(
                 {best && (
                     <span
                         className={`file-relationship-side-best${tiebreak ? ' is-tiebreak' : ''}`}
-                        title={tiebreak ? 'The same picture either way, and this is the smaller file' : undefined}
+						title={tiebreak ? 'Smaller identical image' : undefined}
                     >
                         {tiebreak ? 'Smaller' : 'Best'}
                     </span>
@@ -451,7 +428,6 @@ function CompareInfo(
     );
 }
 
-/** One wheel notch, and the range the frame will hold. */
 const ZOOM_STEP = 1.25;
 const ZOOM_MAX = 256;
 
@@ -513,7 +489,6 @@ const zooming = (event: WheelEvent): boolean => event.ctrlKey || event.metaKey |
 
 interface CompareFrameProps {
     children: ReactNode;
-    /** Shared transform synchronizes both frames. */
     zoom: Zoom;
     setZoom: Dispatch<SetStateAction<Zoom>>;
     label: string;
@@ -521,7 +496,6 @@ interface CompareFrameProps {
     /** Hide without unmounting while the replacement pair loads. */
     blank: boolean;
     marks: MarkState;
-    /** Source image dimensions used for region coordinates. */
     markBounds: Bounds | null;
 
     onSide(side: 'a' | 'b'): void;
@@ -534,7 +508,6 @@ function CompareFrame(
 ) {
     const frameRef = useRef<HTMLDivElement>(null);
     const panFrom = useRef<{ x: number; y: number } | null>(null);
-    // Region placement requires the rendered frame dimensions.
     const [frameSize, setFrameSize] = useState<Bounds | null>(null);
 
     useEffect(() => {
@@ -669,12 +642,10 @@ type CompareLayout = 'flip' | 'side-by-side';
 interface PairCompareProps extends CompareProps {
     layout: CompareLayout;
     side: 'a' | 'b';
-    diffKey: boolean;
     blank: boolean;
     marks: MarkState;
     aMetadata?: RecordMetadata;
     bMetadata?: RecordMetadata;
-    /** How B already relates to A, when it does. */
     bDetail?: string;
     /** Verdict is relative to A, the preferred side. */
     verdict: QualityVerdict;
@@ -696,7 +667,7 @@ interface PairCompareProps extends CompareProps {
 function PairCompare(
     {
         host, a, b, aBounds, bBounds, layout, side, onSide, aMetadata, bMetadata, bDetail, verdict, pixelDuplicate,
-        matchScale, diffKey, blank, marks, onMatchScale, onMenu,
+		matchScale, blank, marks, onMatchScale, onMenu,
     }: PairCompareProps,
 ) {
     const frame = frameFor(aBounds, bBounds);
@@ -705,11 +676,6 @@ function PairCompare(
 
     useEffect(() => setZoom(NO_ZOOM), [a, b]);
 
-    const keyHelp =
-        'Hold ctrl while scrolling to zoom both, plus and minus to zoom from the keyboard, '
-        + '0 or a double click to reset. On the keypad, 4 and 6 pick a side, 7 and 9 call that '
-        + 'side better, 5 pairs them as alternatives, 2 marks them unrelated, 3 switches layout '
-        + 'and 1 shows the difference.';
 
     function image(which: 'a' | 'b') {
         const id = which === 'a' ? a : b;
@@ -748,7 +714,7 @@ function PairCompare(
                                 zoom={zoom}
                                 setZoom={setZoom}
                                 label={
-                                    `Record ${which === 'a' ? a : b}, side ${which.toUpperCase()}. ${keyHelp}`
+									`Record ${which === 'a' ? a : b}, side ${which.toUpperCase()}`
                                 }
                                 active={side === which}
                                 blank={blank}
@@ -764,7 +730,7 @@ function PairCompare(
                         <CompareFrame
                             zoom={zoom}
                             setZoom={setZoom}
-                            label={`Flip between record ${a} and record ${b}. Scroll, or use the arrow keys. ${keyHelp}`}
+							label={`Records ${a} and ${b}`}
                             active={false}
                             blank={blank}
                             marks={marks}
@@ -789,6 +755,22 @@ function PairCompare(
                 />
             </div>
             <div className="file-relationship-flip-bar">
+				<div className="comparison-zoom-controls" role="group" aria-label="Zoom">
+					<button type="button" className="toolbar-button" aria-label="Zoom out" disabled={zoom.scale <= 1}
+							onClick={() => setZoom(current => ({
+			                    scale: scaledBy(current, 1 / ZOOM_STEP),
+			                    x: 0,
+			                    y: 0
+		                    }))}>−
+		            </button>
+					<span>{zoom.scale}×</span>
+					<button type="button" className="toolbar-button" aria-label="Zoom in"
+		                    disabled={zoom.scale >= ZOOM_MAX}
+							onClick={() => setZoom(current => ({scale: scaledBy(current, ZOOM_STEP), x: 0, y: 0}))}>+
+		            </button>
+					<button type="button" className="toolbar-button" onClick={() => setZoom(NO_ZOOM)}>Reset zoom
+		            </button>
+				</div>
                 {(['a', 'b'] as const).map((which) => {
                     const id = which === 'a' ? a : b;
                     const bounds = which === 'a' ? aBounds : bBounds;
@@ -827,10 +809,7 @@ function PairCompare(
                     </span>
                 )}
             </div>
-            <p className="file-relationship-flip-keys muted">
-                Keypad: 4/6 side · 7/9 better · 5 alternatives · 2 unrelated · 3 layout
-                {diffKey && ' · 1 difference'}
-            </p>
+
         </div>
     );
 }
@@ -908,16 +887,15 @@ function verdictOf(survey: DiffSurvey): string {
     const verdict = classifyDifference(survey);
     switch (verdict.kind) {
         case 'identical':
-            return 'Every pixel matches, alpha included.';
+			return 'Identical pixels';
         case 'noise':
-            return `${verdict.changed.toLocaleString()} pixels differ, none of them by more than `
-                + `${NOTABLE_DELTA} of 255: the same image re-encoded.`;
+			return `${verdict.changed.toLocaleString()} changed pixels · maximum difference `
+				+ `${NOTABLE_DELTA}/255`;
         case 'near-identical':
-            return `${percent(verdict.share)} of pixels match, with ${verdict.regions} `
-                + `${verdict.regions === 1 ? 'region' : 'regions'} changed.`;
+			return `${percent(verdict.share)} matching pixels · ${verdict.regions} `
+				+ `${verdict.regions === 1 ? 'region' : 'regions'}`;
         case 'different':
-            return `${percent(verdict.share)} of pixels match, spread across the frame rather than `
-                + 'gathered into a few edits.';
+			return `${percent(verdict.share)} matching pixels`;
     }
 }
 
@@ -927,7 +905,6 @@ function regionLabel(survey: DiffSurvey, index: number): string {
         + `${region.pixels.toLocaleString()} px`;
 }
 
-/** Display an overview and 1:1 crops ordered by notable-pixel count. */
 function DiffCompare({host, a, b}: CompareProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const images = useRef<[HTMLImageElement, HTMLImageElement] | null>(null);
@@ -1051,19 +1028,9 @@ function DiffCompare({host, a, b}: CompareProps) {
                 )}
                 {state.status === 'error' && <p className="file-relationship-none error">{state.message}</p>}
             </div>
-            <p className="file-relationship-diff-note muted">
-                {survey === null ? (
-                    'Read at full resolution: nothing is scaled down before it is compared.'
-                ) : (
-                    <>
-                        {verdictOf(survey)} Compared at {survey.width} x {survey.height}
-                        {region === null
-                            ? '; the map takes the largest difference in each block, so one changed pixel still shows. Click it to zoom.'
-                            : ', and this region is drawn one output pixel per real pixel.'}
-                        {' '}Keypad 3, 4 or 6 goes back to the images.
-                    </>
-                )}
-            </p>
+			{survey !== null && <p className="file-relationship-diff-note muted">
+				{verdictOf(survey)} · {survey.width} × {survey.height}
+            </p>}
         </div>
     );
 }
@@ -1072,6 +1039,8 @@ function EmptyLane({children}: { children: string }) {
     return <p className="file-relationship-none muted">{children}</p>;
 }
 
+// Presents duplicate comparisons with the preferred copy as A; similarity searches stay pinned.
+// Reveals each pair only when its images and metadata are ready.
 function FileRelationshipsPanel({host}: PanelProps) {
     const [focused, setFocused] = useState<RecordId | null>(() => lastRelationshipsFocus());
     const [state, setState] = useState<State>({status: 'idle'});
@@ -1305,7 +1274,6 @@ function FileRelationshipsPanel({host}: PanelProps) {
         return lane ?? facts.current.get(id);
     }
 
-    /** Fetch missing queue metadata before computing quality order. */
     function readMetadata(ids: RecordId[]): Promise<void> {
         const missing = ids.filter((id) => !facts.current.has(id));
         if (missing.length === 0) return Promise.resolve();
@@ -1321,10 +1289,6 @@ function FileRelationshipsPanel({host}: PanelProps) {
     const focusedMetadata = focused === null ? undefined : metadataFor(focused);
     const comparedMetadata = compared === null ? undefined : metadataFor(compared);
 
-    /**
-     * Order comparisons with the preferred copy as A. Keep similarity results anchored to the
-     * selected record.
-     */
     const swapped = compareQuality(focusedMetadata, comparedMetadata).score < 0;
     const sides: Sides | null = focused === null || compared === null
         ? null
@@ -1342,10 +1306,6 @@ function FileRelationshipsPanel({host}: PanelProps) {
 
     const pairShown = compared === null
         || (loadedPair !== null && loadedPair.a === focused && loadedPair.b === compared);
-    /**
-     * Use one busy flag to hide images and disable rulings until decoding completes. Keep
-     * images mounted for recovery after failed actions.
-     */
     const busy = pending || !pairShown;
 
     /**
@@ -1355,7 +1315,6 @@ function FileRelationshipsPanel({host}: PanelProps) {
     function decode(id: RecordId): Promise<HTMLImageElement | undefined> {
         const held = decoded.current.get(id);
         if (held !== undefined) {
-            // Refresh insertion order to evict older pairs first.
             decoded.current.delete(id);
             decoded.current.set(id, held);
             return Promise.resolve(held);
@@ -1374,7 +1333,6 @@ function FileRelationshipsPanel({host}: PanelProps) {
         );
     }
 
-    /** Run the full-resolution region scan only when overlays are enabled. */
     useEffect(() => {
         if (!markDifferences || !comparable || focused === null || compared === null || !pairShown) {
             setMarks({status: 'off'});
@@ -1401,10 +1359,6 @@ function FileRelationshipsPanel({host}: PanelProps) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [markDifferences, comparable, focused, compared, pairShown, host]);
 
-    /**
-     * Wait for both metadata and decoded images before revealing the pair, so labels and
-     * quality order match the displayed files.
-     */
     useEffect(() => {
         if (focused === null || compared === null) return;
 
@@ -1421,11 +1375,7 @@ function FileRelationshipsPanel({host}: PanelProps) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [focused, compared, host]);
 
-    /**
-     * Prefetch metadata and decode lookahead pairs. Share requests within a queue generation
-     * across navigation; successful rulings invalidate them because inherited rulings may
-     * remove other candidates.
-     */
+	/** Preloads unresolved pairs; rulings can invalidate other cached candidates too. */
     function lookAhead(): Promise<void> {
         return queue.fill(async () => {
             const response = await host.records.nextUndecidedDuplicate({distance, limit: LOOKAHEAD_PAIRS + 1});
@@ -1449,7 +1399,6 @@ function FileRelationshipsPanel({host}: PanelProps) {
         return () => queue.invalidate();
     }, [distance, host, queue]);
 
-    /** Read the current pair when lookahead resolves to exclude it after intervening navigation. */
     useEffect(() => {
         shown.current = focused === null || compared === null ? null : {a: focused, b: compared};
     }, [focused, compared]);
@@ -1529,10 +1478,7 @@ function FileRelationshipsPanel({host}: PanelProps) {
     if (focused === null) {
         return (
             <div className="panel-body file-relationships-empty">
-                <p className="muted">
-                    Right click a record in the thumbnail grid and choose "Send to Relationships View" to find
-                    files that look like it.
-                </p>
+				<p className="muted">No record selected.</p>
                 <button
                     type="button"
                     className="file-relationship-action"
@@ -1562,7 +1508,6 @@ function FileRelationshipsPanel({host}: PanelProps) {
         return undefined;
     }
 
-    /** `alternative (4 bits)` when both halves are known, either half alone otherwise. */
     function describe(id: RecordId, bits?: number): string | undefined {
         const relation = relationTo(id);
         const distanceText = bits === undefined ? undefined : bitsLabel(bits);
@@ -1612,8 +1557,8 @@ function FileRelationshipsPanel({host}: PanelProps) {
                                 className="file-relationship-toggle"
                                 title={
                                     comparable
-                                        ? 'Box every area where the two differ, read at full resolution'
-                                        : 'The two are different resolutions, so their pixels do not line up'
+										? 'Highlight differences'
+										: 'Different image dimensions'
                                 }
                             >
                                 <input
@@ -1714,7 +1659,6 @@ function FileRelationshipsPanel({host}: PanelProps) {
                                 bDetail={sideBRelation}
                                 verdict={verdict}
                                 pixelDuplicate={pixels.status === 'identical'}
-                                diffKey={comparable}
                                 blank={busy}
                                 marks={marks}
                                 onMenu={onCardMenu}
@@ -1724,11 +1668,7 @@ function FileRelationshipsPanel({host}: PanelProps) {
                             && (comparable ? (
                                 <DiffCompare host={host} a={sides.a} b={sides.b} aBounds={aBounds} bBounds={bBounds}/>
                             ) : (
-                                <p className="file-relationship-none muted">
-                                    These two are different resolutions, so there is no pixel difference to show.
-                                    Compare
-                                    them side by side or by flipping instead.
-                                </p>
+								<p className="file-relationship-none muted">Different image dimensions.</p>
                             ))}
                         <div className="file-relationship-actions">
                             <button
@@ -1756,7 +1696,7 @@ function FileRelationshipsPanel({host}: PanelProps) {
                                 title={`Pair records ${sides.a} and ${sides.b} as alternatives (keypad 5)`}
                                 onClick={() => ruleAlternatives(sides.a, sides.b)}
                             >
-                                Set Alternatives
+								Mark as alternatives
                             </button>
                             <button
                                 type="button"
@@ -1765,7 +1705,7 @@ function FileRelationshipsPanel({host}: PanelProps) {
                                 title={`Mark records ${sides.a} and ${sides.b} as coincidental lookalikes (keypad 2)`}
                                 onClick={() => ruleUnrelated(sides.a, sides.b)}
                             >
-                                Set Unrelated
+								Mark as unrelated
                             </button>
                             <button
                                 type="button"
@@ -1863,8 +1803,7 @@ function FileRelationshipsPanel({host}: PanelProps) {
 export const fileRelationshipsPanel = {
     type: 'file-relationships',
     title: 'File Relationships',
-    description:
-        'Find perceptually similar files to the selected record, compare them side by side, and mark them as duplicates or alternatives.',
+	description: 'Duplicates and alternatives.',
     component: FileRelationshipsPanel,
     configVersion: 1,
 } as const;

@@ -23,9 +23,6 @@ export interface SystemPredicate {
 
 const PREFIX = 'system:';
 
-/** The shortest bare token that opens the whole list; below this it collides with ordinary tags. */
-const MIN_PREFIX = 3;
-
 export const SYSTEM_PREDICATES: readonly SystemPredicate[] = [
     {text: 'system:everything', kind: 'flag', hint: 'every record'},
     {text: 'system:has tags', kind: 'flag', hint: ''},
@@ -86,8 +83,8 @@ const isExactName = (predicate: SystemPredicate, needle: string): boolean =>
     namesOf(predicate).includes(needle);
 
 /**
- * System predicates matching what has been typed so far. Returns every predicate while the token is
- * still just a prefix of `system:`, then narrows by name, then stops once an argument is underway.
+ * System predicates matching an explicit `system:` prefix. Narrows by name, then stops once an
+ * argument is underway.
  */
 export function matchSystemPredicates(input: string, limit = 12): SystemPredicate[] {
     const raw = input.trimStart().toLowerCase();
@@ -96,9 +93,7 @@ export function matchSystemPredicates(input: string, limit = 12): SystemPredicat
     // The server routes `-system:x` to an ordinary tag lookup, so a negated predicate has no completion.
     if (token.startsWith('-')) return [];
 
-    if (!token.startsWith(PREFIX)) {
-        return token.length >= MIN_PREFIX && PREFIX.startsWith(token) ? SYSTEM_PREDICATES.slice(0, limit) : [];
-    }
+	if (!token.startsWith(PREFIX)) return [];
 
     const argument = raw.slice(PREFIX.length);
     if (ARGUMENT_CHARS.test(argument)) return [];
@@ -125,7 +120,6 @@ export const systemCompletion = (predicate: SystemPredicate): string =>
     predicate.kind === 'flag' ? predicate.text : `${predicate.text} `;
 
 
-/** The two predicates whose values come from the mime table rather than being typed free-hand. */
 export type MimeField = 'mime' | 'mime_id';
 
 /** Where the caret sits inside a `system:mime = ...` term. */
@@ -171,7 +165,6 @@ export function mimeArgument(input: string): MimeArgument | null {
     };
 }
 
-/** A mime the value position could be completed to. */
 export interface MimeSuggestion {
     /** The finished term, ready to commit as a chip. */
     text: string;

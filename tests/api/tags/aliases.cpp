@@ -28,7 +28,15 @@ SCENARIO_METHOD( ServerFixture, "Tag aliases", "[api][tags][aliases]" )
 
 				CHECK(
 					tx.query_value< int >(
-						"SELECT count(*) FROM tag_aliases WHERE tag_domain_id = $1 AND aliased_id = $2 AND alias_id = $3",
+						//language=postgresql
+						R"SQL(
+							SELECT
+							    count(*)
+							FROM tag_aliases
+							WHERE tag_domain_id = $1
+							    AND aliased_id = $2
+							    AND alias_id = $3
+						)SQL",
 						pqxx::params { domain, samus, samus_aran } )
 				    == 1 );
 			}
@@ -42,7 +50,15 @@ SCENARIO_METHOD( ServerFixture, "Tag aliases", "[api][tags][aliases]" )
 					CHECK( again.status == 200 );
 
 					pqxx::nontransaction tx { db() };
-					CHECK( tx.query_value< int >( "SELECT count(*) FROM tag_aliases" ) == 1 );
+					CHECK(
+						tx.query_value< int >(
+							//language=postgresql
+							R"SQL(
+								SELECT
+								    count(*)
+								FROM tag_aliases
+							)SQL" )
+						== 1 );
 				}
 			}
 
@@ -60,7 +76,14 @@ SCENARIO_METHOD( ServerFixture, "Tag aliases", "[api][tags][aliases]" )
 					pqxx::nontransaction tx { db() };
 					CHECK(
 						tx.query_value< int >(
-							"SELECT alias_id FROM tag_aliases WHERE tag_domain_id = $1 AND aliased_id = $2",
+							//language=postgresql
+							R"SQL(
+								SELECT
+								    alias_id
+								FROM tag_aliases
+								WHERE tag_domain_id = $1
+								    AND aliased_id = $2
+							)SQL",
 							pqxx::params { domain, samus } )
 					    == samus_aran );
 				}
@@ -75,7 +98,15 @@ SCENARIO_METHOD( ServerFixture, "Tag aliases", "[api][tags][aliases]" )
 					CHECK( removed.status == 200 );
 
 					pqxx::nontransaction tx { db() };
-					CHECK( tx.query_value< int >( "SELECT count(*) FROM tag_aliases" ) == 0 );
+					CHECK(
+						tx.query_value< int >(
+							//language=postgresql
+							R"SQL(
+								SELECT
+								    count(*)
+								FROM tag_aliases
+							)SQL" )
+						== 0 );
 				}
 			}
 		}
@@ -109,7 +140,15 @@ SCENARIO_METHOD( ServerFixture, "Tag aliases", "[api][tags][aliases]" )
 				CHECK( created.status == 200 );
 
 				pqxx::nontransaction tx { db() };
-				CHECK( tx.query_value< int >( "SELECT count(*) FROM tag_aliases" ) == 0 );
+				CHECK(
+					tx.query_value< int >(
+						//language=postgresql
+						R"SQL(
+							SELECT
+							    count(*)
+							FROM tag_aliases
+						)SQL" )
+					== 0 );
 			}
 		}
 
@@ -227,13 +266,27 @@ TEST_CASE_METHOD(
 	CHECK( api().createAliases( domain, { { a, b }, { b, c }, { c, a } } ).status == 409 );
 	pqxx::nontransaction read { db() };
 	CHECK(
-		read.query_value< int >( "SELECT COUNT(*) FROM tag_aliases WHERE tag_domain_id = $1", pqxx::params { domain } )
-	    == 0 );
+		read.query_value< int >(
+			//language=postgresql
+			R"SQL(
+				SELECT
+				    COUNT(*)
+				FROM tag_aliases
+				WHERE tag_domain_id = $1
+			)SQL",
+			pqxx::params{ domain } )
+		== 0 );
 	CHECK( api().createAliases( domain, { { a, b }, { b, c } } ).status == 200 );
 	CHECK(
 		read.query_value< int >(
-			"SELECT effective_tag_id FROM tag_aliases "
-			"WHERE tag_domain_id = $1 AND aliased_id = $2",
+			//language=postgresql
+			R"SQL(
+				SELECT
+				    effective_tag_id
+				FROM tag_aliases
+				WHERE tag_domain_id = $1
+				    AND aliased_id = $2
+			)SQL",
 			pqxx::params { domain, a } )
 	    == c );
 }
@@ -253,8 +306,16 @@ TEST_CASE_METHOD(
 	CHECK( api().post( "/tags/alias/remove", body, { { "tag_domain_id", std::to_string( domain ) } } ).status == 400 );
 	pqxx::nontransaction read { db() };
 	CHECK(
-		read.query_value< int >( "SELECT COUNT(*) FROM tag_aliases WHERE tag_domain_id = $1", pqxx::params { domain } )
-	    == 2 );
+		read.query_value< int >(
+			//language=postgresql
+			R"SQL(
+				SELECT
+				    COUNT(*)
+				FROM tag_aliases
+				WHERE tag_domain_id = $1
+			)SQL",
+			pqxx::params{ domain } )
+		== 2 );
 }
 
 } // namespace idhan::test

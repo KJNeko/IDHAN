@@ -41,9 +41,11 @@ class CallInput
 
 	[[nodiscard]] static std::expected< CallInput, std::string > forFd( ipc::UniqueFd fd );
 
+	//! `fd` must already be validated as a regular, read-only file of `size` bytes.
+	[[nodiscard]] static CallInput forFd( ipc::UniqueFd fd, std::size_t size );
+
 	[[nodiscard]] static std::expected< CallInput, std::string > forBlob( ipc::Blob blob );
 
-	//! Stages \p bytes into anonymous memory and wraps the result.
 	[[nodiscard]] static std::expected< CallInput, std::string > forBytes( std::span< const std::byte > bytes );
 
 	[[nodiscard]] static std::expected< std::shared_ptr< const CallInput >, std::string > sharedForBytes(

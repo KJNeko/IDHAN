@@ -1,8 +1,3 @@
-/**
- * Single-field login: paste an IDHAN API key and go. The key is validated against the server and,
- * once accepted, used directly on every request.
- */
-
 import { useState, type FormEvent } from 'react';
 import { ApiError } from '../api/client';
 import { InvalidKeyError } from './session';
@@ -33,11 +28,12 @@ export function LoginScreen() {
     <main className="login">
       <form className="login-card" onSubmit={onSubmit}>
         <h1>IDHAN</h1>
-        <p className="muted">Enter your access key to continue.</p>
+		  <label htmlFor="access-key">Access key</label>
         <input
           type="password"
           className="login-input"
-          placeholder="64-character key"
+		  id="access-key"
+		  placeholder="Access key"
           autoComplete="off"
           autoFocus
           spellCheck={false}

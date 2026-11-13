@@ -9,75 +9,41 @@
 #include <vector>
 
 #include "apiAuth.hpp"
-#include "idhan/db/DBContext.hpp"
-#include "jsonBody.hpp"
 #include "idValidation.hpp"
+#include "idhan/db/DBContext.hpp"
+#include "idhan/http/routing/ReflectedRoutes.hpp"
+#include "jsonBody.hpp"
 #include "logging/log.hpp"
 #include "search/SearchQuery.hpp"
 #include "search/parseSortType.hpp"
 
 namespace idhan::httpapi
 {
-
-[[nodiscard]] static http::HTTPTask< http::Response > search( db::DBContext& db, http::RequestContext context )
+[[nodiscard]] http::HTTPTask< http::JsonResult< std::vector< RecordID > > > searchRecords(
+	db::DBContext& db,
+	http::Query< SearchParameters > parameters )
 {
-	auto tag_ids_e { context.parameters().vector< TagID >( "tag_ids" ) };
-	if ( !tag_ids_e ) co_return http::Response::error( 400, tag_ids_e.error().message );
-	auto tag_ids { std::move( *tag_ids_e ) };
-
-	if ( tag_ids.empty() )
-	{
-		auto tag_id_e { context.parameters().vector< TagID >( "tag_id" ) };
-		if ( !tag_id_e ) co_return http::Response::error( 400, tag_id_e.error().message );
-		tag_ids = std::move( *tag_id_e );
-	}
-
-	auto tag_domain_ids_e { context.parameters().vector< TagDomainID >( "tag_domains" ) };
-	if ( !tag_domain_ids_e ) co_return http::Response::error( 400, tag_domain_ids_e.error().message );
-
-	for ( const auto tag_id : tag_ids )
-		if ( tag_id <= 0 ) co_return http::Response::error( 400, "tag_ids must be positive" );
-
-	for ( const auto domain_id : *tag_domain_ids_e )
-		if ( domain_id <= 0 ) co_return http::Response::error( 400, "tag_domains must be positive" );
-
-	auto by_e { context.parameters().optional< std::string >( "by" ) };
-	if ( !by_e ) co_return http::Response::error( 400, by_e.error().message );
-	auto order_e { context.parameters().optional< std::string >( "order" ) };
-	if ( !order_e ) co_return http::Response::error( 400, order_e.error().message );
-	auto include_deleted_e { context.parameters().optional< bool >( "include_deleted" ) };
-	if ( !include_deleted_e.has_value() ) co_return http::Response::error( 400, include_deleted_e.error().message );
+	auto tag_ids { std::move( parameters.value.tag_ids ) };
+	if ( tag_ids.empty() ) tag_ids = std::move( parameters.value.tag_id );
 
 	SearchQuery query {};
-	query.setIncludeDeleted( include_deleted_e.value().value_or( false ) );
+	query.setIncludeDeleted( parameters.value.include_deleted.value_or( false ) );
 	query.addPositiveTags( tag_ids );
 
-	if ( *by_e )
+	if ( parameters.value.by )
 	{
-		const auto sort_type { parseSortType( **by_e ) };
-		if ( !sort_type ) co_return http::Response::error( 400, std::format( "Unknown sorting method '{}'", **by_e ) );
+		const auto sort_type { parseSortType( *parameters.value.by ) };
+		if ( !sort_type )
+			co_return http::Response::error( 400, std::format( "Unknown sorting method '{}'", *parameters.value.by ) );
 
 		query.setSortType( *sort_type );
 	}
-	if ( *order_e ) query.setSortOrder( **order_e == "desc" ? SortOrder::DESC : SortOrder::ASC );
+	if ( parameters.value.order )
+		query.setSortOrder( *parameters.value.order == "desc" ? SortOrder::DESC : SortOrder::ASC );
 
-	const auto result { co_await query.query( db, std::move( *tag_domain_ids_e ) ) };
+	const auto result { co_await query.query( db, std::move( parameters.value.tag_domains ) ) };
 
-	simdjson::builder::string_builder builder;
-	builder.start_array();
-	bool first { true };
-	for ( const auto id : result.record_ids )
-	{
-		if ( !first ) builder.append_comma();
-		builder.append( id );
-		first = false;
-	}
-	builder.end_array();
-
-	auto json { builder.view() };
-	if ( json.error() ) throw std::runtime_error( simdjson::error_message( json.error() ) );
-
-	co_return http::Response::json( 200, folly::IOBuf::copyBuffer( *json ) );
+	co_return http::JsonResponse< std::vector< RecordID > > { result.record_ids };
 }
 
 struct SplitTags
@@ -114,7 +80,9 @@ struct SplitTags
 	return out;
 }
 
-[[nodiscard]] static http::HTTPTask< http::Response > searchPost( db::DBContext& db, http::RequestContext context )
+[[nodiscard]] http::HTTPTask< http::JsonResult< SearchRecordsResponse > > searchPost(
+	db::DBContext& db,
+	http::RequestContext context )
 {
 	try
 	{
@@ -268,114 +236,52 @@ struct SplitTags
 
 		const auto result { co_await query.query( db, std::move( tag_domains ), return_ids, return_hashes ) };
 
-		simdjson::builder::string_builder builder;
-		builder.start_object();
-		bool first_field { true };
-
-		const auto nextField = [ &builder, &first_field ]
-		{
-			if ( !first_field ) builder.append_comma();
-			first_field = false;
-		};
-
-		if ( return_ids )
-		{
-			nextField();
-			builder.escape_and_append_with_quotes( "record_ids" );
-			builder.append_colon();
-			builder.start_array();
-			bool first_id { true };
-			for ( const auto id : result.record_ids )
-			{
-				if ( !first_id ) builder.append_comma();
-				builder.append( id );
-				first_id = false;
-			}
-			builder.end_array();
-		}
+		SearchRecordsResponse response {};
+		if ( return_ids ) response.record_ids.emplace( result.record_ids );
 
 		if ( return_hashes )
 		{
-			nextField();
-			builder.escape_and_append_with_quotes( "hashes" );
-			builder.append_colon();
-			builder.start_array();
-			bool first_hash { true };
-			for ( const auto& hash : result.hashes )
-			{
-				if ( !first_hash ) builder.append_comma();
-				builder.append( hash.hex() );
-				first_hash = false;
-			}
-			builder.end_array();
+			auto& hashes { response.hashes.emplace() };
+			hashes.reserve( result.hashes.size() );
+			for ( const auto& hash : result.hashes ) hashes.push_back( hash.hex() );
 		}
 
-		const auto count { static_cast< std::int64_t >( result.size() ) };
-		nextField();
-		builder.append_key_value( "count", count );
+		response.count = static_cast< std::int64_t >( result.size() );
+		response.truncated = limit_param.has_value() && response.count == *limit_param;
+		response.query_ms =
+			std::chrono::duration_cast< std::chrono::milliseconds >( std::chrono::steady_clock::now() - start ).count();
 
-		nextField();
-		builder.append_key_value( "truncated", limit_param.has_value() && count == *limit_param );
-
-		const auto elapsed {
-			std::chrono::duration_cast< std::chrono::milliseconds >( std::chrono::steady_clock::now() - start ).count()
-		};
-		nextField();
-		builder.append_key_value( "query_ms", static_cast< std::int64_t >( elapsed ) );
-
-		bool debug_requested { false };
-		if ( bool debug_value {}; root[ "debug" ].get( debug_value ) == simdjson::SUCCESS )
-			debug_requested = debug_value;
+		bool debug_requested {};
+		bool debug_value {};
+		if ( root[ "debug" ].get( debug_value ) == simdjson::SUCCESS ) debug_requested = debug_value;
 
 		if ( debug_requested && query.stats() )
 		{
-			nextField();
-			builder.escape_and_append_with_quotes( "stats" );
-			builder.append_colon();
-			builder.start_array();
-			bool first_step { true };
+			auto& stats { response.stats.emplace() };
 			for ( const auto& step : query.stats()->steps() )
 			{
-				if ( !first_step ) builder.append_comma();
-				first_step = false;
-
-				builder.start_object();
-				builder.append_key_value( "step", step.label );
-				builder.append_comma();
-				builder.append_key_value( "rows", static_cast< std::int64_t >( step.rows ) );
-				builder.append_comma();
-				builder.append_key_value( "inverted", step.inverted );
-				builder.append_comma();
-				builder.escape_and_append_with_quotes( "kind" );
-				builder.append_colon();
+				SearchRecordsResponse::Step output {
+					step.label, static_cast< std::int64_t >( step.rows ), step.inverted, {}, {}
+				};
 				switch ( step.kind )
 				{
 					case search::StepKind::Fetch:
-						builder.escape_and_append_with_quotes( "fetch" );
+						output.kind = "fetch";
 						break;
 					case search::StepKind::Fold:
-						builder.escape_and_append_with_quotes( "fold" );
+						output.kind = "fold";
 						break;
 					case search::StepKind::Page:
-						builder.escape_and_append_with_quotes( "page" );
+						output.kind = "page";
 						break;
 				}
-				if ( step.micros > 0 )
-				{
-					builder.append_comma();
-					builder.append_key_value( "micros", step.micros );
-				}
-				builder.end_object();
+				if ( step.micros > 0 ) output.micros.emplace( step.micros );
+
+				stats.push_back( std::move( output ) );
 			}
-			builder.end_array();
 		}
 
-		builder.end_object();
-
-		auto json { builder.view() };
-		if ( json.error() ) throw std::runtime_error( simdjson::error_message( json.error() ) );
-
-		co_return http::Response::json( 200, folly::IOBuf::copyBuffer( *json ) );
+		co_return http::JsonResponse< SearchRecordsResponse > { std::move( response ) };
 	}
 	catch ( const std::invalid_argument& e )
 	{
@@ -385,28 +291,6 @@ struct SplitTags
 	{
 		co_return http::Response::error( 400, e.what() );
 	}
-}
-
-http::RouteDefinition searchRoute( db::DBContext& db )
-{
-	auto handler = [ &db ]( http::RequestContext context ) -> http::HTTPTask< http::Response >
-	{ co_return co_await search( db, std::move( context ) ); };
-
-	return http::RouteDefinition {
-		http::RouteMetadata { proxygen::HTTPMethod::GET, "/search", {}, { apiAuthValidation( db ) } },
-		std::move( handler )
-	};
-}
-
-http::RouteDefinition searchPostRoute( db::DBContext& db )
-{
-	auto handler = [ &db ]( http::RequestContext context ) -> http::HTTPTask< http::Response >
-	{ co_return co_await searchPost( db, std::move( context ) ); };
-
-	return http::RouteDefinition {
-		http::RouteMetadata { proxygen::HTTPMethod::POST, "/search", {}, { apiAuthValidation( db ) } },
-		std::move( handler )
-	};
 }
 
 } // namespace idhan::httpapi

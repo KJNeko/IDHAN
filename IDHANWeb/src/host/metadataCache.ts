@@ -13,7 +13,6 @@ type Meta = MetadataResponse['records'][number];
 
 /** Ids per POST; the server caps at 1000, so chunk larger fan-outs. */
 const MAX_BATCH = 1000;
-/** Cached metadata objects to retain, kept well above the visible window. */
 const CACHE_LIMIT = 20_000;
 /** Remember server-confirmed missing ids to avoid re-requesting holes every scroll. */
 const MISSING_LIMIT = 20_000;
@@ -106,7 +105,6 @@ export function forgetMetadata(ids: readonly RecordId[]): void {
     }
 }
 
-/** Synchronously reads an already-cached record, or undefined. */
 export function peekMetadata(id: RecordId): Meta | undefined {
   return cache.get(id);
 }

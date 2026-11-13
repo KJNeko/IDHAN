@@ -356,10 +356,13 @@ void DBConnection::pumpHandshake( const ConnectionState current_state )
 			const std::array< const char*, 2 > values { { timeout.c_str(), search_path.c_str() } };
 			constexpr std::array< int, 2 > lengths { { 0, 0 } };
 			constexpr std::array< int, 2 > formats { { 0, 0 } };
-			// Values are parsed by PostgreSQL as data; no connection information or
-			// SQL configuration text is constructed by concatenation.
 			constexpr char startup_sql[] =
-				"SELECT set_config('statement_timeout', $1, false), set_config('search_path', $2, false)";
+			//language=postgresql
+			R"SQL(
+					SELECT
+					    set_config('statement_timeout', $1, false),
+					    set_config('search_path', $2, false)
+				)SQL";
 			if ( PQsendQueryParams(
 					 connection, startup_sql, 2, nullptr, values.data(), lengths.data(), formats.data(), 0 )
 			     != 1 )
@@ -386,10 +389,7 @@ void DBConnection::pumpHandshake( const ConnectionState current_state )
 				PGresult* result { PQgetResult( connection ) };
 				if ( result == nullptr )
 				{
-					// Pipeline mode emits a null delimiter after a command's result;
-					// our ledger knows the startup query is immediately followed by
-					// its Sync, so advance once to observe that boundary. A null is
-					// not itself completion while a known Sync remains.
+					// In pipeline mode the first null only ends the startup query; its Sync follows.
 					if ( role != ConnectionRole::management && !saw_startup_sync && !startup_delimiter )
 					{
 						startup_delimiter = true;

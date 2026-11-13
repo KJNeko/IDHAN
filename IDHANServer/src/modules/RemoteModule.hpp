@@ -76,7 +76,7 @@ class RemoteModule
 		std::size_t width,
 		std::size_t height ) const;
 
-	//! An encoded image (PNG, despite the historical WEBP naming).
+	//! The thumbnail encoded as an in-memory WebP file.
 	[[nodiscard]] IDHANTask< std::expected< ThumbnailInfo, ModuleError > > createThumbnailFile(
 		RemoteCallData data,
 		std::size_t width,

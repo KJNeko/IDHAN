@@ -1,13 +1,5 @@
-import type {JobStatus} from './types';
-/**
- * Typed IDHAN REST client.
- *
- * The permanent API key is presented on every authenticated call via the `X-API-Key` header; see
- * src/auth/session.ts for how the credential is obtained and stored.
- *
- * This is the raw client. The coalescing and caching host API (batched metadata, thumbnail LRU) is a
- * layer built on top of these methods, not baked in here.
- */
+import type {JobStatus, Subscription, SubscriptionInput, SubscriptionGroup, SubscriptionGroupInput} from './types';
+import type {DownloadBandwidth} from './types';
 
 import type { LayoutDocument } from '../layout/document';
 import type {
@@ -27,14 +19,16 @@ import type {
   ServerLayoutMeta,
     KeyCheck,
   DatabaseStats,
+    DownloadSessionCounts,
     DownloadSessionErrorLog,
     DownloadSessionInfo,
     DownloadSessionRecords,
+    DownloadSessionState,
+    DownloadSessionUrlJob,
+    DownloadSessionUrlState,
     DownloadSessionUrlFlat,
     DownloadSessionUrlNode,
-    DownloaderDebug,
     DownloaderSecrets,
-    RateLimitLane,
   StorageNode,
   TagDomain,
   TagInfo,
@@ -43,7 +37,6 @@ import type {
   VersionInfo,
 } from './types';
 
-/** Header the credential rides in. The server also honours Authorization/IDHAN-API-Key and the rest. */
 const KEY_HEADER = 'X-API-Key';
 
 /** Non-2xx responses throw this, carrying the status and decoded JSON or plain-text body. */
@@ -71,7 +64,6 @@ export function getKey(): string | null {
 
 interface RequestOptions {
   method?: string;
-  /** JSON-encoded into the body if present. */
   body?: unknown;
   signal?: AbortSignal;
   /**
@@ -124,25 +116,67 @@ function safeParse(text: string): unknown {
 }
 
 export const api = {
+	subscriptionGroups: {
+		list(signal?: AbortSignal): Promise<SubscriptionGroup[]> {
+			return request('/subscription_groups', {signal});
+		},
+		create(body: SubscriptionGroupInput): Promise<SubscriptionGroup> {
+			return request('/subscription_groups', {method: 'POST', body});
+		},
+		update(id: number, body: SubscriptionGroupInput): Promise<SubscriptionGroup> {
+			return request(`/subscription_groups/${id}`, {method: 'PATCH', body});
+		},
+		run(id: number): Promise<SubscriptionGroup> {
+			return request(`/subscription_groups/${id}/run`, {method: 'POST'});
+		},
+		remove(id: number): Promise<{ deleted: boolean }> {
+			return request(`/subscription_groups/${id}`, {method: 'DELETE'});
+		},
+	},
+	subscriptions: {
+		batch(groupId: number, items: SubscriptionInput[]): Promise<{ ids: number[]; added: number; skipped: number }> {
+			return request(`/subscription_groups/${groupId}/subscriptions/batch`, {method: 'POST', body: {items}});
+		},
+		records(id: number): Promise<{ record_ids: number[] }> {
+			return request(`/subscriptions/${id}/records`);
+		},
+		list(signal?: AbortSignal): Promise<Subscription[]> {
+			return request('/subscriptions', {signal});
+		},
+		create(groupId: number, body: SubscriptionInput): Promise<Subscription> {
+			return request(`/subscription_groups/${groupId}/subscriptions`, {method: 'POST', body});
+		},
+		update(id: number, body: SubscriptionInput): Promise<Subscription> {
+			return request(`/subscriptions/${id}`, {method: 'PATCH', body});
+		},
+		run(id: number): Promise<Subscription> {
+			return request(`/subscriptions/${id}/run`, {method: 'POST'});
+		},
+		remove(id: number): Promise<{ deleted: boolean }> {
+			return request(`/subscriptions/${id}`, {method: 'DELETE'});
+		},
+	},
   /** Unauthenticated; also serves as a plain reachability probe for the server. */
   version(signal?: AbortSignal): Promise<VersionInfo> {
     return request<VersionInfo>('/version', { key: null, signal });
   },
 
   auth: {
-      /** Confirm an API key is currently accepted. Throws ApiError(401) if not. */
       verifyKey(key: string, signal?: AbortSignal): Promise<KeyCheck> {
           return request<KeyCheck>('/auth/verify', {key, signal});
     },
   },
 
     downloader: {
-        /** Maps session IDs to last-seen event sequences; omitted sessions return retained history. */
-        debug(eventCursors: ReadonlyMap<number, number> = new Map(), signal?: AbortSignal): Promise<DownloaderDebug> {
-            const cursorText = [...eventCursors].map(([id, sequence]) => `${id}:${sequence}`).join(',');
-            const query = cursorText === '' ? '' : `?event_cursors=${encodeURIComponent(cursorText)}`;
-            return request<DownloaderDebug>(`/downloader/debug${query}`, {signal});
-        },
+		enableLane(lane: string): Promise<{ reset: string }> {
+			return request(`/rate_limits/reset?lane=${encodeURIComponent(lane)}`, {method: 'POST'});
+		},
+		cache(signal?: AbortSignal): Promise<import('./types').ParserCacheSnapshot> {
+			return request('/downloader/cache', {signal});
+		},
+		rateLimits(signal?: AbortSignal): Promise<import('./types').RateLimitLane[]> {
+			return request('/rate_limits', {signal});
+		},
         secrets(signal?: AbortSignal): Promise<DownloaderSecrets> {
             return request<DownloaderSecrets>('/downloader/secrets', {signal});
         },
@@ -151,7 +185,35 @@ export const api = {
         },
     },
 
+    downloaderHosts: {
+        list(signal?: AbortSignal): Promise<import('./types').DownloaderParserHost[]> {
+            return request('/downloader/hosts', {signal});
+        },
+        set(host: string, parser: string): Promise<import('./types').DownloaderParserHost[]> {
+            return request('/downloader/hosts', {method: 'POST', body: {host, parser}});
+        },
+        remove(host: string): Promise<{ deleted: boolean }> {
+            return request(`/downloader/hosts?${new URLSearchParams({host})}`, {method: 'DELETE'});
+        },
+    },
     downloadSessions: {
+		installParser(filename: string, source: string, replace: boolean): Promise<{ installed: boolean }> {
+			return request('/download_sessions/parsers', {method: 'POST', body: {filename, source, replace}});
+		},
+		async downloadParser(filename: string): Promise<Blob> {
+			const path = `/download_sessions/parsers/${encodeURIComponent(filename)}`;
+			const headers = new Headers();
+			if (currentKey) headers.set(KEY_HEADER, currentKey);
+			const response = await fetch(path, {headers});
+			if (!response.ok) throw await readApiError(response, `GET ${path}`);
+			return response.blob();
+		},
+		parsers(signal?: AbortSignal): Promise<{ parsers: import('./types').DownloaderParser[] }> {
+			return request('/download_sessions/parsers', {signal});
+		},
+        options(signal?: AbortSignal): Promise<import('./types').DownloaderOptions> {
+            return request('/download_sessions/options', {signal});
+        },
         list(signal?: AbortSignal): Promise<DownloadSessionInfo[]> {
             return request<DownloadSessionInfo[]>('/download_sessions', {signal});
         },
@@ -172,13 +234,13 @@ export const api = {
                 signal,
             });
         },
-        submitUrlSession(url: string, name?: string, signal?: AbortSignal): Promise<{
+        submitUrlSession(url: string, name?: string, signal?: AbortSignal, options?: import('./types').DownloadSettings): Promise<{
             session: DownloadSessionInfo;
             url: DownloadSessionUrlNode;
         }> {
             return request('/download_sessions/urls', {
                 method: 'POST',
-                body: name === undefined ? {url} : {url, name},
+                body: {...(name === undefined ? {url} : {url, name}), ...(options === undefined ? {} : {options})},
                 signal,
             });
         },
@@ -237,8 +299,8 @@ export const api = {
         });
     },
 
-    reorganizeUrls(signal?: AbortSignal): Promise<JobDispatch> {
-        return request<JobDispatch>('/jobs/urls/reorganize', {method: 'POST', signal});
+	deduplicateUrls(signal?: AbortSignal): Promise<JobDispatch> {
+		return request<JobDispatch>('/jobs/urls/deduplicate', {method: 'POST', signal});
     },
 
     recordRelationships(recordId: number, signal?: AbortSignal): Promise<FileRelationships> {
@@ -330,13 +392,11 @@ export const api = {
     }));
   },
 
-    /** Every mime id the server knows, mapped to its name (GET /mime). */
     listMimes(signal?: AbortSignal): Promise<MimeMap> {
         return request<MimeMap>('/mime', {signal});
     },
 };
 
-/** Raw wire row from GET /tags/autocomplete, before normalisation to AutocompleteResult. */
 interface AutocompleteRow {
   tag_id: number;
   tag_text?: string;
@@ -357,7 +417,6 @@ export const tags = {
         return request<TagInfo>(`/tags/${tagId}/info${query ? `?${query}` : ''}`, {signal: options.signal});
   },
 
-  /** A tag's parent/child/alias/sibling relationships in one domain, as ids (GET .../relationships). */
   relationships(tagDomainId: number, tagId: number, signal?: AbortSignal): Promise<TagRelationships> {
     return request<TagRelationships>(`/tags/${tagDomainId}/${tagId}/relationships`, { signal });
   },
@@ -391,9 +450,7 @@ export const tags = {
   },
 };
 
-/** Database statistics for the Database Stats panel. */
 export const stats = {
-  /** Aggregate counts (records, tags, mappings estimate, clusters) and record-count-by-mime. */
   database(signal?: AbortSignal): Promise<DatabaseStats> {
     return request<DatabaseStats>('/db/stats', { signal });
   },
@@ -404,7 +461,6 @@ export const stats = {
   },
 };
 
-/** WebUI plugin discovery (M6). Returns the validated index; bundles are dynamic-imported client-side. */
 export const plugins = {
   list(signal?: AbortSignal): Promise<PluginManifest[]> {
     return request<PluginManifest[]>('/plugins', { signal });
@@ -417,7 +473,6 @@ export const plugins = {
  * upsert to that id.
  */
 export const layouts = {
-  /** Metadata for every server-stored layout (no documents). */
   list(signal?: AbortSignal): Promise<ServerLayoutMeta[]> {
     return request<ServerLayoutMeta[]>('/layouts', { signal });
   },
@@ -442,135 +497,55 @@ export const layouts = {
   },
 };
 
-/**
- * URL for an <img> or <video> whose element cannot set request headers. The credential therefore
- * rides in the `idhan_key` query parameter, which the server accepts alongside the header.
- */
-/** Watches coalesced session-tree updates. Returns a close function. */
-export function watchDownloadSessions(handlers: {
-    onSession: (session: DownloadSessionInfo, urls: DownloadSessionUrlNode[]) => void;
-    onRemoved?: (sessionId: number) => void;
-    onError?: (message: string) => void;
-    onOpen?: () => void;
-}): () => void {
-    const refreshing = new Map<number, boolean>();
-    const refresh = async (sessionId: number) => {
-        if (refreshing.has(sessionId)) {
-            refreshing.set(sessionId, true);
-            return;
-        }
+/** Every frame's `event:` names its stream; the payload's `type` field names the event within it. */
+export const EVENT_STREAMS = {
+    downloader: 'downloader',
+    job: 'job',
+	subscriptions: 'subscriptions',
+} as const;
 
-        refreshing.set(sessionId, false);
-        while (refreshing.has(sessionId)) {
-            refreshing.set(sessionId, false);
-            try {
-                const [session, urls] = await Promise.all([
-                    api.downloadSessions.get(sessionId), api.downloadSessions.urls(sessionId),
-                ]);
-                handlers.onSession(session, urls);
-            } catch (error) {
-                if (error instanceof ApiError && error.status === 404) handlers.onRemoved?.(sessionId);
-                else handlers.onError?.('Unable to refresh a download session.');
-            }
+export type EventStream = typeof EVENT_STREAMS[keyof typeof EVENT_STREAMS];
 
-            if (refreshing.get(sessionId) !== true) {
-                refreshing.delete(sessionId);
-                return;
-            }
-        }
-    };
+type StreamPayload = Record<string, unknown>;
 
-    return sharedWatchSSE([EVENT_TYPES.downloadSessionChanged], {
-        onOpen: handlers.onOpen,
-        onError: handlers.onError,
-        onEvent: (name, data, _timestamp, type) => {
-            if (type !== EVENT_TYPES.downloadSessionChanged || name === 'shutdown') return;
-
-            const payload = safeParse(data);
-            if (typeof payload !== 'object' || payload === null) return;
-
-            // The server opens every subscription with the sessions that already exist, so a reload
-            // shows downloads already in progress rather than waiting for one of them to change.
-            if (name === 'snapshot') {
-                const sessions = (payload as { sessions?: unknown }).sessions;
-                if (Array.isArray(sessions)) {
-                    void Promise.all(sessions.filter((id): id is number => typeof id === 'number').map(refresh));
-                    return;
-                }
-                const id = (payload as { id?: unknown }).id;
-                if (typeof id === 'number') void refresh(id);
-                return;
-            }
-
-            if (name !== 'update') return;
-            const event = payload as { id?: unknown; removed?: unknown };
-            if (typeof event.id !== 'number') return;
-            if (event.removed === true) handlers.onRemoved?.(event.id);
-            else void refresh(event.id);
-        },
-    });
-}
-
-export function isRateLimitLane(value: unknown): value is RateLimitLane {
-    if (typeof value !== 'object' || value === null) return false;
-    const lane = value as Record<string, unknown>;
-    const requests = lane.requests;
-    const seconds = lane.seconds;
-    const effectiveInterval = lane.effective_interval_ms;
-    const remaining = lane.remaining_ms;
-    const consecutive = lane.consecutive_limits;
-    return typeof lane.scheduling_key === 'string'
-        && typeof lane.throttled === 'boolean'
-        && typeof lane.active === 'boolean'
-        && [requests, seconds, effectiveInterval, remaining, consecutive]
-            .every((field) => typeof field === 'number' && Number.isFinite(field) && field >= 0)
-        && typeof requests === 'number'
-        && typeof seconds === 'number'
-        && (lane.throttled ? requests > 0 && seconds > 0 : requests === 0 && seconds === 0);
-}
-
-export type SSEHandlers = {
-    /** `timestamp` is seconds since the epoch, stamped by the server when the event was generated. */
-    onEvent: (name: string, data: string, timestamp: number | null, type: string) => void;
+type StreamHandlers = {
+    onEvent: (stream: string, payload: StreamPayload) => void;
     onError?: (message: string) => void;
     onOpen?: () => void;
 };
 
-export const EVENT_TYPES = {
-    jobStatus: 'job.status',
-    downloadSessionChanged: 'downloader.session',
-    allDownloader: 'downloader.*',
-    downloaderDebug: 'downloader.debug',
-    downloaderRateLimit: 'downloader.rate_limit',
-} as const;
-
-type EventSubscription = { types: readonly string[] | null; handlers: SSEHandlers };
+type EventSubscription = {
+    streams: readonly EventStream[] | null;
+    handlers: StreamHandlers;
+    sessionIds?: readonly number[];
+};
 
 type SharedStream = {
     subscriptions: Set<EventSubscription>;
     close: () => void;
     path: string | null;
-    opened: boolean;
-    snapshotReady: boolean;
-    snapshots: Map<string, Parameters<SSEHandlers['onEvent']>>;
 };
 
 let sharedStream: SharedStream | null = null;
 
-function matchesEventType(types: readonly string[] | null, type: string): boolean {
-    if (types === null || types.length === 0 || type === 'stream.snapshot.complete') return true;
-    return types.some((selector) => selector === type
-        || (selector.endsWith('.*') && type.startsWith(selector.slice(0, -1))));
-}
-
 function streamPath(subscriptions: Set<EventSubscription>): string | null {
     if (subscriptions.size === 0) return null;
-    const selectors = new Set<string>();
+    const streams = new Set<string>();
     for (const subscription of subscriptions) {
-        if (subscription.types === null || subscription.types.length === 0) return '/events';
-        for (const type of subscription.types) selectors.add(type);
+        if (subscription.streams === null || subscription.streams.length === 0) return '/events';
+        for (const stream of subscription.streams) streams.add(stream);
     }
-    return `/events?types=${encodeURIComponent([...selectors].sort().join(','))}`;
+    const downloader = [...subscriptions].filter(s => s.streams?.includes(EVENT_STREAMS.downloader));
+    const ids = downloader.length && downloader.every(s => s.sessionIds?.length)
+        ? [...new Set(downloader.flatMap(s => [...s.sessionIds!]))].sort((a, b) => a - b) : [];
+    return `/events?filter=${encodeURIComponent([...streams].sort().join(','))}${ids.length ? `&session_ids=${ids.join(',')}` : ''}`;
+}
+
+function matchesSubscription(subscription: EventSubscription, stream: string, payload: StreamPayload): boolean {
+    if (subscription.streams?.length && !subscription.streams.includes(stream as EventStream)) return false;
+    if (stream !== EVENT_STREAMS.downloader || !subscription.sessionIds?.length) return true;
+    const id = payload.session_id;
+    return typeof id !== 'number' || subscription.sessionIds.includes(id);
 }
 
 function startSharedStream(stream: SharedStream): void {
@@ -579,84 +554,42 @@ function startSharedStream(stream: SharedStream): void {
 
     stream.close();
     stream.path = path;
-    stream.opened = false;
-    stream.snapshotReady = false;
-    stream.snapshots.clear();
     if (path === null) return;
 
     stream.close = watchSSE(path, {
         onOpen: () => {
-            stream.opened = true;
-            stream.snapshotReady = false;
-            stream.snapshots.clear();
             for (const subscription of [...stream.subscriptions]) subscription.handlers.onOpen?.();
         },
         onError: (message) => {
-            stream.opened = false;
             for (const subscription of [...stream.subscriptions]) subscription.handlers.onError?.(message);
         },
-        onEvent: (name, data, timestamp, type) => {
-            const event = [name, data, timestamp, type] as Parameters<SSEHandlers['onEvent']>;
-            if (type === 'stream.snapshot.complete') {
-                stream.snapshotReady = true;
-                for (const subscription of [...stream.subscriptions])
-                    subscription.handlers.onEvent(name, data, timestamp, type);
-                return;
-            }
-
-            const payload = safeParse(data) as {
-                job_id?: unknown;
-                id?: unknown;
-                scheduling_key?: unknown;
-                removed?: unknown
-            };
-            const identity = typeof payload === 'object' && payload !== null
-                ? payload.job_id ?? payload.id ?? payload.scheduling_key ?? type
-                : type;
-            const key = `${type}:${String(identity)}`;
-            if (name === 'update' && payload && typeof payload === 'object' && payload.removed === true) {
-                stream.snapshots.delete(key);
-            } else if (name === 'snapshot' || name === 'update') {
-                if (type === EVENT_TYPES.downloaderDebug) {
-                    const previous = stream.snapshots.get(key) ?? null;
-                    const reduced = retainDebugSnapshot(previous, event);
-                    if (reduced) stream.snapshots.set(key, reduced);
-                } else {
-                    stream.snapshots.set(key, event);
-                }
-            }
+        onEvent: (name, data) => {
+            const parsed = safeParse(data);
+            if (typeof parsed !== 'object' || parsed === null) return;
+            const payload = parsed as StreamPayload;
             for (const subscription of [...stream.subscriptions]) {
-                if (matchesEventType(subscription.types, type))
-                    subscription.handlers.onEvent(name, data, timestamp, type);
+                if (matchesSubscription(subscription, name, payload)) subscription.handlers.onEvent(name, payload);
             }
         },
     });
 }
 
-/** One shared connection; adding/removing filters reconnects once with the union of requested types. */
-function sharedWatchSSE(types: readonly string[] | null, handlers: SSEHandlers): () => void {
+/** One shared connection; adding or removing subscribers reconnects once with the union of their filters. */
+function sharedWatchSSE(
+    streams: readonly EventStream[] | null,
+    handlers: StreamHandlers,
+    sessionIds?: readonly number[],
+): () => void {
     if (sharedStream === null) {
         sharedStream = {
             subscriptions: new Set(), close: () => {
             }, path: null,
-            opened: false, snapshotReady: false, snapshots: new Map(),
         };
     }
     const stream = sharedStream;
-    const subscription = {types, handlers};
+    const subscription = {streams, handlers, sessionIds};
     stream.subscriptions.add(subscription);
     startSharedStream(stream);
-
-    if (stream.opened) {
-        queueMicrotask(() => {
-            if (!stream.subscriptions.has(subscription)) return;
-            handlers.onOpen?.();
-            for (const snapshot of stream.snapshots.values()) {
-                if (matchesEventType(types, snapshot[3])) handlers.onEvent(...snapshot);
-            }
-            if (stream.snapshotReady) handlers.onEvent('snapshot', '{}', null, 'stream.snapshot.complete');
-        });
-    }
 
     return () => {
         stream.subscriptions.delete(subscription);
@@ -665,24 +598,31 @@ function sharedWatchSSE(types: readonly string[] | null, handlers: SSEHandlers):
     };
 }
 
-/** Subscribe to the unified event stream. Omit `types` for all types; `downloader.*` is a prefix filter. */
+/** Raw events from the selected streams. Omit sessionIds for all download sessions. Nothing is replayed. */
 export function watchEvents(
     handlers: {
-        onEvent: (event: { event: string; type: string; data: string; timestamp: number | null }) => void;
+        onEvent: (event: { stream: string; type: string; payload: StreamPayload }) => void;
         onError?: (message: string) => void;
         onOpen?: () => void;
     },
-    types?: readonly string[],
+    streams?: readonly EventStream[],
+    sessionIds?: readonly number[],
 ): () => void {
-    const selected = types?.length ? [...new Set(types)].sort() : [];
+    const selected = streams?.length ? [...new Set(streams)].sort() : [];
     return sharedWatchSSE(selected.length ? selected : null, {
         onOpen: handlers.onOpen,
         onError: handlers.onError,
-        onEvent: (event, data, timestamp, type) => handlers.onEvent({event, type, data, timestamp}),
-    });
+        onEvent: (stream, payload) => handlers.onEvent({
+            stream, type: typeof payload.type === 'string' ? payload.type : '', payload,
+        }),
+    }, sessionIds);
 }
 
-function watchSSE(path: string, handlers: SSEHandlers): () => void {
+function watchSSE(path: string, handlers: {
+    onEvent: (name: string, data: string) => void;
+    onError?: (message: string) => void;
+    onOpen?: () => void
+}): () => void {
     let controller: AbortController | null = null;
     let retry: ReturnType<typeof setTimeout> | undefined;
     let closed = false;
@@ -721,15 +661,11 @@ function watchSSE(path: string, handlers: SSEHandlers): () => void {
             let buffered = '';
             let eventName = 'message';
             let data: string[] = [];
-            let timestamp: number | null = null;
-            let type = '';
 
             const dispatch = () => {
-                if (data.length > 0) handlers.onEvent(eventName, data.join('\n'), timestamp, type);
+                if (data.length > 0) handlers.onEvent(eventName, data.join('\n'));
                 eventName = 'message';
                 data = [];
-                timestamp = null;
-                type = '';
             };
 
             const consumeLine = (line: string) => {
@@ -743,12 +679,7 @@ function watchSSE(path: string, handlers: SSEHandlers): () => void {
                 const field = separator === -1 ? line : line.slice(0, separator);
                 const value = separator === -1 ? '' : line.slice(separator + 1).replace(/^ /, '');
                 if (field === 'event') eventName = value;
-                if (field === 'type') type = value;
                 if (field === 'data') data.push(value);
-                if (field === 'timestamp') {
-                    const parsed = Number(value);
-                    timestamp = Number.isFinite(parsed) ? parsed : null;
-                }
             };
 
             while (!closed) {
@@ -781,6 +712,385 @@ function watchSSE(path: string, handlers: SSEHandlers): () => void {
     };
 }
 
+const DOWNLOAD_URL_STATES: readonly DownloadSessionUrlState[] = [
+    'pending', 'downloading', 'processing', 'importing', 'completed', 'imported', 'imported_previously',
+    'skipped_no_url_class', 'skipped_already_seen', 'skipped_already_imported', 'failed', 'cancelled',
+];
+
+const NETWORK_FIELDS = [
+    'downloading', 'waiting', 'waiting_parsers', 'waiting_requests', 'waiting_http_rate', 'waiting_http_shard',
+	'waiting_storage', 'downloaded_bytes', 'average_import_bytes',
+] as const;
+
+type DownloadSessionListener = {
+    onSession: (session: DownloadSessionInfo, urls: DownloadSessionUrlNode[]) => void;
+	onBandwidth?: (bandwidth: DownloadBandwidth) => void;
+    onRemoved?: (sessionId: number) => void;
+    onError?: (message: string) => void;
+    onOpen?: () => void;
+    sessionIds?: readonly number[];
+};
+
+type StoredSession = {
+    info: DownloadSessionInfo;
+    rows: Map<number, DownloadSessionUrlJob>;
+    errors: Set<number>;
+    /** Rebuilt only after a URL changes, so listeners can tell URL changes from summary changes. */
+    tree: DownloadSessionUrlNode[] | null;
+};
+
+type DownloaderStore = {
+    sessions: Map<number, StoredSession>;
+	bandwidth: DownloadBandwidth | null;
+    /** Set once the connection's snapshot has fully arrived. */
+    ready: boolean;
+    opened: boolean;
+    listeners: Set<DownloadSessionListener>;
+    dirty: Set<number>;
+    flushQueued: boolean;
+    sessionFilter: string;
+    close: () => void;
+};
+
+let downloaderStore: DownloaderStore | null = null;
+
+function optionalNumber(value: unknown): number | null {
+    return typeof value === 'number' ? value : null;
+}
+
+function optionalString(value: unknown): string | null {
+    return typeof value === 'string' ? value : null;
+}
+
+function isUrlState(value: unknown): value is DownloadSessionUrlState {
+    return typeof value === 'string' && (DOWNLOAD_URL_STATES as readonly string[]).includes(value);
+}
+
+/** Applies a payload's state fields; fields it omits are cleared. */
+function applyUrlState(row: DownloadSessionUrlJob, payload: StreamPayload): void {
+    if (isUrlState(payload.state)) row.state = payload.state;
+    row.record_id = optionalNumber(payload.record_id);
+    row.size = optionalNumber(payload.size);
+    row.stage = optionalString(payload.stage) as DownloadSessionUrlJob['stage'];
+    row.error = optionalString(payload.error);
+    row.finished_at = optionalNumber(payload.finished_at);
+    const transferring = row.state === 'downloading';
+    row.bytes = transferring && typeof payload.bytes === 'number' ? payload.bytes : undefined;
+    row.total = transferring && typeof payload.total === 'number' ? payload.total : undefined;
+}
+
+function urlRow(payload: StreamPayload): DownloadSessionUrlJob | null {
+    if (typeof payload.url_id !== 'number' || typeof payload.url !== 'string') return null;
+    const row: DownloadSessionUrlJob = {
+        id: payload.url_id,
+        parent_id: optionalNumber(payload.parent_id),
+        url: payload.url,
+        state: 'pending',
+        created_at: optionalNumber(payload.created_at) ?? 0,
+        finished_at: null,
+        error: null,
+        stage: null,
+        record_id: null,
+        size: null,
+    };
+    applyUrlState(row, payload);
+    return row;
+}
+
+function buildTree(rows: Map<number, DownloadSessionUrlJob>): DownloadSessionUrlNode[] {
+    const nodes = new Map<number, DownloadSessionUrlNode>();
+    const ordered = [...rows.values()].sort((a, b) => a.id - b.id);
+    for (const row of ordered) nodes.set(row.id, {...row, children: []});
+    const roots: DownloadSessionUrlNode[] = [];
+    for (const node of nodes.values()) {
+        const parent = node.parent_id === null ? undefined : nodes.get(node.parent_id);
+        if (parent) parent.children.push(node);
+        else roots.push(node);
+    }
+    // Newest submissions first, matching the REST listing.
+    return roots.reverse();
+}
+
+function countStates(rows: Map<number, DownloadSessionUrlJob>): DownloadSessionCounts {
+    const counts = Object.fromEntries(DOWNLOAD_URL_STATES.map(state => [state, 0])) as DownloadSessionCounts;
+    for (const row of rows.values()) counts[row.state] += 1;
+    return counts;
+}
+
+function removeSubtree(rows: Map<number, DownloadSessionUrlJob>, id: number): void {
+    const removed = new Set([id]);
+    // Children always have higher ids than their parents, so one ordered pass finds every descendant.
+    for (const row of [...rows.values()].sort((a, b) => a.id - b.id)) {
+        if (row.parent_id !== null && removed.has(row.parent_id)) removed.add(row.id);
+    }
+    for (const value of removed) rows.delete(value);
+}
+
+function listenerWants(listener: DownloadSessionListener, sessionId: number): boolean {
+    return !listener.sessionIds?.length || listener.sessionIds.includes(sessionId);
+}
+
+function sessionView(stored: StoredSession): [DownloadSessionInfo, DownloadSessionUrlNode[]] {
+    if (stored.tree === null) stored.tree = buildTree(stored.rows);
+    return [{...stored.info, counts: countStates(stored.rows), error_count: stored.errors.size}, stored.tree];
+}
+
+function flushDownloader(store: DownloaderStore): void {
+    store.flushQueued = false;
+	if (!store.ready) return;
+
+    const dirty = [...store.dirty];
+    store.dirty.clear();
+    for (const id of dirty) {
+        const stored = store.sessions.get(id);
+        if (!stored) continue;
+        const [info, tree] = sessionView(stored);
+        for (const listener of [...store.listeners]) {
+            if (listenerWants(listener, id)) listener.onSession(info, tree);
+        }
+    }
+}
+
+function markDirty(store: DownloaderStore, sessionId: number): void {
+    store.dirty.add(sessionId);
+	// A baseline can arrive across many reads. Rebuilding its growing trees for each chunk
+	// repeats sorting, counting, metadata invalidation, and rendering before ingestion finishes.
+	if (!store.ready) return;
+
+    if (store.flushQueued) return;
+    store.flushQueued = true;
+    queueMicrotask(() => flushDownloader(store));
+}
+
+function upsertSession(store: DownloaderStore, payload: StreamPayload, id: number): StoredSession | undefined {
+    if (typeof payload.name !== 'string') return store.sessions.get(id);
+    const existing = store.sessions.get(id);
+    const info: DownloadSessionInfo = {
+        ...existing?.info,
+        id,
+        name: payload.name,
+        created_at: optionalNumber(payload.created_at) ?? existing?.info.created_at ?? 0,
+        last_used_at: optionalNumber(payload.last_used_at) ?? existing?.info.last_used_at ?? 0,
+        state: (optionalString(payload.state) as DownloadSessionState | null) ?? existing?.info.state ?? 'idle',
+        error_count: existing?.errors.size ?? 0,
+    };
+    if (existing) {
+        existing.info = info;
+        return existing;
+    }
+    const created: StoredSession = {info, rows: new Map(), errors: new Set(), tree: null};
+    store.sessions.set(id, created);
+    return created;
+}
+
+function applyUrlEvent(stored: StoredSession, type: string, payload: StreamPayload): boolean {
+    if (type === 'urls_snapshot' || type === 'url_created') {
+        const entries = type === 'urls_snapshot' && Array.isArray(payload.urls) ? payload.urls : [payload];
+        for (const entry of entries) {
+            if (typeof entry !== 'object' || entry === null) continue;
+            const row = urlRow(entry as StreamPayload);
+            if (row) stored.rows.set(row.id, row);
+        }
+        return true;
+    }
+    if (typeof payload.url_id !== 'number') return false;
+    const row = stored.rows.get(payload.url_id);
+    if (type === 'url_removed') {
+        removeSubtree(stored.rows, payload.url_id);
+        return true;
+    }
+    if (!row) return false;
+    if (type === 'url_updated') {
+        stored.rows.set(row.id, {...row});
+        applyUrlState(stored.rows.get(row.id)!, payload);
+        return true;
+    }
+    if (type === 'url_progress') {
+        stored.rows.set(row.id, {
+            ...row,
+            bytes: optionalNumber(payload.bytes) ?? undefined,
+            total: optionalNumber(payload.total) ?? undefined,
+        });
+        return true;
+    }
+    return false;
+}
+
+function applyErrorEvent(stored: StoredSession, type: string, payload: StreamPayload): boolean {
+    if (type === 'errors_snapshot' && Array.isArray(payload.errors)) {
+        for (const entry of payload.errors) {
+            const id = (entry as StreamPayload | null)?.error_id;
+            if (typeof id === 'number') stored.errors.add(id);
+        }
+        return true;
+    }
+    if (type === 'request_error' && typeof payload.error_id === 'number') {
+        stored.errors.add(payload.error_id);
+        return true;
+    }
+    if (type === 'request_errors_cleared' && Array.isArray(payload.error_ids)) {
+        for (const id of payload.error_ids) if (typeof id === 'number') stored.errors.delete(id);
+        return true;
+    }
+    return false;
+}
+
+function applyDownloaderEvent(store: DownloaderStore, payload: StreamPayload): void {
+    const type = typeof payload.type === 'string' ? payload.type : '';
+	if (type === 'bandwidth') {
+		const speed = payload.download_bytes_per_second;
+		if (typeof speed !== 'number' || !Number.isFinite(speed) || speed < 0 || !Array.isArray(payload.sessions)) return;
+		const sessions: DownloadBandwidth['sessions'] = [];
+		for (const value of payload.sessions) {
+			if (typeof value !== 'object' || value === null) return;
+			const entry = value as StreamPayload;
+			if (typeof entry.session_id !== 'number' || typeof entry.download_bytes_per_second !== 'number') return;
+			if (!Number.isFinite(entry.download_bytes_per_second) || entry.download_bytes_per_second < 0) return;
+			sessions.push({session_id: entry.session_id, download_bytes_per_second: entry.download_bytes_per_second});
+		}
+		store.bandwidth = {download_bytes_per_second: speed, sessions};
+		for (const listener of [...store.listeners]) publishBandwidth(listener, store.bandwidth);
+		return;
+	}
+    if (type === 'snapshot_complete') {
+        store.ready = true;
+		for (const id of store.dirty) markDirty(store, id);
+        return;
+    }
+    const id = payload.session_id;
+    if (typeof id !== 'number') return;
+    if (type === 'session_deleted') {
+        store.sessions.delete(id);
+        store.dirty.delete(id);
+        for (const listener of [...store.listeners]) if (listenerWants(listener, id)) listener.onRemoved?.(id);
+        return;
+    }
+    if (type === 'session_snapshot' || type === 'session_created') {
+		if (payload.is_subscription === true) return;
+        upsertSession(store, payload, id);
+        markDirty(store, id);
+        return;
+    }
+    const stored = store.sessions.get(id);
+    if (!stored) return;
+    if (type === 'session_state') {
+        if (typeof payload.state === 'string') stored.info = {
+            ...stored.info,
+            state: payload.state as DownloadSessionState
+        };
+        if (typeof payload.last_used_at === 'number') stored.info = {
+            ...stored.info,
+            last_used_at: payload.last_used_at
+        };
+        markDirty(store, id);
+        return;
+    }
+    if (type === 'network') {
+        const network: Partial<DownloadSessionInfo> = {};
+        for (const field of NETWORK_FIELDS) {
+            const value = payload[field];
+            if (typeof value === 'number') network[field] = value;
+        }
+        stored.info = {...stored.info, ...network};
+        markDirty(store, id);
+        return;
+    }
+    if (applyUrlEvent(stored, type, payload)) {
+        stored.tree = null;
+        markDirty(store, id);
+        return;
+    }
+    if (applyErrorEvent(stored, type, payload)) markDirty(store, id);
+}
+
+function downloaderSessionFilter(store: DownloaderStore): readonly number[] | undefined {
+    const listeners = [...store.listeners];
+    if (listeners.length === 0 || !listeners.every(listener => listener.sessionIds?.length)) return undefined;
+    return [...new Set(listeners.flatMap(listener => [...listener.sessionIds!]))].sort((a, b) => a - b);
+}
+
+function publishBandwidth(listener: DownloadSessionListener, bandwidth: DownloadBandwidth): void {
+	listener.onBandwidth?.({
+		download_bytes_per_second: bandwidth.download_bytes_per_second,
+		sessions: bandwidth.sessions.filter(session => listenerWants(listener, session.session_id)),
+	});
+}
+
+function connectDownloader(store: DownloaderStore): void {
+    const filter = downloaderSessionFilter(store);
+    const key = filter?.join(',') ?? '';
+    if (key === store.sessionFilter && store.opened) return;
+
+    const previous = store.close;
+    store.sessionFilter = key;
+    store.opened = true;
+    store.close = sharedWatchSSE([EVENT_STREAMS.downloader], {
+        onOpen: () => {
+            store.sessions.clear();
+			store.bandwidth = null;
+            store.dirty.clear();
+            store.ready = false;
+            for (const listener of [...store.listeners]) listener.onOpen?.();
+        },
+        onError: (message) => {
+            for (const listener of [...store.listeners]) listener.onError?.(message);
+        },
+        onEvent: (_stream, payload) => applyDownloaderEvent(store, payload),
+    }, filter);
+    previous();
+}
+
+function downloader(): DownloaderStore {
+    if (downloaderStore === null) {
+        downloaderStore = {
+			sessions: new Map(), bandwidth: null, ready: false, opened: false, listeners: new Set(), dirty: new Set(),
+            flushQueued: false, sessionFilter: '', close: () => {
+            },
+        };
+    }
+    return downloaderStore;
+}
+
+function releaseDownloader(store: DownloaderStore): void {
+    if (store.listeners.size > 0) {
+        connectDownloader(store);
+        return;
+    }
+    store.close();
+    if (downloaderStore === store) downloaderStore = null;
+}
+
+/** Sessions with their URL trees, kept current from the downloader stream and shared by every caller. */
+export function watchDownloadSessions(handlers: {
+    onSession: (session: DownloadSessionInfo, urls: DownloadSessionUrlNode[]) => void;
+	onBandwidth?: (bandwidth: DownloadBandwidth) => void;
+    onRemoved?: (sessionId: number) => void;
+    onError?: (message: string) => void;
+    onOpen?: () => void;
+}, options: { sessionIds?: readonly number[] } = {}): () => void {
+    const store = downloader();
+    const listener: DownloadSessionListener = {...handlers, sessionIds: options.sessionIds};
+    store.listeners.add(listener);
+    const reconnects = store.opened && store.sessionFilter !== (downloaderSessionFilter(store)?.join(',') ?? '');
+    connectDownloader(store);
+    if (!reconnects && store.sessions.size > 0) {
+        queueMicrotask(() => {
+            if (!store.listeners.has(listener)) return;
+            listener.onOpen?.();
+			if (store.bandwidth) publishBandwidth(listener, store.bandwidth);
+			if (!store.ready) return;
+
+            for (const [id, stored] of store.sessions) {
+                if (listenerWants(listener, id)) listener.onSession(...sessionView(stored));
+            }
+        });
+    }
+    return () => {
+        store.listeners.delete(listener);
+        releaseDownloader(store);
+    };
+}
+
 type JobHandlers = {
     onJobs: (jobs: JobStatus[]) => void;
     onError?: (message: string) => void;
@@ -801,6 +1111,29 @@ function isJobStatus(value: unknown): value is JobStatus {
     return typeof job.job_id === 'number' && typeof job.status === 'string' && typeof job.completed === 'boolean';
 }
 
+function applyJobEvent(stream: JobStream, payload: StreamPayload): boolean {
+    if (payload.type === 'snapshot') {
+        const jobs = payload.jobs;
+        if (!Array.isArray(jobs) || !jobs.every(isJobStatus)) return false;
+        stream.jobs = new Map(jobs.map(job => [job.job_id, job]));
+        return true;
+	}
+	if (payload.type === 'response' && typeof payload.job_id === 'number') {
+		const job = stream.jobs.get(payload.job_id);
+		if (!job) return false;
+		stream.jobs.set(payload.job_id, {...job, response: payload.response});
+		return true;
+    }
+    if (payload.type !== 'status') return false;
+    if (typeof payload.job_id === 'number' && payload.removed === true) {
+        stream.jobs.delete(payload.job_id);
+        return true;
+    }
+    if (!isJobStatus(payload)) return false;
+    stream.jobs.set(payload.job_id, payload);
+    return true;
+}
+
 /** One shared connection and current snapshot for every job consumer, including late subscribers. */
 export function watchJobs(handlers: JobHandlers): () => void {
     if (!jobStream) {
@@ -809,41 +1142,20 @@ export function watchJobs(handlers: JobHandlers): () => void {
             }
         };
         jobStream = stream;
-        stream.close = sharedWatchSSE([EVENT_TYPES.jobStatus], {
+        stream.close = sharedWatchSSE([EVENT_STREAMS.job], {
             onOpen: () => {
-                stream.ready = false;
+                stream.ready = true;
                 stream.jobs.clear();
+                for (const handler of [...stream.handlers]) handler.onJobs([]);
             },
             onError: (message) => {
                 for (const handler of [...stream.handlers]) handler.onError?.(message);
             },
-            onEvent: (name, data, _timestamp, type) => {
-                if (type === 'stream.snapshot.complete') {
-                    stream.ready = true;
-                    const jobs = [...stream.jobs.values()].sort((a, b) => a.job_id - b.job_id);
-                    for (const handler of [...stream.handlers]) handler.onJobs(jobs);
-                    return;
-                }
-                if (type !== EVENT_TYPES.jobStatus) return;
-                const payload = safeParse(data);
-                if (typeof payload !== 'object' || payload === null) return;
-                if (name === 'snapshot') {
-                    const jobs = (payload as { jobs?: unknown }).jobs;
-                    if (Array.isArray(jobs) && jobs.every(isJobStatus)) {
-                        stream.jobs = new Map(jobs.map(job => [job.job_id, job]));
-                    } else if (isJobStatus(payload)) {
-                        stream.jobs.set(payload.job_id, payload);
-                    } else return;
-                } else if (name === 'update') {
-                    const update = payload as { job_id?: unknown; removed?: unknown };
-                    if (typeof update.job_id === 'number' && update.removed === true) stream.jobs.delete(update.job_id);
-                    else if (isJobStatus(payload)) stream.jobs.set(payload.job_id, payload);
-                    else return;
-                } else return;
-                if (stream.ready) {
-                    const jobs = [...stream.jobs.values()].sort((a, b) => a.job_id - b.job_id);
-                    for (const handler of [...stream.handlers]) handler.onJobs(jobs);
-                }
+            onEvent: (_stream, payload) => {
+                if (!applyJobEvent(stream, payload)) return;
+                if (!stream.ready) return;
+                const jobs = [...stream.jobs.values()].sort((a, b) => a.job_id - b.job_id);
+                for (const handler of [...stream.handlers]) handler.onJobs(jobs);
             },
         });
     }
@@ -860,92 +1172,11 @@ export function watchJobs(handlers: JobHandlers): () => void {
     };
 }
 
-function isDownloaderDebug(value: unknown): value is DownloaderDebug {
-    if (typeof value !== 'object' || value === null) return false;
-    const debug = value as Partial<DownloaderDebug>;
-    return Array.isArray(debug.sessions) && Array.isArray(debug.lanes);
-}
-
-function retainDebugSnapshot(
-    previous: Parameters<SSEHandlers['onEvent']> | null,
-    event: Parameters<SSEHandlers['onEvent']>,
-): Parameters<SSEHandlers['onEvent']> | null {
-    const [name, data, timestamp, type] = event;
-    const incoming = safeParse(data);
-    if (!isDownloaderDebug(incoming)) return previous;
-    if (name === 'snapshot' || !previous) return ['snapshot', data, timestamp, type];
-    if (name !== 'update') return previous;
-    const old = safeParse(previous[1]);
-    if (!isDownloaderDebug(old)) return ['snapshot', data, timestamp, type];
-    const sessions = incoming.sessions.map(session => {
-        const prior = old.sessions.find(value => value.id === session.id);
-        const events = new Map((prior?.events ?? []).map(value => [value.sequence, value]));
-        for (const event of session.events) events.set(event.sequence, event);
-        return {
-            ...session, events: [...events.values()].sort((a, b) => a.sequence - b.sequence).slice(-500),
-            events_dropped: (prior?.events_dropped ?? 0) + session.events_dropped
-        };
-    });
-    return ['snapshot', JSON.stringify({...incoming, sessions}), timestamp, type];
-}
-
-/** Complete diagnostic state and incremental event history over one shared SSE subscription. */
-export function watchDownloaderDebug(handlers: {
-    onState: (debug: DownloaderDebug, reset: boolean) => void;
-    onError?: (message: string) => void;
-}): () => void {
-    return sharedWatchSSE([EVENT_TYPES.downloaderDebug], {
-        onError: handlers.onError,
-        onEvent: (name, data, _timestamp, type) => {
-            if (type !== EVENT_TYPES.downloaderDebug) return;
-            if (name !== 'snapshot' && name !== 'update') return;
-            const debug = safeParse(data);
-            if (isDownloaderDebug(debug)) handlers.onState(debug, name === 'snapshot');
-        },
-    });
-}
-
-export function watchRateLimits(handlers: {
-    onSnapshot: (limits: RateLimitLane[]) => void;
-    onUpdate: (limit: RateLimitLane) => void;
-    onError?: (message: string) => void;
-    onOpen?: () => void;
-}): () => void {
-    let snapshotting = false;
-    let snapshottingValues = new Map<string, RateLimitLane>();
-    return sharedWatchSSE([EVENT_TYPES.downloaderRateLimit], {
-        onOpen: () => {
-            snapshotting = true;
-            snapshottingValues.clear();
-            handlers.onOpen?.();
-        },
-        onError: handlers.onError,
-        onEvent: (name, data, _timestamp, type) => {
-            if (name === 'shutdown') return;
-            if (type === 'stream.snapshot.complete') {
-                if (snapshotting) {
-                    handlers.onSnapshot([...snapshottingValues.values()]);
-                    snapshotting = false;
-                    snapshottingValues.clear();
-                }
-                return;
-            }
-            if (type !== EVENT_TYPES.downloaderRateLimit) return;
-
-            const payload = safeParse(data);
-            if (name === 'snapshot' && isRateLimitLane(payload)) {
-                snapshotting = true;
-                snapshottingValues.set(payload.scheduling_key, payload);
-                return;
-            }
-
-            if (name === 'update' && isRateLimitLane(payload)) handlers.onUpdate(payload);
-        },
-    });
-}
-
+/**
+ * URL for an <img> or <video> whose element cannot set request headers. The credential therefore
+ * rides in the `idhan_key` query parameter, which the server accepts alongside the header.
+ */
 export function thumbnailUrl(recordId: number, size = 256): string {
-  // The server generates a square thumbnail at any requested edge length; clamp to a positive integer.
   const edge = Math.max(1, Math.round(size));
   const params = new URLSearchParams({ size: String(edge) });
   if (currentKey) params.set('idhan_key', currentKey);

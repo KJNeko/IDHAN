@@ -14,9 +14,10 @@ export async function gallery(input, idhan) {
 
 export function post(input, idhan) {
     const query = new URL(input.url).searchParams;
-    idhan.import({
+    idhan.queueImport({
         request: {url: new URL("/file.gif", input.url).href},
         filename: "fixture.gif",
+        postedAt: query.has("postedAt") ? Number(query.get("postedAt")) : undefined,
         urls: [{url: input.url, type: "post"}],
         discoveredUrls: [new URL("/source", input.url).href],
         tags: query.has("multipleDomains")
@@ -27,4 +28,28 @@ export function post(input, idhan) {
 
 export function failure() {
     throw new Error("deterministic parser failure");
+}
+
+export default class ApiFixture {
+    static metadata = {
+        formatVersion: 1,
+        sdkVersion: "1.0.0",
+        id: "fixture",
+        version: 1,
+        options: [],
+        handlers: [{id: "echo", method: "echo", parameters: {query: {name: "Query", type: "string"}}}],
+        discoveries: [],
+        urlClasses: []
+    };
+}
+
+export async function run(input, host) {
+    const module = await import("./fixture.js");
+    const handler = module[input.operation];
+    if (typeof handler !== "function") throw new Error(`Missing fixture operation: ${input.operation}`);
+    return handler(input, host);
+}
+
+export function echo(input) {
+    if (input.params.query !== "  raw query, untouched  ") throw new Error("Generator parameters were changed");
 }

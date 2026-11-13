@@ -1,5 +1,0 @@
-in: path
-name: record_id
-required: true
-schema:
-  $ref: ../schemas/RecordID.yaml

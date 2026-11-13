@@ -7,6 +7,7 @@
 
 #include <filesystem>
 #include <memory>
+#include <thread>
 
 #include "ConnectionArguments.hpp"
 #include "filesystem/clusters/ClusterManager.hpp"
@@ -27,6 +28,8 @@ namespace idhan::maintenance
 class HashMaintenance;
 class ModuleMaintenance;
 class TagCountMaintenance;
+class BandwidthMaintenance;
+class SubscriptionMaintenance;
 }
 
 namespace idhan::http
@@ -54,10 +57,12 @@ class ServerContext
 	std::shared_ptr< folly::CPUThreadPoolExecutor > m_db_executor {};
 	std::unique_ptr< db::DBContext > m_db_context {};
 
-	// Keep module health checks alive while hash workers drain, including failed startup.
 	std::unique_ptr< maintenance::ModuleMaintenance > m_module_maintenance {};
 	std::unique_ptr< maintenance::HashMaintenance > m_hash_maintenance {};
 	std::unique_ptr< maintenance::TagCountMaintenance > m_tag_count_maintenance {};
+	std::unique_ptr< maintenance::BandwidthMaintenance > m_bandwidth_maintenance {};
+	std::unique_ptr< maintenance::SubscriptionMaintenance > m_subscription_maintenance {};
+	std::jthread m_subscription_events {};
 	std::unique_ptr< httpapi::HeartbeatService > m_heartbeat {};
 
 	std::unique_ptr< http::HTTPServer > m_http_server {};

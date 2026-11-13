@@ -1,6 +1,5 @@
 #pragma once
 
-#include <array>
 #include <atomic>
 #include <chrono>
 #include <cstddef>
@@ -9,9 +8,9 @@
 #include <memory>
 #include <mutex>
 #include <string>
-#include <vector>
 
-#include "IDHANDownloader/LaneSnapshot.hpp"
+#include "IDHANDownloader/http/DownloadSpeed.hpp"
+#include "IDHANDownloader/http/LaneSnapshot.hpp"
 #include "http/Transfer.hpp"
 
 namespace idhan::downloader
@@ -20,6 +19,7 @@ class IoPool;
 class IoThread;
 class LanePolicy;
 class LaneShard;
+class LaneObserver;
 
 //! Connection owner for one host, kept alive by in-flight callbacks.
 class Lane : public std::enable_shared_from_this< Lane >
@@ -28,19 +28,10 @@ class Lane : public std::enable_shared_from_this< Lane >
 
 	struct Config
 	{
-		std::size_t max_shards { 4 };
-		std::size_t shard_growth_threshold { 8 };
-		std::size_t unthrottled_concurrency { 32 };
-		std::size_t throttled_concurrency { 4 };
+		std::size_t concurrency { 1 };
 	};
 
   private:
-
-	struct DownloadSample
-	{
-		std::chrono::steady_clock::time_point bucket {};
-		std::uint64_t bytes {};
-	};
 
 	struct Pending
 	{
@@ -62,25 +53,28 @@ class Lane : public std::enable_shared_from_this< Lane >
 	//! All wakeups use one event loop to preserve their order.
 	IoThread& m_timer_thread;
 	Config m_config;
+	LaneObserver* m_observer {};
 
 	mutable std::mutex m_mutex {};
 	std::deque< Pending > m_queue {};
-	std::vector< std::shared_ptr< LaneShard > > m_shards {};
+	//! File imports drain first; both queues preserve submission order within their priority.
+	std::deque< Pending > m_import_queue {};
+	std::shared_ptr< LaneShard > m_shard {};
 	std::size_t m_in_flight {};
+	std::uint64_t m_dispatched {};
 	std::chrono::steady_clock::time_point m_last_enqueued { std::chrono::steady_clock::now() };
 	Gate m_gate {};
-	std::array< DownloadSample, 10 > m_download_samples {};
+	std::uint64_t m_downloaded_bytes {};
+	mutable DownloadSpeed m_download_speed;
 	bool m_stopped {};
 
 	static void pump( const std::shared_ptr< Lane >& lane );
-	//! Called with m_mutex held.
-	void growIfNeeded();
-	[[nodiscard]] std::shared_ptr< LaneShard > pickShard();
+	void publish() const;
 	void arm( const std::shared_ptr< Lane >& lane, std::chrono::steady_clock::duration wait );
 
   public:
 
-	Lane( std::string key, LanePolicy& policy, IoPool& pool, Config config );
+	Lane( std::string key, LanePolicy& policy, IoPool& pool, Config config, LaneObserver* observer = nullptr );
 	Lane( const Lane& ) = delete;
 	Lane& operator=( const Lane& ) = delete;
 	~Lane();
@@ -92,9 +86,8 @@ class Lane : public std::enable_shared_from_this< Lane >
 	//! Recalculates an armed wakeup after an external policy change.
 	void wake();
 	void onTransferFinished();
-	void onBytesReceived(
-		std::size_t bytes,
-		std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now() );
+	void onTransferFinalizing();
+	void onBytesReceived( std::size_t bytes );
 
 	[[nodiscard]] bool retirable(
 		std::chrono::steady_clock::duration keep_alive,
@@ -103,7 +96,7 @@ class Lane : public std::enable_shared_from_this< Lane >
 	void fill( LaneSnapshot& snapshot, std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now() )
 		const;
 
-	//! Fails all transfers and releases shards on their IO threads.
+	//! Fails all transfers and releases its connection pool on its IO thread.
 	void shutdown();
 };
 

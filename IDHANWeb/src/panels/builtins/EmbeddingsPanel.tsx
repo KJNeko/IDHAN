@@ -1,9 +1,3 @@
-/**
- * Embeddings: lists registered embedding models (GET /embeddings/models) and drives a resumable
- * backfill per model (POST /embeddings/generate), receiving job progress through SSE.
- * Generation only: no search over the vectors, per the design spec's scope cut.
- */
-
 import {useCallback, useEffect, useRef, useState} from 'react';
 import type {PanelProps} from '../../host/types';
 
@@ -11,7 +5,6 @@ interface EmbeddingModel {
     model_id: number;
     model_name: string;
     dimensions: number;
-    /** Whether a loaded module is currently routing this model name. */
     available: boolean;
     /**
      * Roughly how many records this model has embedded, from pg_class.reltuples. Absent when the
@@ -20,7 +13,6 @@ interface EmbeddingModel {
     embedding_estimate?: number;
 }
 
-/** Shape of the JSON `setJobResponse` publishes for an embedding backfill, both mid-run and final. */
 interface EmbeddingProgress {
     model_name: string;
     embedded: number;
@@ -51,7 +43,6 @@ function jobFailureMessage(data: JobStatusResponse | null): string {
     return data?.error ?? data?.response?.error ?? 'unknown error';
 }
 
-/** Progress line under a model row while a backfill is active or has just finished. */
 function EmbedProgress({data}: { data: JobStatusResponse }) {
     const failed = jobFailed(data);
     const stateClass = data.completed ? (failed ? ' state-error' : ' state-done') : '';
@@ -74,7 +65,6 @@ function EmbeddingsPanel({host}: PanelProps) {
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [jobs, setJobs] = useState<Record<string, ActiveJob>>({});
-    /** Which model the delete button has been pressed for once. Deleting is irreversible. */
     const [confirming, setConfirming] = useState<number | null>(null);
     const subscriptions = useRef<Record<string, () => void>>({});
 
@@ -191,8 +181,7 @@ function EmbeddingsPanel({host}: PanelProps) {
             {models === null ? (
                 <p className="muted">Loading…</p>
             ) : models.length === 0 ? (
-                <p className="muted">No embedding models registered. Load a module that provides one and restart the
-                    server.</p>
+				<p className="muted">No embedding models available.</p>
             ) : (
                 <ul className="embed-list">
                     {models.map((model) => {
@@ -237,7 +226,7 @@ function EmbeddingsPanel({host}: PanelProps) {
                                             {typeof model.embedding_estimate === 'number'
                                                 ? `about ${model.embedding_estimate.toLocaleString()} embeddings`
                                                 : 'every embedding it holds'}
-                                            ? This cannot be undone; regenerating them means another full backfill.
+											?
                                         </span>
                                         <button type="button" className="toolbar-button"
                                                 onClick={() => setConfirming(null)}>
@@ -262,7 +251,7 @@ function EmbeddingsPanel({host}: PanelProps) {
 export const embeddingsPanel = {
     type: 'embeddings',
     title: 'Embeddings',
-    description: 'View registered embedding models and run backfills to fill in vectors.',
+	description: 'Embedding models.',
     component: EmbeddingsPanel,
     configVersion: 1,
     singleton: true,

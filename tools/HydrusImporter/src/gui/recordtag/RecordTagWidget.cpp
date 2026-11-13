@@ -9,7 +9,6 @@
 
 void ActiveTagDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index ) const
 {
-	// Draw base item first (background, selection highlight, text)
 	QStyledItemDelegate::paint( painter, option, index );
 
 	const auto type = static_cast< TagRelationshipType >( index.data( RelationshipTypeRole ).toInt() );
@@ -48,7 +47,6 @@ RecordTagWidget::RecordTagWidget( QWidget* parent ) :
 {
 	auto* main_layout = new QVBoxLayout( this );
 
-	// Top row: Record ID input, Load button, Domain selector, Detach
 	auto* top_layout = new QHBoxLayout();
 	auto* record_id_label = new QLabel( "Record ID:", this );
 	m_recordIdInput = new QLineEdit( this );
@@ -66,7 +64,6 @@ RecordTagWidget::RecordTagWidget( QWidget* parent ) :
 	top_layout->addWidget( m_detachButton );
 	main_layout->addLayout( top_layout );
 
-	// Middle: Preview + Raw Tags + Active Tags
 	auto* middle_layout = new QHBoxLayout();
 
 	m_previewLabel = new QLabel( this );
@@ -96,7 +93,6 @@ RecordTagWidget::RecordTagWidget( QWidget* parent ) :
 
 	main_layout->addLayout( middle_layout );
 
-	// Bottom: Add/Remove controls
 	auto* bottom_layout = new QHBoxLayout();
 	m_addTagInput = new QLineEdit( this );
 	m_addTagInput->setPlaceholderText( "Type to search tags..." );
@@ -108,7 +104,6 @@ RecordTagWidget::RecordTagWidget( QWidget* parent ) :
 	bottom_layout->addWidget( m_removeTagButton );
 	main_layout->addLayout( bottom_layout );
 
-	// Autocomplete popup
 	m_autocompletePopup = new QListWidget( this );
 	m_autocompletePopup->setWindowFlags( Qt::Popup | Qt::FramelessWindowHint | Qt::WindowDoesNotAcceptFocus );
 	m_autocompletePopup->setAttribute( Qt::WA_ShowWithoutActivating );
@@ -116,7 +111,6 @@ RecordTagWidget::RecordTagWidget( QWidget* parent ) :
 	m_autocompletePopup->setMouseTracking( true );
 	m_autocompletePopup->hide();
 
-	// Connections
 	connect( m_loadButton, &QPushButton::clicked, this, &RecordTagWidget::onLoadRecord );
 	connect( m_randomButton, &QPushButton::clicked, this, &RecordTagWidget::onRandomRecord );
 	connect( m_recordIdInput, &QLineEdit::returnPressed, this, &RecordTagWidget::onLoadRecord );
@@ -324,7 +318,6 @@ void RecordTagWidget::populateLists()
 	all_ids.insert( all_ids.end(), m_rawTagIds.begin(), m_rawTagIds.end() );
 	all_ids.insert( all_ids.end(), m_activeTagIds.begin(), m_activeTagIds.end() );
 
-	// Collect extra IDs from verbose info for tag text resolution
 	for ( const auto& [ tag_id, info ] : m_verboseMap )
 	{
 		for ( const auto id : info.aliased_from ) all_ids.push_back( id );
@@ -378,7 +371,6 @@ void RecordTagWidget::populateLists()
 					auto* item = new QListWidgetItem( QString::fromStdString( text ), m_activeTagsList );
 					item->setData( Qt::UserRole, static_cast< qlonglong >( tag_id ) );
 
-					// Build tooltip and relationship type from verbose info
 					QStringList tooltip_lines;
 					auto rel_type = ActiveTagDelegate::TagRelationshipType::None;
 

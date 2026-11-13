@@ -9,8 +9,8 @@
 namespace idhan::premade
 {
 
-//! Threads one module call may use internally, as the host sized it.
-/** \return Zero when the host said nothing, in which case the backend's own default stands. */
+//! The IDHAN_RENDER_THREADS budget the host passed down.
+//! \return 0 when unset or malformed, in which case the backend's own default stands.
 inline std::size_t renderThreads()
 {
 	const char* const value { std::getenv( "IDHAN_RENDER_THREADS" ) };

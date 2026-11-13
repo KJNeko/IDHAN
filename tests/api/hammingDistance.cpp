@@ -17,12 +17,18 @@ static void seedHashedImage( pqxx::connection& connection, const RecordID record
 {
 	pqxx::work tx { connection };
 	tx.exec(
-		"INSERT INTO file_info (record_id, size, mime_id, cluster_store_time, cluster_delete_time) "
-		"VALUES ($1, 123, $2, now(), now())",
+		//language=postgresql
+		R"SQL(
+			INSERT INTO file_info (record_id, size, mime_id, cluster_store_time, cluster_delete_time)
+			    VALUES ($1, 123, $2, now(), now())
+		)SQL",
 		pqxx::params { record_id, mime_ids::IMAGE_PNG } );
 	tx.exec(
-		"INSERT INTO image_metadata (record_id, width, height, channels, phash) "
-		"VALUES ($1, 640, 480, 4, $2::bit(64))",
+		//language=postgresql
+		R"SQL(
+			INSERT INTO image_metadata (record_id, width, height, channels, phash)
+			    VALUES ($1, 640, 480, 4, $2::bit(64))
+		)SQL",
 		pqxx::params { record_id, "x" + hex } );
 	tx.commit();
 }
@@ -33,13 +39,21 @@ static Distances storedDistances( pqxx::connection& connection )
 
 	Distances distances {};
 	for ( const auto& [ left_id, right_id, distance ] :
-	      tx.query< RecordID, RecordID, int >( "SELECT left_id, right_id, distance FROM hamming_distance" ) )
+		  tx.query< RecordID, RecordID, int >(
+			  //language=postgresql
+			  R"SQL(
+				  SELECT
+				      left_id,
+				      right_id,
+				      distance
+				  FROM hamming_distance
+			  )SQL" ) )
 		distances.emplace( DistancePair { left_id, right_id }, distance );
 
 	return distances;
 }
 
-// Use the immediate startup sweep rather than depending on the five-minute idle timer.
+//! Use the immediate startup sweep rather than depending on the five-minute idle timer.
 static Distances awaitDistances( pqxx::connection& connection, const std::size_t expected )
 {
 	testServer().restart( false );
@@ -58,7 +72,16 @@ static Distances awaitDistances( pqxx::connection& connection, const std::size_t
 static bool queueDrained( pqxx::connection& connection )
 {
 	pqxx::nontransaction tx { connection };
-	return tx.query_value< bool >( "SELECT NOT EXISTS (SELECT 1 FROM hamming_distance_queue)" );
+	return tx.query_value< bool >(
+		//language=postgresql
+		R"SQL(
+			SELECT
+			    NOT EXISTS (
+			        SELECT
+			            1
+			        FROM hamming_distance_queue
+			    )
+		)SQL" );
 }
 
 static Distances awaitQueueDrain( pqxx::connection& connection )
@@ -118,7 +141,13 @@ SCENARIO_METHOD( ServerFixture, "The server stores hamming distances for newly h
 				{
 					pqxx::work tx { db() };
 					tx.exec(
-						"UPDATE image_metadata SET phash = 'xf0f0f0f0f0f0f0f0' WHERE record_id = $1",
+						//language=postgresql
+						R"SQL(
+							UPDATE
+							    image_metadata
+							SET phash = 'xf0f0f0f0f0f0f0f0'
+							WHERE record_id = $1
+						)SQL",
 						pqxx::params { one_bit } );
 					tx.commit();
 				}
@@ -136,7 +165,14 @@ SCENARIO_METHOD( ServerFixture, "The server stores hamming distances for newly h
 					{
 						pqxx::work tx { db() };
 						tx.exec(
-							"UPDATE image_metadata SET phash = NULL WHERE record_id = $1", pqxx::params { one_bit } );
+							//language=postgresql
+							R"SQL(
+								UPDATE
+								    image_metadata
+								SET phash = NULL
+								WHERE record_id = $1
+							)SQL",
+							pqxx::params{ one_bit } );
 						tx.commit();
 					}
 

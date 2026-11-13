@@ -91,7 +91,8 @@ class DBConnection : public std::enable_shared_from_this< DBConnection >
 	[[nodiscard]] runtime::Task<> connect();
 	void enqueue( std::shared_ptr< DBOperation > );
 	void wake();
-	// Only the serialized pump may operate on its PGconn.
+
+	//! Only the serialized pump may operate on its PGconn.
 	void pump();
 	[[nodiscard]] ConnectionStats stats() const;
 	[[nodiscard]] runtime::Task<> drain();

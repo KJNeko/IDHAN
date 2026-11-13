@@ -5,20 +5,18 @@
 namespace idhan
 {
 
-//! Outcome of an attempt to import a file.
 enum ImportStatus : std::uint8_t
 {
-	Success = 1, //!< File was newly imported.
-	Exists = 2, //!< File was already present; nothing was added.
-	Deleted = 3, //!< File matches a record previously marked deleted.
-	Failed = 4, //!< Import failed; See `ImportFailureCode`
+	Success = 1,
+	Exists  = 2,
+	Deleted = 3,
+	Failed  = 4,
 };
 
-//! Reason an import returned ImportStatus::Failed.
 enum ImportFailureCode : std::uint8_t
 {
-	UnknownReason = 0, //!< Failure with no more specific code.
-	UnknownMime = 1, //!< The file's MIME type could not be determined or is unsupported.
+	UnknownReason = 0,
+	UnknownMime   = 1,
 };
 
 } // namespace idhan

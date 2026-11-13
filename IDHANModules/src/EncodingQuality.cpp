@@ -33,7 +33,6 @@ constexpr std::array< std::uint8_t, 64 > ZIGZAG {
 	  30, 37, 44, 51, 58, 59, 52, 45, 38, 31, 39, 46, 53, 60, 61, 54, 47, 55, 62, 63 }
 };
 
-//! Maximum JPEG header scan size; allows large metadata segments while bounding reads.
 constexpr std::size_t JPEG_SCAN_LIMIT { 8 * 1024 * 1024 };
 
 //! Return nullopt on a failed or short read.
@@ -167,10 +166,7 @@ static ChromaSubsampling readSubsampling( const std::span< const std::byte > fra
 	return ChromaSubsampling::UNKNOWN;
 }
 
-/**
- * Remove NUL, control characters, and invalid UTF-8 before storing COM text in PostgreSQL or
- * JSON.
- */
+//! Removes NUL, control characters, and invalid UTF-8 so COM text can be stored in PostgreSQL or JSON.
 static std::string sanitizeComment( const std::span< const std::byte > payload )
 {
 	std::string text {};
@@ -182,7 +178,6 @@ static std::string sanitizeComment( const std::span< const std::byte > payload )
 
 		if ( lead < 0x20 || lead == 0x7F )
 		{
-			// Preserve whitespace separators as spaces.
 			if ( lead == '\t' || lead == '\n' || lead == '\r' ) text.push_back( ' ' );
 			++index;
 			continue;
@@ -247,7 +242,6 @@ static FileEncoding parseJpeg( const ModuleFile& file )
 
 	QuantizationTables tables {};
 	EncodingQuality encoding {};
-	// Initialize parsed JPEG comments as empty; unsupported formats retain nullopt.
 	std::string comment {};
 	bool framed { false };
 	bool lossless_frame { false };
@@ -274,7 +268,6 @@ static FileEncoding parseJpeg( const ModuleFile& file )
 			continue;
 		}
 
-		// Stop header parsing at SOS or EOI.
 		if ( marker == 0xDA || marker == 0xD9 ) break;
 
 		const auto header { readAt( file, offset + 2, 2 ) };
@@ -319,7 +312,6 @@ static FileEncoding parseJpeg( const ModuleFile& file )
 
 	if ( lossless_frame )
 	{
-		// Do not estimate quantization quality for lossless frames.
 		result.quality = EncodingQuality { .lossless = true };
 		return result;
 	}
@@ -391,7 +383,6 @@ FileEncoding readFileEncoding( const ModuleFile& file, const MimeID mime_id )
 			// PNG text chunks are not parsed, so comment remains unknown.
 			return FileEncoding { .quality = EncodingQuality { .lossless = true } };
 		default:
-			// Encoding quality is unsupported for TIFF and AVIF.
 			return {};
 	}
 }

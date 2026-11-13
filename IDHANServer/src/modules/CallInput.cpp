@@ -55,6 +55,14 @@ std::expected< CallInput, std::string > CallInput::forBlob( ipc::Blob blob )
 	return input;
 }
 
+CallInput CallInput::forFd( ipc::UniqueFd fd, const std::size_t size )
+{
+	CallInput input {};
+	input.m_size = size;
+	input.m_file = std::move( fd );
+	return input;
+}
+
 std::expected< CallInput, std::string > CallInput::forBytes( const std::span< const std::byte > bytes )
 {
 	auto blob { ipc::Blob::fromBytes( bytes ) };

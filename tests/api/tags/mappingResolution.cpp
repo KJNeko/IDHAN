@@ -15,12 +15,19 @@ static void attachFile( pqxx::connection& connection, const RecordID record_id )
 {
 	pqxx::nontransaction tx { connection };
 	tx.exec(
-		"INSERT INTO file_info (record_id, size, mime_id, cluster_delete_time) "
-		"VALUES ($1, 0, (SELECT mime_id FROM mime WHERE name = 'image/png'), now())",
+		//language=postgresql
+		R"SQL(
+			INSERT INTO file_info (record_id, size, mime_id, cluster_delete_time)
+			    VALUES ($1, 0, (
+			            SELECT
+			                mime_id
+			            FROM mime
+			            WHERE name = 'image/png'
+			    ), now())
+		)SQL",
 		pqxx::params { record_id } );
 }
 
-//! What the resolution layer settled on for the record, which is what a search reads.
 static std::vector< TagID > finalTags(
 	pqxx::connection& connection,
 	const RecordID record_id,
@@ -31,8 +38,16 @@ static std::vector< TagID > finalTags(
 	std::vector< TagID > tags {};
 
 	for ( const auto& row : tx.exec(
-			  "SELECT DISTINCT tag_id FROM active_tag_mappings_final WHERE record_id = $1 AND tag_domain_id = $2 "
-			  "ORDER BY tag_id",
+			  //language=postgresql
+			  R"SQL(
+				  SELECT DISTINCT
+				      tag_id
+				  FROM active_tag_mappings_final
+				  WHERE record_id = $1
+				      AND tag_domain_id = $2
+				  ORDER BY
+				      tag_id
+			  )SQL",
 			  pqxx::params { record_id, tag_domain_id } ) )
 		tags.emplace_back( row[ 0 ].as< TagID >() );
 
@@ -147,11 +162,32 @@ TEST_CASE_METHOD(
 	REQUIRE( api().createAliases( domain, { { source, target } } ).status == 200 );
 	{
 		pqxx::work pause_consumer { db() };
-		pause_consumer.exec( "SELECT pg_advisory_xact_lock('tag_count_delta'::regclass::oid::bigint)" );
+		pause_consumer.exec(
+			//language=postgresql
+			R"SQL(
+				SELECT
+				    pg_advisory_xact_lock('tag_count_delta'::regclass::oid::bigint)
+			)SQL" );
 		REQUIRE( api().addTags( domain, { record }, { source } ).status == 200 );
 		CHECK( api().search( domain, { target } ) == std::vector { record } );
-		CHECK( pause_consumer.query_value< int >( "SELECT COUNT(*) FROM tag_counts" ) == 0 );
-		CHECK( pause_consumer.query_value< int >( "SELECT COUNT(*) FROM tag_count_delta" ) == 2 );
+		CHECK(
+			pause_consumer.query_value< int >(
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    COUNT(*)
+					FROM tag_counts
+				)SQL" )
+			== 0 );
+		CHECK(
+			pause_consumer.query_value< int >(
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    COUNT(*)
+					FROM tag_count_delta
+				)SQL" )
+			== 2 );
 		pause_consumer.commit();
 	}
 	// Startup runs the real maintenance job immediately, including work left by a crashed server.
@@ -161,7 +197,14 @@ TEST_CASE_METHOD(
 	while ( !drained && std::chrono::steady_clock::now() < deadline )
 	{
 		pqxx::nontransaction read { db() };
-		drained = read.query_value< int >( "SELECT COUNT(*) FROM tag_count_delta" ) == 0;
+		drained = read.query_value< int >(
+					  //language=postgresql
+					  R"SQL(
+						  SELECT
+						      COUNT(*)
+						  FROM tag_count_delta
+					  )SQL" )
+				  == 0;
 		if ( !drained ) std::this_thread::sleep_for( std::chrono::milliseconds { 10 } );
 	}
 	REQUIRE( drained );

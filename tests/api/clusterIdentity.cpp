@@ -207,7 +207,12 @@ TEST_CASE_METHOD(
 	const auto spelling { path.lexically_relative( std::filesystem::current_path() ) / "." / "" };
 	pqxx::work insert { db() };
 	const auto id { insert.query_value< ClusterID >(
-		"INSERT INTO file_clusters (cluster_name, folder_path) VALUES ($1, $2) RETURNING cluster_id",
+		//language=postgresql
+		R"SQL(
+			INSERT INTO file_clusters (cluster_name, folder_path)
+			    VALUES ($1, $2)
+			RETURNING cluster_id
+		)SQL",
 		pqxx::params { prefix + "-legacy", spelling.string() } ) };
 	insert.commit();
 	remember( id );

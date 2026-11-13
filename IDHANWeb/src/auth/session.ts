@@ -33,7 +33,6 @@ function clear(): void {
   try {
     localStorage.removeItem(STORAGE_KEY);
   } catch {
-    // ignore
   }
 }
 
@@ -52,7 +51,6 @@ export async function login(input: string): Promise<AuthedSession> {
     const key = normalise(input);
     if (!key) throw new InvalidKeyError();
 
-    // Verify the key actually authenticates before committing it.
   try {
       await api.auth.verifyKey(key);
   } catch (error) {
@@ -93,7 +91,6 @@ export async function restore(): Promise<AuthedSession | null> {
   }
 }
 
-/** Forget the current credential. */
 export async function logout(): Promise<void> {
   clear();
 }

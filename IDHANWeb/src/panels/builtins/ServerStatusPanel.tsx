@@ -1,8 +1,3 @@
-/**
- * Server Status: reads /version through the host's fetch escape hatch rather than importing the API
- * client, dogfooding the same surface plugins get.
- */
-
 import { useEffect, useState } from 'react';
 import type { PanelProps } from '../../host/types';
 import type { VersionInfo } from '../../api/types';
@@ -59,7 +54,7 @@ function ServerStatusPanel({ host }: PanelProps) {
 export const serverStatusPanel = {
   type: 'server-status',
   title: 'Server Status',
-  description: 'IDHAN server version and build information.',
+	description: 'Server version.',
   component: ServerStatusPanel,
   singleton: true,
 } as const;

@@ -5,29 +5,31 @@
 
 #include "idhan/db/DBContext.hpp"
 #include "notifications/MissingFiles.hpp"
-#include "urls/AssociateUrls.hpp"
 
 namespace idhan::db
 {
 
-runtime::Task< std::optional< RecordID > > findStoredDirectRecordByUrl(
-	DBContext& db,
-	std::string url,
-	std::vector< std::string > ephemeral_query )
+runtime::Task< std::optional< RecordID > > findStoredDirectRecordByUrl( DBContext& db, std::string url )
 {
-	const auto matches { co_await helpers::findEquivalentUrls( std::move( url ), std::move( ephemeral_query ), db ) };
-	if ( matches.empty() ) co_return std::nullopt;
-
 	DBBindings bindings {};
-	bindings.bind( matches );
+	bindings.bind( std::move( url ) );
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT DISTINCT mappings.record_id, fi.cluster_id IS NOT NULL AND fi.cluster_delete_time IS NULL AND fi.cluster_store_time IS NOT NULL "
-				"FROM urls JOIN url_mappings mappings USING (url_id) "
-				"LEFT JOIN file_info fi USING (record_id) WHERE urls.url_id = ANY($1::integer[]) "
-				"AND EXISTS (SELECT 1 FROM urls typed WHERE typed.url_id = ANY($1::integer[]) "
-				"AND typed.url_type = 'file') LIMIT 2",
+				//language=postgresql
+				R"SQL(
+					SELECT DISTINCT
+					    mappings.record_id,
+					    fi.cluster_id IS NOT NULL
+					    AND fi.cluster_delete_time IS NULL
+					    AND fi.cluster_store_time IS NOT NULL
+					FROM urls
+					    JOIN url_mappings mappings USING (url_id)
+					    LEFT JOIN file_info fi USING (record_id)
+					WHERE urls.url = $1
+					    AND urls.url_type = 'file'
+					LIMIT 2
+				)SQL",
 				std::move( bindings ) )
 			.rows< RecordID, std::optional< bool > >()
 	};
@@ -39,6 +41,38 @@ runtime::Task< std::optional< RecordID > > findStoredDirectRecordByUrl(
 	co_return record_id;
 }
 
+runtime::Task< std::vector< SHA256 > > storedRecordHashesForUrl( DBContext& db, std::string url )
+{
+	DBBindings bindings {};
+	bindings.bind( std::move( url ) );
+	const auto rows {
+		co_await db
+			.query(
+				//language=postgresql
+				R"SQL(
+					SELECT DISTINCT
+					    r.sha256
+					FROM urls u
+					    JOIN url_mappings m USING (url_id)
+					    JOIN records r USING (record_id)
+					    JOIN file_info fi USING (record_id)
+					WHERE u.url = $1
+					    AND fi.cluster_id IS NOT NULL
+					    AND fi.cluster_store_time IS NOT NULL
+					    AND fi.cluster_delete_time IS NULL
+					ORDER BY
+					    r.sha256
+				)SQL",
+				std::move( bindings ) )
+			.rows< std::span< const std::byte > >()
+	};
+	std::vector< SHA256 > hashes {};
+	hashes.reserve( rows.size() );
+	for ( const auto& [ bytes ] : rows ) hashes.emplace_back( SHA256::fromBuffer( bytes ) );
+
+	co_return hashes;
+}
+
 runtime::Task< std::optional< RecordID > > findMissingRecordForHash( DBContext& db, const SHA256& hash )
 {
 	DBBindings bindings {};
@@ -46,7 +80,14 @@ runtime::Task< std::optional< RecordID > > findMissingRecordForHash( DBContext& 
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT record_id FROM records JOIN missing_files USING (record_id) WHERE sha256 = $1",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    record_id
+					FROM records
+					    JOIN missing_files USING (record_id)
+					WHERE sha256 = $1
+				)SQL",
 				std::move( bindings ) )
 			.rows< RecordID >()
 	};
@@ -60,8 +101,20 @@ runtime::Task< bool > isRecordFileMissing( DBContext& db, const RecordID record_
 	DBBindings bindings {};
 	bindings.bind( record_id );
 	const auto rows {
-		co_await db.query( "SELECT EXISTS (SELECT 1 FROM missing_files WHERE record_id = $1)", std::move( bindings ) )
-			.rows< bool >()
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    EXISTS (
+					        SELECT
+					            1
+					        FROM missing_files
+					        WHERE record_id = $1
+					    )
+				)SQL",
+					 std::move( bindings ) )
+				 .rows< bool >()
 	};
 	co_return std::get< 0 >( rows.row( 0 ) );
 }
@@ -72,8 +125,17 @@ runtime::Task< void > markDirectUrls( DBContext& db, std::vector< std::string > 
 
 	DBBindings bindings {};
 	bindings.bind( urls );
-	co_await db.query( "UPDATE urls SET url_type = 'file' WHERE url = ANY($1::text[])", std::move( bindings ) )
-		.result();
+	co_await db
+			 .query(
+				 //language=postgresql
+				 R"SQL(
+				UPDATE
+				    urls
+				SET url_type = 'file'
+				WHERE url = ANY ($1::text[])
+			)SQL",
+				 std::move( bindings ) )
+			 .result();
 }
 
 runtime::Task< std::optional< RecordFileState > > findRecordFileState( DBContext& db, const SHA256& hash )
@@ -112,8 +174,19 @@ runtime::Task< std::optional< std::string > > bestMimeExtension( DBContext& db, 
 {
 	DBBindings bindings {};
 	bindings.bind( mime_id );
-	const auto rows { co_await db.query( "SELECT best_extension FROM mime WHERE mime_id = $1", std::move( bindings ) )
-	                      .rows< std::optional< std::string > >() };
+	const auto rows{
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    best_extension
+					FROM mime
+					WHERE mime_id = $1
+				)SQL",
+					 std::move( bindings ) )
+				 .rows< std::optional< std::string > >()
+	};
 	if ( rows.empty() ) co_return std::nullopt;
 
 	co_return std::get< 0 >( rows.row( 0 ) );
@@ -181,8 +254,16 @@ runtime::Task< void > detachMissingRecordFile( DBContext& db, const RecordID rec
 	const auto changed {
 		co_await db
 			.query(
-				"UPDATE file_info SET cluster_id = NULL WHERE record_id = $1 AND cluster_id = $2 "
-				"AND cluster_delete_time IS NULL RETURNING record_id",
+				//language=postgresql
+				R"SQL(
+					UPDATE
+					    file_info
+					SET cluster_id = NULL
+					WHERE record_id = $1
+					    AND cluster_id = $2
+					    AND cluster_delete_time IS NULL
+					RETURNING record_id
+				)SQL",
 				std::move( bindings ) )
 			.rows< RecordID >()
 	};

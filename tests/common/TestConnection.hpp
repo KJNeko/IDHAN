@@ -13,7 +13,6 @@ inline std::string envOr( const char* const name, const std::string_view fallbac
 	return value == nullptr ? std::string( fallback ) : std::string( value );
 }
 
-//! Where the tests expect postgres to be. Overridable so a CI runner can point elsewhere.
 struct PostgresSettings
 {
 	std::string host { envOr( "IDHAN_TEST_PG_HOST", "localhost" ) };

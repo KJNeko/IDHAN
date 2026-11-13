@@ -15,7 +15,7 @@ ThumbnailInfo::ThumbnailInfo( VipsImagePtr&& image, const bool do_cache_thumbnai
   cache_thumbnail( do_cache_thumbnail )
 {
 	std::size_t output_length { 0 };
-	// vips_image_write_to_memory returns a g_malloc'd buffer owned by the caller (freed with g_object_unref).
+	// vips_image_write_to_memory returns a g_malloc'd buffer the caller frees with g_free.
 	void* image_data { vips_image_write_to_memory( image.get(), &output_length ) };
 	if ( !image_data ) throw std::runtime_error( "vips_image_write_to_memory failed" );
 

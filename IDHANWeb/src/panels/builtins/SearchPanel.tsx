@@ -1,14 +1,4 @@
-/**
- * Search: the panel that drives everything downstream. The user builds a query out of tag chips (text
- * tags, `-negation`, and `system:` predicates), picks a sort, and runs it. The ordered
- * id set the server returns is published to `host.results`, which the grid and viewer page against.
- *
- * Only debounce and per-keystroke abort live here. Caching and prefix-extension reuse live in the
- * host (autocompleteCache), which also enforces a 2-char minimum. `system:` predicates never reach
- * the server: they are a fixed catalogue matched locally (systemPredicates) and listed above the
- * tag matches. The one exception is the value of a `system:mime` term, which comes from the mime
- * table (host/mimeCatalogue) and is fetched once per session.
- */
+import {SearchFilterInput} from './SearchFilterInput';
 
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import type { PanelProps } from '../../host/types';
@@ -73,10 +63,8 @@ function readConfig(raw: Partial<Config>): Config {
   };
 }
 
-/** One term, as the breakdown table shows it: what its query cost against what it actually did. */
 type TermRow = {
     term: string;
-    /** Rows the term's own query returned. */
     fetched: number;
     /** Rows this term took out of the running result. Null for the term that established it. */
     removed: number | null;
@@ -135,7 +123,6 @@ function queryToken(input: string): string | null {
   return trimmed.startsWith('-') ? trimmed.slice(1) : trimmed;
 }
 
-/** One row of the dropdown: a matched tag, a `system:` predicate name, or a mime for its value. */
 type Suggestion =
     | { kind: 'tag'; tag: AutocompleteResult }
     | { kind: 'system'; predicate: SystemPredicate }
@@ -171,10 +158,13 @@ function useMimeCatalogue(active: boolean): MimeCatalogue {
 }
 
 /** Debounced, per-keystroke-abortable autocomplete. Caching and prefix reuse are host-side. */
-function useAutocomplete(host: PanelProps['host'], input: string): AutocompleteResult[] {
+function useAutocomplete(host: PanelProps['host'], input: string) {
   const [suggestions, setSuggestions] = useState<AutocompleteResult[]>([]);
+    const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+      setSuggestions([]);
+      setError(null);
     const token = queryToken(input);
     if (token === null) {
       setSuggestions([]);
@@ -187,8 +177,8 @@ function useAutocomplete(host: PanelProps['host'], input: string): AutocompleteR
         .then((results) => {
           if (!controller.signal.aborted) setSuggestions(results);
         })
-        .catch(() => {
-          // Aborted or transient; leave the last suggestions in place.
+          .catch((error: unknown) => {
+              if (!controller.signal.aborted) setError(`Tag suggestions unavailable: ${error instanceof Error ? error.message : String(error)}`);
         });
     }, DEBOUNCE_MS);
     return () => {
@@ -197,7 +187,7 @@ function useAutocomplete(host: PanelProps['host'], input: string): AutocompleteR
     };
   }, [host, input]);
 
-  return suggestions;
+    return {suggestions, error};
 }
 
 function SearchPanel({ host }: PanelProps) {
@@ -219,7 +209,7 @@ function SearchPanel({ host }: PanelProps) {
     const breakdownRef = useRef(showBreakdown);
     breakdownRef.current = showBreakdown;
 
-    const tagSuggestions = useAutocomplete(host, input);
+    const {suggestions: tagSuggestions, error: autocompleteError} = useAutocomplete(host, input);
     const systemSuggestions = useMemo(() => matchSystemPredicates(input), [input]);
     const mimeArg = useMemo(() => mimeArgument(input), [input]);
     const mimes = useMimeCatalogue(mimeArg !== null);
@@ -281,7 +271,6 @@ function SearchPanel({ host }: PanelProps) {
     persist({ tags: next });
   }
 
-    /** Commits the input: a new chip, or the rewrite of the one being edited. */
   function addTag(tag: string) {
         const target = editing;
 
@@ -292,7 +281,6 @@ function SearchPanel({ host }: PanelProps) {
         commitTags(target === null ? addTerm(tags, tag) : replaceTerm(tags, target, tag));
     }
 
-    /** Loads a chip back into the input; committing rewrites it in place. */
     function startEdit(tag: string) {
         setEditing(tag);
         setInput(tag);
@@ -300,7 +288,6 @@ function SearchPanel({ host }: PanelProps) {
         inputRef.current?.focus();
     }
 
-    /** Leaves the chip as it was. */
     function cancelEdit() {
         setEditing(null);
     setInput('');
@@ -406,6 +393,11 @@ function SearchPanel({ host }: PanelProps) {
                 key={tag}
                 className={`chip${tag.startsWith('-') ? ' negated' : ''}${tag.startsWith('system:') ? ' system' : ''}${tag === editing ? ' editing' : ''}`}
             >
+            {!tag.startsWith('system:') && <button type="button" className="chip-effect"
+                                                   aria-label={`Effect for ${tag}`} aria-pressed={tag.startsWith('-')}
+                                                   onClick={() => commitTags(replaceTerm(tags, tag, tag.startsWith('-') ? tag.slice(1) : `-${tag}`))}>
+				{tag.startsWith('-') ? 'Exclude' : 'Include'}
+            </button>}
             <button type="button" className="chip-text" onClick={() => startEdit(tag)} title="Edit">
               {tag}
             </button>
@@ -422,13 +414,15 @@ function SearchPanel({ host }: PanelProps) {
         ))}
       </div>
 
+        {autocompleteError && <p className="error" role="alert">{autocompleteError}</p>}
       <div className="search-input-wrap">
         <input
+			aria-label={editing === null ? 'Tag' : 'Edit term'}
             ref={inputRef}
             className={`search-input${editing === null ? '' : ' editing'}`}
           value={input}
             placeholder={
-                editing === null ? 'Add a tag, -negation, or system: predicate…' : 'Enter to apply, Esc to cancel'
+				editing === null ? 'Tag' : 'Edit term'
             }
           onChange={(e) => {
             setInput(e.target.value);
@@ -438,6 +432,10 @@ function SearchPanel({ host }: PanelProps) {
           spellCheck={false}
           autoComplete="off"
         />
+		  <button type="button" className="toolbar-button" disabled={!input.trim()} onClick={() => addTag(input)}>
+			  {editing === null ? 'Add tag' : 'Apply'}
+		  </button>
+		  {editing !== null && <button type="button" className="toolbar-button" onClick={cancelEdit}>Cancel</button>}
         {suggestions.length > 0 && (
           <ul className="search-suggestions">
             {suggestions.map((s, i) => (
@@ -460,7 +458,7 @@ function SearchPanel({ host }: PanelProps) {
                     {s.kind === 'system' && (
                         <>
                             <span className="suggestion-text">{s.predicate.text}</span>
-                            {s.predicate.hint && <span className="suggestion-hint">{s.predicate.hint}</span>}
+
                         </>
                     )}
                     {s.kind === 'tag' && (
@@ -481,6 +479,7 @@ function SearchPanel({ host }: PanelProps) {
         )}
       </div>
 
+		<SearchFilterInput onAdd={addTag}/>
       <div className="search-controls">
           <label className="panel-checkbox">
               <input type="checkbox" checked={includeDeleted} onChange={toggleIncludeDeleted}/> Include deleted files
@@ -495,23 +494,21 @@ function SearchPanel({ host }: PanelProps) {
             ))}
           </select>
         </label>
-        <button
-          type="button"
-          className="search-order"
-          onClick={() => changeSort(sortBy, sortOrder === 'desc' ? 'asc' : 'desc')}
-          disabled={sortBy === 'random'}
-          title={sortBy === 'random' ? 'Direction has no effect on a random sort' : sortOrder === 'desc' ? 'Descending' : 'Ascending'}
-        >
-          {sortBy === 'random' ? '⇅' : sortOrder === 'desc' ? '↓' : '↑'}
-        </button>
+		  <label className="search-sort">Order
+			  <select aria-label="Sort order" disabled={sortBy === 'random'} value={sortOrder}
+					  onChange={event => changeSort(sortBy, event.target.value as SortOrder)}>
+				  <option value="asc">Ascending</option>
+				  <option value="desc">Descending</option>
+			  </select>
+		  </label>
           <button
               type="button"
               className={`search-breakdown-toggle${showBreakdown ? ' on' : ''}`}
               onClick={toggleBreakdown}
               aria-pressed={showBreakdown}
-              title="Show how many records each term matched and removed"
+
           >
-              Breakdown
+			  Per-term results
         </button>
         <button type="button" className="search-run" onClick={() => void runSearch(tags, sortBy, sortOrder)} disabled={running}>
           {running ? 'Searching…' : 'Search'}
@@ -523,7 +520,7 @@ function SearchPanel({ host }: PanelProps) {
         {showBreakdown && (
             <div className="search-breakdown">
                 {termRows.length === 0 && pageStep === null ? (
-                    <p className="muted">Run a search to see how each term narrowed it.</p>
+					<p className="muted">No search results.</p>
                 ) : (
                     <table className="breakdown-table">
                         <thead>
@@ -574,7 +571,7 @@ function SearchPanel({ host }: PanelProps) {
 export const searchPanel = {
   type: 'search',
   title: 'Search',
-  description: 'Build a tag query and publish the ordered result set to the grid.',
+	description: 'Tag search.',
   component: SearchPanel,
   defaultConfig: DEFAULT_CONFIG,
   configVersion: 1,

@@ -22,10 +22,12 @@
 #include "apiAuth.hpp"
 #include "filesystem/PathHelpers.hpp"
 #include "filesystem/clusters/clusterIdentity.hpp"
+#include "filesystem/io/IOUring.hpp"
 #include "idhan/SHA256.hpp"
 #include "idhan/db/DBBindings.hpp"
 #include "idhan/db/DBContext.hpp"
-#include "idhan/http/FileResponse.hpp"
+#include "idhan/http/response/FileResponse.hpp"
+#include "idhan/http/routing/ReflectedRoutes.hpp"
 #include "modules/CallInput.hpp"
 #include "modules/ModuleLoader.hpp"
 #include "paths.hpp"
@@ -61,47 +63,60 @@ namespace idhan::httpapi
 	return extra;
 }
 
-[[nodiscard]] static std::expected< void, std::string > cacheThumbnail(
-	const std::filesystem::path& path,
+[[nodiscard]] static runtime::Task< std::expected< void, std::string > > cacheThumbnail(
+	const std::filesystem::path path,
 	const std::span< const std::byte > bytes )
 {
-	std::error_code error {};
-	std::filesystem::create_directories( path.parent_path(), error );
-	if ( error ) return std::unexpected( std::format( "could not create cache directory: {}", error.message() ) );
+	auto& uring { IOUring::getInstance() };
+
+	const int created { co_await uring.createDirectories( path.parent_path() ) };
+	if ( created < 0 )
+		co_return std::unexpected( std::format( "could not create cache directory: {}", std::strerror( -created ) ) );
 
 	static std::atomic< std::uint64_t > temporary_id { 0 };
 	const auto temporary {
 		path.parent_path() / std::format( ".{}.{}.tmp", path.filename().string(), temporary_id.fetch_add( 1 ) )
 	};
 
-	const int fd { ::open( temporary.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0600 ) };
-	if ( fd < 0 ) return std::unexpected( std::format( "could not create cache file: {}", std::strerror( errno ) ) );
+	const int descriptor { co_await uring.openFile( temporary, O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0600 ) };
+	if ( descriptor < 0 )
+		co_return std::unexpected( std::format( "could not create cache file: {}", std::strerror( -descriptor ) ) );
 
-	folly::File file { fd, true };
-	const auto written { folly::writeFull( file.fd(), bytes.data(), bytes.size() ) };
-	if ( written < 0 || static_cast< std::size_t >( written ) != bytes.size() )
+	FileIOUring file { descriptor, 0, FileIOUring::ReadWrite };
+	std::string failure {};
+	try
 	{
-		const auto write_error { written < 0 ? errno : EIO };
-		std::filesystem::remove( temporary, error );
-		return std::unexpected( std::format( "could not write cache file: {}", std::strerror( write_error ) ) );
+		co_await file.write( bytes );
+	}
+	catch ( const std::exception& error )
+	{
+		failure = std::format( "could not write cache file: {}", error.what() );
 	}
 
-	if ( ::fsync( file.fd() ) != 0 )
+	if ( failure.empty() )
 	{
-		const auto sync_error { errno };
-		std::filesystem::remove( temporary, error );
-		return std::unexpected( std::format( "could not sync cache file: {}", std::strerror( sync_error ) ) );
+		const int synced { co_await file.sync() };
+		if ( synced < 0 ) failure = std::format( "could not sync cache file: {}", std::strerror( -synced ) );
 	}
 
-	std::filesystem::rename( temporary, path, error );
-	if ( error )
+	const int closed { co_await file.close() };
+	if ( failure.empty() && closed < 0 )
+		failure = std::format( "could not close cache file: {}", std::strerror( -closed ) );
+
+	if ( !failure.empty() )
 	{
-		const auto publish_error { error.message() };
-		std::filesystem::remove( temporary, error );
-		return std::unexpected( std::format( "could not publish cache file: {}", publish_error ) );
+		(void)co_await uring.removeFile( temporary );
+		co_return std::unexpected( std::move( failure ) );
 	}
 
-	return {};
+	const int renamed { co_await uring.renameFile( temporary, path ) };
+	if ( renamed < 0 )
+	{
+		(void)co_await uring.removeFile( temporary );
+		co_return std::unexpected( std::format( "could not publish cache file: {}", std::strerror( -renamed ) ) );
+	}
+
+	co_return {};
 }
 
 static http::HTTPTask< http::Response > serveCachedThumbnail(
@@ -131,26 +146,32 @@ static http::HTTPTask< http::Response > serveCachedThumbnail(
 http::HTTPTask< http::Response > recordThumbnailResponse(
 	db::DBContext& db,
 	http::RequestContext& context,
-	const RecordID record_id )
+	const RecordID record_id,
+	const FetchThumbnailQuery& parameters )
 {
-	const auto size_e { context.parameters().optional< std::size_t >( "size" ) };
-	if ( !size_e ) co_return http::Response::error( 400, size_e.error().message );
-
-	const auto size { size_e->value_or( 256 ) };
+	const auto size { parameters.size.value_or( 256 ) };
 	if ( size == 0 || size > 4096 ) co_return http::Response::error( 400, "size must be between 1 and 4096" );
-	const auto regenerate_e { context.parameters().optional< bool >( "regenerate" ) };
-	if ( !regenerate_e ) co_return http::Response::error( 400, regenerate_e.error().message );
 
 	db::DBBindings bindings {};
 	bindings.bind( record_id );
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT file_info.mime_id, records.sha256, file_info.cluster_id, "
-				"COALESCE(file_info.extension, mime.best_extension, ''), COALESCE(metadata.json::text, '{}') "
-				"FROM records JOIN file_info USING (record_id) "
-				"LEFT JOIN mime ON mime.mime_id = file_info.mime_id "
-				"LEFT JOIN metadata USING (record_id) WHERE records.record_id = $1 AND file_info.cluster_id IS NOT NULL",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    file_info.mime_id,
+					    records.sha256,
+					    file_info.cluster_id,
+					    COALESCE(file_info.extension, mime.best_extension, ''),
+					    COALESCE(metadata.json::text, '{}')
+					FROM records
+					    JOIN file_info USING (record_id)
+					    LEFT JOIN mime ON mime.mime_id = file_info.mime_id
+					    LEFT JOIN metadata USING (record_id)
+					WHERE records.record_id = $1
+					    AND file_info.cluster_id IS NOT NULL
+				)SQL",
 				std::move( bindings ) )
 			.rows< MimeID, std::span< const std::byte >, ClusterID, std::string, std::string >()
 	};
@@ -160,7 +181,7 @@ http::HTTPTask< http::Response > recordThumbnailResponse(
 	const SHA256 sha256 { SHA256::fromBuffer( sha256_bytes ) };
 	const auto hex { sha256.hex() };
 	const auto path { thumbnailPath( hex, size ) };
-	const bool regenerate { regenerate_e->value_or( false ) };
+	const bool regenerate { parameters.regenerate.value_or( false ) };
 	if ( !regenerate && isCachedThumbnail( path ) ) co_return co_await serveCachedThumbnail( context, path, hex );
 
 	const auto thumbnailers { modules::ModuleLoader::instance().getThumbnailerFor( mime_id ) };
@@ -183,9 +204,17 @@ http::HTTPTask< http::Response > recordThumbnailResponse(
 	const auto archive_rows {
 		co_await db
 			.query(
-				"SELECT archive_metadata.encrypted, encode(records.sha256, 'hex'), archive_map.path "
-				"FROM archive_metadata LEFT JOIN archive_map ON archive_map.archive_id = archive_metadata.archive_id "
-				"LEFT JOIN records ON records.record_id = archive_map.record_id WHERE archive_metadata.record_id = $1",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    archive_metadata.encrypted,
+					    encode(records.sha256, 'hex'),
+					    archive_map.path
+					FROM archive_metadata
+					    LEFT JOIN archive_map ON archive_map.archive_id = archive_metadata.archive_id
+					    LEFT JOIN records ON records.record_id = archive_map.record_id
+					WHERE archive_metadata.record_id = $1
+				)SQL",
 				std::move( archive_bindings ) )
 			.rows< bool, std::optional< std::string >, std::optional< std::string > >()
 	};
@@ -213,32 +242,22 @@ http::HTTPTask< http::Response > recordThumbnailResponse(
 		co_return response;
 	}
 
-	const auto cached { cacheThumbnail( path, bytes ) };
+	const auto cached { co_await cacheThumbnail( path, bytes ) };
 	if ( !cached )
 		co_return http::Response::error( 500, std::format( "Thumbnail cache write failed: {}", cached.error() ) );
 
 	co_return co_await serveCachedThumbnail( context, path, hex );
 }
 
-static http::HTTPTask< http::Response > fetchThumbnail( db::DBContext& db, http::RequestContext context )
+http::HTTPTask< http::EncodedResult< http::RequestBody, "image/webp" > > fetchThumbnail(
+	db::DBContext& db,
+	http::RequestContext context,
+	http::Query< FetchThumbnailQuery > query )
 {
-	const auto record_id_e { context.parameters().scalar< RecordID >( "record_id" ) };
-	if ( !record_id_e ) co_return http::Response::error( 400, record_id_e.error().message );
+	const auto record_id { *context.parameters().scalar< RecordID >( "record_id" ) };
 
-	co_return co_await recordThumbnailResponse( db, context, *record_id_e );
-}
-
-http::RouteDefinition thumbnailRoute( db::DBContext& db )
-{
-	return http::RouteDefinition {
-		http::RouteMetadata {
-			proxygen::HTTPMethod::GET,
-			"/records/{record_id}/thumbnail",
-			{ recordIdPathParameter() },
-			{ apiAuthValidation( db ), recordExistsValidation( db ) } },
-		[ &db ]( http::RequestContext context ) -> http::HTTPTask< http::Response >
-		{ co_return co_await fetchThumbnail( db, std::move( context ) ); }
-	};
+	co_return http::encodedResponse< http::RequestBody, "image/webp" >(
+		co_await recordThumbnailResponse( db, context, record_id, query.value ) );
 }
 
 } // namespace idhan::httpapi

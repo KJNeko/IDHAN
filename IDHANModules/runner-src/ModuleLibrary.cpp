@@ -13,7 +13,6 @@
 namespace idhan::runner
 {
 
-//! Signature of the factory that getModulesFunc returns a pointer to.
 using GetModulesFunc = std::vector< std::shared_ptr< IDHANModule > > ( * )( ModuleCallbacks );
 
 [[nodiscard]] std::string dlError()
@@ -134,6 +133,10 @@ std::vector< ipc::ManifestEntry > ModuleLibrary::manifest() const
 			supports_text = embedder->supportsText();
 		}
 
+		std::vector< MimeID > phash_mimes {};
+		if ( ( module->type() & ModuleTypeFlags::METADATA ) != 0 )
+			phash_mimes = std::static_pointer_cast< MetadataModuleI >( module )->phashMimes();
+
 		entries.emplace_back(
 			ipc::ManifestEntry {
 				.index = index,
@@ -147,7 +150,8 @@ std::vector< ipc::ManifestEntry > ModuleLibrary::manifest() const
 				.mimes = handleableMimesOf( module ),
 				.model_name = std::move( model_name ),
 				.dimensions = dimensions,
-				.supports_text = supports_text } );
+				.supports_text = supports_text,
+				.phash_mimes = std::move( phash_mimes ) } );
 	}
 
 	return entries;

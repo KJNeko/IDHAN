@@ -11,8 +11,7 @@ class JobProgress
 	mutable std::function< void() > m_on_change {};
 
   protected:
-
-	// Only queue notifications here: a producer may still hold its progress mutex.
+	//! Only queue notifications here: a producer may still hold its progress mutex.
 	void changed() const
 	{
 		std::lock_guard lock { m_callback_mutex };
@@ -29,6 +28,6 @@ class JobProgress
 		m_on_change = std::move( callback );
 	}
 
-	// Implementations provide a consistent snapshot while the job's workers update their state.
+	//! Implementations provide a consistent snapshot while the job's workers update their state.
 	[[nodiscard]] virtual Json::Value snapshot() const = 0;
 };

@@ -16,7 +16,6 @@ import type {AutocompleteOptions, AutocompleteResult} from '../api/types';
 /** Below this the server-side candidate set is too large to be worth querying; the UI shows nothing. */
 const MIN_NEEDLE = 2;
 const DEFAULT_LIMIT = 100;
-/** Bounds the cache. FIFO eviction is fine here. */
 const CACHE_LIMIT = 500;
 
 interface CacheEntry {
@@ -86,7 +85,6 @@ export async function autocomplete(
   return results;
 }
 
-/** Test/maintenance hook: drop all cached suggestions. */
 export function clearAutocompleteCache(): void {
   cache.clear();
 }

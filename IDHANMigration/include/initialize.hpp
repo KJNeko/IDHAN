@@ -12,8 +12,8 @@ class dbtransaction;
 namespace idhan::db
 {
 
-// Create missing extensions in the configured namespace and initialize the application schema.
-// Failure rolls back bootstrap changes; existing objects and extensions are left alone.
+//! Create missing extensions in the configured namespace and initialize the application schema.
+//! Failure rolls back bootstrap changes; existing objects and extensions are left alone.
 void initializeDatabase(
 	pqxx::dbtransaction& tx,
 	std::string_view schema,

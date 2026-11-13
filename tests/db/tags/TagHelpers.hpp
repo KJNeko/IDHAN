@@ -17,9 +17,15 @@ inline int insertNamespace( pqxx::transaction_base& tx, const std::string_view t
 {
 	return tx
 	    .exec(
-			"INSERT INTO tag_namespaces (namespace_text) VALUES ($1) "
-			"ON CONFLICT (namespace_text) DO UPDATE SET namespace_text = EXCLUDED.namespace_text "
-			"RETURNING namespace_id",
+			//language=postgresql
+			R"SQL(
+				INSERT INTO tag_namespaces (namespace_text)
+				    VALUES ($1)
+				ON CONFLICT (namespace_text)
+				    DO UPDATE SET
+				        namespace_text = EXCLUDED.namespace_text
+				    RETURNING namespace_id
+			)SQL",
 			pqxx::params { text } )
 	    .one_row()[ 0 ]
 	    .as< int >();
@@ -35,9 +41,15 @@ inline int insertTag(
 
 	return tx
 	    .exec(
-			"INSERT INTO tags (namespace_id, subtag_text) VALUES ($1, $2) "
-			"ON CONFLICT (namespace_id, subtag_text) DO UPDATE SET subtag_text = EXCLUDED.subtag_text "
-			"RETURNING tag_id",
+			//language=postgresql
+			R"SQL(
+				INSERT INTO tags (namespace_id, subtag_text)
+				    VALUES ($1, $2)
+				ON CONFLICT (namespace_id, subtag_text)
+				    DO UPDATE SET
+				        subtag_text = EXCLUDED.subtag_text
+				    RETURNING tag_id
+			)SQL",
 			pqxx::params { namespace_id, subtag_text } )
 	    .one_row()[ 0 ]
 	    .as< int >();

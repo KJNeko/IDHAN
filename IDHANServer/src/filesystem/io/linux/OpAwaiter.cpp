@@ -63,4 +63,4 @@ OpAwaiter::~OpAwaiter() = default;
 
 } // namespace idhan
 
-#endif // __linux__
+#endif

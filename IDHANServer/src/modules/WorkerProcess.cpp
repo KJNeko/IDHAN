@@ -20,13 +20,11 @@
 #include <span>
 #include <unistd.h>
 
-#include "downloader/DebugEvents.hpp"
 #include "logging/log.hpp"
 
 namespace idhan::modules
 {
 
-//! The descriptor the runner is told to use.
 constexpr int CHILD_CHANNEL_FD { 3 };
 
 void resumeContinuation( std::coroutine_handle<> continuation )
@@ -46,9 +44,6 @@ WorkerProcess::WorkerProcess( WorkerSettings settings, CallbackHandler on_callba
   m_on_callback( std::move( on_callback ) )
 {}
 
-//! \warning Must not run on the worker's own IO thread. The join below would be a self-join, and
-//!          EDEADLK out of a destructor aborts the process. Nothing that could hold the last
-//!          reference is ever resumed on the IO thread; see resumeContinuation().
 WorkerProcess::~WorkerProcess()
 {
 	terminate( "worker owner destroyed", Termination::EXPECTED );
@@ -333,44 +328,6 @@ void WorkerProcess::handleFrame( ipc::Frame&& frame )
 				}
 				m_rss_kb.store( frame.body[ ipc::field::RSS_KB ].asUInt64() );
 				m_active_calls.store( frame.body[ ipc::field::ACTIVE_CALLS ].asUInt64() );
-				// Older runners may omit activity; continue accepting their liveness reports.
-				if ( frame.body.isMember( ipc::field::MODULE_ACTIVITY ) )
-				{
-					const auto& entries { frame.body[ ipc::field::MODULE_ACTIVITY ] };
-					if ( !entries.isArray() )
-					{
-						reject( "heartbeat module activity is not an array" );
-						return;
-					}
-
-					std::vector< ipc::ModuleActivity > activity {};
-					for ( const auto& entry : entries )
-					{
-						if ( !entry.isObject() )
-						{
-							reject( "heartbeat module activity is not an object" );
-							return;
-						}
-
-						if ( !entry[ ipc::field::QUEUED ].isUInt64() || !entry[ ipc::field::RUNNING ].isUInt64() )
-						{
-							reject( "heartbeat module activity has invalid counters" );
-							return;
-						}
-
-						activity.emplace_back(
-							ipc::ModuleActivity { .queued = entry[ ipc::field::QUEUED ].asUInt64(),
-							                      .running = entry[ ipc::field::RUNNING ].asUInt64() } );
-					}
-					bool changed { false };
-					{
-						const std::lock_guard< std::mutex > guard { m_calls_mutex };
-						changed = !m_module_activity.has_value() || m_module_activity.value() != activity;
-						m_module_activity = std::move( activity );
-					}
-					if ( changed ) downloader::notifyDebugChanged();
-				}
-
 				m_last_heartbeat = std::chrono::steady_clock::now();
 				return;
 			}
@@ -520,7 +477,6 @@ void WorkerProcess::terminate( const std::string& reason, const Termination kind
 	}
 
 	failAll( reason, true );
-	if ( !m_settings.describe_only ) downloader::notifyDebugChanged();
 }
 
 std::chrono::steady_clock::time_point WorkerProcess::lastActivity()
@@ -547,7 +503,7 @@ bool WorkerProcess::manifestSeen()
 	return m_manifest_seen;
 }
 
-std::expected< std::vector< ipc::ManifestEntry >, std::string > WorkerProcess::awaitManifest(
+std::expected< std::vector< ipc::ManifestEntry >, std::string > WorkerProcess::awaitManifestSync(
 	const std::chrono::milliseconds timeout )
 {
 	std::unique_lock< std::mutex > guard { m_manifest_mutex };
@@ -586,12 +542,11 @@ bool WorkerProcess::addManifestWaiter( std::function< void() > waiter )
 	return true;
 }
 
-IDHANTask< std::expected< std::vector< ipc::ManifestEntry >, std::string > > WorkerProcess::awaitManifestAsync(
+IDHANTask< std::expected< std::vector< ipc::ManifestEntry >, std::string > > WorkerProcess::awaitManifest(
 	const std::chrono::milliseconds timeout )
 {
 	using Manifest = std::expected< std::vector< ipc::ManifestEntry >, std::string >;
 
-	//! Parks on the IO thread's arrival notification plus a timer, whichever lands first.
 	struct Awaiter
 	{
 		std::shared_ptr< WorkerProcess > worker;
@@ -677,7 +632,6 @@ IDHANTask< std::shared_ptr< CallOutcome > > WorkerProcess::call(
 	Json::Value body,
 	std::shared_ptr< const CallInput > input )
 {
-	// Assigned here rather than by the caller: this is the map the id has to be unique in.
 	const std::uint64_t call_id { m_next_call_id.fetch_add( 1 ) };
 	body[ ipc::field::CALL_ID ] = Json::UInt64 { call_id };
 
@@ -698,7 +652,6 @@ IDHANTask< std::shared_ptr< CallOutcome > > WorkerProcess::call(
 		                    .mime_id = static_cast< MimeID >( body[ ipc::field::MIME_ID ].asInt() ) } );
 	}
 
-	//! Registers the call, posts it, and parks the coroutine until the result comes back.
 	struct Suspender
 	{
 		WorkerProcess* worker;
@@ -724,7 +677,6 @@ IDHANTask< std::shared_ptr< CallOutcome > > WorkerProcess::call(
 					outcome->ok = false;
 					outcome->error = "worker is not running";
 					outcome->worker_died = true;
-					// Not suspending: the coroutine carries on with the failure already recorded.
 					return false;
 				}
 
@@ -757,12 +709,6 @@ IDHANTask< std::shared_ptr< CallOutcome > > WorkerProcess::call(
 	}
 
 	co_return outcome;
-}
-
-std::optional< std::vector< ipc::ModuleActivity > > WorkerProcess::moduleActivity()
-{
-	const std::lock_guard< std::mutex > guard { m_calls_mutex };
-	return m_module_activity;
 }
 
 } // namespace idhan::modules

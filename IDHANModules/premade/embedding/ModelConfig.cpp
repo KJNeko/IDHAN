@@ -78,7 +78,6 @@ constexpr std::array< std::string_view, 4 > EMBEDDING_OUTPUT_NAMES {
 	{ "pooler_output", "image_embeds", "text_embeds", "image_features" }
 };
 
-//! Picks the output that carries the embedding, and reports its width.
 [[nodiscard]] const GraphTensorInfo* chooseEmbeddingOutput( const GraphInterface& interface )
 {
 	for ( const auto name : EMBEDDING_OUTPUT_NAMES )

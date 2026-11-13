@@ -139,7 +139,15 @@ SCENARIO_METHOD( ServerFixture, "Tag domains", "[api][tags][domains]" )
 			THEN( "its alias rows go with it" )
 			{
 				pqxx::nontransaction tx { db() };
-				CHECK( tx.query_value< int >( "SELECT count(*) FROM tag_aliases" ) == 0 );
+				CHECK(
+					tx.query_value< int >(
+						//language=postgresql
+						R"SQL(
+							SELECT
+							    count(*)
+							FROM tag_aliases
+						)SQL" )
+					== 0 );
 			}
 
 			THEN( "its partitions remain" )

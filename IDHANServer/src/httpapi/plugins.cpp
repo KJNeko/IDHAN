@@ -14,13 +14,14 @@
 
 #include "apiAuth.hpp"
 #include "idhan/db/DBContext.hpp"
+#include "idhan/http/routing/ReflectedRoutes.hpp"
 #include "logging/log.hpp"
 #include "paths.hpp"
 
 namespace idhan::httpapi
 {
 
-[[nodiscard]] static std::optional< std::string > parseManifest(
+[[nodiscard]] static std::optional< PluginResponse > parseManifest(
 	const std::filesystem::path& path,
 	const std::string& dir )
 {
@@ -62,52 +63,33 @@ namespace idhan::httpapi
 		return std::nullopt;
 	}
 
-	simdjson::builder::string_builder builder;
-	builder.start_object();
-	builder.append_key_value( "id", id );
-	builder.append_comma();
-	builder.append_key_value( "name", name );
-	builder.append_comma();
-	builder.append_key_value( "version", version );
-	builder.append_comma();
-	builder.append_key_value( "hostApi", host_api );
-
+	PluginResponse response {
+		std::string { id },
+		std::string { name },
+		std::string { version },
+		std::string { host_api },
+		{},
+		{},
+		dir,
+		std::format( "/plugins/{}/{}", dir, entry_file )
+	};
 	std::string_view description {};
 	if ( root[ "description" ].get_string().get( description ) == simdjson::SUCCESS )
-	{
-		builder.append_comma();
-		builder.append_key_value( "description", description );
-	}
+		response.description.emplace( description );
 
 	simdjson::dom::array panels {};
 	if ( root[ "panels" ].get_array().get( panels ) == simdjson::SUCCESS )
-	{
-		builder.append_comma();
-		builder.escape_and_append_with_quotes( "panels" );
-		builder.append_colon();
-		builder.append_raw( simdjson::minify( panels ) );
-	}
+		response.panels.emplace( http::JsonDocument { simdjson::minify( panels ) } );
 
-	builder.append_comma();
-	builder.append_key_value( "dir", dir );
-	builder.append_comma();
-	builder.append_key_value( "entry", std::format( "/plugins/{}/{}", dir, entry_file ) );
-	builder.end_object();
-
-	auto json { builder.view() };
-	if ( json.error() ) throw std::runtime_error( simdjson::error_message( json.error() ) );
-
-	return std::string { *json };
+	return response;
 }
 
-[[nodiscard]] static std::string scanPlugins()
+[[nodiscard]] static std::vector< PluginResponse > scanPlugins()
 {
-	simdjson::builder::string_builder builder;
-	builder.start_array();
+	std::vector< PluginResponse > response;
 
 	const auto root { getPluginsPath() };
 	std::error_code ec {};
-	bool first { true };
 	if ( std::filesystem::exists( root, ec ) )
 	{
 		for ( const auto& entry : std::filesystem::directory_iterator( root, ec ) )
@@ -119,9 +101,7 @@ namespace idhan::httpapi
 			auto parsed { parseManifest( manifest_path, entry.path().filename().string() ) };
 			if ( !parsed ) continue;
 
-			if ( !first ) builder.append_comma();
-			first = false;
-			builder.append_raw( *parsed );
+			response.push_back( std::move( parsed.value() ) );
 		}
 	}
 	else
@@ -129,37 +109,22 @@ namespace idhan::httpapi
 		log::info( "Plugins path {} does not exist; serving an empty plugin index", root.string() );
 	}
 
-	builder.end_array();
-
-	auto json { builder.view() };
-	if ( json.error() ) throw std::runtime_error( simdjson::error_message( json.error() ) );
-
-	return std::string { *json };
+	return response;
 }
 
 static std::mutex g_index_mutex {};
-static std::optional< std::string > g_index {};
+static std::optional< std::vector< PluginResponse > > g_index {};
 
-static http::HTTPTask< http::Response > listPlugins( http::RequestContext context )
+http::HTTPTask< http::JsonResult< std::vector< PluginResponse > > > listPlugins( http::Query< ListPluginsQuery > query )
 {
-	const auto rescan_e { context.parameters().optional< bool >( "rescan" ) };
-	if ( !rescan_e ) co_return http::Response::error( 400, rescan_e.error().message );
-
-	std::string index {};
+	std::vector< PluginResponse > index {};
 	{
 		std::lock_guard< std::mutex > lock { g_index_mutex };
-		if ( rescan_e->value_or( false ) || !g_index ) g_index = scanPlugins();
+		if ( query.value.rescan.value_or( false ) || !g_index ) g_index = scanPlugins();
 		index = *g_index;
 	}
 
-	co_return http::Response::json( 200, folly::IOBuf::copyBuffer( index ) );
-}
-
-http::RouteDefinition pluginsRoute( db::DBContext& db )
-{
-	return http::RouteDefinition {
-		http::RouteMetadata { proxygen::HTTPMethod::GET, "/plugins", {}, { apiAuthValidation( db ) } }, listPlugins
-	};
+	co_return http::JsonResponse< std::vector< PluginResponse > > { std::move( index ) };
 }
 
 } // namespace idhan::httpapi

@@ -9,7 +9,7 @@ namespace idhan::db
 {
 class DBTransaction;
 
-// Serializes missing-domain creation because insertion creates tag-table partitions.
+//! Serializes missing-domain creation because insertion creates tag-table partitions.
 [[nodiscard]] runtime::Task< TagDomainID > getOrCreateTagDomain( DBTransaction& transaction, std::string name );
 
 } // namespace idhan::db

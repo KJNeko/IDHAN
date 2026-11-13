@@ -39,7 +39,6 @@ describe('compareQuality', () => {
         const carries = record({...JPEG, has_icc_profile: true});
 
         expect(compareQuality(carries, record({...JPEG, has_icc_profile: false})).score).toBe(5);
-        // Unknown fields do not affect scoring.
         expect(compareQuality(carries, record(JPEG)).score).toBe(0);
     });
 

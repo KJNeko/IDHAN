@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {AutocompleteOptions, AutocompleteResult} from '../api/types';
 
-// Mock the REST client so we can count network calls and assert the prefix-extension reuse.
 const autocompleteTags = vi.fn<
     (prefix: string, opts?: AutocompleteOptions) => Promise<AutocompleteResult[]>
 >();
@@ -42,8 +41,8 @@ describe('autocomplete cache', () => {
     expect(autocompleteTags).toHaveBeenCalledTimes(1);
 
     const extended = await autocomplete('samu', { limit: 100 });
-    expect(autocompleteTags).toHaveBeenCalledTimes(1); // no new call
-    expect(extended.map((r) => r.text).sort()).toEqual(['samus', 'tsamu']); // substring 'samu'
+	  expect(autocompleteTags).toHaveBeenCalledTimes(1);
+	  expect(extended.map((r) => r.text).sort()).toEqual(['samus', 'tsamu']);
   });
 
   it('does NOT reuse when the shorter query was truncated at the limit', async () => {

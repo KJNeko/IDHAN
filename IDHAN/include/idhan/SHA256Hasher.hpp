@@ -11,7 +11,6 @@
 namespace idhan
 {
 
-//! Incremental SHA-256 for inputs that cannot be held in one buffer.
 class SHA256Hasher
 {
 	std::unique_ptr< EVP_MD_CTX, decltype( &EVP_MD_CTX_free ) > m_context { EVP_MD_CTX_new(), EVP_MD_CTX_free };

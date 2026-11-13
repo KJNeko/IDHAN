@@ -9,9 +9,9 @@ describe('satisfiesHostApi', () => {
   });
 
   it('rejects a caret range below the wanted version or across a major', () => {
-    expect(satisfiesHostApi('1.1.0', '^1.2.0')).toBe(false); // host older than wanted
-    expect(satisfiesHostApi('2.0.0', '^1.0.0')).toBe(false); // next major
-    expect(satisfiesHostApi('0.9.0', '^1.0.0')).toBe(false); // previous major
+	  expect(satisfiesHostApi('1.1.0', '^1.2.0')).toBe(false);
+	  expect(satisfiesHostApi('2.0.0', '^1.0.0')).toBe(false);
+	  expect(satisfiesHostApi('0.9.0', '^1.0.0')).toBe(false);
   });
 
   it('tightens caret to the minor before 1.0', () => {

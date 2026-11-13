@@ -52,4 +52,4 @@ class UrlServiceWidget : public QWidget
 	void processedUrls( std::size_t count, std::size_t unique_count );
 };
 
-#endif //IDHAN_URLSERVICEWIDGET_HPP
+#endif

@@ -11,10 +11,9 @@ namespace idhan
 
 QFuture< TagDomainID > IDHANClient::createTagDomain( const std::string& name )
 {
-	// So it seems that something with postgresql gets very angry when we do too many table modifications at once, Something about a deadlock.
-	// Not sure how this happens but this function seems to be causing it the most, So we'll add a explicit lock here to prevent that from happening
 	auto promise { std::make_shared< QPromise< TagDomainID > >() };
 
+	// Concurrent domain creation deadlocks inside PostgreSQL.
 	static std::mutex mutex {};
 	auto guard { std::make_shared< std::lock_guard< decltype( mutex ) > >( mutex ) };
 

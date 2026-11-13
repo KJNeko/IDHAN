@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include "AsyncFileService.hpp"
+#include "FileService.hpp"
 #include "AuthKeyCache.hpp"
 #include "ClusterService.hpp"
 #include "DownloaderPersistence.hpp"
@@ -51,7 +51,7 @@ class IDHANServerContext
 	[[nodiscard]] server::ShutdownController& shutdown() noexcept;
 	[[nodiscard]] server::AuthKeyCache& authKeys() noexcept;
 	[[nodiscard]] server::JobRuntime& jobs() noexcept;
-	[[nodiscard]] server::AsyncFileService& files() noexcept;
+	[[nodiscard]] server::FileService& files() noexcept;
 	[[nodiscard]] server::ClusterService& clusters() noexcept;
 	[[nodiscard]] server::ImportService& imports() noexcept;
 	[[nodiscard]] server::MimeRegistry& mimes() noexcept;

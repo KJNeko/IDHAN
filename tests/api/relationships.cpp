@@ -130,10 +130,26 @@ SCENARIO_METHOD( ServerFixture, "Duplicate relationships retain only the current
 
 	pqxx::nontransaction tx { db() };
 	CHECK(
-		tx.query_value< RecordID >( "SELECT king_id FROM duplicate_members WHERE record_id = $1", pqxx::params { d } )
+		tx.query_value< RecordID >(
+			//language=postgresql
+			R"SQL(
+				SELECT
+				    king_id
+				FROM duplicate_members
+				WHERE record_id = $1
+			)SQL",
+			pqxx::params{ d } )
 		== a );
 	CHECK(
-		tx.query_value< RecordID >( "SELECT king_id FROM duplicate_members WHERE record_id = $1", pqxx::params { b } )
+		tx.query_value< RecordID >(
+			//language=postgresql
+			R"SQL(
+				SELECT
+				    king_id
+				FROM duplicate_members
+				WHERE record_id = $1
+			)SQL",
+			pqxx::params{ b } )
 		== a );
 }
 
@@ -141,7 +157,11 @@ static void seedPerceptualHash( pqxx::connection& connection, const RecordID rec
 {
 	pqxx::work tx { connection };
 	tx.exec(
-		"INSERT INTO image_metadata (record_id, width, height, channels, phash) VALUES ($1, 640, 480, 4, $2::bit(64))",
+		//language=postgresql
+		R"SQL(
+			INSERT INTO image_metadata (record_id, width, height, channels, phash)
+			    VALUES ($1, 640, 480, 4, $2::bit(64))
+		)SQL",
 		pqxx::params { record_id, "x" + hex } );
 	tx.commit();
 }
@@ -294,7 +314,17 @@ SCENARIO_METHOD( ServerFixture, "Relationships between two records can be cleare
 
 				pqxx::nontransaction tx { db() };
 				CHECK_FALSE( tx.query_value< bool >(
-					"SELECT EXISTS (SELECT 1 FROM duplicate_members WHERE king_id = $1 AND record_id <> king_id)",
+					//language=postgresql
+					R"SQL(
+						SELECT
+						    EXISTS (
+						        SELECT
+						            1
+						        FROM duplicate_members
+						        WHERE king_id = $1
+						            AND record_id <> king_id
+						    )
+					)SQL",
 					pqxx::params { superior } ) );
 			}
 		}

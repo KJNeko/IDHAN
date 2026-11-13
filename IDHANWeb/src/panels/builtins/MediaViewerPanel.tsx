@@ -43,8 +43,10 @@ function MediaViewerPanel({ host }: PanelProps) {
     const sel = host.selection.get();
     return sel.length > 0 ? sel[sel.length - 1]! : null;
   });
-    const [meta, setMeta] = useState<{ id: RecordId; record: RecordMetadata | null } | null>(null);
+    const [meta, setMeta] = useState<{ id: RecordId; record: RecordMetadata | null; error?: string } | null>(null);
   const [loadedId, setLoadedId] = useState<RecordId | null>(null);
+    const [mediaFailure, setMediaFailure] = useState<RecordId | null>(null);
+    const [attempt, setAttempt] = useState(0);
   const prefetched = useRef(new Set<string>());
 
   useEffect(() => host.results.subscribe(setResults), [host]);
@@ -55,31 +57,40 @@ function MediaViewerPanel({ host }: PanelProps) {
     if (ids.length > 0) setActiveId(ids[ids.length - 1]!);
   }), [host]);
 
-    // Resolve the active record's kind from the shared metadata cache.
   useEffect(() => {
     if (activeId === null) {
       setMeta(null);
       return;
     }
     const id = activeId;
+      setMediaFailure(null);
+      setLoadedId(null);
+      setMeta(null);
     let cancelled = false;
     host.records
       .getMetadata([id])
       .then((res) => {
         if (cancelled) return;
-          setMeta({ id, record: res.records[0] ?? null });
+          const record = res.records[0] ?? null;
+          setMeta({id, record, error: record === null ? `Record #${id} was not found.` : undefined});
       })
-      .catch(() => {
-          if (!cancelled) setMeta({ id, record: null });
+        .catch((error: unknown) => {
+            if (!cancelled) setMeta({
+                id,
+                record: null,
+                error: `Could not load record: ${error instanceof Error ? error.message : String(error)}`
+            });
       });
     return () => {
       cancelled = true;
     };
-  }, [host, activeId]);
+  }, [host, activeId, attempt]);
 
   const record = meta !== null && meta.id === activeId ? meta.record : null;
   const metaPending = meta === null || meta.id !== activeId;
-  const kind = metaPending ? null : kindOf(record);
+    const error = meta?.id === activeId ? meta.error : undefined;
+    const failed = error !== undefined || mediaFailure === activeId;
+    const kind = metaPending || failed ? null : kindOf(record);
   // Images become ready after decoding; streaming media becomes ready when metadata is
   // available.
   const ready = kind !== null && (kind !== 'image' || loadedId === activeId);
@@ -110,6 +121,7 @@ function MediaViewerPanel({ host }: PanelProps) {
         prefetched.current.add(url);
         const img = new Image();
         img.src = url;
+      }).catch(() => { /* Navigation loads and reports failures for the active record. */
       });
     }
   }, [host, activeIndex, ids]);
@@ -129,7 +141,7 @@ function MediaViewerPanel({ host }: PanelProps) {
   if (activeId === null) {
     return (
       <div className="panel-body viewer-empty">
-        <p className="muted">Select a record to view it.</p>
+		  <p className="muted">No record selected.</p>
       </div>
     );
   }
@@ -146,7 +158,7 @@ function MediaViewerPanel({ host }: PanelProps) {
           {/* Only the image takes the record menu; video and audio keep the browser's own controls menu. */}
           {kind === 'image' && (
               <img
-                  key={activeId}
+                  key={`${activeId}:${attempt}`}
                   className="viewer-media"
                   style={{
                       ...dimensions,
@@ -158,12 +170,14 @@ function MediaViewerPanel({ host }: PanelProps) {
                   alt={`#${activeId}`}
                   draggable={false}
                   onLoad={() => setLoadedId(activeId)}
-                  onError={() => setLoadedId(activeId)}
+                  onError={() => setMediaFailure(activeId)}
                   onContextMenu={(event) => openRecordMenu(event, [activeId])}
               />
           )}
-        {kind === 'video' && <video className="viewer-media" src={fileUrl} controls autoPlay={false} />}
-        {kind === 'audio' && <audio className="viewer-audio" src={fileUrl} controls />}
+          {kind === 'video' && <video key={`${activeId}:${attempt}`} className="viewer-media" src={fileUrl}
+                                      onError={() => setMediaFailure(activeId)} controls autoPlay={false}/>}
+          {kind === 'audio' && <audio key={`${activeId}:${attempt}`} className="viewer-audio" src={fileUrl}
+                                      onError={() => setMediaFailure(activeId)} controls/>}
         {kind === 'other' && (
           <div className="viewer-fallback">
             <p className="muted">No inline preview for {record?.mime ?? 'this type'}.</p>
@@ -172,7 +186,14 @@ function MediaViewerPanel({ host }: PanelProps) {
             </a>
           </div>
         )}
-        {!ready && <p className="viewer-loading">Loading...</p>}
+          {failed && <div className="viewer-fallback">
+              <p className="error" role="alert">{error ?? 'Could not load media.'}</p>
+              <button type="button" className="toolbar-button"
+                      onClick={() => setAttempt(current => current + 1)}>Retry
+              </button>
+              <a className="viewer-download" href={host.records.fileUrl(activeId, {download: true})}>Download</a>
+          </div>}
+          {!ready && !failed && <p className="viewer-loading" role="status">Loading…</p>}
       </div>
       <div className="viewer-bar">
         <button type="button" onClick={() => step(-1)} disabled={activeIndex <= 0} title="Previous (←)">
@@ -199,7 +220,7 @@ function MediaViewerPanel({ host }: PanelProps) {
 export const mediaViewerPanel = {
   type: 'media-viewer',
   title: 'Media Viewer',
-  description: 'Full-size view of the active record, with neighbour prefetch and paging.',
+	description: 'Selected file.',
   component: MediaViewerPanel,
   configVersion: 1,
 } as const;

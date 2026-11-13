@@ -1,7 +1,6 @@
 #pragma once
 #include "ThumbnailerModule.hpp"
 
-//! Thumbnailer for raster image formats handled by libvips (JPEG, PNG, WebP, TIFF, ...).
 class ImageVipsThumbnailer : public idhan::ThumbnailerModuleI
 {
   public:
@@ -21,12 +20,12 @@ class ImageVipsThumbnailer : public idhan::ThumbnailerModuleI
 
 	[[nodiscard]] idhan::ModuleVersion version() override { return { .m_major = 1, .m_minor = 0, .m_patch = 0 }; }
 
-	// no shared mutable state: each call builds its own vips image, safe to run concurrently
+	//! No shared mutable state: each call builds its own vips image, safe to run concurrently
 	[[nodiscard]] bool threadSafe() override { return true; }
 
-	// vips_thumbnail_source evaluates on the vips threadpool
+	//! vips_thumbnail_source evaluates on the vips threadpool
 	[[nodiscard]] bool singleThreaded() override { return false; }
 
-	// VIPS_INIT builds the operation and type registries; far too expensive to pay per call
+	//! VIPS_INIT builds the operation and type registries; far too expensive to pay per call
 	[[nodiscard]] idhan::ModuleResidency residency() override { return idhan::ModuleResidency::PERSISTENT; }
 };

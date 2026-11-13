@@ -27,21 +27,47 @@ static std::string tagActivationRepairSql()
 static void checkActivationCounts( pqxx::transaction_base& tx )
 {
 	CHECK( tx.query_value< int >( R"(
-        WITH expected AS (
-            SELECT tag_id, tag_domain_id, SUM(storage_count) AS storage_count, SUM(display_count) AS display_count
-            FROM (
-                SELECT tag_id, tag_domain_id, COUNT(*) AS storage_count, 0 AS display_count
-                FROM active_tag_mappings GROUP BY tag_id, tag_domain_id
-                UNION ALL
-                SELECT tag_id, tag_domain_id, 0, COUNT(*)
-                FROM active_tag_mappings_final GROUP BY tag_id, tag_domain_id
-            ) contributions GROUP BY tag_id, tag_domain_id
-        )
-        SELECT COUNT(*) FROM expected e FULL JOIN tag_counts c USING (tag_id, tag_domain_id)
-        WHERE COALESCE(e.storage_count, 0) <> COALESCE(c.storage_count, 0)
-           OR COALESCE(e.display_count, 0) <> COALESCE(c.display_count, 0)
-    )" ) == 0 );
-	CHECK( tx.query_value< int >( "SELECT COUNT(*) FROM tag_count_delta" ) == 0 );
+			WITH expected AS (
+			    SELECT
+			        tag_id,
+			        tag_domain_id,
+			        SUM(storage_count) AS storage_count,
+			        SUM(display_count) AS display_count
+			    FROM (
+			        SELECT
+			            tag_id,
+			            tag_domain_id,
+			            COUNT(*) AS storage_count,
+			            0 AS display_count
+			        FROM active_tag_mappings
+			        GROUP BY
+			            tag_id,
+			            tag_domain_id
+			        UNION ALL
+			        SELECT
+			            tag_id,
+			            tag_domain_id,
+			            0,
+			            COUNT(*)
+			        FROM active_tag_mappings_final
+			        GROUP BY
+			            tag_id,
+			            tag_domain_id
+			    ) contributions
+			    GROUP BY
+			        tag_id,
+			        tag_domain_id
+			)
+			SELECT
+			    COUNT(*)
+			FROM expected e
+			    FULL JOIN tag_counts c USING (tag_id, tag_domain_id)
+			WHERE COALESCE(e.storage_count, 0) <> COALESCE(c.storage_count, 0)
+			    OR COALESCE(e.display_count, 0) <> COALESCE(c.display_count, 0)
+		)" ) == 0 );
+	CHECK( tx.query_value< int >( "SELECT\n"
+			   "    COUNT(*)\n"
+			   "FROM tag_count_delta" ) == 0 );
 }
 
 TEST_CASE_METHOD(
@@ -71,7 +97,9 @@ TEST_CASE_METHOD(
 
 	SECTION( "Both active tables were truncated" )
 	{
-		tx.exec( "TRUNCATE active_tag_mappings, active_tag_mappings_parents" );
+		tx.exec( "TRUNCATE\n"
+			"    active_tag_mappings,\n"
+			"    active_tag_mappings_parents" );
 	}
 	SECTION( "Only inherited parents were truncated" )
 	{
@@ -83,14 +111,20 @@ TEST_CASE_METHOD(
 	}
 
 	tx.exec(
-		"INSERT INTO active_tag_mappings_parents (record_id, tag_id, origin_id, tag_domain_id) VALUES ($1, $2, $3, $4)",
+		"INSERT INTO active_tag_mappings_parents (record_id, tag_id, origin_id, tag_domain_id)\n"
+		"    VALUES ($1, $2, $3, $4)",
 		pqxx::params { record, orphan, source, first_domain } );
 	tx.exec(
-		"INSERT INTO tag_counts (tag_id, tag_domain_id, storage_count, display_count) VALUES ($1, $2, 99, 99) "
-		"ON CONFLICT (tag_id, tag_domain_id) DO UPDATE SET storage_count = 99, display_count = 99",
+		"INSERT INTO tag_counts (tag_id, tag_domain_id, storage_count, display_count)\n"
+		"    VALUES ($1, $2, 99, 99)\n"
+		"ON CONFLICT (tag_id, tag_domain_id)\n"
+		"    DO UPDATE SET\n"
+		"        storage_count = 99,\n"
+		"        display_count = 99",
 		pqxx::params { orphan, first_domain } );
 	tx.exec(
-		"INSERT INTO tag_count_delta (tag_id, tag_domain_id, storage_delta, display_delta) VALUES ($1, $2, 999, 999)",
+		"INSERT INTO tag_count_delta (tag_id, tag_domain_id, storage_delta, display_delta)\n"
+		"    VALUES ($1, $2, 999, 999)",
 		pqxx::params { orphan, first_domain } );
 	tx.exec( "DROP TRIGGER trg_tag_mappings_after_active_insert ON file_info" );
 	tx.exec( "DROP TRIGGER trg_tag_mappings_after_insert ON tag_mappings" );
@@ -98,19 +132,33 @@ TEST_CASE_METHOD(
 	const auto migration { tagActivationRepairSql() };
 	tx.exec( migration );
 	CHECK( tx.query_value< int >( R"(
-        SELECT COUNT(*) FROM pg_trigger WHERE NOT tgisinternal AND tgenabled = 'O'
-          AND ((tgrelid = 'file_info'::regclass AND tgname = 'trg_tag_mappings_after_active_insert')
-            OR (tgrelid = 'tag_mappings'::regclass AND tgname = 'trg_tag_mappings_after_insert'))
-    )" ) == 2 );
-	CHECK( tx.query_value< int >( "SELECT COUNT(*) FROM tag_mappings" ) == 3 );
-	CHECK( tx.query_value< int >( "SELECT COUNT(*) FROM file_info" ) == 1 );
+			SELECT
+			    COUNT(*)
+			FROM pg_trigger
+			WHERE NOT tgisinternal
+			    AND tgenabled = 'O'
+			    AND ((tgrelid = 'file_info'::regclass
+			            AND tgname = 'trg_tag_mappings_after_active_insert')
+			        OR (tgrelid = 'tag_mappings'::regclass
+			            AND tgname = 'trg_tag_mappings_after_insert'))
+		)" ) == 2 );
+	CHECK( tx.query_value< int >( "SELECT\n"
+			   "    COUNT(*)\n"
+			   "FROM tag_mappings" ) == 3 );
+	CHECK( tx.query_value< int >( "SELECT\n"
+			   "    COUNT(*)\n"
+			   "FROM file_info" ) == 1 );
 	CHECK( finalTags( tx, record, first_domain ) == sorted( { first_ideal, parent, grandparent } ) );
 	CHECK( finalTags( tx, record, second_domain ) == std::vector { second_ideal } );
 	CHECK( finalTags( tx, without_file, first_domain ).empty() );
 	CHECK(
 		parentRows( tx, record, first_domain )
 	    == std::vector { ParentRow { parent, first_ideal, 0 }, ParentRow { grandparent, parent, 1 } } );
-	CHECK( tx.query_value< int >( "SELECT COUNT(*) FROM tag_counts WHERE tag_id = $1", pqxx::params { orphan } ) == 0 );
+	CHECK( tx.query_value< int >( "SELECT\n"
+								  "    COUNT(*)\n"
+								  "FROM tag_counts\n"
+								  "WHERE tag_id = $1",
+								  pqxx::params{ orphan } ) == 0 );
 	checkActivationCounts( tx );
 
 	// Re-running the repair must not double inherited contributions or replay stale deltas.
@@ -155,7 +203,10 @@ TEST_CASE_METHOD(
 	insertMapping( tx, without_file, source, first_domain );
 	CHECK( finalTags( tx, tags_first, first_domain ).empty() );
 	tx.exec(
-		"INSERT INTO file_info (record_id, size, extension) VALUES ($1, 0, 'png'), ($2, 0, 'png')",
+		"INSERT INTO file_info (record_id, size, extension)\n"
+		"VALUES\n"
+		"    ($1, 0, 'png'),\n"
+		"    ($2, 0, 'png')",
 		pqxx::params { tags_first, another } );
 	CHECK( finalTags( tx, tags_first, first_domain ) == sorted( { first_ideal, parent } ) );
 	CHECK( finalTags( tx, tags_first, second_domain ) == std::vector { second_ideal } );
@@ -165,10 +216,16 @@ TEST_CASE_METHOD(
 	checkActivationCounts( tx );
 
 	tx.exec(
-		"INSERT INTO tag_mappings (record_id, tag_id, tag_domain_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
+		"INSERT INTO tag_mappings (record_id, tag_id, tag_domain_id)\n"
+		"    VALUES ($1, $2, $3)\n"
+		"ON CONFLICT\n"
+		"    DO NOTHING",
 		pqxx::params { tags_first, source, first_domain } );
 	tx.exec(
-		"INSERT INTO file_info (record_id, size, extension) VALUES ($1, 0, 'png') ON CONFLICT DO NOTHING",
+		"INSERT INTO file_info (record_id, size, extension)\n"
+		"    VALUES ($1, 0, 'png')\n"
+		"ON CONFLICT\n"
+		"    DO NOTHING",
 		pqxx::params { tags_first } );
 	CHECK( parentRows( tx, tags_first, first_domain ) == std::vector { ParentRow { parent, first_ideal, 0 } } );
 	accumulateTagCountsForTest( tx );

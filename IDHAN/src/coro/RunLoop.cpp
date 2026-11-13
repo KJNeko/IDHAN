@@ -29,7 +29,6 @@ void RunLoop::run()
 			m_queue.pop_front();
 		}
 
-		// Resumed outside the lock: the coroutine body is free to post() back onto this loop.
 		handle.resume();
 	}
 }

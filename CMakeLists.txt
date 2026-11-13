@@ -1,118 +1,42 @@
-# /CMakeLists.txt
-
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-set(CMAKE_CXX_STANDARD 26)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-set(BUILD_STATIC_LIBS_ONLY ON)
-set(BUILD_STATIC_LIBS ON)
-set(BUILD_SHARED_LIBS OFF)
-
 cmake_minimum_required(VERSION 3.28)
-project(IDHAN LANGUAGES CXX)
 
-# No targets use named C++ modules. Scanning adds GCC module flags that prevent ccache hits.
-set(CMAKE_CXX_SCAN_FOR_MODULES OFF CACHE BOOL "Scan C++ sources for module dependencies")
+project(IDHAN LANGUAGES C CXX)
 
-set(IDHAN_DEPENDENCIES ${CMAKE_CURRENT_SOURCE_DIR}/dependencies)
+list(PREPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+include(ProjectSettings)
+include(Options)
+include(Dependencies)
 
-enable_testing()
-
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/dependencies/libFGL)
-
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/dependencies")
-list(APPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_LIST_DIR}/dependencies")
-
-option(BUILD_IDHAN_DOCS "Builds the API and source docs" ON)
-option(BUILD_IDHAN_WEB "Builds the React WebUI for IDHAN server" ON)
-option(BUILD_IDHAN_SERVER "Builds the server" ON)
-option(BUILD_IDHAN_DOWNLOADER "Builds the downloader runtime" ON)
-
-option(BUILD_IDHAN_TESTS "Builds all tests relating to IDHAN" OFF)
-
-option(BUILD_IDHAN_CLIENT "Builds the shared library for the IDHANClient" ON)
-option(BUILD_IDHAN_HTTP "Builds the proxygen backed HTTP layer" ON)
-option(IDHAN_DISABLE_API_AUTH "Disable the API access key checks" OFF)
-
-option(IDHAN_ENABLE_TRACE "Enable trace log level" ON)
-
-option(BUILD_IDHAN_TOOLS "Builds all tools" ON)
-option(BUILD_HYDRUS_IMPORTER "Builds the hydrus importer" ON)
-option(BUILD_IDHAN_DOWNLOADER_TESTER "Builds the downloader script testing program" ON)
-option(BUILD_IDHAN_DOWNLOADER_SPECS "Generates the downloader API clients from IDHANDownloader/specs" ON)
-
-function(idhan_require_option DEPENDENT DEPENDENCY)
-	if (${DEPENDENT} AND NOT ${DEPENDENCY})
-		get_property(DEPENDENCY_HELP CACHE ${DEPENDENCY} PROPERTY HELPSTRING)
-		message(STATUS "${DEPENDENT} requires ${DEPENDENCY}; enabling ${DEPENDENCY}")
-		set(${DEPENDENCY} ON CACHE BOOL "${DEPENDENCY_HELP}" FORCE)
-	endif ()
-endfunction()
-
-idhan_require_option(BUILD_IDHAN_SERVER BUILD_IDHAN_HTTP)
-idhan_require_option(BUILD_IDHAN_TESTS BUILD_IDHAN_SERVER)
-idhan_require_option(BUILD_IDHAN_DOCS BUILD_IDHAN_SERVER)
-idhan_require_option(BUILD_IDHAN_SERVER BUILD_IDHAN_DOWNLOADER)
-idhan_require_option(BUILD_IDHAN_DOWNLOADER_TESTER BUILD_IDHAN_DOWNLOADER)
-idhan_require_option(BUILD_HYDRUS_IMPORTER BUILD_IDHAN_CLIENT)
-idhan_require_option(BUILD_IDHAN_TOOLS BUILD_IDHAN_CLIENT)
-
-# This is not recommended to turn off. Only turn it off if you really know what you are doing
-option(IDHAN_USE_JEMALLOC "Link the server against jemalloc instead of the system allocator" ON)
-
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-	set(IDHAN_HARDEN_DEFAULT OFF)
-else ()
-	set(IDHAN_HARDEN_DEFAULT ON)
+# CTest must be enabled at the root so all component suites are discoverable.
+if (BUILD_IDHAN_TESTS OR BUILD_PTR_CORE_TESTS)
+	enable_testing()
 endif ()
-
-option(IDHAN_HARDEN "Block same-uid ptrace of the server and disable worker core dumps" ${IDHAN_HARDEN_DEFAULT})
-
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-	set(IDHAN_TRACK_CORO_FRAMES ON)
-endif ()
-
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-	set(IDHAN_ENABLE_TRACE OFF)
-endif ()
-
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-
-if (BUILD_IDHAN_SERVER)
-	include(postgres)
-	include(toml)
-endif ()
-
-find_package(spdlog REQUIRED)
-find_package(Jsoncpp REQUIRED)
 
 add_subdirectory(IDHAN)
-if (BUILD_IDHAN_SERVER OR BUILD_IDHAN_DOWNLOADER)
-	include(proxygen)
-endif ()
 
 if (BUILD_IDHAN_DOWNLOADER)
 	add_subdirectory(IDHANDownloader)
 endif ()
 
+if (BUILD_IDHAN_SERVER OR BUILD_IDHAN_HTTP)
+	add_subdirectory(IDHANHttp)
+endif ()
+
 if (BUILD_IDHAN_SERVER)
 	add_subdirectory(IDHANDb)
-	add_subdirectory(IDHANHttp)
 	add_subdirectory(IDHANMigration)
 	add_subdirectory(IDHANModules)
 	add_subdirectory(IDHANServer)
 endif ()
+
 if (BUILD_IDHAN_CLIENT)
 	add_subdirectory(IDHANClient)
 endif ()
 
-
 if (BUILD_HYDRUS_IMPORTER OR BUILD_IDHAN_TOOLS)
-	#HydrusImporter
-	include(sqlite3)
-	add_subdirectory(tools/HydrusImporter/ptr-core)
 	add_subdirectory(tools/HydrusImporter)
+elseif (BUILD_PTR_CORE_TESTS)
+	add_subdirectory(tools/HydrusImporter/ptr-core)
 endif ()
 
 if (BUILD_IDHAN_DOCS)
@@ -127,5 +51,5 @@ if (BUILD_IDHAN_TESTS)
 	add_subdirectory(tests)
 endif ()
 
-include(cmake/ExternalWarnings.cmake)
-idhan_configure_external_warnings("${CMAKE_SOURCE_DIR}")
+include(ExternalWarnings)
+idhan_configure_external_warnings("${CMAKE_CURRENT_SOURCE_DIR}")

@@ -73,7 +73,6 @@ export type CompareSortMode =
     | 'closest-b'
     | 'label';
 
-/** The dropdown's contents, in the order they are offered. */
 export const COMPARE_SORT_MODES: ReadonlyArray<{ value: CompareSortMode; label: string }> = [
     {value: 'delta', label: 'Strongest difference'},
     {value: 'toward-a', label: 'Leans toward A'},

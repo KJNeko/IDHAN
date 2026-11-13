@@ -35,7 +35,8 @@ class DBRows
 	[[nodiscard]] std::size_t size() const noexcept;
 	[[nodiscard]] bool empty() const noexcept;
 	[[nodiscard]] std::tuple< Ts... > row( std::size_t index ) const;
-	// Borrowed field views live only as long as this result.
+
+	//! Borrowed field views live only as long as this result.
 	[[nodiscard]] PGresult* get() const noexcept;
 	[[nodiscard]] DBResult release() &&;
 

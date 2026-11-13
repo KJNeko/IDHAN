@@ -10,7 +10,7 @@ namespace idhan::db
 inline constexpr std::string_view DEFAULT_SCHEMA { "idhan" };
 inline constexpr std::string_view EXTENSION_SCHEMA { "public" };
 
-// A schema setting names one identifier, even when it contains commas or quotes.
+//! A schema setting names one identifier, even when it contains commas or quotes.
 [[nodiscard]] inline std::string quoteSchemaIdentifier( const std::string_view schema )
 {
 	if ( schema.empty() || schema.find( '\0' ) != std::string_view::npos )

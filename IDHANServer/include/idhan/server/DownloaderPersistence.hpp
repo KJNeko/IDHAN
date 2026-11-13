@@ -6,8 +6,8 @@
 #include <string_view>
 #include <vector>
 
-#include "IDHANDownloader/CookiePersistence.hpp"
-#include "IDHANDownloader/SecretProvider.hpp"
+#include "IDHANDownloader/cookies/CookiePersistence.hpp"
+#include "IDHANDownloader/secrets/SecretProvider.hpp"
 #include "idhan/runtime/Task.hpp"
 
 namespace idhan::db
@@ -33,10 +33,10 @@ class DownloaderPersistence final : public downloader::CookiePersistence, public
 	[[nodiscard]] runtime::Task<> drain();
 	[[nodiscard]] runtime::Task<> waitForPersistence();
 	[[nodiscard]] std::vector< downloader::PersistedCookie > loadAll() override;
-	void upsert( const downloader::PersistedCookie& ) override;
-	void erase( std::string_view name, std::string_view domain, std::string_view path ) override;
+	[[nodiscard]] runtime::Task<> upsert( downloader::PersistedCookie cookie ) override;
+	[[nodiscard]] runtime::Task<> erase( std::string name, std::string domain, std::string path ) override;
 	void pruneExpired() override;
-	[[nodiscard]] std::optional< std::string > secret( std::string_view name ) override;
-	[[nodiscard]] runtime::Task<> replaceSecret( std::string name, std::string value );
+	[[nodiscard]] std::expected< Json::Value, std::string > secrets( std::string_view domain ) override;
+	[[nodiscard]] runtime::Task<> replaceSecrets( std::string domain, Json::Value value );
 };
 } // namespace idhan::server

@@ -6,7 +6,6 @@
  * obvious from the call: rewriting a term onto one that already exists merges the two.
  */
 
-/** Appends `term` unless the list already carries it. */
 export function addTerm(terms: readonly string[], term: string): string[] {
     const trimmed = term.trim();
     if (trimmed.length === 0 || terms.includes(trimmed)) return [...terms];

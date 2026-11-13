@@ -1,9 +1,3 @@
-/**
- * Notes: free-text notes attached to the focused record. Reads /records/{id}/notes ([{note_id,text}]);
- * add posts text/plain to /add_note, remove deletes /remove_note/{note_id}. Both mutations return the
- * updated note list, so the panel adopts the response directly. Follows the selection like Record Info.
- */
-
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import type { PanelProps, RecordId } from '../../host/types';
 
@@ -94,7 +88,7 @@ function NotesPanel({ host }: PanelProps) {
 
   return (
     <div className="panel-body notes-panel">
-      {focused === null && <p className="muted">Select a record to see its notes.</p>}
+		{focused === null && <p className="muted">No record selected.</p>}
 
       {focused !== null && (
         <>
@@ -141,7 +135,7 @@ function NotesPanel({ host }: PanelProps) {
 export const notesPanel = {
   type: 'notes',
   title: 'Notes',
-  description: 'Free-text notes attached to the focused record.',
+	description: 'Record notes.',
   component: NotesPanel,
   configVersion: 1,
 } as const;

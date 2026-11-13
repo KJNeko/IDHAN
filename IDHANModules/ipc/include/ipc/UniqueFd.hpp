@@ -9,7 +9,6 @@
 namespace idhan::ipc
 {
 
-//! Owning wrapper around a file descriptor.
 class UniqueFd
 {
 	int m_fd { -1 };
@@ -38,7 +37,6 @@ class UniqueFd
 	//! Relinquishes ownership; the caller is responsible for closing the returned descriptor.
 	[[nodiscard]] int release() { return std::exchange( m_fd, -1 ); }
 
-	//! Closes the held descriptor (if any) and takes ownership of \p fd.
 	void reset( const int fd = -1 )
 	{
 		// Guard against self-reset closing the descriptor we are about to store.

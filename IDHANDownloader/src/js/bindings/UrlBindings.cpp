@@ -2,6 +2,7 @@
 
 #include <ada.h>
 #include <cstdint>
+#include <iterator>
 #include <memory>
 #include <optional>
 #include <string>
@@ -9,6 +10,7 @@
 #include <utility>
 
 #include "js/CommonBindings.hpp"
+#include "js/JSValueHandle.hpp"
 #include "js/QuickJSBinding.hpp"
 
 namespace idhan::downloader::quickjs
@@ -97,6 +99,28 @@ void refresh( URLSearchParamsObject& object )
 void commit( URLSearchParamsObject& object )
 {
 	if ( object.url ) object.url->value.set_search( object.parameters.to_string() );
+}
+
+IDHAN_QJS_FUNCTION( urlCanParse )
+{
+	(void)this_value;
+	try
+	{
+		if ( argument_count == 0 ) return JS_ThrowTypeError( context, "URL.canParse requires an input" );
+
+		const auto input { argumentString( context, argument_count, arguments, 0 ) };
+		if ( !input.has_value() ) return JS_EXCEPTION;
+
+		const bool has_base { argument_count > 1 && !JS_IsUndefined( arguments[ 1 ] ) };
+		if ( !has_base ) return JS_NewBool( context, ada::can_parse( *input ) );
+
+		const auto base { argumentString( context, argument_count, arguments, 1 ) };
+		if ( !base.has_value() ) return JS_EXCEPTION;
+
+		const std::string_view base_view { *base };
+		return JS_NewBool( context, ada::can_parse( *input, &base_view ) );
+	}
+	IDHAN_QJS_TRANSLATE_EXCEPTIONS( context )
 }
 
 void urlFinalizer( JSRuntime*, const JSValue value )
@@ -204,6 +228,8 @@ IDHAN_QJS_GETTER( urlOrigin )
 	}
 
 IDHAN_URL_COMPONENT( urlProtocol, get_protocol, set_protocol )
+IDHAN_URL_COMPONENT( urlUsername, get_username, set_username )
+IDHAN_URL_COMPONENT( urlPassword, get_password, set_password )
 IDHAN_URL_COMPONENT( urlHost, get_host, set_host )
 IDHAN_URL_COMPONENT( urlHostname, get_hostname, set_hostname )
 IDHAN_URL_COMPONENT( urlPort, get_port, set_port )
@@ -582,6 +608,8 @@ const JSCFunctionListEntry url_properties[] {
 	IDHAN_QJS_PROPERTY( "href", urlHref, urlHrefSet ),
 	IDHAN_QJS_READONLY_PROPERTY( "origin", urlOrigin ),
 	IDHAN_QJS_PROPERTY( "protocol", urlProtocol, urlProtocolSet ),
+	IDHAN_QJS_PROPERTY( "username", urlUsername, urlUsernameSet ),
+	IDHAN_QJS_PROPERTY( "password", urlPassword, urlPasswordSet ),
 	IDHAN_QJS_PROPERTY( "host", urlHost, urlHostSet ),
 	IDHAN_QJS_PROPERTY( "hostname", urlHostname, urlHostnameSet ),
 	IDHAN_QJS_PROPERTY( "port", urlPort, urlPortSet ),
@@ -591,6 +619,10 @@ const JSCFunctionListEntry url_properties[] {
 	IDHAN_QJS_READONLY_PROPERTY( "searchParams", urlSearchParams ),
 	IDHAN_QJS_METHOD( "toString", 0, urlToString ),
 	IDHAN_QJS_METHOD( "toJSON", 0, urlToString ),
+};
+
+const JSCFunctionListEntry url_static_properties[] {
+	IDHAN_QJS_METHOD( "canParse", 1, urlCanParse ),
 };
 
 const JSCFunctionListEntry url_search_params_properties[] {
@@ -616,6 +648,17 @@ bool installURLBindings( JSContext* context, const JSValueConst global )
 
 	if ( !search_params_installed ) return false;
 
-	return installClass( context, global, url_class_id, url_class, urlConstructor, 2, url_properties );
+	const bool url_installed {
+		installClass( context, global, url_class_id, url_class, urlConstructor, 2, url_properties )
+	};
+
+	if ( !url_installed ) return false;
+
+	JSValueHandle constructor { context, JS_GetPropertyStr( context, global, "URL" ) };
+	if ( JS_IsException( constructor.get() ) ) return false;
+
+	const int installed { JS_SetPropertyFunctionList(
+		context, constructor.get(), url_static_properties, static_cast< int >( std::size( url_static_properties ) ) ) };
+	return installed >= 0;
 }
 } // namespace idhan::downloader::quickjs

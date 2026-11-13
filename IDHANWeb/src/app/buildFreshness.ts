@@ -6,7 +6,6 @@ import { useEffect, useState } from 'react';
 
 const CHECK_INTERVAL_MS = 10 * 60 * 1000;
 
-/** Return the entry module path, or null if none is present. */
 export function entryScript(doc: Document): string | null {
   const source = doc.querySelector('script[type="module"][src]')?.getAttribute('src');
   if (!source) return null;

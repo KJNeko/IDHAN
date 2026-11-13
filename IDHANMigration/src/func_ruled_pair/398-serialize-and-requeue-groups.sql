@@ -8,11 +8,15 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trg_lock_alternative_changes
-    BEFORE INSERT OR UPDATE OR DELETE ON alternative_records
-    FOR EACH STATEMENT EXECUTE FUNCTION lock_relationship_changes();
+    BEFORE INSERT OR UPDATE OR DELETE
+    ON alternative_records
+    FOR EACH STATEMENT
+EXECUTE FUNCTION lock_relationship_changes();
 CREATE TRIGGER trg_lock_unrelated_changes
-    BEFORE INSERT OR UPDATE OR DELETE ON unrelated_records
-    FOR EACH STATEMENT EXECUTE FUNCTION lock_relationship_changes();
+    BEFORE INSERT OR UPDATE OR DELETE
+    ON unrelated_records
+    FOR EACH STATEMENT
+EXECUTE FUNCTION lock_relationship_changes();
 
 -- Requeue every group member to restore inferior-to-inferior distances, even when the kings
 -- have dissimilar hashes.

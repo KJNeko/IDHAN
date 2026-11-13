@@ -1,6 +1,5 @@
 # syntax=docker/dockerfile:1.7
 
-# Stage 0: WebUI
 FROM --platform=$BUILDPLATFORM node:22-slim AS webbuilder
 
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
@@ -13,7 +12,17 @@ RUN --mount=type=cache,target=/pnpm-store,id=idhan-pnpm-v1,sharing=locked \
 COPY IDHANWeb/ ./
 RUN pnpm exec vite build --outDir /web/dist
 
-# Stage 1: Build IDHANServer
+FROM --platform=$BUILDPLATFORM node:22-slim AS parserbuilder
+WORKDIR /parsers
+
+COPY IDHANDownloader/package.json IDHANDownloader/package-lock.json ./
+COPY IDHANDownloader/premade/ ./premade/
+RUN --mount=type=cache,target=/root/.npm,id=idhan-parser-npm-v1,sharing=locked \
+    npm ci --include=dev --include=optional --ignore-scripts --no-audit --no-fund
+COPY IDHANDownloader/tsconfig.json ./
+COPY IDHANDownloader/scripts/build-parsers.mjs ./scripts/build-parsers.mjs
+RUN npm run build:parsers
+
 FROM --platform=$BUILDPLATFORM ubuntu:26.10 AS builder
 
 ARG BUILDARCH
@@ -82,10 +91,7 @@ RUN apt-get update && \
     libiberty-dev \
     libaio-dev \
     zlib1g-dev \
-    python3 \
-    nodejs \
-    npm \
-    default-jre-headless && \
+    python3 && \
     rm -rf /var/lib/apt/lists/*
 
 # GCC 16 supports the C++26 dialect used by IDHAN and its coroutine dependencies.
@@ -118,6 +124,7 @@ COPY IDHAN /build/IDHAN
 COPY IDHANDb /build/IDHANDb
 COPY IDHANHttp /build/IDHANHttp
 COPY IDHANDownloader /build/IDHANDownloader
+COPY --from=parserbuilder /parsers/dist/ /build/parser-bundles/
 COPY IDHANModules /build/IDHANModules
 COPY IDHANMigration /build/IDHANMigration
 COPY IDHANServer /build/IDHANServer
@@ -135,10 +142,8 @@ ENV CCACHE_DIR=/root/.ccache \
     CCACHE_COMPILERCHECK=content \
     CCACHE_MAXSIZE=3G \
     CCACHE_STATSLOG=/tmp/idhan-ccache.log
-# The npm cache also holds the openapi-generator jar that npx fetches for the downloader specs.
 RUN --mount=type=cache,target=/root/.ccache,id=idhan-ccache-v1 \
     --mount=type=cache,target=/build/build,id=idhan-cmake-ubuntu2610-gcc16-v1-${TARGETARCH}${TARGETVARIANT}-${CMAKE_BUILD_TYPE},sharing=locked \
-    --mount=type=cache,target=/root/.npm,id=idhan-npm-v1-${TARGETARCH}${TARGETVARIANT} \
     toolchain_key="$( { dpkg-query -W; sha256sum /build/Dockerfile; } | sha256sum | cut -d ' ' -f1)" && \
     if [ "$(cat build/.idhan-toolchain 2>/dev/null)" != "$toolchain_key" ]; then \
         find build -mindepth 1 -maxdepth 1 -exec rm -rf {} + && \
@@ -164,11 +169,15 @@ RUN --mount=type=cache,target=/root/.ccache,id=idhan-ccache-v1 \
     -DBUILD_HYDRUS_IMPORTER=OFF \
     -DBUILD_IDHAN_DOCS=ON \
     -DBUILD_IDHAN_WEB=OFF \
+    -DBUILD_IDHAN_DOWNLOADER=ON \
+    -DBUILD_IDHAN_DOWNLOADER_TESTER=OFF \
+    -DIDHAN_DOWNLOADER_PREBUILT_DIR=/build/parser-bundles \
     -DBUILD_IDHAN_CLIENT=OFF \
     -DBUILD_IDHAN_TOOLS=OFF \
     -DIDHAN_DISABLE_API_AUTH=${IDHAN_DISABLE_API_AUTH} \
     -DCMAKE_C_COMPILER_LAUNCHER=ccache \
     -DCMAKE_CXX_COMPILER_LAUNCHER=ccache && \
+    cmake --build build --target IDHANDownloaderAssets -j${BUILD_JOBS} && \
     if cmake --build build --target IDHANServer -j${BUILD_JOBS}; then \
         ccache --show-log-stats --verbose; \
     else \
@@ -179,7 +188,6 @@ RUN --mount=type=cache,target=/root/.ccache,id=idhan-ccache-v1 \
     cp /build/build/bin /build/bin -r && \
     find /build/bin -name '*.debug' -delete
 
-# Stage 2: Runtime environment
 FROM ubuntu:26.10
 
 RUN sed -i 's/^Components: main$/Components: main universe/' /etc/apt/sources.list.d/ubuntu.sources
@@ -235,9 +243,9 @@ COPY --from=builder /build/bin/static/ /usr/share/idhan/static
 COPY --from=webbuilder /web/dist/ /usr/share/idhan/static
 COPY --from=builder /build/bin/modules/ /usr/share/idhan/modules
 COPY --from=builder /build/bin/config.toml /usr/share/idhan/config.toml
-COPY --from=builder /build/bin/downloader/ /usr/share/idhan/downloader
+# Parser bundles come from parserbuilder and are staged with non-code assets by CMake.
+COPY --from=builder /build/bin/downloaders/parsers/ /usr/share/idhan/downloaders/parsers
 
-# Embedding folder
 RUN mkdir -p /usr/share/idhan/models
 
 ENV IDHAN_DATABASE_HOST=localhost \
@@ -246,7 +254,7 @@ ENV IDHAN_DATABASE_HOST=localhost \
     IDHAN_DATABASE_DATABASE=idhan-db \
     IDHAN_THUMBNAILS_PATH=/thumbnails \
     IDHAN_EMBEDDINGS_MODEL_PATH=/usr/share/idhan/models \
-    IDHAN_DOWNLOADER_PARSER_DIRECTORY=/usr/share/idhan/downloader \
+    IDHAN_DOWNLOADER_PARSER_DIRECTORY=/usr/share/idhan/downloaders/parsers \
     IDHAN_HOST_IPV4_LISTEN=0.0.0.0 \
     IDHAN_HOST_IPV6_LISTEN=:: \
     IDHAN_HOST_USE_TLS=false \

@@ -18,12 +18,26 @@ TEST_CASE( "A dropped database transaction rolls back and returns its lease", "[
 	{
 		auto transaction { folly::coro::blockingWait( context.transaction() ) };
 		folly::coro::blockingWait(
-			transaction.query( "CREATE TEMPORARY TABLE transaction_rollback_test ( id integer )" ).result() );
+			transaction
+				.query(
+					//language=postgresql
+					R"SQL(
+						CREATE TEMPORARY TABLE transaction_rollback_test (
+						    id integer
+						)
+					)SQL" )
+				.result() );
 	}
 
 	auto transaction { folly::coro::blockingWait( context.transaction() ) };
 	auto table = folly::coro::blockingWait(
-		transaction.query( "SELECT to_regclass('pg_temp.transaction_rollback_test')::text" )
+		transaction
+			.query(
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    to_regclass('pg_temp.transaction_rollback_test')::text
+				)SQL" )
 			.rows< std::optional< std::string > >() );
 	REQUIRE( table.size() == 1 );
 	CHECK_FALSE( std::get< 0 >( table.row( 0 ) ).has_value() );

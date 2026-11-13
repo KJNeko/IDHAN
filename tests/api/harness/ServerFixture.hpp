@@ -50,7 +50,6 @@ class TestServer
 
 [[nodiscard]] TestServer& testServer();
 
-//! Wipes the tag tables when the test that used them ends.
 class ServerFixture
 {
   protected:
@@ -74,7 +73,6 @@ class ServerFixture
 	~ServerFixture();
 };
 
-//! True when a partition of that name exists for the domain, eg tag_mappings_domain_3.
 [[nodiscard]] bool partitionExists( pqxx::connection& connection, std::string_view prefix, TagDomainID tag_domain_id );
 
 } // namespace idhan::test

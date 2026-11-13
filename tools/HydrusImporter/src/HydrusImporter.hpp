@@ -27,9 +27,8 @@ struct ServiceInfo
 //! A Hydrus-internal hash identifier (row id of a hash in the Hydrus database).
 using HashID = std::uint32_t;
 
-//! Drives a one-time import from a Hydrus SQLite database set (master, client and mappings DBs).
-//! Opens the databases, copies the file storage into IDHAN, maps Hydrus hash IDs to IDHAN RecordIDs,
-//! and enumerates the available tag services.
+//! Read-only access to a Hydrus SQLite database set (master, client and mappings DBs). Maps Hydrus
+//! hash IDs to IDHAN RecordIDs and enumerates the available tag services.
 class HydrusImporter
 {
 	//! Opens a Hydrus SQLite database read-only, throwing a descriptive error if it cannot be opened.
@@ -52,10 +51,8 @@ class HydrusImporter
 	//! Maps a batch of Hydrus hash IDs to their corresponding IDHAN RecordIDs.
 	std::unordered_map< HashID, RecordID > mapHydrusRecords( std::vector< HashID > hash_ids ) const;
 
-	//! \return true if the Hydrus database contains PTR (public tag repository) data.
 	bool hasPTR() const;
 
-	//! \return Summaries of all tag services present in the Hydrus database.
 	std::vector< ServiceInfo > getTagServices();
 };
 

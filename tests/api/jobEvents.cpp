@@ -14,7 +14,7 @@ TEST_CASE_METHOD(
 {
 	const auto encoding { GENERATE( "identity", "gzip", "zstd" ) };
 	CAPTURE( encoding );
-	JobEventStream stream { serverPort(), api().key(), "/events?types=job.status", encoding };
+	JobEventStream stream { serverPort(), api().key(), "/events?filter=job", encoding };
 	const auto snapshot { stream.waitFor( "snapshot" ) };
 	REQUIRE( snapshot.isObject() );
 	CHECK( stream.contentEncoding() == ( std::string_view { encoding } == "identity" ? "" : encoding ) );
@@ -30,7 +30,7 @@ TEST_CASE_METHOD(
 	Json::Value final;
 	for ( int attempt {}; attempt < 4; ++attempt )
 	{
-		final = stream.waitFor( "update", job_id );
+		final = stream.waitFor( "status", job_id );
 		REQUIRE_FALSE( final.isNull() );
 		if ( final[ "completed" ].asBool() ) break;
 	}
@@ -39,11 +39,14 @@ TEST_CASE_METHOD(
 	CHECK( final[ "response" ][ "failed_count" ].asUInt64() == 1 );
 	CHECK( final[ "response" ][ "failures" ][ 0 ][ "record_id" ].as< RecordID >() == record );
 
-	JobEventStream reconnected { serverPort(), api().key(), "/events?types=job.status", encoding };
-	const auto current { reconnected.waitFor( "snapshot", job_id ) };
+	JobEventStream reconnected { serverPort(), api().key(), "/events?filter=job", encoding };
+	const auto reconnected_snapshot { reconnected.waitFor( "snapshot" ) };
+	Json::Value current {};
+	for ( const auto& job : reconnected_snapshot[ "jobs" ] )
+		if ( job[ "job_id" ].as< JobID >() == job_id ) current = job;
 	CHECK( current[ "completed" ].asBool() );
 	REQUIRE( api().get( std::format( "/jobs/{}/status", job_id ) ).status == 200 );
-	const auto removed { stream.waitFor( "update", job_id ) };
+	const auto removed { stream.waitFor( "status", job_id ) };
 	CHECK( removed[ "removed" ].asBool() );
 }
 } // namespace idhan::test

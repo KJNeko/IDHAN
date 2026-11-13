@@ -24,6 +24,8 @@ vi.mock('../../api/client', async importOriginal => {
 vi.mock('./recordActions', () => ({
     useRecordMenu: () => ({openRecordMenu: vi.fn(), recordMenu: null}),
 }));
+vi.mock('./DownloadRateLimits', () => ({DownloadRateLimits: () => null}));
+vi.mock('./DownloadParserCache', () => ({DownloadParserCache: () => null}));
 Object.assign(globalThis, {IS_REACT_ACT_ENVIRONMENT: true});
 
 let unmount: (() => Promise<void>) | undefined;
@@ -169,7 +171,58 @@ describe('import failure reasons', () => {
     ])('shows the server reason for status $status: $reason', async ({status, body, reason}) => {
         const {container} = await mount(storageFetch(() => [{readonly: false}], () => new Response(body, {status})));
         await dropFile(container);
-        expect(container.querySelector('.import-row.state-error .import-reason')!.textContent).toBe(reason);
+        const message = container.querySelector('.import-row.state-error .import-reason')!.textContent!;
+        expect(message).toContain(reason);
+        expect(message).toContain('image.png');
+        expect(message).toContain('POST /file/import');
+        expect(message).toContain(`HTTP ${status}`);
         expect(container.textContent).toContain('1 failed');
     });
+});
+
+it('reports a browser upload failure with filename and request context', async () => {
+    const {container} = await mount(storageFetch(() => [{readonly: false}], () => {
+        throw new TypeError('NetworkError when attempting to fetch resource.');
+    }));
+    await dropFile(container);
+    const message = container.querySelector('.import-reason')!.textContent!;
+    expect(message).toContain('image.png');
+    expect(message).toContain('POST /file/import');
+    expect(message).toContain('No HTTP response was received');
+    expect(message).toContain('local file');
+    expect(message).toContain('NetworkError when attempting to fetch resource.');
+});
+
+it('imports nested folders as individual files while displaying and uploading only the basename', async () => {
+    const fetch = storageFetch(() => [{readonly: false}]);
+    const {container} = await mount(fetch);
+    const file = new File(['bytes'], 'image.jpg');
+    const child = {
+        name: 'image.jpg',
+        isFile: true,
+        isDirectory: false,
+        file: (resolve: (file: File) => void) => resolve(file)
+    };
+    const directory = {
+        name: 'artist', isFile: false, isDirectory: true, createReader: () => {
+            let read = false;
+            return {
+                readEntries: (resolve: (entries: unknown[]) => void) => {
+                    resolve(read ? [] : [child]);
+                    read = true;
+                }
+            };
+        }
+    };
+    const drop = new Event('drop', {bubbles: true, cancelable: true});
+    Object.defineProperty(drop, 'dataTransfer', {
+        value: {
+            items: [{kind: 'file', webkitGetAsEntry: () => directory}],
+            files: []
+        }
+    });
+    await act(() => container.querySelector('.import-drop')!.dispatchEvent(drop));
+    expect(fetch.mock.calls.some(([path]) => path === '/file/import?filename=image.jpg')).toBe(true);
+    expect(container.querySelector('.import-row-head .grow')!.textContent).toBe('image.jpg');
+    expect(container.querySelector('.import-row-head .grow')!.textContent).not.toContain('artist/');
 });

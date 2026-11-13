@@ -3,174 +3,21 @@
 #include <spdlog/spdlog.h>
 
 #include <algorithm>
-#include <chrono>
+#include <format>
 #include <pthread.h>
 #include <utility>
 
-#include "SessionContext.hpp"
+#include "session/SessionContext.hpp"
 
 namespace idhan::downloader
 {
 
-ScriptRunner::Worker::Worker( ScriptRunner& runner, const std::size_t index ) : m_runner( runner ), m_index( index )
-{
-	m_thread = std::jthread( [ this ] { run(); } );
-}
-
-ScriptRunner::Worker::~Worker()
-{
-	join();
-}
-
-void ScriptRunner::Worker::join()
-{
-	notify();
-
-	if ( m_thread.joinable() ) m_thread.join();
-}
-
-void ScriptRunner::Worker::notify()
-{
-	{
-		const std::scoped_lock lock { m_mutex };
-		m_woken = true;
-	}
-
-	m_wakeup.notify_all();
-}
-
-void ScriptRunner::Worker::deliver( ScriptCompletion completion )
-{
-	{
-		const std::scoped_lock lock { m_mutex };
-		m_inbox.emplace_back( std::move( completion ) );
-		m_woken = true;
-	}
-
-	m_wakeup.notify_all();
-}
-
-void ScriptRunner::Worker::run()
-{
-	::pthread_setname_np( ::pthread_self(), "downloader-script" );
-	m_scripts = std::make_unique< ScriptContext >( m_runner.m_options.script, m_runner.m_bytecode );
-
-	while ( m_runner.m_running.load() )
-	{
-		std::string error {};
-
-		if ( !m_scripts->pumpJobs( error ) ) spdlog::warn( "downloader script: a microtask threw: {}", error );
-
-		drainInbox();
-
-		if ( !m_scripts->pumpJobs( error ) ) spdlog::warn( "downloader script: a microtask threw: {}", error );
-
-		advance();
-		startWork();
-		advance();
-
-		std::unique_lock lock { m_mutex };
-
-		if ( m_woken || !m_inbox.empty() )
-		{
-			m_woken = false;
-			continue;
-		}
-
-		m_wakeup.wait_for( lock, std::chrono::milliseconds { 250 }, [ this ] { return m_woken || !m_inbox.empty(); } );
-		m_woken = false;
-	}
-
-	discardAll();
-	m_scripts.reset();
-}
-
-void ScriptRunner::Worker::drainInbox()
-{
-	std::deque< ScriptCompletion > taken {};
-
-	{
-		const std::scoped_lock lock { m_mutex };
-		taken.swap( m_inbox );
-	}
-
-	for ( ScriptCompletion& completion : taken ) completion.handle->impl().settle( completion.pending );
-}
-
-void ScriptRunner::Worker::startWork()
-{
-	while ( m_runner.m_running.load() )
-	{
-		auto work { m_runner.take() };
-
-		if ( !work.has_value() ) return;
-
-		SessionContext::Impl& session { work->handle->impl() };
-		auto execution { session.beginWork( *m_scripts, *work, m_index ) };
-
-		if ( !execution )
-		{
-			session.releaseStart();
-			continue;
-		}
-
-		m_resident.emplace_back( std::move( execution ) );
-		m_handles.emplace_back( work->handle );
-
-		// Count parser requests before releasing the reserved start slot.
-		const bool finished { session.step( *m_scripts, *m_resident.back() ) };
-		session.releaseStart();
-
-		if ( finished ) releaseAt( m_resident.size() - 1 );
-	}
-}
-
-void ScriptRunner::Worker::advance()
-{
-	for ( std::size_t index {}; index < m_resident.size(); )
-	{
-		if ( m_handles[ index ]->impl().step( *m_scripts, *m_resident[ index ] ) )
-			releaseAt( index );
-		else
-			++index;
-	}
-}
-
-void ScriptRunner::Worker::releaseAt( const std::size_t index )
-{
-	// Keep the session alive while realm destruction calls back into it.
-	const std::shared_ptr< SessionContext > handle { m_handles[ index ] };
-	handle->impl().releaseWork( *m_scripts, *m_resident[ index ] );
-
-	m_resident.erase( m_resident.begin() + static_cast< std::ptrdiff_t >( index ) );
-	m_handles.erase( m_handles.begin() + static_cast< std::ptrdiff_t >( index ) );
-}
-
-void ScriptRunner::Worker::discardAll()
-{
-	for ( std::size_t index {}; index < m_resident.size(); ++index )
-	{
-		m_handles[ index ]->impl().abandon( *m_resident[ index ] );
-		m_handles[ index ]->impl().releaseWork( *m_scripts, *m_resident[ index ] );
-	}
-
-	m_resident.clear();
-	m_handles.clear();
-
-	const std::scoped_lock lock { m_mutex };
-	m_inbox.clear();
-}
-
 ScriptRunner::ScriptRunner( Options options, BytecodeCache& bytecode ) : m_options( options ), m_bytecode( bytecode )
 {
-	if ( m_options.threads == 0 ) m_options.threads = 1;
-
-	m_workers.reserve( m_options.threads );
-
-	for ( std::size_t index {}; index < m_options.threads; ++index )
-		m_workers.emplace_back( std::make_unique< Worker >( *this, index ) );
-
-	spdlog::info( "downloader script: {} script threads", m_options.threads );
+	m_options.parser_instances = std::max< std::size_t >( 1, m_options.parser_instances );
+	spdlog::info(
+		"downloader script: up to {} dedicated instances per parser, shared by all sessions",
+		m_options.parser_instances );
 }
 
 ScriptRunner::~ScriptRunner()
@@ -178,82 +25,310 @@ ScriptRunner::~ScriptRunner()
 	stop();
 }
 
+void ScriptRunner::run( Runtime& runtime )
+{
+	const auto name { std::format( "dl-parser {}", runtime.id ) };
+	::pthread_setname_np( ::pthread_self(), name.c_str() );
+	runtime.scripts = std::make_unique< ScriptContext >( m_options.script, m_bytecode, runtime.activity, m_key_values );
+	while ( true )
+	{
+		runtime.available.acquire();
+		RuntimeEvent event;
+		{
+			const std::scoped_lock lock { m_mutex };
+			event = std::move( runtime.events.front() );
+			runtime.events.pop_front();
+		}
+		const auto* reason { std::get_if< WakeReason >( &event ) };
+		if ( reason != nullptr && *reason == WakeReason::STOP ) break;
+
+		const bool ready { processEvent( runtime, std::move( event ) ) };
+		if ( ready )
+		{
+			const std::scoped_lock lock { m_mutex };
+			if ( runtime.events.empty() ) enqueueEvent( runtime, WakeReason::READY_MICROTASKS );
+		}
+	}
+
+	discardAll( runtime );
+}
+
+void ScriptRunner::enqueueEvent( Runtime& runtime, RuntimeEvent event )
+{
+	runtime.events.push_back( std::move( event ) );
+	runtime.available.release();
+}
+
+bool ScriptRunner::processEvent( Runtime& runtime, RuntimeEvent event )
+{
+	auto* completion { std::get_if< ScriptCompletion >( &event ) };
+	if ( completion != nullptr ) completion->handle->impl().completePendingOperation( completion->pending );
+
+	auto* submitted { std::get_if< ScriptWork >( &event ) };
+	if ( submitted != nullptr )
+	{
+		const std::scoped_lock lock { m_mutex };
+		runtime.work.push_back( std::move( *submitted ) );
+	}
+
+	bool ready { advance( runtime ) };
+	std::optional< ScriptWork > work;
+	bool reserved {};
+	{
+		const std::scoped_lock lock { m_mutex };
+		// Rotate past sessions whose HTTP budget is full, so they cannot block others.
+		const auto waiting { runtime.work.size() };
+		for ( std::size_t index {}; index < waiting; ++index )
+		{
+			auto candidate { std::move( runtime.work.front() ) };
+			runtime.work.pop_front();
+			if ( !candidate.handle->impl().acceptsWork() )
+			{
+				work = std::move( candidate );
+				break;
+			}
+
+			if ( candidate.handle->impl().reserveStart() )
+			{
+				reserved = true;
+				work = std::move( candidate );
+				break;
+			}
+
+			runtime.work.push_back( std::move( candidate ) );
+		}
+	}
+	if ( work.has_value() )
+	{
+		auto& session { work.value().handle->impl() };
+		if ( !session.acceptsWork() )
+		{
+			if ( reserved ) session.releaseStart();
+
+			session.retireQueued( work.value().id );
+			const std::scoped_lock lock { m_mutex };
+			--runtime.load;
+		}
+		else
+		{
+			auto execution { session.beginWork( *runtime.scripts, work.value(), runtime.id ) };
+			if ( execution )
+			{
+				execution->start_reserved = true;
+				runtime.resident.push_back(
+					Runtime::Resident { .handle = work.value().handle, .execution = std::move( execution ) } );
+			}
+			else
+			{
+				session.releaseStart();
+				const std::scoped_lock lock { m_mutex };
+				--runtime.load;
+			}
+		}
+		ready = true;
+	}
+
+	if ( runtime.scripts->valid() )
+	{
+		std::string error;
+		if ( !runtime.scripts->runReadyMicrotasks( error, 64, std::chrono::milliseconds { 2 } ) )
+			spdlog::warn( "downloader script: a microtask threw: {}", error );
+	}
+
+	ready = advance( runtime ) || ready;
+	return ( runtime.scripts->valid() && JS_IsJobPending( runtime.scripts->runtime() ) ) || ready;
+}
+
+bool ScriptRunner::advance( Runtime& runtime )
+{
+	bool progressed {};
+	for ( std::size_t index {}; index < runtime.resident.size(); )
+	{
+		auto& resident { runtime.resident[ index ] };
+		auto& session { resident.handle->impl() };
+		auto& execution { *resident.execution };
+		const auto before { execution.stage };
+		const bool finished { session.step( *runtime.scripts, execution ) };
+		session.releaseStartIfReady( execution );
+		progressed = progressed || execution.stage != before;
+		if ( finished )
+			releaseAt( runtime, index );
+		else
+			++index;
+	}
+	return progressed;
+}
+
+void ScriptRunner::releaseAt( Runtime& runtime, const std::size_t index )
+{
+	auto& resident { runtime.resident[ index ] };
+	resident.handle->impl().releaseWork( *runtime.scripts, *resident.execution );
+	// Session destruction can call discard(); release its handle outside m_mutex.
+	runtime.resident.erase( runtime.resident.begin() + static_cast< std::ptrdiff_t >( index ) );
+	const std::scoped_lock lock { m_mutex };
+	--runtime.load;
+}
+
+void ScriptRunner::discardAll( Runtime& runtime )
+{
+	for ( const auto& resident : runtime.resident )
+	{
+		resident.handle->impl().abandon( *resident.execution );
+		resident.handle->impl().releaseWork( *runtime.scripts, *resident.execution );
+	}
+	runtime.resident.clear();
+	std::deque< ScriptWork > work;
+	std::deque< RuntimeEvent > events;
+	{
+		const std::scoped_lock lock { m_mutex };
+		work.swap( runtime.work );
+		events.swap( runtime.events );
+	}
+	for ( const auto& pending : work ) pending.handle->impl().retireQueued( pending.id );
+
+	for ( const auto& event : events )
+	{
+		const auto* pending { std::get_if< ScriptWork >( &event ) };
+		if ( pending != nullptr ) pending->handle->impl().retireQueued( pending->id );
+	}
+
+	runtime.scripts.reset();
+}
+
 void ScriptRunner::stop()
 {
 	if ( !m_running.exchange( false ) ) return;
 
-	for ( const auto& worker : m_workers ) worker->notify();
-	for ( const auto& worker : m_workers ) worker->join();
-
-	std::deque< ScriptWork > queued {};
-
+	// Synchronize with submit() before taking the stable set of threads to join.
+	std::vector< Runtime* > runtimes;
 	{
 		const std::scoped_lock lock { m_mutex };
-		queued.swap( m_queue );
+		for ( const auto& [ id, runtime ] : m_runtimes )
+		{
+			runtimes.push_back( runtime.get() );
+			// Shutdown has priority over queued work; keep one permit per event.
+			runtime->events.emplace_front( WakeReason::STOP );
+			runtime->available.release();
+		}
 	}
+	for ( auto* runtime : runtimes )
+	{
+		if ( runtime->thread.joinable() ) runtime->thread.join();
+	}
+	m_runtimes.clear();
+}
 
-	for ( ScriptWork& work : queued ) work.handle->impl().retireQueued( work.id );
+void ScriptRunner::notifySessionReady( const ScriptSession* session )
+{
+	const std::scoped_lock lock { m_mutex };
+	if ( !m_running.load() ) return;
+
+	for ( const auto& [ id, runtime ] : m_runtimes )
+	{
+		const auto found { runtime->sessions.find( session ) };
+		if ( found == runtime->sessions.end() ) continue;
+
+		if ( found->second.expired() )
+		{
+			runtime->sessions.erase( found );
+			continue;
+		}
+
+		enqueueEvent( *runtime, WakeReason::SESSION_CAPACITY_CHANGED );
+	}
 }
 
 bool ScriptRunner::submit( ScriptWork work )
 {
+	const auto parser { work.route.script.string() };
 	{
 		const std::scoped_lock lock { m_mutex };
-
 		if ( !m_running.load() || !work.handle->impl().acceptsWork() ) return false;
 
-		m_queue.emplace_back( std::move( work ) );
-	}
+		Runtime* chosen {};
+		std::size_t instances {};
+		for ( const auto& [ id, runtime ] : m_runtimes )
+		{
+			if ( runtime->parser != parser ) continue;
 
-	for ( const auto& worker : m_workers ) worker->notify();
+			++instances;
+			if ( chosen == nullptr || runtime->load < chosen->load ) chosen = runtime.get();
+		}
+		if ( chosen == nullptr || ( chosen->load > 0 && instances < m_options.parser_instances ) )
+		{
+			auto runtime { std::make_unique< Runtime >() };
+			runtime->id = m_next_runtime++;
+			runtime->parser = parser;
+			chosen = runtime.get();
+			m_runtimes.emplace( chosen->id, std::move( runtime ) );
+			chosen->thread = std::jthread( [ this, chosen ] { run( *chosen ); } );
+		}
+		work.handle->impl().attachRuntime( chosen->id, chosen->activity );
+		std::erase_if( chosen->sessions, []( const auto& entry ) { return entry.second.expired(); } );
+		chosen->sessions.insert_or_assign( &work.handle->impl(), work.handle );
+		++chosen->load;
+		enqueueEvent( *chosen, std::move( work ) );
+	}
 	return true;
 }
 
-std::optional< ScriptWork > ScriptRunner::take()
+bool ScriptRunner::complete( const std::size_t runtime, ScriptCompletion completion )
 {
-	const std::scoped_lock lock { m_mutex };
-
-	for ( auto entry { m_queue.begin() }; entry != m_queue.end(); ++entry )
 	{
-		if ( !entry->handle->impl().reserveStart() ) continue;
+		const std::scoped_lock lock { m_mutex };
+		if ( !m_running.load() ) return false;
 
-		ScriptWork work { std::move( *entry ) };
-		m_queue.erase( entry );
-		return work;
+		const auto found { m_runtimes.find( runtime ) };
+		if ( found == m_runtimes.end() ) return false;
+
+		enqueueEvent( *found->second, std::move( completion ) );
 	}
-
-	return std::nullopt;
-}
-
-bool ScriptRunner::complete( const std::size_t worker, ScriptCompletion completion )
-{
-	if ( !m_running.load() || worker >= m_workers.size() ) return false;
-
-	m_workers[ worker ]->deliver( std::move( completion ) );
 	return true;
 }
 
 void ScriptRunner::discard( const SessionContext* session )
 {
-	std::deque< ScriptWork > dropped {};
-
+	std::deque< ScriptWork > dropped;
 	{
 		const std::scoped_lock lock { m_mutex };
+		if ( !m_running.load() ) return;
 
-		for ( auto entry { m_queue.begin() }; entry != m_queue.end(); )
+		for ( const auto& [ id, runtime ] : m_runtimes )
 		{
-			if ( entry->handle.get() != session )
-			{
-				++entry;
-				continue;
-			}
+			if ( !runtime->sessions.contains( &session->impl() ) ) continue;
 
-			dropped.emplace_back( std::move( *entry ) );
-			entry = m_queue.erase( entry );
+			for ( auto event { runtime->events.begin() }; event != runtime->events.end(); )
+			{
+				auto* work { std::get_if< ScriptWork >( &*event ) };
+				if ( work == nullptr || work->handle.get() != session )
+				{
+					++event;
+					continue;
+				}
+
+				dropped.push_back( std::move( *work ) );
+				// The consumer may already hold this event's permit. Replace it rather
+				// than removing a queue slot and desynchronizing the semaphore count.
+				*event = WakeReason::SESSION_CAPACITY_CHANGED;
+				++event;
+				--runtime->load;
+			}
+			for ( auto work { runtime->work.begin() }; work != runtime->work.end(); )
+			{
+				if ( work->handle.get() != session )
+				{
+					++work;
+					continue;
+				}
+
+				dropped.push_back( std::move( *work ) );
+				work = runtime->work.erase( work );
+				--runtime->load;
+			}
+			enqueueEvent( *runtime, WakeReason::SESSION_CAPACITY_CHANGED );
 		}
 	}
-
-	for ( ScriptWork& work : dropped ) work.handle->impl().retireQueued( work.id );
+	for ( const auto& work : dropped ) work.handle->impl().retireQueued( work.id );
 }
 
 } // namespace idhan::downloader

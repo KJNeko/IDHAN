@@ -7,9 +7,9 @@
 
 #include <algorithm>
 #include <atomic>
-#include <charconv>
 #include <chrono>
 #include <cstdint>
+#include <format>
 #include <limits>
 #include <map>
 #include <simdjson.h>
@@ -22,36 +22,28 @@
 #include "fileMetadata.hpp"
 #include "idValidation.hpp"
 #include "idhan/db/DBContext.hpp"
+#include "idhan/http/routing/ReflectedRoutes.hpp"
 #include "jobs/JobContext.hpp"
 #include "jobs/JobTask.hpp"
-#include "jobs/UrlReorganizationProgress.hpp"
+#include "jobs/UrlDeduplicationProgress.hpp"
 #include "jsonBody.hpp"
 #include "logging/log.hpp"
 
 namespace idhan::httpapi
 {
 
-[[nodiscard]] static http::PathParameter jobIdPathParameter()
-{
-	return http::PathParameter {
-		"job_id",
-		[]( const std::string_view value ) -> std::expected< void, http::ParseError >
-		{
-			idhan::JobID id {};
-			const auto result { std::from_chars( value.data(), value.data() + value.size(), id ) };
-			if ( result.ec != std::errc {} || result.ptr != value.data() + value.size() )
-				return std::unexpected( http::ParseError { "job_id", "must be a job id" } );
-			return {};
-		}
-	};
-}
-
 [[nodiscard]] static std::string responseText( const http::Response& response )
 {
 	const auto* body { std::get_if< std::unique_ptr< folly::IOBuf > >( &response.body ) };
-	if ( !body || !*body ) return "Unknown error";
-
-	return ( *body )->to< std::string >();
+	std::string text { body && *body ? ( *body )->to< std::string >() : std::string { "Unknown error" } };
+	simdjson::dom::parser parser;
+	simdjson::dom::element document;
+	if ( parser.parse( text ).get( document ) == simdjson::SUCCESS )
+	{
+		std::string_view error;
+		if ( document[ "error" ].get_string().get( error ) == simdjson::SUCCESS ) text.assign( error );
+	}
+	return text;
 }
 
 [[nodiscard]] static std::string toCompactJson( const Json::Value& value )
@@ -61,36 +53,67 @@ namespace idhan::httpapi
 	return Json::writeString( builder, value );
 }
 
-static void appendJobStatus(
-	simdjson::builder::string_builder& builder,
-	const idhan::JobID job_id,
-	const std::shared_ptr< JobContext >& job,
-	const bool cleanup_on_completion )
+//! JobTaskStatus owns the canonical snapshot so completion fields remain consistent.
+template < typename T >
+T jobSnapshotField( const Json::Value& field )
 {
-	if ( !job )
+	if constexpr ( std::same_as< T, std::string > )
 	{
-		Json::Value missing;
-		missing[ "job_id" ] = job_id;
-		missing[ "status" ] = "not_found";
-		builder.append_raw( toCompactJson( missing ) );
-		return;
-	}
+		if ( !field.isString() ) throw std::logic_error( "Job snapshot field must be a string" );
 
+		return field.asString();
+	}
+	else if constexpr ( std::same_as< T, bool > )
+	{
+		if ( !field.isBool() ) throw std::logic_error( "Job snapshot field must be a boolean" );
+
+		return field.asBool();
+	}
+	else
+	{
+		static_assert( std::same_as< T, std::int64_t > );
+		if ( !field.isInt64() ) throw std::logic_error( "Job snapshot field must be an integer" );
+
+		return field.asInt64();
+	}
+}
+
+static JobStatusResponse jobStatusResponse( const std::shared_ptr< JobContext >& job, const bool cleanup )
+{
 	const auto status { job->status() };
 	const auto snapshot { status->snapshot() };
-	if ( cleanup_on_completion && snapshot[ "completed" ].asBool() ) status->m_cleanup_requested = true;
-	builder.append_raw( toCompactJson( snapshot ) );
+	JobStatusResponse response {
+		job->id(),
+		jobSnapshotField< std::string >( snapshot[ "job_name" ] ),
+		jobSnapshotField< bool >( snapshot[ "continuous" ] ),
+		jobSnapshotField< std::string >( snapshot[ "location" ] ),
+		{},
+		jobSnapshotField< bool >( snapshot[ "completed" ] ),
+		jobSnapshotField< std::string >( snapshot[ "status" ] )
+	};
+	if ( cleanup && response.completed ) status->m_cleanup_requested = true;
+
+	if ( snapshot.isMember( "start_time" ) )
+		response.start_time.emplace( jobSnapshotField< std::int64_t >( snapshot[ "start_time" ] ) );
+
+	if ( snapshot.isMember( "end_time" ) )
+		response.end_time.emplace( jobSnapshotField< std::int64_t >( snapshot[ "end_time" ] ) );
+
+	if ( snapshot.isMember( "error" ) )
+		response.error.emplace( jobSnapshotField< std::string >( snapshot[ "error" ] ) );
+
+	if ( snapshot.isMember( "progress" ) )
+		response.progress.emplace( http::JsonDocument { toCompactJson( snapshot[ "progress" ] ) } );
+
+	if ( snapshot.isMember( "response" ) )
+		response.response.emplace( http::JsonDocument { toCompactJson( snapshot[ "response" ] ) } );
+
+	return response;
 }
 
-[[nodiscard]] static http::Response jsonResponse( simdjson::builder::string_builder& builder )
-{
-	auto json { builder.view() };
-	if ( json.error() ) throw std::runtime_error( simdjson::error_message( json.error() ) );
-
-	return http::Response::json( 200, folly::IOBuf::copyBuffer( *json ) );
-}
-
-static http::HTTPTask< http::Response > jobStatus( [[maybe_unused]] db::DBContext& db, http::RequestContext context )
+http::HTTPTask< http::JsonResult< JobStatusResponse > > jobStatus(
+	[[maybe_unused]] db::DBContext& db,
+	http::RequestContext context )
 {
 	const auto job_id_e { context.parameters().scalar< idhan::JobID >( "job_id" ) };
 	if ( !job_id_e ) co_return http::Response::error( 400, job_id_e.error().message );
@@ -98,34 +121,19 @@ static http::HTTPTask< http::Response > jobStatus( [[maybe_unused]] db::DBContex
 	const auto job { getJobRuntime().getJob( *job_id_e ) };
 	if ( !job ) co_return http::Response::error( 404, std::format( "Job {} not found", *job_id_e ) );
 
-	simdjson::builder::string_builder builder;
-	appendJobStatus( builder, *job_id_e, job, true );
-	co_return jsonResponse( builder );
+	co_return http::JsonResponse< JobStatusResponse > { jobStatusResponse( job, true ) };
 }
 
-static http::HTTPTask< http::Response > jobsStatus( [[maybe_unused]] db::DBContext& db, http::RequestContext context )
+http::HTTPTask< http::JsonResult< JobsStatusResponse > > jobsStatus(
+	[[maybe_unused]] db::DBContext& db,
+	http::Query< JobsStatusQuery > query )
 {
-	const auto cleanup_e { context.parameters().optional< bool >( "cleanup" ) };
-	if ( !cleanup_e ) co_return http::Response::error( 400, cleanup_e.error().message );
-	const auto cleanup { cleanup_e->value_or( false ) };
+	const auto cleanup { query.value.cleanup.value_or( false ) };
 
-	simdjson::builder::string_builder builder;
-	builder.start_object();
-	builder.escape_and_append_with_quotes( "jobs" );
-	builder.append_colon();
-	builder.start_array();
+	JobsStatusResponse response {};
+	for ( const auto& job : getJobRuntime().getAllJobs() ) response.jobs.push_back( jobStatusResponse( job, cleanup ) );
 
-	bool first { true };
-	for ( const auto& job : getJobRuntime().getAllJobs() )
-	{
-		if ( !first ) builder.append_comma();
-		first = false;
-		appendJobStatus( builder, job->id(), job, cleanup );
-	}
-
-	builder.end_array();
-	builder.end_object();
-	co_return jsonResponse( builder );
+	co_return http::JsonResponse< JobsStatusResponse > { std::move( response ) };
 }
 
 static JobTask rescanMetadataJob( std::vector< RecordID > record_ids, db::DBContext& db )
@@ -135,7 +143,16 @@ static JobTask rescanMetadataJob( std::vector< RecordID > record_ids, db::DBCont
 	if ( record_ids.empty() )
 	{
 		const auto rows { co_await folly::coro::co_withExecutor(
-			executor, db.query( "SELECT record_id FROM file_info" ).rows< RecordID >() ) };
+				executor,
+				db.query(
+					  //language=postgresql
+					  R"SQL(
+					  SELECT
+					      record_id
+					  FROM file_info
+				  )SQL" )
+				  .rows< RecordID >() )
+		};
 		record_ids.reserve( rows.size() );
 		for ( const auto& [ record_id ] : rows ) record_ids.push_back( record_id );
 	}
@@ -168,7 +185,9 @@ static JobTask rescanMetadataJob( std::vector< RecordID > record_ids, db::DBCont
 	co_await setJobResponse( std::move( result ) );
 }
 
-static http::HTTPTask< http::Response > rescanMetadata( db::DBContext& db, http::RequestContext context )
+http::HTTPTask< http::JsonResult< QueuedJobResponse > > rescanMetadata(
+	db::DBContext& db,
+	http::RequestContext context )
 {
 	std::vector< RecordID > record_ids {};
 
@@ -205,14 +224,10 @@ static http::HTTPTask< http::Response > rescanMetadata( db::DBContext& db, http:
 
 	const auto job { queueJob( rescanMetadataJob( std::move( record_ids ), db ), "Rescanning record metadata" ) };
 
-	simdjson::builder::string_builder builder;
-	builder.start_object();
-	builder.append_key_value( "job_id", job->id() );
-	builder.end_object();
-	co_return jsonResponse( builder );
+	co_return http::JsonResponse< QueuedJobResponse > { { job->id() } };
 }
 
-struct UrlReorganizationGroup
+struct UrlDeduplicationGroup
 {
 	std::vector< UrlID > ids {};
 	UrlID preferred_type_id { std::numeric_limits< UrlID >::max() };
@@ -225,8 +240,8 @@ struct UrlSurvivorPreparation
 	std::optional< UrlID > collision {};
 };
 
-// Reserve the lowest ID's preferred type before removing any members. This preserves
-// the global type preference even if a later batch fails and the job is rerun.
+//! Reserve the lowest ID's preferred type before removing any members. This preserves
+//! the global type preference even if a later batch fails and the job is rerun.
 static runtime::Task< UrlSurvivorPreparation > prepareUrlSurvivor(
 	db::DBContext& db,
 	const UrlID survivor,
@@ -235,14 +250,31 @@ static runtime::Task< UrlSurvivorPreparation > prepareUrlSurvivor(
 	std::string preferred_type )
 {
 	auto transaction { co_await db.transaction() };
-	co_await transaction.query( "LOCK TABLE urls IN SHARE ROW EXCLUSIVE MODE" ).result();
+	co_await transaction
+			 .query(
+				 //language=postgresql
+				 R"SQL(
+				LOCK TABLE urls IN SHARE ROW EXCLUSIVE MODE
+			)SQL" )
+			 .result();
 	db::DBBindings bindings {};
 	bindings.bind( survivor );
 	bindings.bind( url );
 	const auto rows {
 		co_await transaction
 			.query(
-				"SELECT url_id, url_type::text FROM urls WHERE url_id = $1 OR url = $2 ORDER BY url_id FOR UPDATE",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    url_id,
+					    url_type::text
+					FROM urls
+					WHERE url_id = $1
+					    OR url = $2
+					ORDER BY
+					    url_id
+					FOR UPDATE
+				)SQL",
 				std::move( bindings ) )
 			.rows< UrlID, std::string >()
 	};
@@ -262,8 +294,7 @@ static runtime::Task< UrlSurvivorPreparation > prepareUrlSurvivor(
 		}
 	}
 
-	if ( !found_survivor )
-		throw std::runtime_error( "A URL survivor was removed during reorganization; rerun the job" );
+	if ( !found_survivor ) throw std::runtime_error( "A URL survivor was removed during deduplication; rerun the job" );
 
 	const auto winner { collision.has_value() ? std::min( survivor, collision.value() ) : survivor };
 	db::DBBindings type_bindings {};
@@ -271,20 +302,27 @@ static runtime::Task< UrlSurvivorPreparation > prepareUrlSurvivor(
 	type_bindings.bind( preferred_type );
 	co_await transaction
 		.query(
-			"UPDATE urls SET url_type = $2::UrlType WHERE url_id = $1 AND url_type <> $2::UrlType",
+			//language=postgresql
+			R"SQL(
+				UPDATE
+				    urls
+				SET url_type = $2::UrlType
+				WHERE url_id = $1
+				    AND url_type <> $2::UrlType
+			)SQL",
 			std::move( type_bindings ) )
 		.result();
 	co_await transaction.commit();
 	co_return UrlSurvivorPreparation { winner, collision };
 }
 
-// Each transaction moves at most 1000 mappings. Parent row locks prevent new
-// references to the loser while its last mappings and URL row are removed.
+//! Each transaction moves at most 1000 mappings. Parent row locks prevent new
+//! references to the loser while its last mappings and URL row are removed.
 static runtime::Task<> mergeUrlInChunks(
 	db::DBContext& db,
 	const UrlID survivor,
 	const UrlID loser,
-	std::shared_ptr< jobs::UrlReorganizationProgress > progress )
+	std::shared_ptr< jobs::UrlDeduplicationProgress > progress )
 {
 	for ( ;; )
 	{
@@ -294,7 +332,16 @@ static runtime::Task<> mergeUrlInChunks(
 		const auto held {
 			co_await transaction
 				.query(
-					"SELECT url_id FROM urls WHERE url_id = ANY($1::integer[]) ORDER BY url_id FOR UPDATE",
+					//language=postgresql
+					R"SQL(
+						SELECT
+						    url_id
+						FROM urls
+						WHERE url_id = ANY ($1::integer[])
+						ORDER BY
+						    url_id
+						FOR UPDATE
+					)SQL",
 					std::move( locks ) )
 				.rows< UrlID >()
 		};
@@ -306,18 +353,35 @@ static runtime::Task<> mergeUrlInChunks(
 		const auto moved {
 			co_await transaction
 				.query(
+					//language=postgresql
 					R"SQL(
-			WITH batch AS (
-			    SELECT record_id FROM url_mappings WHERE url_id = $2 ORDER BY record_id LIMIT 1000
-			), removed AS (
-			    DELETE FROM url_mappings m USING batch b
-			    WHERE m.url_id = $2 AND m.record_id = b.record_id RETURNING m.record_id
-			), inserted AS (
-			    INSERT INTO url_mappings (record_id, url_id)
-			    SELECT record_id, $1 FROM removed ON CONFLICT DO NOTHING
-			)
-			SELECT count(*) FROM removed
-		)SQL",
+						WITH batch AS (
+						    SELECT
+						        record_id
+						    FROM url_mappings
+						    WHERE url_id = $2
+						    ORDER BY
+						        record_id
+						    LIMIT 1000
+						),
+						removed AS (
+						    DELETE FROM url_mappings m USING batch b
+						WHERE m.url_id = $2
+						    AND m.record_id = b.record_id
+						RETURNING m.record_id
+						), inserted AS (
+						    INSERT INTO url_mappings (record_id, url_id)
+						    SELECT
+						        record_id,
+						        $1
+						    FROM removed
+						    ON CONFLICT
+						        DO NOTHING
+						)
+						    SELECT
+						        count(*)
+						    FROM removed
+					)SQL",
 					std::move( bindings ) )
 				.rows< std::int64_t >()
 		};
@@ -332,14 +396,23 @@ static runtime::Task<> mergeUrlInChunks(
 			log_bindings.bind( loser );
 			co_await transaction
 				.query(
+					//language=postgresql
 					R"SQL(
-				INSERT INTO url_log (url_id, log_time, last_code)
-				SELECT $1, log_time, last_code FROM url_log WHERE url_id = $2
-				ON CONFLICT (url_id) DO UPDATE
-				SET log_time = EXCLUDED.log_time, last_code = EXCLUDED.last_code
-				WHERE EXCLUDED.log_time > url_log.log_time
-				   OR (url_log.log_time IS NULL AND EXCLUDED.log_time IS NOT NULL)
-			)SQL",
+						INSERT INTO url_log (url_id, log_time, last_code)
+						SELECT
+						    $1,
+						    log_time,
+						    last_code
+						FROM url_log
+						WHERE url_id = $2
+						ON CONFLICT (url_id)
+						    DO UPDATE SET
+						        log_time = EXCLUDED.log_time,
+						        last_code = EXCLUDED.last_code
+						    WHERE EXCLUDED.log_time > url_log.log_time
+						        OR (url_log.log_time IS NULL
+						            AND EXCLUDED.log_time IS NOT NULL)
+					)SQL",
 					std::move( log_bindings ) )
 				.result();
 			db::DBBindings type_bindings {};
@@ -347,18 +420,41 @@ static runtime::Task<> mergeUrlInChunks(
 			type_bindings.bind( loser );
 			co_await transaction
 				.query(
+					//language=postgresql
 					R"SQL(
-				UPDATE urls s SET url_type = l.url_type FROM urls l
-				WHERE s.url_id = $1 AND l.url_id = $2 AND s.url_type = 'unknown' AND l.url_type <> 'unknown'
-			)SQL",
+						UPDATE
+						    urls s
+						SET url_type = l.url_type
+						FROM urls l
+						WHERE s.url_id = $1
+						    AND l.url_id = $2
+						    AND s.url_type = 'unknown'
+						    AND l.url_type <> 'unknown'
+					)SQL",
 					std::move( type_bindings ) )
 				.result();
 			db::DBBindings delete_log {};
 			delete_log.bind( loser );
-			co_await transaction.query( "DELETE FROM url_log WHERE url_id = $1", std::move( delete_log ) ).result();
+			co_await transaction
+					 .query(
+						 //language=postgresql
+						 R"SQL(
+						DELETE FROM url_log
+						WHERE url_id = $1
+					)SQL",
+						 std::move( delete_log ) )
+					 .result();
 			db::DBBindings delete_url {};
 			delete_url.bind( loser );
-			co_await transaction.query( "DELETE FROM urls WHERE url_id = $1", std::move( delete_url ) ).result();
+			co_await transaction
+					 .query(
+						 //language=postgresql
+						 R"SQL(
+						DELETE FROM urls
+						WHERE url_id = $1
+					)SQL",
+						 std::move( delete_url ) )
+					 .result();
 		}
 
 		co_await transaction.commit();
@@ -367,18 +463,34 @@ static runtime::Task<> mergeUrlInChunks(
 	}
 }
 
-// A concurrent importer may create the canonical spelling between batches. Check
-// under a short write lock, merging that row too before claiming the sorted URL.
+//! A concurrent importer may create the canonical spelling between batches. Check
+//! under a short write lock, merging that row too before claiming the sorted URL.
 static runtime::Task< std::optional< UrlID > > saveSortedUrl( db::DBContext& db, const UrlID survivor, std::string url )
 {
 	auto transaction { co_await db.transaction() };
-	co_await transaction.query( "LOCK TABLE urls IN SHARE ROW EXCLUSIVE MODE" ).result();
+	co_await transaction
+			 .query(
+				 //language=postgresql
+				 R"SQL(
+				LOCK TABLE urls IN SHARE ROW EXCLUSIVE MODE
+			)SQL" )
+			 .result();
 	db::DBBindings lookup {};
 	lookup.bind( url );
 	lookup.bind( survivor );
 	const auto collision {
-		co_await transaction.query( "SELECT url_id FROM urls WHERE url = $1 AND url_id <> $2", std::move( lookup ) )
-			.rows< UrlID >()
+		co_await transaction
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    url_id
+					FROM urls
+					WHERE url = $1
+					    AND url_id <> $2
+				)SQL",
+					 std::move( lookup ) )
+				 .rows< UrlID >()
 	};
 	if ( !collision.empty() )
 	{
@@ -390,43 +502,82 @@ static runtime::Task< std::optional< UrlID > > saveSortedUrl( db::DBContext& db,
 	db::DBBindings update {};
 	update.bind( survivor );
 	update.bind( url );
-	co_await transaction.query( "UPDATE urls SET url = $2 WHERE url_id = $1 AND url <> $2", std::move( update ) )
-		.result();
+	co_await transaction
+			 .query(
+				 //language=postgresql
+				 R"SQL(
+				UPDATE
+				    urls
+				SET url = $2
+				WHERE url_id = $1
+				    AND url <> $2
+			)SQL",
+				 std::move( update ) )
+			 .result();
 	co_await transaction.commit();
 	co_return std::nullopt;
 }
 
-static runtime::Task< Json::Value > reorganizeUrls(
+static constexpr std::int64_t url_normalization_page_size { 1024 };
+
+static runtime::Task< Json::Value > deduplicateUrls(
 	db::DBContext& db,
-	std::shared_ptr< jobs::UrlReorganizationProgress > progress )
+	std::shared_ptr< jobs::UrlDeduplicationProgress > progress )
 {
 	static std::atomic_bool active {};
-	if ( active.exchange( true ) ) throw std::runtime_error( "URL reorganization is already running" );
+	if ( active.exchange( true ) ) throw std::runtime_error( "URL deduplication is already running" );
 
 	const auto release { folly::makeGuard( [] { active.store( false ); } ) };
 	auto& downloader { downloader::downloadSessionManager() };
-	const auto initialized_e { downloader.classStorageUrls( {} ) };
+	const auto initialized_e { co_await downloader.normalizeUrls( {} ) };
 	if ( !initialized_e.has_value() ) throw std::runtime_error( initialized_e.error() );
 
-	// Bound the scan to IDs present at startup; new unsorted imports can be handled
-	// by a later run. Keyset pages avoid a full-table count or an OFFSET scan.
-	const auto last { co_await db.query( "SELECT url_id FROM urls ORDER BY url_id DESC LIMIT 1" ).rows< UrlID >() };
+	// Bound the scan to IDs present at startup; later imports are handled by a later run.
+	const auto last{
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    url_id
+					FROM urls
+					ORDER BY
+					    url_id DESC
+					LIMIT 1
+				)SQL" )
+				 .rows< UrlID >()
+	};
 	const UrlID upper { last.empty() ? 0 : std::get< 0 >( last.row( 0 ) ) };
 	UrlID cursor {};
-	std::map< std::string, UrlReorganizationGroup > groups {};
+	std::map< std::string, UrlDeduplicationGroup > groups {};
 	std::uint64_t total {};
 	std::uint64_t sorted {};
+	std::uint64_t invalid {};
 	std::uint64_t planned_merges {};
-	progress->setPhase( "sorting", "Reading and sorting URLs in pages of 1000" );
+	progress->setPhase(
+		"sorting", std::format( "Reading and normalizing URLs in pages of {}", url_normalization_page_size ) );
 	for ( ;; )
 	{
 		db::DBBindings bindings {};
 		bindings.bind( cursor );
 		bindings.bind( upper );
+		bindings.bind( url_normalization_page_size );
 		const auto rows {
 			co_await db
 				.query(
-					"SELECT url_id, url, url_type::text FROM urls WHERE url_id > $1 AND url_id <= $2 ORDER BY url_id LIMIT 1000",
+					//language=postgresql
+					R"SQL(
+						SELECT
+						    url_id,
+						    url,
+						    url_type::text
+						FROM urls
+						WHERE url_id > $1
+						    AND url_id <= $2
+						ORDER BY
+						    url_id
+						LIMIT $3
+					)SQL",
 					std::move( bindings ) )
 				.rows< UrlID, std::string, std::string >()
 		};
@@ -435,20 +586,30 @@ static runtime::Task< Json::Value > reorganizeUrls(
 		std::vector< std::string > urls {};
 		urls.reserve( rows.size() );
 		for ( const auto& [ id, url, type ] : rows ) urls.push_back( url );
-		auto sorted_e { downloader.classStorageUrls( std::move( urls ) ) };
-		if ( !sorted_e.has_value() ) throw std::runtime_error( sorted_e.error() );
+		auto normalized_e { co_await downloader.normalizeUrls( std::move( urls ) ) };
+		if ( !normalized_e.has_value() ) throw std::runtime_error( normalized_e.error() );
 
-		auto& normalized { sorted_e.value() };
+		auto& normalized { normalized_e.value() };
 		std::size_t index {};
 		for ( const auto& [ id, url, type ] : rows )
 		{
-			auto& target { normalized[ index++ ] };
+			auto& target_e { normalized[ index++ ] };
 			cursor = id;
 			++total;
-			// Already sorted rows cannot collide with each other (urls.url is UNIQUE).
+			// Invalid legacy URLs stay as stored; new ones are rejected before reaching the table.
+			if ( !target_e.has_value() )
+			{
+				log::warn( "URL normalization: keeping url_id {} unchanged: {}", id, target_e.error() );
+				++invalid;
+				continue;
+			}
+
+			auto& target { target_e.value().url };
+			// Already normalized rows cannot collide with each other (urls.url is UNIQUE).
 			// Find their canonical spelling by its URL index when processing changed rows.
 			if ( target == url ) continue;
 
+			log::debug( "URL normalization: url_id {} {} -> {}", id, url, target );
 			++sorted;
 			auto& group { groups[ target ] };
 			if ( !group.ids.empty() ) ++planned_merges;
@@ -462,8 +623,20 @@ static runtime::Task< Json::Value > reorganizeUrls(
 		}
 
 		progress->scanned( total, sorted );
+		log::debug(
+			"URL normalization: scanned {} URLs through url_id {}; {} changed, {} invalid",
+			total,
+			cursor,
+			sorted,
+			invalid );
 	}
 
+	log::info(
+		"URL normalization: scanned {} URLs; {} changed, {} invalid, {} merges planned",
+		total,
+		sorted,
+		invalid,
+		planned_merges );
 	progress->planned( total, total - planned_merges, planned_merges );
 	std::uint64_t merged {};
 	for ( auto& [ url, group ] : groups )
@@ -504,7 +677,7 @@ static runtime::Task< Json::Value > reorganizeUrls(
 			if ( !added.has_value() ) break;
 
 			if ( added.value() < survivor )
-				throw std::runtime_error( "A lower URL ID appeared during reorganization; rerun the job" );
+				throw std::runtime_error( "A lower URL ID appeared during deduplication; rerun the job" );
 
 			if ( added.value() > upper ) ++total;
 
@@ -516,72 +689,41 @@ static runtime::Task< Json::Value > reorganizeUrls(
 	}
 
 	progress->committed( merged );
+	log::info( "URL normalization: merged {} duplicate URLs", merged );
 	Json::Value result;
-	result[ "kind" ] = "url_reorganization";
+	result[ "kind" ] = "url_deduplication";
 	result[ "total_count" ] = static_cast< Json::UInt64 >( total );
 	result[ "unique_count" ] = total - merged;
 	result[ "merged_count" ] = static_cast< Json::UInt64 >( merged );
 	result[ "sorted_count" ] = static_cast< Json::UInt64 >( sorted );
+	result[ "invalid_count" ] = static_cast< Json::UInt64 >( invalid );
 	co_return result;
 }
 
-static JobTask reorganizeUrlsJob( db::DBContext& db )
+static JobTask deduplicateUrlsJob( db::DBContext& db )
 {
-	auto progress { std::make_shared< jobs::UrlReorganizationProgress >() };
+	auto progress { std::make_shared< jobs::UrlDeduplicationProgress >() };
 	co_await setJobProgress( progress );
 	try
 	{
 		auto result {
-			co_await folly::coro::co_withExecutor( getJobRuntime().executor(), reorganizeUrls( db, progress ) )
+			co_await folly::coro::co_withExecutor( getJobRuntime().executor(), deduplicateUrls( db, progress ) )
 		};
 		co_await setJobResponse( std::move( result ) );
 	}
 	catch ( ... )
 	{
-		progress->setPhase( "failed", "URL reorganization failed; earlier batches remain saved. Rerun to continue" );
+		progress->setPhase( "failed", "URL deduplication failed; earlier batches remain saved. Rerun to continue" );
 		throw;
 	}
 }
 
-static http::HTTPTask< http::Response > queueUrlReorganization(
+http::HTTPTask< http::JsonResult< QueuedJobResponse > > queueUrlDeduplication(
 	db::DBContext& db,
 	[[maybe_unused]] http::RequestContext context )
 {
-	const auto job { queueJob( reorganizeUrlsJob( db ), "Reorganizing URLs" ) };
-	simdjson::builder::string_builder builder;
-	builder.start_object();
-	builder.append_key_value( "job_id", job->id() );
-	builder.end_object();
-	co_return jsonResponse( builder );
-}
-
-std::vector< http::RouteDefinition > jobRoutes( db::DBContext& db )
-{
-	std::vector< http::RouteDefinition > routes {};
-
-	const auto add =
-		[ &routes, &db ](
-			const proxygen::HTTPMethod method,
-			std::string path,
-			std::vector< http::PathParameter > path_parameters,
-			http::HTTPTask< http::Response > ( *handler )( db::DBContext&, http::RequestContext ) )
-	{
-		auto bound = [ &db, handler ]( http::RequestContext context ) -> http::HTTPTask< http::Response >
-		{ co_return co_await handler( db, std::move( context ) ); };
-
-		routes.push_back(
-			http::RouteDefinition {
-				http::RouteMetadata {
-					method, std::move( path ), std::move( path_parameters ), { apiAuthValidation( db ) } },
-				std::move( bound ) } );
-	};
-
-	add( proxygen::HTTPMethod::GET, "/jobs/status", {}, jobsStatus );
-	add( proxygen::HTTPMethod::GET, "/jobs/{job_id}/status", { jobIdPathParameter() }, jobStatus );
-	add( proxygen::HTTPMethod::POST, "/jobs/metadata/rescan", {}, rescanMetadata );
-	add( proxygen::HTTPMethod::POST, "/jobs/urls/reorganize", {}, queueUrlReorganization );
-
-	return routes;
+	const auto job { queueJob( deduplicateUrlsJob( db ), "Deduplicating URLs" ) };
+	co_return http::JsonResponse< QueuedJobResponse > { { job->id() } };
 }
 
 } // namespace idhan::httpapi

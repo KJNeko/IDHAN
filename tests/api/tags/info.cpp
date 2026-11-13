@@ -126,8 +126,11 @@ class TagCountFixture : public ServerFixture
 			pqxx::work transaction { db() };
 			for ( const auto record : records )
 				transaction.exec(
-					"INSERT INTO file_info (record_id, size, mime_id, cluster_store_time, cluster_delete_time) "
-					"VALUES ($1, 123, $2, now(), now())",
+					//language=postgresql
+					R"SQL(
+						INSERT INTO file_info (record_id, size, mime_id, cluster_store_time, cluster_delete_time)
+						    VALUES ($1, 123, $2, now(), now())
+					)SQL",
 					pqxx::params { record, mime_ids::IMAGE_PNG } );
 			transaction.commit();
 		}

@@ -1,9 +1,3 @@
-/**
- * Log Viewer: the server's in-memory ring buffer, via GET /log?level=<level>. The endpoint returns
- * the whole buffer as plain text filtered to the requested level and above, so the body is replaced
- * on each fetch rather than appended. Logs are process-local, so a restart empties this.
- */
-
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { PanelProps } from '../../host/types';
 
@@ -92,7 +86,7 @@ function LogViewerPanel({ host }: PanelProps) {
 export const logViewerPanel = {
   type: 'log-viewer',
   title: 'Log Viewer',
-  description: "The server's in-memory log ring buffer, filtered by level.",
+	description: 'Server logs.',
   component: LogViewerPanel,
   configVersion: 1,
   singleton: true,

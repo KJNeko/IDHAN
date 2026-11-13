@@ -16,20 +16,11 @@ interface ModelChoice {
 }
 
 const jobOptions = {
-    urls: {label: 'Reorganize URLs', description: 'Sort URLs using URL class rules and merge matching URLs.'},
-    metadata: {
-        label: 'Rescan metadata',
-        description: 'Parse stored files again to refresh their metadata. Leave record IDs empty to scan all records with files.'
-    },
-    cluster: {
-        label: 'Scan cluster',
-        description: 'Scan a storage cluster and fill in missing MIME types and metadata. Optionally verify file hashes.'
-    },
-    embeddings: {
-        label: 'Generate missing embeddings',
-        description: 'Resume embedding generation for records missing vectors from the selected model.'
-    },
-} satisfies Record<JobKind, { label: string; description: string }>;
+	urls: {label: 'Deduplicate URLs'},
+	metadata: {label: 'Rescan metadata'},
+	cluster: {label: 'Scan cluster'},
+	embeddings: {label: 'Generate missing embeddings'},
+} satisfies Record<JobKind, { label: string }>;
 
 export function JobLauncher({host, jobs, onQueued}: {
     host: PanelProps['host'];
@@ -38,6 +29,7 @@ export function JobLauncher({host, jobs, onQueued}: {
 }) {
     const [kind, setKind] = useState<JobKind>('urls');
     const [recordIds, setRecordIds] = useState('');
+	const [metadataScope, setMetadataScope] = useState<'all' | 'ids'>('all');
     const [clusters, setClusters] = useState<ClusterChoice[]>([]);
     const [models, setModels] = useState<ModelChoice[]>([]);
     const [target, setTarget] = useState('');
@@ -81,7 +73,7 @@ export function JobLauncher({host, jobs, onQueued}: {
         return () => controller.abort();
     }, [kind, host, reload]);
 
-    const jobName = kind === 'urls' ? 'Reorganizing URLs'
+	const jobName = kind === 'urls' ? 'Deduplicating URLs'
         : kind === 'metadata' ? 'Rescanning record metadata'
             : kind === 'cluster' ? `Scanning cluster ${target}` : `Embedding backfill for ${target}`;
     const running = jobs.some(job => job.job_name === jobName && job.status === 'running');
@@ -96,10 +88,11 @@ export function JobLauncher({host, jobs, onQueued}: {
         try {
             let job: { job_id: number };
             if (kind === 'urls') {
-                job = await api.reorganizeUrls();
+				job = await api.deduplicateUrls();
             } else if (kind === 'metadata') {
                 // Accept positive decimal record IDs separated by whitespace or commas.
-                const tokens = recordIds.trim() ? recordIds.trim().split(/[\s,]+/) : [];
+				const tokens = metadataScope === 'ids' && recordIds.trim() ? recordIds.trim().split(/[\s,]+/) : [];
+				if (metadataScope === 'ids' && tokens.length === 0) throw new Error('Record IDs required.');
                 if (tokens.some(token => !/^\d+$/.test(token) || Number(token) <= 0 || Number(token) > 2147483647)) {
                     throw new Error('Enter positive record IDs up to 2147483647, separated by spaces or commas.');
                 }
@@ -140,10 +133,19 @@ export function JobLauncher({host, jobs, onQueued}: {
                                                                                  value={value}>{option.label}</option>)}
                 </select>
             </label>
-            {kind === 'metadata' && <label>Record IDs (optional)
-                <input value={recordIds} onChange={event => setRecordIds(event.target.value)}
-                       placeholder="All records with files" disabled={queueing}/>
-            </label>}
+			{kind === 'metadata' && <>
+                <label>Scope
+                    <select aria-label="Metadata scope" value={metadataScope} disabled={queueing}
+                            onChange={event => setMetadataScope(event.target.value as 'all' | 'ids')}>
+                        <option value="all">All records with files</option>
+                        <option value="ids">Specific record IDs</option>
+                    </select>
+                </label>
+				{metadataScope === 'ids' && <label>Record IDs
+                    <input aria-label="Record IDs" value={recordIds} required
+                           onChange={event => setRecordIds(event.target.value)} disabled={queueing}/>
+                </label>}
+            </>}
             {kind === 'cluster' && <label>Cluster
                 <select value={target} onChange={event => setTarget(event.target.value)} disabled={loading || queueing}>
                     {!clusters.length &&
@@ -167,8 +169,8 @@ export function JobLauncher({host, jobs, onQueued}: {
             {needsTarget && <button type="button" disabled={loading || queueing}
                                     onClick={() => setReload(value => value + 1)}>Refresh choices</button>}
         </div>
-        <p className="muted">{jobOptions[kind].description}</p>
-        {kind === 'cluster' && <label className="job-auto">
+
+		{kind === 'cluster' && <label className="job-auto">
             <input type="checkbox" checked={verifyHash} onChange={event => setVerifyHash(event.target.checked)}
                    disabled={queueing}/> Verify file hashes
         </label>}

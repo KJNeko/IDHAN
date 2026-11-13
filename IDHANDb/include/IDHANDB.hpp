@@ -74,8 +74,7 @@ class DBTask
 	[[nodiscard]] std::runtime_error connectionError( std::string_view operation ) const;
 
   public:
-
-	// Replacement tasks own cold operation state; the PGconn API below is the legacy prototype.
+	//! Replacement tasks own cold operation state; the PGconn API below is the legacy prototype.
 	explicit DBTask( std::shared_ptr< DBOperation > );
 
 	class Awaiter
@@ -227,7 +226,6 @@ class IDHANPQContext
 		{
 			if ( PQsendQuery( conn, sql.data() ) != 1 )
 			{
-				// failed
 			}
 			else
 			{
@@ -269,7 +267,6 @@ class IDHANPQContext
 					 0 )
 			     != 1 )
 			{
-				// failed
 			}
 			else
 			{

@@ -1,9 +1,3 @@
-/**
- * A single-tag autocomplete picker that resolves to a concrete tag id rather than text, yielding the
- * picked AutocompleteResult. Used by the Tag Relationships panel, whose endpoints need existing ids.
- * The Tag Editor keeps its own inline box because it adds text and lets the server create tags.
- */
-
 import { useEffect, useState } from 'react';
 import type { HostApi } from '../../host/types';
 import type { AutocompleteResult } from '../../api/types';
@@ -22,10 +16,13 @@ interface TagPickerProps {
 export function TagPicker({ host, value, onPick, domain, placeholder, disabled }: TagPickerProps) {
   const [input, setInput] = useState('');
   const [suggestions, setSuggestions] = useState<AutocompleteResult[]>([]);
+    const [autocompleteError, setAutocompleteError] = useState<string | null>(null);
   const [highlight, setHighlight] = useState(-1);
 
   // 2-char minimum: 1-char prefixes scan the whole tag table server-side.
   useEffect(() => {
+      setSuggestions([]);
+      setAutocompleteError(null);
     const token = input.trim();
     if (token.length < 2) {
       setSuggestions([]);
@@ -38,7 +35,9 @@ export function TagPicker({ host, value, onPick, domain, placeholder, disabled }
         .then((results) => {
           if (!controller.signal.aborted) setSuggestions(results);
         })
-        .catch(() => {});
+          .catch((error: unknown) => {
+              if (!controller.signal.aborted) setAutocompleteError(`Tag suggestions unavailable: ${error instanceof Error ? error.message : String(error)}`);
+          });
     }, DEBOUNCE_MS);
     return () => {
       clearTimeout(timer);
@@ -98,6 +97,7 @@ export function TagPicker({ host, value, onPick, domain, placeholder, disabled }
 
   return (
     <div className="tagpick">
+        {autocompleteError && <p className="error" role="alert">{autocompleteError}</p>}
       <input
         className="search-input"
         value={input}

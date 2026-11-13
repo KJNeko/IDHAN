@@ -68,8 +68,12 @@ static std::string buildTermQuery(
 	query += " FROM ";
 	query += from_clause;
 
-	if ( joins_file_info ) query += " JOIN file_info fi USING (record_id)";
-	if ( join_records_for_hashes ) query += " JOIN records rc USING (record_id)";
+	if ( joins_file_info )
+		query += " JOIN file_info fi\n"
+		"USING (record_id)";
+	if ( join_records_for_hashes )
+		query += " JOIN records rc\n"
+		"USING (record_id)";
 	query += spec.joins;
 	query += extra_joins;
 
@@ -78,7 +82,8 @@ static std::string buildTermQuery(
 
 	if ( !where_core.empty() )
 	{
-		query += " AND (";
+		query += " \n"
+		"AND (";
 		query += where_core;
 		query += ')';
 	}
@@ -92,7 +97,8 @@ static std::string buildTermQuery(
 
 	if ( random_order )
 	{
-		query += " ORDER BY random()";
+		query += " ORDER BY\n"
+		"    random()";
 		return query;
 	}
 
@@ -270,7 +276,7 @@ static runtime::Task< Set > runFetch( FetchContext ctx, std::string query, std::
 static std::string domainFilter( const FetchContext& ctx )
 {
 	if ( ctx.tag_domains.empty() ) return {};
-	return " AND f.tag_domain_id = ANY($1)";
+	return " AND f.tag_domain_id = ANY ($1)";
 }
 
 std::string_view tagMappingTable( const HydrusDisplayType display )
@@ -327,7 +333,8 @@ runtime::Task< Set > fetchNamespace( FetchContext ctx, const NamespaceID tag_nam
 		format_ns::format( "{} f", tagMappingTable( ctx.display ) ),
 		"f",
 		true,
-		" JOIN tags t USING (tag_id)",
+		" JOIN tags t\n"
+		"USING (tag_id)",
 		where,
 		SortOrder::ASC,
 		false,

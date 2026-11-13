@@ -2,7 +2,6 @@
 
 #include "ThumbnailerModule.hpp"
 
-//! Thumbnailer for video via FFmpeg, decoding a representative frame to RGB.
 class FFMPEGThumbnailer final : public idhan::ThumbnailerModuleI
 {
   public:
@@ -15,17 +14,18 @@ class FFMPEGThumbnailer final : public idhan::ThumbnailerModuleI
 
 	[[nodiscard]] idhan::ModuleVersion version() override;
 
-	// each call owns its AVFormatContext/codec contexts, no shared state: safe to run concurrently
+	//! Each call owns its AVFormatContext/codec contexts, no shared state: safe to run concurrently
 	[[nodiscard]] bool threadSafe() override { return true; }
 
-	// the decoder runs its own thread pool, sized from the render budget
+	//! The decoder runs its own thread pool, sized from the render budget
 	[[nodiscard]] bool singleThreaded() override { return false; }
 
-	// createThumbnailFile encodes through vips, so this worker pays VIPS_INIT as well as codec setup
+	//! createThumbnailFile encodes through vips, so this worker pays VIPS_INIT as well as codec setup
 	[[nodiscard]] idhan::ModuleResidency residency() override { return idhan::ModuleResidency::PERSISTENT; }
 
 	[[nodiscard]] std::vector< idhan::MimeID > handleableMimes() override;
 
+	//! Returns an RGB video preview near 10% playback, fitted within the requested dimensions.
 	[[nodiscard]] std::expected< idhan::ThumbnailInfo, idhan::ModuleError > createThumbnailRaw(
 		idhan::ModuleCallData& data,
 		std::size_t width,

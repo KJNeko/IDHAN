@@ -19,7 +19,6 @@ function parse(version: string): Parsed | null {
   return { major: Number(match[1]), minor: Number(match[2]), patch: Number(match[3]) };
 }
 
-/** True if the current host `version` satisfies the plugin-declared `range`. */
 export function satisfiesHostApi(version: string, range: string): boolean {
   const trimmed = range.trim();
   if (trimmed === '*' || trimmed === 'x') return true;
@@ -36,13 +35,11 @@ export function satisfiesHostApi(version: string, range: string): boolean {
     return atLeast(host, want);
   }
 
-  // Bare exact version.
   const want = parse(trimmed);
   if (!want) return false;
   return host.major === want.major && host.minor === want.minor && host.patch === want.patch;
 }
 
-/** host >= want, lexicographically over (major, minor, patch). Callers have already matched major. */
 function atLeast(host: Parsed, want: Parsed): boolean {
   if (host.minor !== want.minor) return host.minor > want.minor;
   return host.patch >= want.patch;

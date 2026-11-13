@@ -40,7 +40,8 @@ void PTRDownloadWidget::onSelectDirectory()
 {
 	const QString dir = QFileDialog::getExistingDirectory(
 		this,
-		"Select PTR download directory",
+		"Select\n"
+		"    PTR download directory",
 		ui->directoryPath->text(),
 		QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks );
 

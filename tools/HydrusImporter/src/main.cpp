@@ -9,7 +9,6 @@ int main( int argc, char** argv )
 	QApplication app { argc, argv };
 	app.setApplicationName( "IDHAN Importer" );
 
-	// Clobber the default locale because whatever
 	QLocale locale( QLocale::English );
 	locale.setNumberOptions( QLocale::DefaultNumberOptions );
 	QLocale::setDefault( locale );

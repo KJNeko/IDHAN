@@ -15,7 +15,6 @@
 namespace idhan::ipc
 {
 
-//! Seals applied once the output is complete.
 constexpr unsigned int SINK_SEALS { F_SEAL_WRITE | F_SEAL_SHRINK | F_SEAL_GROW | F_SEAL_SEAL };
 
 std::expected< std::unique_ptr< MemfdSink >, std::string > MemfdSink::create()
@@ -85,4 +84,4 @@ std::expected< UniqueFd, std::string > MemfdSink::seal()
 
 } // namespace idhan::ipc
 
-#endif // __linux__
+#endif

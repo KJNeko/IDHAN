@@ -12,11 +12,9 @@
 namespace premade
 {
 
-//! What the normalizer replaces, and with what.
 constexpr std::string_view SPACE { " " };
 constexpr std::string_view META_SPACE { "▁" };
 
-//! Length in bytes of the UTF-8 sequence beginning with \p lead.
 [[nodiscard]] std::size_t sequenceLength( const unsigned char lead )
 {
 	if ( ( lead & 0x80 ) == 0x00 ) return 1;
@@ -26,7 +24,6 @@ constexpr std::string_view META_SPACE { "▁" };
 	return 1;
 }
 
-//! Packs an ordered pair of vocabulary ids into one key.
 [[nodiscard]] constexpr std::uint64_t pairKey( const std::int32_t left, const std::int32_t right )
 {
 	return ( static_cast< std::uint64_t >( static_cast< std::uint32_t >( left ) ) << 32 )

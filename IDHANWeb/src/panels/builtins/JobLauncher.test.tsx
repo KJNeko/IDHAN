@@ -5,7 +5,7 @@ import {api} from '../../api/client';
 import type {PanelProps} from '../../host/types';
 import {JobLauncher} from './JobLauncher';
 
-vi.mock('../../api/client', () => ({api: {reorganizeUrls: vi.fn(), rescanMetadata: vi.fn()}}));
+vi.mock('../../api/client', () => ({api: {deduplicateUrls: vi.fn(), rescanMetadata: vi.fn()}}));
 Object.assign(globalThis, {IS_REACT_ACT_ENVIRONMENT: true});
 
 it('starts scoped metadata, cluster verification, and available embedding backfills', async () => {
@@ -40,6 +40,11 @@ it('starts scoped metadata, cluster verification, and available embedding backfi
         await act(() => root.render(<JobLauncher host={host} jobs={[]} onQueued={onQueued}/>));
         expect(fetch).not.toHaveBeenCalled();
         await choose('metadata');
+		await act(() => {
+			const scope = view.querySelector<HTMLSelectElement>('[aria-label="Metadata scope"]')!;
+			scope.value = 'ids';
+			scope.dispatchEvent(new Event('change', {bubbles: true}));
+		});
         await act(() => {
             const input = view.querySelector('input')!;
             Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, '12, 34 12');
@@ -75,11 +80,12 @@ it('blocks duplicate jobs and reports dispatch failures', async () => {
     const view = document.createElement('div');
     const root = createRoot(view);
     try {
-        await act(() => root.render(<JobLauncher host={host} jobs={[{job_name: 'Reorganizing URLs', status: 'running'}]}
+		await act(() => root.render(<JobLauncher host={host}
+	                                             jobs={[{job_name: 'Deduplicating URLs', status: 'running'}]}
                                                  onQueued={onQueued}/>));
         expect(view.querySelector<HTMLButtonElement>('button[type=submit]')!.disabled).toBe(true);
         await act(() => root.render(<JobLauncher host={host} jobs={[]} onQueued={onQueued}/>));
-        vi.mocked(api.reorganizeUrls).mockRejectedValueOnce(new Error('Permission denied'));
+		vi.mocked(api.deduplicateUrls).mockRejectedValueOnce(new Error('Permission denied'));
         await act(() => view.querySelector('form')!.dispatchEvent(new Event('submit', {
             bubbles: true,
             cancelable: true
@@ -90,4 +96,41 @@ it('blocks duplicate jobs and reports dispatch failures', async () => {
     } finally {
         await act(() => root.unmount());
     }
+});
+
+it('makes all-record and specific-ID rescans explicit', async () => {
+	vi.mocked(api.rescanMetadata).mockClear();
+	vi.mocked(api.rescanMetadata).mockResolvedValue({job_id: 30, status: 'dispatched'});
+	const view = document.createElement('div');
+	const root = createRoot(view);
+	try {
+		await act(() => root.render(<JobLauncher host={{} as PanelProps['host']} jobs={[]} onQueued={vi.fn()}/>));
+		await act(() => {
+			const select = view.querySelector('select')!;
+			select.value = 'metadata';
+			select.dispatchEvent(new Event('change', {bubbles: true}));
+		});
+		expect(view.querySelector<HTMLSelectElement>('[aria-label="Metadata scope"]')!.value).toBe('all');
+		expect(view.querySelector('[aria-label="Record IDs"]')).toBeNull();
+		await act(() => view.querySelector('form')!.dispatchEvent(new Event('submit', {
+			bubbles: true,
+			cancelable: true
+		})));
+		expect(api.rescanMetadata).toHaveBeenCalledWith([]);
+		await act(() => {
+			const select = view.querySelector<HTMLSelectElement>('[aria-label="Metadata scope"]')!;
+			select.value = 'ids';
+			select.dispatchEvent(new Event('change', {bubbles: true}));
+		});
+		expect(view.querySelector<HTMLInputElement>('[aria-label="Record IDs"]')!.required).toBe(true);
+		const calls = vi.mocked(api.rescanMetadata).mock.calls.length;
+		await act(() => view.querySelector('form')!.dispatchEvent(new Event('submit', {
+			bubbles: true,
+			cancelable: true
+		})));
+		expect(api.rescanMetadata).toHaveBeenCalledTimes(calls);
+		expect(view.querySelector('[role="alert"]')?.textContent).toBe('Record IDs required.');
+	} finally {
+		await act(() => root.unmount());
+	}
 });

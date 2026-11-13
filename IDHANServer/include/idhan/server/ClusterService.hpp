@@ -25,7 +25,7 @@ class DBContext;
 
 namespace idhan::server
 {
-class AsyncFileService;
+class FileService;
 
 struct ClusterInfo
 {
@@ -43,7 +43,7 @@ class ClusterService
 
   public:
 
-	ClusterService( db::DBContext&, AsyncFileService& );
+	ClusterService( db::DBContext&, FileService& );
 	~ClusterService();
 	ClusterService( const ClusterService& ) = delete;
 	ClusterService& operator=( const ClusterService& ) = delete;

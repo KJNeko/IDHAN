@@ -12,7 +12,6 @@
 namespace idhan
 {
 
-//! HTTP method for a client request.
 enum HttpMethod
 {
 	POST,
@@ -21,8 +20,7 @@ enum HttpMethod
 	GET
 };
 
-//! Thin wrapper around QNetworkAccessManager that marshals requests onto the network thread. The
-//! manager is affine to its own thread, so send() hands work to doSendData() via the sendData signal.
+//! Marshals requests onto QNetworkAccessManager's owning thread.
 class IDHAN_CLIENT_EXPORT Network : public QObject
 {
 	Q_OBJECT
@@ -38,11 +36,11 @@ class IDHAN_CLIENT_EXPORT Network : public QObject
 
 	Network( QObject* parent = nullptr );
 
-	//! Issues \p request with \p method and \p body (thread-safely) and returns the pending reply.
+	//! Thread-safe; returns a pending reply owned by the network thread.
 	[[nodiscard]] QNetworkReply* send( HttpMethod method, const QNetworkRequest& request, const QByteArray& body );
 
   public slots:
-	//! Runs on the network thread: performs the request and fulfils \p promise with the reply.
+	//! Runs on the network thread and fulfills the promise with the pending reply.
 	void doSendData(
 		HttpMethod method,
 		const QNetworkRequest& request,
@@ -50,7 +48,6 @@ class IDHAN_CLIENT_EXPORT Network : public QObject
 		const std::shared_ptr< QPromise< QNetworkReply* > >& promise );
 
   signals:
-	//! Emitted by send() to hand a request to doSendData() on the network thread.
 	void sendData(
 		const HttpMethod method,
 		const QNetworkRequest& request,

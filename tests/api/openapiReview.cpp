@@ -58,16 +58,34 @@ TEST_CASE_METHOD(
 		pqxx::work tx { db() };
 		for ( const auto record : records )
 			tx.exec(
-				"INSERT INTO file_info (record_id, size, mime_id, cluster_store_time) VALUES ($1, 123, $2, now())",
+				//language=postgresql
+				R"SQL(
+					INSERT INTO file_info (record_id, size, mime_id, cluster_store_time)
+					    VALUES ($1, 123, $2, now())
+				)SQL",
 				pqxx::params { record, mime_ids::IMAGE_PNG } );
 		tx.exec(
-			"INSERT INTO video_metadata (record_id, duration, framerate, width, height, bitrate, has_audio) VALUES ($1, 1.5, 24, 10, 10, 100, false)",
+			//language=postgresql
+			R"SQL(
+				INSERT INTO video_metadata (record_id, duration, framerate, width, height, bitrate, has_audio)
+				    VALUES ($1, 1.5, 24, 10, 10, 100, false)
+			)SQL",
 			pqxx::params { video } );
 		tx.exec(
-			"INSERT INTO audio_metadata (record_id, duration, bitrate, channels, sample_rate) VALUES ($1, 2.5, 100, 2, 44100), ($2, 0, 100, 2, 44100)",
+			//language=postgresql
+			R"SQL(
+				INSERT INTO audio_metadata (record_id, duration, bitrate, channels, sample_rate)
+				VALUES
+				    ($1, 2.5, 100, 2, 44100),
+				    ($2, 0, 100, 2, 44100)
+			)SQL",
 			pqxx::params { audio, zero } );
 		tx.exec(
-			"INSERT INTO animation_metadata (record_id, duration, width, height, frame_count, loops) VALUES ($1, 3.5, 10, 10, 84, false)",
+			//language=postgresql
+			R"SQL(
+				INSERT INTO animation_metadata (record_id, duration, width, height, frame_count, loops)
+				    VALUES ($1, 3.5, 10, 10, 84, false)
+			)SQL",
 			pqxx::params { animation } );
 		tx.commit();
 	}
@@ -204,7 +222,11 @@ TEST_CASE_METHOD(
 		pqxx::work tx { db() };
 		for ( const auto record : records )
 			tx.exec(
-				"INSERT INTO file_info (record_id, size, mime_id, cluster_store_time) VALUES ($1, 123, $2, now())",
+				//language=postgresql
+				R"SQL(
+					INSERT INTO file_info (record_id, size, mime_id, cluster_store_time)
+					    VALUES ($1, 123, $2, now())
+				)SQL",
 				pqxx::params { record, mime_ids::IMAGE_PNG } );
 		tx.commit();
 	}

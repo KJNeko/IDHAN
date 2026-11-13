@@ -1,3 +1,4 @@
+import {EmbeddingTermInput, type EmbeddingInput} from './EmbeddingTermInput';
 /**
  * Embedding Search: searches by meaning rather than by tag.
  *
@@ -14,7 +15,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { PanelProps } from '../../host/types';
-import { parseTermInput, termsToRequest, termsToTokens, type Term } from './embeddingTerms';
+import {termsToRequest, termsToTokens, type Term} from './embeddingTerms';
 
 interface EmbeddingModel {
   model_id: number;
@@ -32,7 +33,6 @@ interface SearchResponse {
   query_ms: number;
 }
 
-/** The label a term carries in its row. Records read as an id, since that is all there is to show. */
 function termLabel(term: Term): string {
     return term.kind === 'text' ? term.text : `record ${term.recordId}`;
 }
@@ -74,18 +74,17 @@ function TermRow({
         type="checkbox"
         checked={term.enabled}
         onChange={(e) => onChange({ ...term, enabled: e.target.checked })}
-        title="Include this term in the query"
+		aria-label={`Use ${label}`}
       />
 
-      <button
-        type="button"
-        className={`embed-term-sign${term.positive ? ' positive' : ' negative'}`}
-        onClick={() => onChange({ ...term, positive: !term.positive })}
-        title={term.positive ? 'Positive: pull results toward this' : 'Negative: push results away from this'}
-      >
-          {term.positive ? '+' : '−'}
-      </button>
+		<select className="embed-term-effect" aria-label={`Effect for ${label}`}
+				value={term.positive ? 'include' : 'exclude'}
+				onChange={event => onChange({...term, positive: event.target.value === 'include'})}>
+			<option value="include">Include</option>
+			<option value="exclude">Exclude</option>
+		</select>
 
+		<label className="embed-weight-field"><span>Weight</span>
       <input
         type="number"
         className="embed-term-weight"
@@ -96,14 +95,15 @@ function TermRow({
           const next = Number(e.target.value);
           if (Number.isFinite(next)) onChange({ ...term, weight: next });
         }}
-        title="How strongly this term pulls the query"
+		aria-label={`Weight for ${label}`}
       />
+		</label>
 
         <span className={`embed-term-label${term.kind === 'record' ? ' is-record' : ''}`} title={label}>
         {label}
       </span>
 
-        <button type="button" className="embed-term-remove" onClick={onRemove} title="Remove this term">
+		<button type="button" className="embed-term-remove" onClick={onRemove} aria-label={`Remove ${label}`}>
             &times;
       </button>
     </div>
@@ -113,7 +113,6 @@ function TermRow({
 export function EmbeddingSearchPanel({ host }: PanelProps) {
   const [config, setConfigState] = useState<Config>(() => readConfig(host.settings.get() as Partial<Config>));
   const [models, setModels] = useState<EmbeddingModel[]>([]);
-  const [draft, setDraft] = useState('');
   const [error, setError] = useState<string | null>(null);
     const [summary, setSummary] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -184,19 +183,10 @@ export function EmbeddingSearchPanel({ host }: PanelProps) {
         [config.terms, update],
     );
 
-    const addDraftTerm = useCallback(() => {
-    const parsed = parseTermInput(draft);
-    if (!parsed) return;
-
-        if (parsed.kind === 'text' && !textEnabled) {
-            setError('This model cannot embed text. Add a record reference instead, e.g. record:1234.');
-            return;
-        }
-
+	function addInputTerm(term: EmbeddingInput) {
         setError(null);
-        addTerms([parsed]);
-    setDraft('');
-    }, [draft, textEnabled, addTerms]);
+		addTerms([{...term, weight: 1, positive: true, enabled: true}]);
+	}
 
   const addSelectionAsReferences = useCallback(() => {
     const ids = host.selection.get();
@@ -288,36 +278,7 @@ export function EmbeddingSearchPanel({ host }: PanelProps) {
               </label>
           </div>
 
-      <div className="embed-add-row">
-        <input
-          type="text"
-          className="search-input"
-          value={draft}
-          placeholder={textEnabled ? 'catgirl:0.5, -blurry, record:1234' : 'record:1234 or #1234'}
-          spellCheck={false}
-          autoComplete="off"
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-                addDraftTerm();
-            }
-          }}
-        />
-          <button type="button" className="toolbar-button" onClick={addDraftTerm}>
-          Add
-        </button>
-      </div>
-
-          {/* Shown rather than hidden: the reason the box refuses phrases beats a control that
-          silently is not there when the model changes. References still work either way. */}
-      {selected && !textEnabled && (
-        <p className="embed-note">
-          {selected.available
-              ? 'This model ships without a text encoder. Reference records only.'
-            : 'No loaded module provides this model, so text terms cannot be embedded.'}
-        </p>
-      )}
+		  <EmbeddingTermInput textEnabled={textEnabled} onAdd={addInputTerm}/>
 
           <div className="embed-term-head">
         <span>
@@ -338,9 +299,7 @@ export function EmbeddingSearchPanel({ host }: PanelProps) {
 
       <div className="embed-term-list">
           {config.terms.length === 0 ? (
-              <p className="embed-note">
-                  No terms yet. Type a phrase, or a record id as <code>record:1234</code>.
-              </p>
+			  <p className="muted">No terms.</p>
           ) : (
               config.terms.map((term, index) => (
                   <TermRow
@@ -370,7 +329,7 @@ export function EmbeddingSearchPanel({ host }: PanelProps) {
 export const embeddingSearchPanel = {
   type: 'embedding-search',
   title: 'Embedding Search',
-  description: 'Search by meaning: weighted text phrases and reference records.',
+	description: 'Search by text or reference image.',
   component: EmbeddingSearchPanel,
   defaultConfig: DEFAULT_CONFIG,
   configVersion: 1,

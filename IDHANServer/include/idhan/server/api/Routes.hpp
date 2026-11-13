@@ -12,8 +12,8 @@
 namespace idhan::server::api
 {
 
-// Adds every fixed route family. Implementations must call this before the
-// registry is sealed so duplicate and conflicting declarations fail startup.
+//! Adds every fixed route family. Implementations must call this before the
+//! registry is sealed so duplicate and conflicting declarations fail startup.
 void registerRoutes( http::RouteRegistry& );
 
 } // namespace idhan::server::api

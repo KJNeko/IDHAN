@@ -1,14 +1,8 @@
-/**
- * Embedding Compare: two images side by side, and how far a phrase sits from each.
- *
- * Search ranks a collection against one query, so it cannot answer whether a phrase describes A or B
- * better. Terms here carry no weight and no sign: each is scored on its own, and cosine distance is
- * scale-invariant in the query vector, so a weight could not move a number on this screen.
- */
+import {EmbeddingTermInput, type EmbeddingInput} from './EmbeddingTermInput';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { PanelProps, RecordId } from '../../host/types';
-import { compareTermLabel, parseCompareTerm, type CompareTerm } from './embeddingTerms';
+import {compareTermLabel, type CompareTerm} from './embeddingTerms';
 import {useRecordMenu} from './recordActions';
 import {
     barFraction,
@@ -73,7 +67,6 @@ function migrateConfig(config: unknown, fromVersion: number): Config {
     return readConfig(raw);
 }
 
-/** What a set of visible numbers was computed for, so a config edited since the run can be spotted. */
 function signatureOf(config: Config): string {
   return JSON.stringify([config.modelName, config.slotA, config.slotB, config.terms.filter((t) => t.enabled)]);
 }
@@ -85,7 +78,6 @@ interface Results {
   signature: string;
 }
 
-/** One image slot: what is in it, and the two ways to put something there. */
 function SlotCard({
   side,
   recordId,
@@ -101,12 +93,12 @@ function SlotCard({
     const {openRecordMenu, recordMenu} = useRecordMenu(host);
 
   const commitDraft = () => {
-    const parsed = parseCompareTerm(draft);
-    if (parsed?.kind !== 'record') {
-      host.ui.toast('Type a record id, e.g. record:1234 or #1234.', { kind: 'error' });
+	  const id = Number(draft);
+	  if (!Number.isInteger(id) || id <= 0 || id > 2147483647) {
+		  host.ui.toast('Invalid record ID.', {kind: 'error'});
       return;
     }
-    onChange(parsed.recordId);
+	  onChange(id);
     setDraft('');
   };
 
@@ -149,11 +141,12 @@ function SlotCard({
         <button type="button" className="toolbar-button" onClick={setFromSelection}>
           Set from selection
         </button>
+		  <label className="cmp-record-input">Record ID
         <input
-          type="text"
+			type="number" min={1} max={2147483647} step={1}
+			aria-label={`Record ID for ${side}`}
           className="search-input"
           value={draft}
-          placeholder="record:1234"
           spellCheck={false}
           autoComplete="off"
           onChange={(e) => setDraft(e.target.value)}
@@ -164,6 +157,11 @@ function SlotCard({
             }
           }}
         />
+		  </label>
+		  <button type="button" className="toolbar-button"
+				  disabled={!draft || !Number.isInteger(Number(draft)) || Number(draft) <= 0 || Number(draft) > 2147483647}
+				  onClick={commitDraft}>Set record
+	      </button>
       </div>
     </div>
   );
@@ -173,7 +171,6 @@ export function EmbeddingComparePanel({ host }: PanelProps) {
   const [config, setConfigState] = useState<Config>(() => readConfig(host.settings.get() as Partial<Config>));
   const [models, setModels] = useState<EmbeddingModel[]>([]);
   const [selection, setSelection] = useState<readonly RecordId[]>(() => host.selection.get());
-  const [draft, setDraft] = useState('');
   const [results, setResults] = useState<Results | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -248,20 +245,11 @@ export function EmbeddingComparePanel({ host }: PanelProps) {
     [config.terms, update],
   );
 
-  const addDraftTerm = useCallback(() => {
-    const parsed = parseCompareTerm(draft);
-    if (!parsed) return;
-
-    if (parsed.kind === 'text' && !textEnabled) {
-      setError('This model cannot embed text. Add a record reference instead, e.g. record:1234.');
-      return;
-    }
-
-    setError(null);
-    const { dropped } = addTerms([parsed]);
-    if (dropped > 0) host.ui.toast(`At the ${MAX_TERMS}-term limit; nothing was added.`, { kind: 'error' });
-    setDraft('');
-  }, [draft, textEnabled, addTerms, host]);
+	function addInputTerm(term: EmbeddingInput) {
+		setError(null);
+		const {dropped} = addTerms([{...term, enabled: true}]);
+		if (dropped > 0) host.ui.toast(`Maximum ${MAX_TERMS} terms.`, {kind: 'error'});
+	}
 
   const seedFromTags = useCallback(async () => {
     if (config.slotA === null || config.slotB === null) {
@@ -395,16 +383,6 @@ export function EmbeddingComparePanel({ host }: PanelProps) {
         <SlotCard side="B" recordId={config.slotB} host={host} onChange={(id) => update({ slotB: id })} />
       </div>
 
-      {/* Shown rather than hidden: the reason the box refuses phrases beats a control that silently
-          is not there when the model changes. References still work either way. */}
-      {selected && !textEnabled && (
-        <p className="embed-note">
-          {selected.available
-            ? 'This model ships without a text encoder. Reference records only.'
-            : 'No loaded module provides this model, so text terms cannot be embedded.'}
-        </p>
-      )}
-
       <div className="embed-term-head">
         <span>
           Terms
@@ -420,26 +398,7 @@ export function EmbeddingComparePanel({ host }: PanelProps) {
         </button>
       </div>
 
-      <div className="embed-add-row">
-        <input
-          type="text"
-          className="search-input"
-          value={draft}
-          placeholder={textEnabled ? 'blonde hair, or record:1234' : 'record:1234 or #1234'}
-          spellCheck={false}
-          autoComplete="off"
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              addDraftTerm();
-            }
-          }}
-        />
-        <button type="button" className="toolbar-button" onClick={addDraftTerm}>
-          Add
-        </button>
-      </div>
+		<EmbeddingTermInput textEnabled={textEnabled} onAdd={addInputTerm}/>
 
         <label className="cmp-sort">
             <span>Sort</span>
@@ -456,9 +415,7 @@ export function EmbeddingComparePanel({ host }: PanelProps) {
           The numeric columns and the bar are absent until a comparison has produced them. */}
         <div className={`cmp-term-list${results ? ' has-results' : ''}`}>
         {config.terms.length === 0 ? (
-          <p className="embed-note">
-            No terms yet. Type a phrase, or a record id as <code>record:1234</code>.
-          </p>
+			<p className="muted">No terms.</p>
         ) : (
             orderedTerms.map((term) => {
                 const label = compareTermLabel(term);
@@ -556,7 +513,7 @@ export function EmbeddingComparePanel({ host }: PanelProps) {
 export const embeddingComparePanel = {
   type: 'embedding-compare',
   title: 'Embedding Compare',
-  description: 'Two records side by side: how far each phrase sits from each image.',
+	description: 'Compare image embeddings.',
   component: EmbeddingComparePanel,
   defaultConfig: DEFAULT_CONFIG,
     configVersion: 2,

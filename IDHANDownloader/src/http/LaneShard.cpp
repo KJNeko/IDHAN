@@ -9,8 +9,9 @@
 #include <utility>
 
 #include "HostCallback.hpp"
-#include "IDHANDownloader/DirectResponse.hpp"
-#include "URLUtils.hpp"
+#include "IDHANDownloader/http/Bandwidth.hpp"
+#include "IDHANDownloader/http/DirectResponse.hpp"
+#include "urls/URLUtils.hpp"
 #include "http/IoPool.hpp"
 #include "http/Lane.hpp"
 #include "http/UserAgent.hpp"
@@ -104,6 +105,28 @@ LaneShard::~LaneShard()
 
 void LaneShard::release( Active& active )
 {
+	const auto parsed_e { ada::parse< ada::url_aggregator >( active.request.url ) };
+	if ( parsed_e.has_value() )
+	{
+		std::string host { parsed_e.value().get_hostname() };
+		if ( host.ends_with( '.' ) ) host.pop_back();
+
+		curl_off_t received {};
+		long header_bytes {};
+		curl_easy_getinfo( active.easy.get(), CURLINFO_SIZE_DOWNLOAD_T, &received );
+		curl_easy_getinfo( active.easy.get(), CURLINFO_HEADER_SIZE, &header_bytes );
+		recordBandwidth(
+			{ std::move( host ),
+			  std::chrono::duration_cast< std::chrono::seconds >( std::chrono::system_clock::now().time_since_epoch() )
+			      .count(),
+			  static_cast< std::int64_t >( received ) + header_bytes } );
+	}
+
+	if ( active.request.progress )
+		active.request.progress->phase =
+			active.request.buffered_sink ? NetworkActivity::Phase::STORAGE : NetworkActivity::Phase::FINISHED;
+
+	active.alive->store( false );
 	curl_multi_remove_handle( m_multi.get(), active.easy.get() );
 	active.header_list.reset();
 	active.easy.reset();
@@ -116,7 +139,7 @@ void LaneShard::shutdown()
 		auto node { m_active.extract( m_active.begin() ) };
 		Active& active { *node.mapped() };
 
-		if ( active.request.sink ) (void)hostCallback( [ & ] { active.request.sink->abort(); } );
+		if ( active.request.buffered_sink ) (void)hostCallback( [ & ] { active.request.buffered_sink->abort(); } );
 
 		release( active );
 		m_assigned.fetch_sub( 1, std::memory_order_relaxed );
@@ -129,26 +152,77 @@ void LaneShard::shutdown()
 	}
 }
 
+int LaneShard::debugCallback( CURL* easy, const curl_infotype type, char* data, const std::size_t size, void* user )
+{
+	// Observe outgoing headers only; never print libcurl's debug contents (which include secrets).
+	if ( type != CURLINFO_HEADER_OUT ) return 0;
+
+	if ( user == nullptr ) return 0;
+
+	auto* active { static_cast< Active* >( user ) };
+	if ( easy != active->easy.get() ) return 0;
+
+	// A proxy tunnel is setup, not the HTTP request to the destination.
+	if ( std::string_view { data, size }.starts_with( "CONNECT " ) ) return 0;
+
+	if ( !active->request.progress ) return 0;
+
+	auto& progress { *active->request.progress };
+	if ( progress.sent_at.load() != 0 ) return 0;
+
+	progress.stampSent();
+	return 0;
+}
+
+void LaneShard::recordProgress( Active& active, const std::size_t bytes )
+{
+	auto& progress { *active.request.progress };
+	if ( active.response.bytes == 0 )
+	{
+		curl_off_t length {};
+		const bool known {
+			curl_easy_getinfo( active.easy.get(), CURLINFO_CONTENT_LENGTH_DOWNLOAD_T, &length ) == CURLE_OK
+			&& length > 0
+		};
+		progress.expected = known ? static_cast< std::uint64_t >( length ) : 0;
+	}
+
+	progress.received += bytes;
+}
+
 std::size_t LaneShard::writeCallback( char* data, const std::size_t size, const std::size_t count, void* user )
 {
 	const std::size_t total { size * count };
 	auto* active { static_cast< Active* >( user ) };
+	if ( active->request.buffered_sink && !preservingSink( *active )
+	     && !active->request.buffered_sink->canWrite( total ) )
+	{
+		active->paused = true;
+		if ( active->request.progress ) active->request.progress->phase = NetworkActivity::Phase::STORAGE;
+
+		return CURL_WRITEFUNC_PAUSE;
+	}
+	if ( active->request.network ) active->request.network->received( total );
+
+	if ( active->request.progress ) recordProgress( *active, total );
+
 	active->response.bytes += total;
 	const auto lane { active->shard->m_lane.lock() };
 
 	if ( lane ) lane->onBytesReceived( total );
 
-	if ( active->request.sink && active->preview.size() < HTTP_BODY_LOG_LIMIT )
+	if ( active->request.buffered_sink && active->preview.size() < HTTP_BODY_LOG_LIMIT )
 		active->preview.append( data, std::min( total, HTTP_BODY_LOG_LIMIT - active->preview.size() ) );
 
-	if ( active->request.sink && preservingSink( *active ) ) return total;
+	if ( active->request.buffered_sink && preservingSink( *active ) ) return total;
 
-	if ( active->request.sink )
+	if ( active->request.buffered_sink )
 	{
 		const auto written { hostOperation(
 			[ & ]
 			{
-				return active->request.sink->write( std::span { reinterpret_cast< const std::byte* >( data ), total } );
+				return active->request.buffered_sink->enqueue(
+					std::span { reinterpret_cast< const std::byte* >( data ), total } );
 			} ) };
 
 		if ( !written )
@@ -179,6 +253,12 @@ std::size_t LaneShard::headerCallback( char* data, const std::size_t size, const
 	std::string_view line { data, total };
 
 	while ( !line.empty() && ( line.back() == '\r' || line.back() == '\n' ) ) line.remove_suffix( 1 );
+
+	if ( line.empty() && active->response.status == 404 && active->request.options.stop_on_not_found )
+	{
+		active->stopped_on_not_found = true;
+		return 0;
+	}
 
 	if ( line.starts_with( "HTTP/" ) )
 	{
@@ -223,7 +303,7 @@ void LaneShard::start( TransferRequest request, TransferCallback callback )
 {
 	if ( request.cancellation && request.cancellation->load() )
 	{
-		if ( request.sink ) (void)hostCallback( [ & ] { request.sink->abort(); } );
+		if ( request.buffered_sink ) (void)hostCallback( [ & ] { request.buffered_sink->abort(); } );
 
 		callback(
 			std::unexpected(
@@ -241,7 +321,7 @@ void LaneShard::start( TransferRequest request, TransferCallback callback )
 
 	if ( active->easy == nullptr )
 	{
-		if ( active->request.sink ) (void)hostCallback( [ & ] { active->request.sink->abort(); } );
+		if ( active->request.buffered_sink ) (void)hostCallback( [ & ] { active->request.buffered_sink->abort(); } );
 
 		active->callback(
 			std::unexpected(
@@ -259,6 +339,9 @@ void LaneShard::start( TransferRequest request, TransferCallback callback )
 	curl_easy_setopt( easy, CURLOPT_URL, active->request.url.c_str() );
 	curl_easy_setopt( easy, CURLOPT_ERRORBUFFER, active->error.data() );
 	curl_easy_setopt( easy, CURLOPT_PRIVATE, active.get() );
+	curl_easy_setopt( easy, CURLOPT_DEBUGFUNCTION, debugCallback );
+	curl_easy_setopt( easy, CURLOPT_DEBUGDATA, active.get() );
+	curl_easy_setopt( easy, CURLOPT_VERBOSE, 1L );
 	curl_easy_setopt( easy, CURLOPT_NOSIGNAL, 1L );
 	curl_easy_setopt( easy, CURLOPT_HTTP_VERSION, curlHttpVersion( version ) );
 	curl_easy_setopt( easy, CURLOPT_FOLLOWLOCATION, 0L );
@@ -273,9 +356,6 @@ void LaneShard::start( TransferRequest request, TransferCallback callback )
 	curl_easy_setopt( easy, CURLOPT_XFERINFODATA, active.get() );
 
 	if ( options.timeout_ms > 0 ) curl_easy_setopt( easy, CURLOPT_TIMEOUT_MS, options.timeout_ms );
-
-	if ( options.bytes_per_second != 0 )
-		curl_easy_setopt( easy, CURLOPT_MAX_RECV_SPEED_LARGE, static_cast< curl_off_t >( options.bytes_per_second ) );
 
 	const std::string& user_agent { options.user_agent.empty() ? idhan_user_agent : options.user_agent };
 	curl_easy_setopt( easy, CURLOPT_USERAGENT, user_agent.c_str() );
@@ -312,7 +392,7 @@ void LaneShard::start( TransferRequest request, TransferCallback callback )
 
 	if ( const CURLMcode code { curl_multi_add_handle( m_multi.get(), easy ) }; code != CURLM_OK )
 	{
-		if ( active->request.sink ) (void)hostCallback( [ & ] { active->request.sink->abort(); } );
+		if ( active->request.buffered_sink ) (void)hostCallback( [ & ] { active->request.buffered_sink->abort(); } );
 
 		active->callback(
 			std::unexpected(
@@ -331,7 +411,32 @@ void LaneShard::start( TransferRequest request, TransferCallback callback )
 			detail::redactUrlQuery( active->request.url, active->request.sensitive_query ),
 			describeHeaders( active->request.headers ) );
 
+	if ( active->request.buffered_sink )
+	{
+		active->request.buffered_sink->setResumeCallback(
+			[ weak = weak_from_this(), easy, alive = active->alive ]
+			{
+				const auto shard { weak.lock() };
+				if ( !shard || !alive->load() ) return;
+
+				shard->thread().post( [ shard, easy, alive ] { shard->resume( easy, alive ); } );
+			} );
+	}
 	m_active.emplace( easy, std::move( active ) );
+}
+
+void LaneShard::resume( CURL* easy, std::shared_ptr< std::atomic_bool > alive )
+{
+	if ( !alive->load() ) return;
+
+	const auto found { m_active.find( easy ) };
+	if ( found == m_active.end() || !found->second->paused ) return;
+
+	found->second->paused = false;
+	if ( found->second->request.progress ) found->second->request.progress->phase = NetworkActivity::Phase::DOWNLOADING;
+
+	curl_easy_pause( easy, CURLPAUSE_CONT );
+	onProgress();
 }
 
 void LaneShard::onProgress()
@@ -377,6 +482,8 @@ void LaneShard::finish( CURL* easy, const CURLcode code )
 	auto node { m_active.extract( found ) };
 	Active& active { *node.mapped() };
 
+	if ( active.request.progress ) active.request.progress->stampReceived();
+
 	long status {};
 	curl_easy_getinfo( easy, CURLINFO_RESPONSE_CODE, &status );
 
@@ -399,7 +506,7 @@ void LaneShard::finish( CURL* easy, const CURLcode code )
 
 	if ( !active.sink_error.empty() )
 	{
-		if ( active.request.sink ) (void)hostCallback( [ & ] { active.request.sink->abort(); } );
+		if ( active.request.buffered_sink ) (void)hostCallback( [ & ] { active.request.buffered_sink->abort(); } );
 
 		result = std::unexpected( TransferError { .code = TransferErrorCode::SINK, .message = active.sink_error } );
 	}
@@ -413,9 +520,10 @@ void LaneShard::finish( CURL* easy, const CURLcode code )
 					detail::redactUrlQuery( active.request.url, active.request.sensitive_query ),
 					active.request.options.max_response_bytes ) } );
 	}
-	else if ( code != CURLE_OK )
+	// A deliberate header abort still delivers the HTTP 404 to the request's error handler.
+	else if ( code != CURLE_OK && !active.stopped_on_not_found )
 	{
-		if ( active.request.sink ) (void)hostCallback( [ & ] { active.request.sink->abort(); } );
+		if ( active.request.buffered_sink ) (void)hostCallback( [ & ] { active.request.buffered_sink->abort(); } );
 
 		const bool cancelled { active.request.cancellation && active.request.cancellation->load() };
 		result = std::unexpected(
@@ -429,7 +537,7 @@ void LaneShard::finish( CURL* easy, const CURLcode code )
 		active.response.url = std::move( final_url );
 
 		const std::string_view content_type { active.response.headers.get( "content-type" ) };
-		const bool wanted_a_file { active.request.sink != nullptr };
+		const bool wanted_a_file { active.request.buffered_sink != nullptr };
 		const bool unexpected { !redirecting( active ) && ( wanted_a_file || active.response.status >= 400 ) };
 
 		if ( unexpected && isMarkupContentType( content_type ) )
@@ -440,46 +548,38 @@ void LaneShard::finish( CURL* easy, const CURLcode code )
 				content_type,
 				describeBody( wanted_a_file ? active.preview : active.response.body, active.response.bytes ) );
 
-		if ( active.request.sink && preservingSink( active ) )
+		if ( active.request.buffered_sink && preservingSink( active ) )
 		{
-			active.response.sink = std::move( active.request.sink );
+			active.response.sink = std::move( active.request.buffered_sink );
 			result = std::move( active.response );
 		}
 		else if (
-			active.request.sink && active.request.import.options[ "requireFile" ].isBool()
+			active.request.buffered_sink && active.request.import.options[ "requireFile" ].isBool()
 		    && active.request.import.options[ "requireFile" ].asBool()
 		    && !isDirectResponse( content_type, active.preview ) )
 		{
-			(void)hostCallback( [ & ] { active.request.sink->abort(); } );
+			(void)hostCallback( [ & ] { active.request.buffered_sink->abort(); } );
 			result = std::unexpected(
 				TransferError {
 					.code = TransferErrorCode::SINK,
 					.message = "URL did not return a single file (HTML, structured data, or unknown content type)" } );
 		}
-		else if ( active.request.sink )
+		else if ( active.request.buffered_sink )
 		{
 			active.response.import_metadata = ImportMetadata {
 				.size = active.response.bytes,
 				.content_type = std::string { active.response.headers.get( "content-type" ) },
 				.filename = filenameFor( active.response.url, active.response.headers ),
-				.final_url = active.response.url,
+				.effective_url = active.response.url,
 			};
 
-			auto finished {
-				hostOperation( [ & ] { return active.request.sink->finish( active.response.import_metadata ); } )
+			active.response.sink = std::move( active.request.buffered_sink );
+			active.response.import_pending = true;
+			active.response.import_finished = [ lane = m_lane.lock() ]
+			{
+				if ( lane ) lane->onTransferFinished();
 			};
-
-			if ( finished )
-			{
-				active.response.import = *finished;
-				result = std::move( active.response );
-			}
-			else
-			{
-				(void)hostCallback( [ & ] { active.request.sink->abort(); } );
-				result = std::unexpected(
-					TransferError { .code = TransferErrorCode::SINK, .message = std::move( finished.error() ) } );
-			}
+			result = std::move( active.response );
 		}
 		else
 		{
@@ -487,10 +587,18 @@ void LaneShard::finish( CURL* easy, const CURLcode code )
 		}
 	}
 
+	const bool deferred_import { result.has_value() && result.value().import_pending };
 	if ( active.callback ) active.callback( std::move( result ) );
 
 	m_assigned.fetch_sub( 1, std::memory_order_relaxed );
-	if ( const auto lane { m_lane.lock() } ) lane->onTransferFinished();
+	const auto lane { m_lane.lock() };
+	if ( lane )
+	{
+		if ( deferred_import )
+			lane->onTransferFinalizing();
+		else
+			lane->onTransferFinished();
+	}
 }
 
 void LaneShard::cancel( const std::shared_ptr< std::atomic_bool >& cancellation )
@@ -506,7 +614,7 @@ void LaneShard::cancel( const std::shared_ptr< std::atomic_bool >& cancellation 
 		auto node { m_active.extract( entry++ ) };
 		Active& active { *node.mapped() };
 
-		if ( active.request.sink ) (void)hostCallback( [ & ] { active.request.sink->abort(); } );
+		if ( active.request.buffered_sink ) (void)hostCallback( [ & ] { active.request.buffered_sink->abort(); } );
 
 		release( active );
 

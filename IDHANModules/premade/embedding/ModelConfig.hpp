@@ -10,10 +10,8 @@
 namespace premade
 {
 
-//! One model as it sits on disk: its graphs, and how their input has to be prepared.
 struct ModelConfig
 {
-	//! The directory name.
 	std::string m_model_name {};
 
 	std::filesystem::path m_onnx_path {}; //!< The image tower.
@@ -33,10 +31,8 @@ struct ModelConfig
 	std::filesystem::path m_tokenizer_path {};
 };
 
-//! Reads every model directory under \p models_root.
 [[nodiscard]] std::vector< ModelConfig > scanModels( const std::filesystem::path& models_root );
 
-//! Discovers one model directory.
 [[nodiscard]] std::expected< ModelConfig, std::string > readModelDirectory( const std::filesystem::path& directory );
 
 } // namespace premade

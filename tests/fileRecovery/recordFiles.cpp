@@ -28,7 +28,7 @@ std::atomic_uint missing_notifications {};
 std::atomic_uint found_notifications {};
 } // namespace idhan::test
 
-// Observe the notification seams while the production storage and database helpers run.
+//! Observe the notification seams while the production storage and database helpers run.
 namespace idhan::notifications
 {
 void onFileMissing( const RecordID record_id )
@@ -84,37 +84,96 @@ class RecordFilesFixture
 			tx.exec( "SET search_path = " + db::makeSearchPath( m_schema ) );
 			// A scratch schema for the storage helpers, with no extensions or live application data.
 			tx.exec( R"SQL(
-CREATE TABLE records (record_id integer PRIMARY KEY, sha256 bytea UNIQUE NOT NULL);
-CREATE TABLE mime (mime_id smallint PRIMARY KEY, best_extension text);
-CREATE TABLE file_info (record_id integer PRIMARY KEY, cluster_id smallint, mime_id smallint,
-    extension text, size bigint, cluster_store_time timestamp, cluster_delete_time timestamp,
-    file_mtime timestamp, file_ctime timestamp);
-CREATE TABLE file_clusters (cluster_id smallint PRIMARY KEY, folder_path text, cluster_uuid uuid,
-    read_only boolean, cluster_name text, ratio_number smallint, size_limit bigint);
-CREATE TYPE UrlType AS ENUM ('file', 'post', 'gallery', 'unknown');
-CREATE TABLE url_domains (url_domain_id serial PRIMARY KEY, url_domain text UNIQUE NOT NULL);
-CREATE TABLE urls (url_id serial PRIMARY KEY, url text UNIQUE NOT NULL, url_domain_id integer REFERENCES url_domains,
-    url_type UrlType NOT NULL DEFAULT 'unknown');
-CREATE TABLE url_mappings (url_id integer, record_id integer);
-CREATE VIEW missing_files AS SELECT record_id FROM file_info
-    WHERE cluster_id IS NULL AND cluster_delete_time IS NULL;
-INSERT INTO mime VALUES (1, 'png');
-INSERT INTO url_domains (url_domain) VALUES ('files.example');
-INSERT INTO urls (url, url_domain_id, url_type) VALUES ('https://files.example/download', 1, 'file');
-INSERT INTO url_mappings VALUES (1, 1);
-)SQL" );
+					CREATE TABLE records (
+					    record_id integer PRIMARY KEY,
+					    sha256    bytea UNIQUE        NOT NULL
+					);
+
+					CREATE TABLE mime (
+					    mime_id        smallint PRIMARY KEY,
+					    best_extension text
+					);
+
+					CREATE TABLE file_info (
+					    record_id           integer PRIMARY KEY,
+					    cluster_id          smallint,
+					    mime_id             smallint,
+					    extension           text,
+					    size                bigint,
+					    cluster_store_time  timestamp,
+					    cluster_delete_time timestamp,
+					    file_mtime          timestamp,
+					    file_ctime          timestamp
+					);
+
+					CREATE TABLE file_clusters (
+					    cluster_id   smallint PRIMARY KEY,
+					    folder_path  text,
+					    cluster_uuid uuid,
+					    read_only    boolean,
+					    cluster_name text,
+					    ratio_number smallint,
+					    size_limit   bigint
+					);
+
+					CREATE TYPE UrlType AS ENUM (
+					    'file',
+					    'post',
+					    'gallery',
+					    'unknown'
+					);
+
+					CREATE TABLE url_domains (
+					    url_domain_id serial PRIMARY KEY,
+					    url_domain    text UNIQUE        NOT NULL
+					);
+
+					CREATE TABLE urls (
+					    url_id        serial PRIMARY KEY,
+					    url           text UNIQUE        NOT NULL,
+					    url_domain_id integer            REFERENCES url_domains,
+					    url_type      UrlType            NOT NULL DEFAULT 'unknown'
+					);
+
+					CREATE TABLE url_mappings (
+					    url_id    integer,
+					    record_id integer
+					);
+
+					CREATE VIEW missing_files AS
+					SELECT
+					    record_id
+					FROM file_info
+					WHERE cluster_id IS NULL
+					    AND cluster_delete_time IS NULL;
+
+					INSERT INTO mime
+					    VALUES (1, 'png');
+
+					INSERT INTO url_domains (url_domain)
+					    VALUES ('files.example');
+
+					INSERT INTO urls (url, url_domain_id, url_type)
+					    VALUES ('https://files.example/download', 1, 'file');
+
+					INSERT INTO url_mappings
+					    VALUES (1, 1);
+				)SQL" );
 			static constexpr char comparison_index[] {
 #embed "../../IDHANMigration/src/table_urls/430-comparison-index.sql" suffix(, )
 				'\0'
 			};
 			tx.exec( comparison_index );
-			tx.exec( "INSERT INTO records VALUES (1, decode($1, 'hex'))", pqxx::params { hash.hex() } );
+			tx.exec( "INSERT INTO records\n"
+					 "    VALUES (1, decode($1, 'hex'))",
+					 pqxx::params{ hash.hex() } );
 			tx.exec(
-				"INSERT INTO file_clusters VALUES (1, $1, $2::uuid, false, NULL, 1, 0)",
+				"INSERT INTO file_clusters\n"
+				"    VALUES (1, $1, $2::uuid, false, NULL, 1, 0)",
 				pqxx::params { cluster_directory.string(), boost::uuids::to_string( uuid ) } );
 			tx.exec(
-				"INSERT INTO file_info (record_id, cluster_id, mime_id, extension, size, cluster_store_time) "
-				"VALUES (1, 1, 1, 'png', $1, now())",
+				"INSERT INTO file_info (record_id, cluster_id, mime_id, extension, size, cluster_store_time)\n"
+				"    VALUES (1, 1, 1, 'png', $1, now())",
 				pqxx::params { bytes.size() } );
 			tx.commit();
 		}
@@ -171,19 +230,33 @@ INSERT INTO url_mappings VALUES (1, 1);
 	{
 		pqxx::nontransaction tx { m_sql };
 		return tx.query_value< int >(
-			"SELECT count(*) FROM url_domains WHERE url_domain = $1", pqxx::params { domain } );
+			"SELECT\n"
+			"    count(*)\n"
+			"FROM url_domains\n"
+			"WHERE url_domain = $1",
+			pqxx::params{ domain } );
 	}
 
 	std::string urlType( const std::string& url )
 	{
 		pqxx::nontransaction tx { m_sql };
-		return tx.query_value< std::string >( "SELECT url_type::text FROM urls WHERE url = $1", pqxx::params { url } );
+		return tx.query_value< std::string >( "SELECT\n"
+											  "    url_type::text\n"
+											  "FROM urls\n"
+											  "WHERE url = $1",
+											  pqxx::params{ url } );
 	}
 
 	bool missing()
 	{
 		pqxx::nontransaction tx { m_sql };
-		return tx.query_value< bool >( "SELECT EXISTS (SELECT 1 FROM missing_files WHERE record_id = 1)" );
+		return tx.query_value< bool >( "SELECT\n"
+			"    EXISTS (\n"
+			"        SELECT\n"
+			"            1\n"
+			"        FROM missing_files\n"
+			"        WHERE record_id = 1\n"
+			"    )" );
 	}
 };
 
@@ -191,20 +264,32 @@ TEST_CASE_METHOD( RecordFilesFixture, "Successful file detection uses the existi
 {
 	SECTION( "An unknown URL" )
 	{
-		execute( "UPDATE urls SET url_type = 'unknown' WHERE url_id = 1" );
+		execute( "UPDATE\n"
+			"    urls\n"
+			"SET url_type = 'unknown'\n"
+			"WHERE url_id = 1" );
 	}
 	SECTION( "A URL previously classified as a post" )
 	{
-		execute( "UPDATE urls SET url_type = 'post' WHERE url_id = 1" );
+		execute( "UPDATE\n"
+			"    urls\n"
+			"SET url_type = 'post'\n"
+			"WHERE url_id = 1" );
 	}
 	SECTION( "A URL previously classified as a gallery" )
 	{
-		execute( "UPDATE urls SET url_type = 'gallery' WHERE url_id = 1" );
+		execute( "UPDATE\n"
+			"    urls\n"
+			"SET url_type = 'gallery'\n"
+			"WHERE url_id = 1" );
 	}
 	CHECK_FALSE( run( db::findStoredDirectRecordByUrl( context(), "https://files.example/download" ) ).has_value() );
 	execute(
-		"INSERT INTO urls (url_id, url, url_type) VALUES (2, 'https://site.example/post', 'post'), "
-		"(3, 'https://site.example/gallery', 'gallery'), (4, 'https://site.example/source', 'unknown')" );
+		"INSERT INTO urls (url_id, url, url_type)\n"
+		"VALUES\n"
+		"    (2, 'https://site.example/post', 'post'),\n"
+		"    (3, 'https://site.example/gallery', 'gallery'),\n"
+		"    (4, 'https://site.example/source', 'unknown')" );
 	run( db::markDirectUrls( context(), { "https://files.example/download" } ) );
 	CHECK( urlType( "https://files.example/download" ) == "file" );
 	CHECK( run( db::findStoredDirectRecordByUrl( context(), "https://files.example/download" ) ) == 1 );
@@ -316,13 +401,20 @@ TEST_CASE_METHOD(
 {
 	SECTION( "Deliberately deleted file" )
 	{
-		execute( "UPDATE file_info SET cluster_id = NULL, cluster_delete_time = now() WHERE record_id = 1" );
+		execute( "UPDATE\n"
+			"    file_info\n"
+			"SET cluster_id = NULL,\n"
+			"    cluster_delete_time = now()\n"
+			"WHERE record_id = 1" );
 		CHECK_FALSE( missing() );
 		CHECK_FALSE( run( db::findMissingRecordForHash( context(), hash ) ).has_value() );
 	}
 	SECTION( "A record has moved to a different cluster" )
 	{
-		execute( "UPDATE file_info SET cluster_id = 2 WHERE record_id = 1" );
+		execute( "UPDATE\n"
+			"    file_info\n"
+			"SET cluster_id = 2\n"
+			"WHERE record_id = 1" );
 		run( db::detachMissingRecordFile( context(), 1, 1 ) );
 		CHECK_FALSE( missing() );
 	}
@@ -330,42 +422,35 @@ TEST_CASE_METHOD(
 	CHECK( found_notifications == 0 );
 }
 
-TEST_CASE_METHOD( RecordFilesFixture, "Direct URL lookup compares normalized identities", "[recovery][url-comparison]" )
+TEST_CASE_METHOD(
+	RecordFilesFixture,
+	"Direct URL lookup matches the normalized URL exactly",
+	"[recovery][url-normalization]" )
 {
-	const std::string stored { "https://files.example/download?b=2&a=1&is=stable&ex=old&hm=old&" };
-	execute( "UPDATE urls SET url = '" + stored + "' WHERE url_id = 1" );
-	const std::string reordered { "https://files.example/download?hm=old&ex=old&is=stable&a=1&b=2" };
-	CHECK( run( db::findStoredDirectRecordByUrl( context(), reordered ) ) == 1 );
-	const std::string refreshed { "https://files.example/download?hm=new&ex=new&is=stable&a=1&b=2" };
-	CHECK_FALSE( run( db::findStoredDirectRecordByUrl( context(), refreshed ) ).has_value() );
-	CHECK( run( db::findStoredDirectRecordByUrl( context(), refreshed, { "ex", "hm" } ) ) == 1 );
-	CHECK_FALSE( run( db::findStoredDirectRecordByUrl(
-						  context(), "https://files.example/download?is=different&a=1&b=2", { "ex", "hm" } ) )
+	// Spellings are unified by the downloader's normalizeUrl before they reach the database.
+	const std::string stored { "https://files.example/download?a=1&b=2&is=stable" };
+	execute( "UPDATE\n"
+			 "    urls\n"
+			 "SET url = '" + stored + "' WHERE url_id = 1" );
+	CHECK( run( db::findStoredDirectRecordByUrl( context(), stored ) ) == 1 );
+	CHECK_FALSE( run( db::findStoredDirectRecordByUrl( context(), "https://files.example/download?b=2&a=1&is=stable" ) )
 	                 .has_value() );
 	CHECK( urlType( stored ) == "file" );
 
-	SECTION( "Multiple spellings mapped to one record remain unambiguous" )
-	{
-		REQUIRE( run( helpers::associateUrls( 1, { refreshed }, context() ) ).has_value() );
-		run( db::markDirectUrls( context(), { refreshed } ) );
-		CHECK( run( db::findStoredDirectRecordByUrl( context(), refreshed, { "ex", "hm" } ) ) == 1 );
-		CHECK( urlType( stored ) == "file" );
-		CHECK( urlType( refreshed ) == "file" );
-	}
 	SECTION( "Conflicting record mappings prevent reuse" )
 	{
-		execute( "INSERT INTO url_mappings VALUES (1, 2)" );
-		CHECK_FALSE( run( db::findStoredDirectRecordByUrl( context(), refreshed, { "ex", "hm" } ) ).has_value() );
+		execute( "INSERT INTO url_mappings\n"
+			"    VALUES (1, 2)" );
+		CHECK_FALSE( run( db::findStoredDirectRecordByUrl( context(), stored ) ).has_value() );
 	}
-	SECTION( "A differently classified alias cannot hide a conflicting record" )
+	SECTION( "A URL that is not a direct file is not reused" )
 	{
-		REQUIRE( run( helpers::associateUrls( 2, { refreshed }, context() ) ).has_value() );
-		CHECK( urlType( refreshed ) == "unknown" );
-		CHECK_FALSE( run( db::findStoredDirectRecordByUrl( context(), refreshed, { "ex", "hm" } ) ).has_value() );
+		REQUIRE( run( helpers::setUrlType( stored, "post", context() ) ).has_value() );
+		CHECK_FALSE( run( db::findStoredDirectRecordByUrl( context(), stored ) ).has_value() );
 	}
-	SECTION( "Normalized lookup still detects and records a disappeared file" )
+	SECTION( "Lookup still detects and records a disappeared file" )
 	{
-		const auto record { run( db::findStoredDirectRecordByUrl( context(), refreshed, { "ex", "hm" } ) ) };
+		const auto record { run( db::findStoredDirectRecordByUrl( context(), stored ) ) };
 		REQUIRE( record.has_value() );
 		REQUIRE( std::filesystem::remove( file ) );
 		const auto present { run( filesystem::findPresentRecordFilePath( context(), *record ) ) };
@@ -373,7 +458,7 @@ TEST_CASE_METHOD( RecordFilesFixture, "Direct URL lookup compares normalized ide
 		CHECK_FALSE( present->has_value() );
 		CHECK( missing() );
 		CHECK( missing_notifications == 1 );
-		CHECK_FALSE( run( db::findStoredDirectRecordByUrl( context(), refreshed, { "ex", "hm" } ) ).has_value() );
+		CHECK_FALSE( run( db::findStoredDirectRecordByUrl( context(), stored ) ).has_value() );
 	}
 }
 

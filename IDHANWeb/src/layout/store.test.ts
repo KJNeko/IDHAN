@@ -11,7 +11,6 @@ interface AddedPanel {
   component: string;
 }
 
-/** Minimal DockviewApi stand-in: records addPanel calls; the rest of the surface the store touches. */
 function makeFakeApi(): { api: DockviewApi; added: AddedPanel[] } {
   const added: AddedPanel[] = [];
   const api = {
@@ -96,7 +95,7 @@ describe('layout store', () => {
 
     const before = useLayoutStore.getState().doc;
     expect(useLayoutStore.getState().importLayout({ nope: true })).toBe(false);
-    expect(useLayoutStore.getState().doc).toBe(before); // unchanged on rejection
+	  expect(useLayoutStore.getState().doc).toBe(before);
   });
 
   it('setPanelConfig merges a patch and persists', () => {

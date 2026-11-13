@@ -5,8 +5,6 @@
 #include <concepts>
 #include <tuple>
 
-// Everything below here is just pure magic.
-// I'll try to decipher how the hell this works someday....
 template < typename Function >
 struct FunctionDecomp;
 
@@ -47,4 +45,4 @@ using FunctionReturn = FunctionDecomp< Func >::ResultType;
 
 template < typename Func >
 using FunctionTuple = FunctionDecomp< Func >::ArgTuple;
-#endif //ATLASGAMEMANAGER_FUNCTIONDECOMP_HPP
+#endif

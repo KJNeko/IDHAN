@@ -1,3 +1,4 @@
+import {PanelShortcut} from '../PanelShortcut';
 /**
  * Virtualized thumbnail grid backed by host.results. Selection updates host.selection;
  * activation uses the bus. Prefetch visible rows before neighboring viewports.
@@ -55,7 +56,6 @@ function readTileSize(raw: Partial<Config>): number {
   return typeof size === 'number' && Number.isFinite(size) && size > 0 ? Math.round(size) : DEFAULT_CONFIG.tileSize;
 }
 
-/** Tracks the scroll container's content width, to pack a whole number of fixed-width tiles per row. */
 function useColumns(ref: React.RefObject<HTMLDivElement | null>, tile: number): number {
   const [width, setWidth] = useState(0);
   useLayoutEffect(() => {
@@ -150,7 +150,8 @@ function GridPanel({ host }: PanelProps) {
 
       <div ref={scrollRef} className="grid-scroll">
         {ids.length === 0 ? (
-          <p className="muted grid-empty">Run a search to populate the grid.</p>
+			<div className="grid-empty"><p className="muted">No search results.</p><PanelShortcut type="search">Search
+		        files</PanelShortcut></div>
         ) : (
           <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
             {virtualRows.map((row) => {
@@ -208,7 +209,7 @@ function GridPanel({ host }: PanelProps) {
 export const gridPanel = {
   type: 'grid',
   title: 'Thumbnail Grid',
-  description: 'Virtualized grid of the current search results; drives the selection.',
+	description: 'Search results.',
   component: GridPanel,
   defaultConfig: DEFAULT_CONFIG,
   configVersion: 1,

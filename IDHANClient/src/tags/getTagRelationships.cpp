@@ -24,7 +24,6 @@ QFuture< IDHANClient::TagRelationshipInfo > IDHANClient::getTagRelationships(
 		TagRelationshipInfo results {};
 
 		const auto& object { doc.object() };
-		// Process relationship data here according to your TagRelationshipInfo structure
 
 		for ( const auto& aliased_id : object[ "aliased" ].toArray() )
 		{

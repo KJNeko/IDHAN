@@ -1,6 +1,5 @@
 #include "apiAuth.hpp"
 
-#include <folly/io/IOBuf.h>
 #include <proxygen/lib/http/HTTPMessage.h>
 
 #include <array>
@@ -12,17 +11,17 @@
 #include "auth/authKeys.hpp"
 #include "idhan/SHA256.hpp"
 #include "idhan/db/DBContext.hpp"
+#include "idhan/http/routing/ReflectedRoutes.hpp"
 #include "logging/log.hpp"
 
 namespace idhan::httpapi
 {
 
 #ifndef IDHAN_DISABLE_API_AUTH
-constexpr std::array< std::string_view, 3 > key_headers { { "Authorization", "X-API-Key", "IDHAN-API-Key" } };
 
 [[nodiscard]] static std::string headerKey( const proxygen::HTTPMessage& message )
 {
-	for ( const auto header : key_headers )
+	for ( const auto header : apiKeyHeaders )
 	{
 		auto value { message.getHeaders().getSingleOrEmpty( std::string { header } ) };
 		if ( !value.empty() ) return value;
@@ -32,13 +31,9 @@ constexpr std::array< std::string_view, 3 > key_headers { { "Authorization", "X-
 }
 #endif
 
-http::RouteDefinition verifyRoute( db::DBContext& db )
+http::HTTPTask< http::JsonResult< AuthenticationResponse > > verifyAuthentication( http::RequestContext )
 {
-	return http::RouteDefinition {
-		http::RouteMetadata { proxygen::HTTPMethod::GET, "/auth/verify", {}, { apiAuthValidation( db ) } },
-		[]( http::RequestContext ) -> http::HTTPTask< http::Response >
-		{ co_return http::Response::json( 200, folly::IOBuf::copyBuffer( R"({"authenticated":true})" ) ); }
-	};
+	co_return http::JsonResponse< AuthenticationResponse > {};
 }
 
 http::HTTPTask< std::optional< KeyRejection > > verifyApiKey( const std::string_view key, db::DBContext& db )

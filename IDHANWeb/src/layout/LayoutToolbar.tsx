@@ -1,9 +1,3 @@
-/**
- * Top bar: layout name, add-panel picker, edit-mode toggle, the named-layout menu, and sign-out.
- * The menu covers both localStorage snapshots ("Saved") and server-stored layouts ("On server",
- * push/pull); localStorage remains the source of truth and the server copy is opt-in.
- */
-
 import {type ChangeEvent, type SyntheticEvent, useEffect, useMemo, useRef, useState} from 'react';
 import {api, ApiError} from '../api/client';
 import type {PanelDefinition} from '../host/types';
@@ -14,11 +8,11 @@ const PANEL_GROUPS = [
     {title: 'Browse', types: ['search', 'grid', 'compact-grid', 'media-viewer']},
     {title: 'Record details', types: ['record-info', 'file-relationships', 'tag-editor', 'url-list', 'notes']},
     {title: 'Tags', types: ['tag-domain-manager', 'tag-relationships']},
-    {title: 'Import & jobs', types: ['import', 'job-monitor']},
+    {title: 'Import & jobs', types: ['import', 'advanced-import', 'job-monitor']},
     {title: 'Embeddings', types: ['embedding-search', 'embedding-compare', 'embeddings']},
     {
         title: 'Administration',
-        types: ['cluster-manager', 'downloader-secrets', 'sunburst-stats', 'log-viewer', 'server-status']
+		types: ['cluster-manager', 'downloader-secrets', 'bandwidth', 'sunburst-stats', 'log-viewer', 'server-status']
     },
     {title: 'Developer', types: ['selection-inspector', 'debug']},
 ] as const;
@@ -79,7 +73,6 @@ export function LayoutToolbar({ onSignOut }: { onSignOut: () => void }) {
 
   const store = useLayoutStore.getState();
 
-  // Re-read the registry when the catalog changes (a plugin registered new panel types).
   const panels = useMemo(() => listPanels(), [catalogVersion]);
     const openPanelTypes = useMemo(() => new Set(Object.values(placedPanels).map((panel) => panel.type)), [placedPanels]);
     const panelGroups = useMemo(() => {
@@ -110,7 +103,6 @@ export function LayoutToolbar({ onSignOut }: { onSignOut: () => void }) {
     if (chosen) store.newLayout(chosen.trim() || 'Untitled');
   }
 
-  // Download the working document as a JSON file so it can be moved without a server round-trip.
   function onExport() {
     const doc = useLayoutStore.getState().doc;
     const blob = new Blob([JSON.stringify(doc, null, 2)], { type: 'application/json' });
@@ -153,9 +145,9 @@ export function LayoutToolbar({ onSignOut }: { onSignOut: () => void }) {
           {version && <span className="toolbar-version">v{version}</span>}
       </span>
 
-        <span className="toolbar-notice" role="note" title="Development UI, Not for real usage. Vibecoded slop">
-        Development UI, Not for real usage. Vibecoded slop
-      </span>
+		<span className="toolbar-notice" role="note">
+            Vibecoded slop
+        </span>
 
       <input
         className="toolbar-name"
@@ -167,10 +159,6 @@ export function LayoutToolbar({ onSignOut }: { onSignOut: () => void }) {
         <details className="toolbar-menu panel-picker" ref={panelMenu} onToggle={onPanelMenuToggle}>
             <summary className="toolbar-button">Add panel <span aria-hidden="true">▾</span></summary>
             <div className="toolbar-dropdown panel-picker-dropdown">
-                <div className="panel-picker-head">
-                    <strong>Add a panel</strong>
-                    <span>Choose a tool for this layout</span>
-                </div>
                 <input
                     ref={panelSearch}
                     className="panel-picker-search"
@@ -190,12 +178,12 @@ export function LayoutToolbar({ onSignOut }: { onSignOut: () => void }) {
                                     <button
                                         type="button"
                                         className="panel-picker-item"
+                                        title={panel.description}
                                         key={panel.type}
                                         onClick={() => onAddPanel(panel.type)}
                                     >
                       <span className="panel-picker-item-copy">
                         <strong>{panel.title}</strong>
-                        <span>{panel.description ?? 'Add this panel to the current layout.'}</span>
                       </span>
                                         {alreadyOpen && <span className="panel-picker-open">Open</span>}
                                     </button>

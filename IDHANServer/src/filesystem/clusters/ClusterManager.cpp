@@ -21,7 +21,18 @@ template < typename Database >
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT cluster_id, folder_path, cluster_uuid::text, read_only, cluster_name, ratio_number, size_limit FROM file_clusters" )
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    cluster_id,
+					    folder_path,
+					    cluster_uuid::text,
+					    read_only,
+					    cluster_name,
+					    ratio_number,
+					    size_limit
+					FROM file_clusters
+				)SQL" )
 			.template rows<
 				ClusterID,
 				std::string,
@@ -124,7 +135,7 @@ runtime::Task< void > ClusterManager::reloadClusters( db::DBContext& db, const b
 				if ( !marker ) failures += std::format( "\nCluster {}: {}", cluster_id, marker.error() );
 			}
 		}
-		const auto access { ClusterAccess::open( folder_path, uuid, read_only ) };
+		const auto access { ClusterAccess::openSync( folder_path, uuid, read_only ) };
 		if ( !access )
 			failures += std::format( "\nCluster {} at {}: {}", cluster_id, folder_path.string(), access.error() );
 	}

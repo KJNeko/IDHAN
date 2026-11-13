@@ -1,8 +1,5 @@
 #include "DownloadImports.hpp"
 
-#include <IDHANDownloader/DirectResponse.hpp>
-#include <folly/coro/BlockingWait.h>
-
 #include <format>
 #include <map>
 #include <span>
@@ -10,10 +7,12 @@
 #include <vector>
 
 #include "db/fileInfo.hpp"
+#include "db/downloadSessionRecords.hpp"
 #include "filesystem/recordFilePath.hpp"
 #include "idhan/SHA256.hpp"
 #include "idhan/db/DBContext.hpp"
 #include "import/ImportFile.hpp"
+#include "logging/log.hpp"
 #include "tags/AssociateTags.hpp"
 #include "urls/AssociateUrls.hpp"
 
@@ -79,6 +78,7 @@ static runtime::Task< std::expected< ImportResult, std::string > > finishImport(
 	std::vector< std::string > urls,
 	std::map< std::string, std::vector< std::string > > tags_by_domain,
 	const DownloadSessionID session_id,
+	const std::optional< std::int64_t > posted_at,
 	db::DBContext& db )
 {
 	if ( const auto result { co_await helpers::associateUrls( record_id, std::move( urls ), db ) }; !result )
@@ -96,135 +96,141 @@ static runtime::Task< std::expected< ImportResult, std::string > > finishImport(
 
 	if ( session_id != 0 )
 	{
-		db::DBBindings bindings {};
-		bindings.bind( session_id );
-		bindings.bind( record_id );
-		const auto recorded {
-			co_await db
-				.query(
-					"INSERT INTO download_session_records (download_session_id, record_id) "
-					"VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING record_id",
-					std::move( bindings ) )
-				.rows< RecordID >()
+		const bool first_in_session {
+			co_await db::recordDownloadSessionImport( db, session_id, record_id, posted_at )
 		};
-
-		const bool first_in_session { !recorded.empty() };
 
 		if ( existing )
 			note = first_in_session ? "Already in the database" : "Already imported earlier in this session";
 	}
 
-	co_return ImportResult { .record_id = record_id, .note = std::move( note ) };
+	co_return ImportResult { .record_id = record_id, .note = std::move( note ), .existing = existing };
 }
 
 //! A free function rather than a capturing lambda: a lazy coroutine reads its captures after the
 //! closure that owned them has gone, so all state travels as parameters.
 [[nodiscard]] static runtime::Task< std::expected< ImportResult, std::string > > runImport(
 	const std::span< const std::byte > data,
+	const std::optional< int > descriptor,
 	const SHA256 sha256,
 	const std::string filename,
 	const std::string description,
-	std::vector< std::string > direct_urls,
-	std::vector< std::string > urls,
-	std::map< std::string, std::vector< std::string > > tags_by_domain,
-	const DownloadSessionID session_id,
 	const bool force_download,
 	db::DBContext& db )
 {
-	auto imported { co_await imports::importFile( data, sha256, filename, force_download, db ) };
-	if ( !imported )
-		co_return std::unexpected( std::format( "Importing {}: {}", description, imported.error().message ) );
+	auto imported_e { co_await imports::importFile( data, descriptor, sha256, filename, force_download, db ) };
+	if ( !imported_e.has_value() )
+		co_return std::unexpected( std::format( "Importing {}: {}", description, imported_e.error().message ) );
 
-	if ( imported->status == Failed )
+	const auto& imported { imported_e.value() };
+	if ( imported.status == Failed )
 		co_return std::unexpected( std::format( "Downloaded file has an unrecognised MIME type: {}", description ) );
 
-	if ( imported->status == Deleted )
+	if ( imported.status == Deleted )
 		co_return std::unexpected( std::format( "Downloaded file was previously deleted: {}", description ) );
 
-	auto result { co_await finishImport(
-		imported->record_id,
-		imported->status == Exists,
-		std::move( urls ),
-		std::move( tags_by_domain ),
-		session_id,
-		db ) };
-	if ( !result ) co_return std::unexpected( result.error() );
-
-	// Only the URL that delivered bytes and its final redirect destination are direct.
-	co_await db::markDirectUrls( db, std::move( direct_urls ) );
-	co_return *result;
+	co_return ImportResult { .record_id = imported.record_id, .existing = imported.status == Exists };
 }
 
-static runtime::Task< std::expected< std::optional< ImportResult >, std::string > > reuseImport(
-	ImportRequest request,
-	db::DBContext& db )
+folly::coro::Task< std::expected< std::optional< RecordID >, std::string > > DownloadImports::findStoredRecord(
+	ImportRequest request )
 {
-	const auto record { co_await db::findStoredDirectRecordByUrl( db, request.url, request.ephemeral_query ) };
-	if ( !record ) co_return std::nullopt;
-
-	const auto present { co_await filesystem::findPresentRecordFilePath( db, *record ) };
-	if ( !present ) co_return std::unexpected( present.error() );
-
-	if ( !*present ) co_return std::nullopt;
-
-	const auto result { co_await finishImport(
-		*record,
-		true,
-		collectUrls( request.options, request.url ),
-		collectTags( request.options ),
-		static_cast< DownloadSessionID >( request.host_tag ),
-		db ) };
-	if ( !result ) co_return std::unexpected( result.error() );
-
-	co_await db::markDirectUrls( db, { request.url } );
-	co_return *result;
-}
-
-std::expected< std::optional< ImportResult >, std::string > DownloadImports::reuse( const ImportRequest& request )
-{
-	return folly::coro::blockingWait( reuseImport( request, db::DBContext::instance() ) );
-}
-
-std::expected< ImportResult, std::string > DownloadImports::Sink::finish( const ImportMetadata& metadata )
-{
-	const auto size { metadata.size };
-	auto mapping { m_buffer.map( size ) };
-	if ( !mapping )
+	if ( request.force_download )
 	{
-		m_buffer.discard();
-		return std::unexpected( mapping.error() );
+		log::info( "Stored file check for {}: downloading, force download is set", request.url );
+		co_return std::nullopt;
 	}
 
-	const std::span< const std::byte > data { mapping->get(), size };
-	auto urls { collectUrls( m_options, m_url ) };
-	if ( !metadata.final_url.empty() ) urls.emplace_back( metadata.final_url );
-	const std::string filename { m_filename.empty() ? metadata.filename : m_filename };
-	const std::string description { std::format(
-		"{} ({} bytes{})",
-		m_url,
-		size,
-		metadata.content_type.empty() ? std::string {} : std::format( ", {}", metadata.content_type ) ) };
+	auto& db { db::DBContext::instance() };
+	const auto record { co_await db::findStoredDirectRecordByUrl( db, request.url ) };
+	if ( !record.has_value() )
+	{
+		log::info( "Stored file check for {}: downloading, no single stored record has it as a file URL", request.url );
+		co_return std::nullopt;
+	}
 
-	auto outcome { folly::coro::blockingWait( runImport(
-		data,
-		SHA256::hash( data ),
-		filename,
-		description,
-		m_direct_eligible
-		        && isDirectResponse(
-					metadata.content_type,
-					std::string_view { reinterpret_cast< const char* >( data.data() ),
-					                   std::min< std::size_t >( data.size(), 512 ) } ) ?
-			std::vector< std::string > { m_url, metadata.final_url } :
-			std::vector< std::string > {},
+	auto present_e { co_await filesystem::findPresentRecordFilePath( db, record.value() ) };
+	if ( !present_e.has_value() ) co_return std::unexpected( present_e.error() );
+
+	auto& present { present_e.value() };
+	if ( !present.has_value() )
+	{
+		log::info(
+			"Stored file check for {}: downloading, record {} is missing its file", request.url, record.value() );
+		co_return std::nullopt;
+	}
+
+	const int closed { co_await present.value().close() };
+	if ( closed < 0 ) co_return std::unexpected( "Cannot close stored record's cluster directory" );
+
+	log::info( "Stored file check for {}: skipping download, reusing record {}", request.url, record.value() );
+	co_return record;
+}
+
+folly::coro::Task< std::expected< ImportResult, std::string > > DownloadImports::Sink::finish( ImportMetadata metadata )
+{
+	ImportResult imported {};
+	std::vector< std::string > direct_urls {};
+	if ( m_stored_record.has_value() )
+	{
+		imported = ImportResult { .record_id = m_stored_record.value(), .existing = true };
+		direct_urls.emplace_back( m_url );
+	}
+	else
+	{
+		const auto size { metadata.size };
+		auto data_e { co_await m_buffer.read( size ) };
+		if ( !data_e.has_value() )
+		{
+			co_await m_buffer.discard();
+			co_return std::unexpected( data_e.error() );
+		}
+
+		const auto& data { data_e.value() };
+
+		if ( !metadata.effective_url.empty() ) direct_urls = { m_url, metadata.effective_url };
+
+		const std::string filename { m_filename.empty() ? metadata.filename : m_filename };
+		const std::string description { std::format(
+			"{} ({} bytes{})",
+			m_url,
+			size,
+			metadata.content_type.empty() ? std::string {} : std::format( ", {}", metadata.content_type ) ) };
+		auto imported_e { co_await runImport(
+			data,
+			m_buffer.descriptor(),
+			m_hasher.finish(),
+			filename,
+			description,
+			m_force_download,
+			db::DBContext::instance() ) };
+		co_await m_buffer.discard();
+		if ( !imported_e.has_value() ) co_return std::unexpected( imported_e.error() );
+
+		imported = imported_e.value();
+	}
+
+	auto urls { collectUrls( m_options, m_url ) };
+	if ( !metadata.effective_url.empty() ) urls.emplace_back( metadata.effective_url );
+
+	auto& db { db::DBContext::instance() };
+	const auto posted_at {
+		m_options[ "postedAt" ].isNull() ?
+			std::nullopt :
+			std::optional< std::int64_t > { m_options[ "postedAt" ].asInt64() }
+	};
+	auto result_e { co_await finishImport(
+		imported.record_id,
+		imported.existing,
 		std::move( urls ),
 		collectTags( m_options ),
 		m_session_id,
-		m_force_download,
-		db::DBContext::instance() ) ) };
+		posted_at,
+		db ) };
+	if ( !result_e.has_value() ) co_return std::unexpected( result_e.error() );
 
-	m_buffer.discard();
-	return std::move( outcome );
+	co_await db::markDirectUrls( db, std::move( direct_urls ) );
+	co_return result_e.value();
 }
 
 } // namespace idhan::downloader

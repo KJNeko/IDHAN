@@ -11,8 +11,6 @@ namespace idhan
 
 void checkPgVersion( const std::string& pg_version )
 {
-	// Example input: "PostgreSQL 18.0 (Debian 18.0-1.pgdg13+3) on x86_64-pc-linux-gnu, compiled by
-	// gcc (Debian 14.2.0-19) 14.2.0, 64-bit"
 	if ( pg_version.empty() )
 	{
 		log::critical( "Postgres version string was missing" );
@@ -67,7 +65,14 @@ ManagementConnection::ManagementConnection( const ConnectionArguments& arguments
 	log::info( "Interrogating postgres version" );
 	{
 		pqxx::work tx { connection };
-		const auto version { tx.exec( "SELECT version()" ) };
+		const auto version{
+			tx.exec(
+				//language=postgresql
+				R"SQL(
+				SELECT
+				    version()
+			)SQL" )
+		};
 		const auto version_string { version[ 0 ][ 0 ].as< std::string >() };
 		log::info( "Postgres version: {}", version_string );
 		checkPgVersion( version_string );

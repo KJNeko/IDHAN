@@ -74,8 +74,11 @@ class StorageSearchFixture : public ServerFixture
 			pqxx::work tx { db() };
 			for ( const auto record_id : { aliased, direct, untagged, other } )
 				tx.exec(
-					"INSERT INTO file_info (record_id, size, mime_id, cluster_store_time, cluster_delete_time) "
-					"VALUES ($1, 123, $2, now(), now())",
+					//language=postgresql
+					R"SQL(
+						INSERT INTO file_info (record_id, size, mime_id, cluster_store_time, cluster_delete_time)
+						    VALUES ($1, 123, $2, now(), now())
+					)SQL",
 					pqxx::params { record_id, mime_ids::IMAGE_PNG } );
 			tx.commit();
 		}

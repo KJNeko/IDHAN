@@ -116,7 +116,6 @@ TEST_CASE( "Perceptual hash composites alpha onto white", "[phash][modules]" )
 	CHECK( hex( **generated ) == "b51d256f201d2de5" );
 }
 
-//! Apply EXIF orientation to PNG as well as other formats.
 TEST_CASE( "Perceptual hash honours EXIF orientation", "[phash][modules]" )
 {
 	REQUIRE( VIPS_STATUS == 0 );

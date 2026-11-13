@@ -64,7 +64,15 @@ TEST_CASE( "PGConnect", "[pg]" )
 {
 	idhan::db::IDHANPQContext ctx { "localhost", 5432, "idhan-db" };
 
-	auto task { ctx.execSql( "SELECT * FROM pg_type WHERE oid = $1", 23 ) };
+	auto task { ctx.execSql(
+		//language=postgresql
+		R"SQL(
+			SELECT
+			    *
+			FROM pg_type
+			WHERE oid = $1
+		)SQL",
+		23 ) };
 	CHECK( task.socket() >= 0 );
 
 	const auto deadline { std::chrono::steady_clock::now() + std::chrono::seconds { 5 } };

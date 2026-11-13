@@ -38,8 +38,15 @@ SCENARIO_METHOD( MigratedSchema, "Aliases and parents resolving together", "[db]
 			{
 				CHECK(
 					tx.query_value< int >(
-						"SELECT COALESCE(ideal_parent_id, parent_id) FROM tag_parents "
-						"WHERE parent_id = $1 AND child_id = $2 AND tag_domain_id = $3",
+						//language=postgresql
+						R"SQL(
+							SELECT
+							    COALESCE(ideal_parent_id, parent_id)
+							FROM tag_parents
+							WHERE parent_id = $1
+							    AND child_id = $2
+							    AND tag_domain_id = $3
+						)SQL",
 						pqxx::params { metroid, samus, domain } )
 					== metroid_series );
 			}
@@ -150,7 +157,13 @@ SCENARIO_METHOD( MigratedSchema, "Aliases and parents resolving together", "[db]
 		WHEN( "both grandparents are aliased onto the same tag in one statement" )
 		{
 			tx.exec(
-				"INSERT INTO tag_aliases (aliased_id, alias_id, tag_domain_id) VALUES ($1, $3, $4), ($2, $3, $4)",
+				//language=postgresql
+				R"SQL(
+					INSERT INTO tag_aliases (aliased_id, alias_id, tag_domain_id)
+					VALUES
+					    ($1, $3, $4),
+					    ($2, $3, $4)
+				)SQL",
 				pqxx::params { nintendo, nintendo_ead, nintendo_co, domain } );
 
 			THEN( "the two rows collapse onto one, still counting the one origin holding them up" )

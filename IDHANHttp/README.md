@@ -1,5 +1,25 @@
 # IDHANHttp
 
+## Layout
+
+Public headers live under `include/idhan/http/`; implementations under `src/`
+use the same responsibility folders. All types remain in `idhan::http`.
+
+| Folder        | Responsibility                                                                     |
+|---------------|------------------------------------------------------------------------------------|
+| `server/`     | Server lifecycle, configuration, TLS certificates, logging, and compression        |
+| `routing/`    | Route definitions, registration, reflected handler dispatch, and middleware        |
+| `request/`    | Request context, parameters, validation rules, multipart data, and upload storage  |
+| `response/`   | Response types, reflected response conversion, files, and byte ranges              |
+| `json/`       | JSON parsing, serialization, validated values, and missing fields                  |
+| `reflection/` | Shared compile-time annotations, type inspection, and request/JSON codecs          |
+| `openapi/`    | API documentation annotations, authentication descriptions, and schema compilation |
+| `streaming/`  | Streaming response channels, JSON body sources, and server-sent events             |
+
+Include headers by their full public path, for example
+`#include "idhan/http/routing/ReflectedRoutes.hpp"` for route declarations or
+`#include "idhan/http/server/HTTPServer.hpp"` for server setup.
+
 ## Pre-body validation
 
 Attach application validation functions to `RouteMetadata::before_body`. The HTTP
@@ -100,7 +120,7 @@ open-ended, and suffix ranges; unsatisfiable ranges return 416. Multiple ranges,
 unknown range units, and If-Range requests fall back to a full 200 response. HEAD
 ignores Range. Malformed ranges also fall back to the full response. A nonzero
 suffix range on an empty file returns the full empty response. The header-only
-`helpers/parseByteRange.hpp` parser is constexpr and has compile-time coverage.
+`idhan/http/response/parseByteRange.hpp` parser is constexpr and has compile-time coverage.
 Automatic compression is disabled so file range offsets and
 Content-Length describe the bytes actually sent.
 

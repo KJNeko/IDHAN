@@ -50,10 +50,11 @@ class SearchSortingFixture : public ServerFixture
 		for ( std::size_t index = 0; index < records.size(); ++index )
 		{
 			tx.exec(
-				"INSERT INTO file_info (record_id, size, mime_id, cluster_store_time, file_mtime, file_ctime) "
-				"VALUES ($1, $2, $3, TIMESTAMP '1970-01-01' + $4::integer * INTERVAL '1 second', "
-				"TIMESTAMP '1970-01-01' + $5::integer * INTERVAL '1 second', "
-				"TIMESTAMP '1970-01-01' + $6::integer * INTERVAL '1 second')",
+				//language=postgresql
+				R"SQL(
+					INSERT INTO file_info (record_id, size, mime_id, cluster_store_time, file_mtime, file_ctime)
+					    VALUES ($1, $2, $3, TIMESTAMP '1970-01-01' + $4::integer * INTERVAL '1 second', TIMESTAMP '1970-01-01' + $5::integer * INTERVAL '1 second', TIMESTAMP '1970-01-01' + $6::integer * INTERVAL '1 second')
+				)SQL",
 				pqxx::params {
 					records[ index ],
 					sizes[ index ],
@@ -62,8 +63,13 @@ class SearchSortingFixture : public ServerFixture
 					mtimes[ index ],
 					ctimes[ index ] } );
 			tx.exec(
-				"UPDATE records SET creation_time = TIMESTAMP '1970-01-01' + $2::integer * INTERVAL '1 second' "
-				"WHERE record_id = $1",
+				//language=postgresql
+				R"SQL(
+					UPDATE
+					    records
+					SET creation_time = TIMESTAMP '1970-01-01' + $2::integer * INTERVAL '1 second'
+					WHERE record_id = $1
+				)SQL",
 				pqxx::params { records[ index ], creation_times[ index ] } );
 		}
 		tx.commit();

@@ -142,16 +142,6 @@ std::filesystem::path getStaticPath()
 	return static_path;
 }
 
-std::filesystem::path getApiDocsPath()
-{
-	static std::filesystem::path api_docs_path {};
-	static std::once_flag api_docs_path_once {};
-
-	std::call_once( api_docs_path_once, []() { api_docs_path = getStaticPath() / "api"; } );
-
-	return api_docs_path;
-}
-
 std::filesystem::path getThumbnailsPath()
 {
 	static std::filesystem::path thumbnails_path {};
@@ -173,7 +163,6 @@ std::filesystem::path getPluginsPath()
 		plugins_path_once,
 		[]()
 		{
-			// Empty (unconfigured) → default under the static root so the static router serves the bundles.
 			const auto configured { idhan::config::getSilentDefault< std::string >( "plugins", "path", "" ) };
 			if ( !configured.empty() )
 				plugins_path = configured;
@@ -184,7 +173,6 @@ std::filesystem::path getPluginsPath()
 	return plugins_path;
 }
 
-//! Cached: every thumbnail cache miss asks, and each config read re-parses the config file.
 const std::vector< std::size_t >& getCacheableThumbnailSizes()
 {
 	static std::vector< std::size_t > sizes {};
@@ -201,7 +189,6 @@ const std::vector< std::size_t >& getCacheableThumbnailSizes()
 	return sizes;
 }
 
-//! \copydoc getCacheableThumbnailSizes
 bool getThumbnailCachingEnabled()
 {
 	static bool enabled { true };
@@ -215,7 +202,7 @@ bool getThumbnailCachingEnabled()
 
 bool getPurgeThumbnailsOnBoot()
 {
-	// Silent for the same reason: an optional debugging toggle should not nag on every boot.
+	// Silent: an optional debugging toggle should not warn on every boot.
 	return idhan::config::getSilentDefault< bool >( "thumbnails", "purge_on_boot", false );
 }
 

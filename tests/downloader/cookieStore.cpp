@@ -1,3 +1,4 @@
+#include <folly/coro/BlockingWait.h>
 #include "cookies/CookieStore.hpp"
 
 #include <catch2/catch_test_macros.hpp>
@@ -88,14 +89,14 @@ TEST_CASE( "A leading dot on a cookie Domain is ignored", "[downloader][cookies]
 TEST_CASE( "The store only ever holds cookies that carry an expiry", "[downloader][cookies]" )
 {
 	CookieStore store {};
-	store.set( Cookie { .name = "session", .value = "1", .domain = "example.com" } );
+	folly::coro::blockingWait( store.set( Cookie { .name = "session", .value = "1", .domain = "example.com" } ) );
 	CHECK( store.cookies().empty() );
 
-	store.set(
+	folly::coro::blockingWait( store.set(
 		Cookie { .name = "kept",
 	             .value = "1",
 	             .domain = "example.com",
-	             .expires = std::chrono::system_clock::now() + std::chrono::hours { 1 } } );
+		         .expires = std::chrono::system_clock::now() + std::chrono::hours { 1 } } ) );
 	CHECK( store.cookies().size() == 1 );
 }
 
@@ -104,11 +105,11 @@ TEST_CASE( "A session cookie shadows the shared one of the same name", "[downloa
 	CookieStore store {};
 	CookieOverlay overlay {};
 
-	store.set(
+	folly::coro::blockingWait( store.set(
 		Cookie { .name = "auth",
 	             .value = "global",
 	             .domain = "example.com",
-	             .expires = std::chrono::system_clock::now() + std::chrono::hours { 1 } } );
+		         .expires = std::chrono::system_clock::now() + std::chrono::hours { 1 } } ) );
 	overlay.set( Cookie { .name = "auth", .value = "session", .domain = "example.com" } );
 
 	HttpHeaders headers {};
@@ -157,16 +158,25 @@ class RecordingPersistence final : public CookiePersistence
 	std::vector< std::string > erased {};
 	std::size_t prunes {};
 
-	std::vector< PersistedCookie > loadAll() override { return rows; }
+	folly::coro::Task< std::vector< PersistedCookie > > loadAll() override { co_return rows; }
 
-	void upsert( const PersistedCookie& cookie ) override { rows.emplace_back( cookie ); }
-
-	void erase( const std::string_view name, std::string_view, std::string_view ) override
+	folly::coro::Task< void > upsert( PersistedCookie cookie ) override
 	{
-		erased.emplace_back( name );
+		rows.emplace_back( std::move( cookie ) );
+		co_return;
 	}
 
-	void pruneExpired() override { ++prunes; }
+	folly::coro::Task< void > erase( std::string name, std::string, std::string ) override
+	{
+		erased.emplace_back( std::move( name ) );
+		co_return;
+	}
+
+	folly::coro::Task< void > pruneExpired() override
+	{
+		++prunes;
+		co_return;
+	}
 };
 
 TEST_CASE( "The store writes through to its persistence and loads back from it", "[downloader][cookies]" )
@@ -188,16 +198,16 @@ TEST_CASE( "The store writes through to its persistence and loads back from it",
 			.expires = std::chrono::system_clock::now() - std::chrono::hours { 1 } } );
 
 	CookieStore store { &persistence };
-	store.load();
+	folly::coro::blockingWait( store.load() );
 
 	CHECK( persistence.prunes == 1 );
 	REQUIRE( store.cookies().size() == 1 );
 	CHECK( store.cookies().front().name == "kept" );
 
-	store.set( Cookie { .name = "session", .value = "3", .domain = "example.com" } );
+	folly::coro::blockingWait( store.set( Cookie { .name = "session", .value = "3", .domain = "example.com" } ) );
 	CHECK( persistence.rows.size() == 2 );
 
-	store.erase( "kept", "example.com", "/" );
+	folly::coro::blockingWait( store.erase( "kept", "example.com", "/" ) );
 	REQUIRE( persistence.erased.size() == 1 );
 	CHECK( persistence.erased.front() == "kept" );
 	CHECK( store.cookies().empty() );

@@ -1,8 +1,3 @@
-/**
- * Wire types for the IDHAN REST API. These mirror the JSON the server emits (see
- * IDHANServer/src/api) and cover only the fields the WebUI reads, not every column.
- */
-
 export interface SemVer {
   major: number;
   minor: number;
@@ -12,7 +7,6 @@ export interface SemVer {
 
 export interface VersionInfo {
   idhan_server_version: SemVer;
-  /** An object, unlike hydrus_api_version, which really is a bare number. */
   idhan_api_version: SemVer;
   hydrus_api_version: number;
   hydrus_version: number;
@@ -21,7 +15,6 @@ export interface VersionInfo {
   build: string;
 }
 
-/** Response of GET /auth/verify. Reaching it at all means the API key was accepted. */
 export interface KeyCheck {
   authenticated: boolean;
 }
@@ -80,7 +73,6 @@ export interface MetadataRequest {
  * one adds `parsed: false`; everything past `simple_type` depends on which category the file is.
  */
 export interface RecordTag {
-    /** Tag domain the mapping belongs to. */
     domain: string;
     /** Full `namespace:subtag` text. */
     text: string;
@@ -107,7 +99,6 @@ export interface RecordMetadata {
     /** False when no module has produced metadata for this record yet. */
     parsed?: boolean;
     simple_type?: SimpleType;
-    /** Free-form extra fields the parsing module chose to surface. */
     extra?: Record<string, unknown> | null;
 
     /** image, video, animation, image_project. */
@@ -177,11 +168,8 @@ export interface FileRelationships {
     alternatives: number[];
 }
 
-/** What POST /relationships/clear actually removed between two records. */
 export interface ClearedRelationship {
-    /** A direct better/worse pair existed in either direction and was deleted. */
     duplicate_removed: boolean;
-    /** The two were paired as alternatives, and that pair was deleted. */
     alternative_removed: boolean;
 }
 
@@ -193,7 +181,6 @@ export interface UndecidedPair {
     distance: number;
 }
 
-/** The next pair awaiting a duplicate decision, or none left within the distance. */
 export interface UndecidedDuplicate {
     /** The maximum distance that was searched, echoed back. */
     distance: number;
@@ -212,7 +199,6 @@ export interface SimilarRecord {
     unrelated: boolean;
 }
 
-/** Perceptual-hash neighbourhood of one record (GET /relationships/{record_id}/similar). */
 export interface SimilarRecords {
     record_id: number;
     /** The distance that was searched, echoed back. */
@@ -247,7 +233,6 @@ export interface AutocompleteResult {
   similarity?: number;
 }
 
-/** A panel a plugin advertises in its manifest (for display before the bundle is loaded). */
 export interface PluginPanelInfo {
   type: string;
   title?: string;
@@ -279,7 +264,31 @@ export interface ServerLayoutMeta {
   updated_at: number;
 }
 
+export type DownloadSessionCounts = Record<DownloadSessionUrlState, number>;
+
+export interface DownloadBandwidth {
+	download_bytes_per_second: number;
+	sessions: { session_id: number; download_bytes_per_second: number }[];
+}
+
+/** `paused` and `cancelled` are reserved; the server does not produce them yet. */
+export type DownloadSessionState = 'active' | 'idle' | 'paused' | 'cancelled';
+
 export interface DownloadSessionInfo {
+	is_subscription?: boolean;
+    downloading?: number;
+    waiting?: number;
+    waiting_parsers?: number;
+    waiting_requests?: number;
+    downloaded_bytes?: number;
+    average_import_bytes?: number;
+    waiting_http_rate?: number;
+    waiting_http_shard?: number;
+    waiting_storage?: number;
+    download_bytes_per_second?: number;
+    state?: DownloadSessionState;
+    /** Counted by the client from the session's URL rows. */
+    counts?: DownloadSessionCounts;
     id: number;
     name: string;
     created_at: number;
@@ -288,9 +297,24 @@ export interface DownloadSessionInfo {
     error_count: number;
 }
 
-export type DownloadSessionUrlState = 'pending' | 'processing' | 'completed' | 'failed' | 'skipped';
+export type DownloadSessionUrlState =
+    | 'pending'
+    | 'downloading'
+    | 'processing'
+    | 'importing'
+    | 'completed'
+    | 'imported'
+    | 'imported_previously'
+    | 'skipped_no_url_class'
+    | 'skipped_already_seen'
+    | 'skipped_already_imported'
+    | 'failed'
+    | 'cancelled';
+
+export type DownloadFailureStage = 'route' | 'download' | 'parser' | 'import' | 'closed';
 
 export interface DownloadSessionUrlJob {
+    /** Unique within its session only. */
     id: number;
     /** Null on an inserted URL; set on every URL the parser discovered from one. */
     parent_id: number | null;
@@ -299,11 +323,15 @@ export interface DownloadSessionUrlJob {
     created_at: number;
     finished_at: number | null;
     error: string | null;
-    /** Why a URL was skipped. "Already in the database" means this session first encountered an
-     * existing record; "Already imported earlier in this session" means it was already associated
-     * with this session. */
-    note: string | null;
+    /** Null for failures recorded before stages existed. */
+    stage: DownloadFailureStage | null;
     record_id: number | null;
+    /** Byte size of the record's file, set for imported and imported_previously. */
+    size: number | null;
+    /** Live transfer progress of a downloading URL. */
+    bytes?: number;
+    /** Absent when the server did not report a size. */
+    total?: number;
 }
 
 export interface DownloadSessionUrlNode extends DownloadSessionUrlJob {
@@ -343,146 +371,31 @@ export interface DownloadSessionErrorLog {
     errors: DownloadSessionError[];
 }
 
-export type DebugWorkPhase = 'queued' | 'module' | 'parser' | 'transferring';
-
-export type DebugSessionState = 'running' | 'idle' | 'closing' | 'cancelled';
-
-export type DebugEventKind =
-    | 'started'
-    | 'completed'
-    | 'failed'
-    | 'request'
-    | 'request_failed'
-    | 'imported'
-    | 'import_failed'
-    | 'followed'
-    | 'finished';
-
-export interface DebugWorkItem {
-    work_id: number;
-    parent_work_id: number | null;
-    url_id: number | null;
-    url: string;
-    url_class: string;
-    parser: string;
-    phase: DebugWorkPhase;
-    outstanding: number;
-    age_ms: number;
-}
-
-export interface DebugPendingRequest {
-    work_id: number;
-    url_id: number | null;
-    url: string;
-    lane: string;
-    import: boolean;
-    age_ms: number;
-}
-
-export interface DebugSessionCounters {
-    work_started: number;
-    work_completed: number;
-    work_failed: number;
-    requests: number;
-    request_bytes: number;
-    requests_failed: number;
-    imported: number;
-    import_bytes: number;
-    import_failed: number;
-    follows_queued: number;
-    follows_filtered: number;
-    follows_already_queued: number;
-    follows_already_explored: number;
-    follows_already_imported: number;
-}
-
-export interface DebugSessionEvent {
-    /** Monotonic per session and never reused; the cursor for the next poll. */
-    sequence: number;
-    at: number;
-    kind: DebugEventKind;
-    work_id: number;
-    url_id: number | null;
-    url: string;
-    /** Lane key, content type, follow status, or error text, depending on the kind. */
-    detail: string;
-    status: number | null;
-    bytes: number;
-    record_id: number | null;
-}
-
-export interface DebugSession {
-    id: number;
-    name: string | null;
-    root_url: string;
-    state: DebugSessionState;
-    closed: boolean;
-    cancelled: boolean;
-    idle: boolean;
-    queued: number;
-    running: number;
-    in_flight: number;
-    in_flight_limit: number;
-    outstanding: number;
-    counters: DebugSessionCounters;
-    work: DebugWorkItem[];
-    requests: DebugPendingRequest[];
-    events: DebugSessionEvent[];
-    event_sequence: number;
-    /** Events evicted from the server ring before this reader reached them. */
-    events_dropped: number;
-}
-
-export interface DebugLane {
-    scheduling_key: string;
-    group: string;
-    throttled: boolean;
-    effective_interval_ms: number;
-    remaining_ms: number;
-    consecutive_limits: number;
-    backed_off: boolean;
-    in_flight: number;
-    queued: number;
-    shards: number;
-    bytes_per_second: number;
-    download_bytes_per_second: number;
-    active: boolean;
-}
-
-export interface DebugModule {
-    library_index: number;
-    module_index: number;
-    library: string;
-    name: string;
-    /** Includes calls waiting for a worker thread or the module's serialization lock. */
-    queued: number;
-    /** Includes module code waiting for callbacks to finish. */
-    running: number;
-    /** Live processes for the shared library, including isolated callback workers. */
-    workers: number;
-    /** False while a live worker has not supplied its first activity report. */
-    reporting: boolean;
-    thread_safe: boolean;
-}
-
-export interface DownloaderDebug {
-    sessions: DebugSession[];
-    lanes: DebugLane[];
-    /** Omitted by servers predating module activity reporting. */
-    modules?: DebugModule[];
-}
-
-export type DownloaderSecrets = Record<string, string>;
+export type DownloaderSecretValue = string | number | boolean | null
+    | DownloaderSecretValue[] | { [key: string]: DownloaderSecretValue };
+export type DownloaderSecrets = Record<string, { [key: string]: DownloaderSecretValue }>;
 
 export interface RateLimitLane {
-    scheduling_key: string;
+	spread?: boolean;
+    concurrency_limit?: number;
+    dispatched?: number;
+	dispatch_wait?: 'idle' | 'rate_limit' | 'concurrency' | 'backoff' | 'ready' | 'disabled';
+    in_flight?: number;
+    queued?: number;
+    backed_off?: boolean;
+
+	lane: string;
+	group: string;
+	rate_limit_hits?: number;
+	disabled?: boolean;
+	parser_error_hits?: number;
+	parser_limited?: boolean;
+	rate_limited?: boolean;
+	advertised_limits?: string;
     download_bytes_per_second: number;
-    throttled: boolean;
     requests: number;
     seconds: number;
-    effective_interval_ms: number;
     remaining_ms: number;
-    consecutive_limits: number;
     active: boolean;
 }
 
@@ -496,7 +409,6 @@ export interface RateLimitMessage {
     limit: RateLimitLane;
 }
 
-/** A tag service domain (GET /tags/domain/list). */
 export interface TagDomain {
   tag_domain_id: number;
   domain_name: string;
@@ -521,7 +433,6 @@ export interface TagDomainCounts {
     display_count: number;
 }
 
-/** A single tag's namespace/subtag decomposition (GET /tags/{id}/info). */
 export interface TagInfo {
   tag_id: number;
   namespace: { id: number; text: string };
@@ -556,7 +467,6 @@ export type MimeMap = Record<string, string>;
 export interface MimeCount {
   mime: string | null;
   count: number;
-  /** Total on-disk bytes (file_info.size) across records with this mime. */
   bytes: number;
 }
 
@@ -574,7 +484,6 @@ export interface DatabaseStats {
   clusters: number;
 }
 
-/** A node in the GET /db/stats/sunburst storage tree: a table (with index children) or an index. */
 export interface StorageNode {
   name: string;
   value: number;
@@ -601,3 +510,152 @@ export interface JobDispatch {
     /** Records the job was scoped to, when the endpoint takes a record list. */
     record_count?: number;
 }
+
+export type DownloaderOptionValue = boolean | number | string | string[];
+export type DownloaderOptionDefinition = {
+    name: string;
+    description: string;
+} & (
+    { type: 'boolean'; default: boolean }
+    | { type: 'number'; default: number; minimum?: number; integer?: boolean }
+    | { type: 'string'; default: string }
+    | { type: 'string[]'; default: string[] }
+    );
+
+export interface DownloaderOptions {
+    force_import: boolean;
+    parsers: { id: string; options: DownloaderOptionDefinition[] }[];
+}
+
+export interface DownloadSettings {
+    force_import?: boolean;
+    parsers?: Record<string, Record<string, DownloaderOptionValue>>;
+}
+
+export interface DownloaderParserHost {
+    host: string;
+    parser: string;
+    auto_discovered: boolean;
+}
+
+export interface GeneratorParameter {
+	name: string;
+	type: 'string';
+	optional?: boolean;
+	default?: string;
+	pattern?: string;
+}
+
+export interface DownloaderParser {
+	filename: string;
+	id: string;
+	version: number;
+	sdkVersion?: string;
+	options: Array<{ name: string; description?: string; type?: string }>;
+	handlers: Array<{ id: string; method: string; parameters: Record<string, GeneratorParameter> }>;
+	discoveries: Array<{ urlClass: string; method: string }>;
+	urlClasses: Array<{ id: string; version?: number; [key: string]: unknown }>;
+}
+
+
+/** Exact-host totals; child nodes do not inherit or contribute to their parent's value. */
+export interface BandwidthNode {
+	host: string;
+	bytes_received: number;
+	children: BandwidthNode[];
+}
+
+export interface SubscriptionRunProgress {
+	kind: 'subscription';
+	subscription_id: number;
+	session_id?: number;
+	root_id?: number;
+	imported_count: number;
+	known_count: number;
+	error?: string;
+}
+
+export interface JobResponseEvent {
+	type: 'response';
+	job_id: number;
+	response: unknown;
+}
+
+export interface SubscriptionInput {
+	tags?: string;
+	parameters?: Record<string, string>;
+	enabled: boolean;
+}
+
+export interface SubscriptionGroupInput {
+	name: string;
+	generator: string;
+	origin?: string;
+	enabled: boolean;
+	interval_seconds: number;
+}
+
+export interface SubscriptionGroup extends SubscriptionGroupInput {
+	id: number;
+	subscription_count: number;
+	record_count: number;
+	total_size_bytes: number;
+	running_count: number;
+	dead_count: number;
+	error_count: number;
+}
+
+export interface Subscription extends SubscriptionInput {
+	tags: string;
+	parameters: Record<string, string>;
+	id: number;
+	group_id: number;
+	session_id?: number | null;
+	active_root_id?: number | null;
+	/** New files added by the most recently completed run. */
+	imported_count?: number;
+	known_count?: number;
+	total_size_bytes: number;
+	record_count: number;
+	latest_post_at: number | null;
+	post_dates_complete: boolean;
+	dead: boolean;
+	next_run_at: number;
+	initial_sync_complete: boolean;
+	active_session_id: number | null;
+	last_session_id: number | null;
+	last_finished_at: number | null;
+	last_error: string | null;
+}
+
+export interface ParserCacheEntry {
+	parser: string;
+	key: string;
+	hits: number;
+	lifetime_seconds: number;
+	expires_in_seconds: number;
+}
+
+export interface ParserCacheSnapshot {
+	hits: number;
+	misses: number;
+	hit_rate: number;
+	entry_count: number;
+	entries: ParserCacheEntry[];
+}
+
+export interface SubscriptionsSnapshot {
+	groups: SubscriptionGroup[];
+	items: Subscription[];
+}
+
+export type SubscriptionsEvent =
+	| ({ type: 'snapshot' } & SubscriptionsSnapshot)
+	| ({ type: 'snapshot_chunk' } & SubscriptionsSnapshot)
+	| { type: 'snapshot_start' }
+	| { type: 'snapshot_complete' }
+	| {
+	type: 'patch'; groups?: (Partial<SubscriptionGroup> & { id: number })[];
+	items?: (Partial<Subscription> & { id: number })[]
+}
+	| { type: 'remove'; groups?: number[]; items?: number[] };

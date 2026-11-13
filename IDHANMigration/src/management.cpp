@@ -1,7 +1,3 @@
-//
-// Created by kj16609 on 9/8/24.
-//
-
 #include "../include/management.hpp"
 
 #pragma GCC diagnostic push
@@ -15,14 +11,23 @@
 
 namespace idhan::db
 {
-
 bool tableExists( pqxx::transaction_base& tx, const std::string_view name, const std::string_view schema )
 {
-	pqxx::params params {};
+	pqxx::params params{};
 	params.append( name );
 	params.append( schema );
-	const pqxx::result table_result { tx.exec_params(
-		"SELECT table_name FROM information_schema.tables WHERE table_name = $1 AND table_schema = $2", params ) };
+	const pqxx::result table_result{
+		tx.exec_params(
+			//language=postgresql
+			R"SQL(
+			SELECT
+			    table_name
+			FROM information_schema.tables
+			WHERE table_name = $1
+			    AND table_schema = $2
+		)SQL",
+			params )
+	};
 
 	return table_result.size() > 0;
 }
@@ -34,20 +39,22 @@ void addTableToInfo(
 	const std::string_view creation_query,
 	const std::size_t migration_id )
 {
-	pqxx::params params {};
+	pqxx::params params{};
 	params.append( name );
 	params.append( migration_id );
 	params.append( operation );
 	params.append( creation_query );
 	tx.exec_params(
-		R"(
-					INSERT INTO idhan_info (object_name, last_migration_id, last_operation, queries)
-					VALUES( $1, $2, $3, ARRAY[$4] )
-					ON CONFLICT (object_name) DO UPDATE SET
-						queries = idhan_info.queries || EXCLUDED.queries,
-		                last_migration_id = EXCLUDED.last_migration_id,
-		                last_operation = EXCLUDED.last_operation;)",
+		//language=postgresql
+		R"SQL(
+			INSERT INTO idhan_info (object_name, last_migration_id, last_operation, queries)
+			    VALUES ($1, $2, $3, ARRAY[$4])
+			ON CONFLICT (object_name)
+			    DO UPDATE SET
+			        queries = idhan_info.queries || EXCLUDED.queries,
+			        last_migration_id = EXCLUDED.last_migration_id,
+			        last_operation = EXCLUDED.last_operation;
+		)SQL",
 		params );
 }
-
 } // namespace idhan::db

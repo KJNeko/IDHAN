@@ -6,8 +6,8 @@
 #include <vector>
 
 #include "IDHANDownloader/DownloaderConfig.hpp"
-#include "IDHANDownloader/LaneSnapshot.hpp"
-#include "IDHANDownloader/SessionSnapshot.hpp"
+#include "IDHANDownloader/http/LaneSnapshot.hpp"
+#include "IDHANDownloader/session/SessionSnapshot.hpp"
 #include "idhan/runtime/Task.hpp"
 
 namespace idhan::server

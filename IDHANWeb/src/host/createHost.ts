@@ -1,9 +1,3 @@
-/**
- * Builds the HostApi handed to one panel instance. Global services (selection, bus, theme, toasts)
- * come from globalServices; per-instance settings come from a binding the Workspace wires to the
- * layout store, so the host stays decoupled from the store's internals.
- */
-
 import {watchJobs, api, getKey, stats as statsApi, tags as tagApi} from '../api/client';
 import { thumbnailUrl as buildThumbnailUrl, fileUrl as buildFileUrl } from '../api/client';
 import {forgetMetadata, getMetadata} from './metadataCache';

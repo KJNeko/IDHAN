@@ -129,7 +129,14 @@ TEST_CASE_METHOD(
 		pqxx::work transaction { db() };
 		CHECK(
 			transaction.query_value< std::string >(
-				"SELECT cluster_uuid::text FROM file_clusters WHERE cluster_id = $1", pqxx::params { cluster_id } )
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    cluster_uuid::text
+					FROM file_clusters
+					WHERE cluster_id = $1
+				)SQL",
+				pqxx::params { cluster_id } )
 			== document[ "cluster_uuid" ].asString() );
 	}
 	document[ "metadata" ][ "future" ] = "keep this";
@@ -166,7 +173,14 @@ TEST_CASE_METHOD(
 	{
 		pqxx::work transaction { db() };
 		record_id = transaction.query_value< RecordID >(
-			"SELECT record_id FROM file_info JOIN records USING (record_id) WHERE sha256 = decode($1, 'hex')",
+			//language=postgresql
+			R"SQL(
+				SELECT
+				    record_id
+				FROM file_info
+				    JOIN records USING (record_id)
+				WHERE sha256 = decode($1, 'hex')
+			)SQL",
 			pqxx::params { hash.hex() } );
 	}
 	CHECK( api().get( std::format( "/records/{}/file", record_id ) ).body == bytes );
@@ -202,6 +216,40 @@ TEST_CASE_METHOD(
 
 TEST_CASE_METHOD(
 	ClusterMarkerFixture,
+	"Spilled uploads retain their descriptor through MIME specialization",
+	"[api][import][spilled-upload]" )
+{
+	create();
+	std::string bytes { "PK\x03\x04", 4 };
+	// Exceed the 8 MiB request memory limit. The archive module specializes ZIP to CBZ
+	// from the filename, so this also detects a failure to pass the spilled descriptor.
+	bytes.resize( 9 * 1024 * 1024, '\0' );
+	bytes += name;
+
+	const auto imported { api().postOctets( "/file/import", bytes, { { "filename", "spilled.cbz" } } ) };
+	REQUIRE( imported.status == 200 );
+	REQUIRE( imported.json[ "status" ].asInt() == 1 );
+	const RecordID record_id { imported.json[ "record_id" ].as< RecordID >() };
+	CHECK( api().get( std::format( "/records/{}/file", record_id ) ).body == bytes );
+
+	pqxx::read_transaction transaction { db() };
+	const auto rows {
+		transaction.exec(
+			//language=postgresql
+			R"SQL(
+				SELECT
+				    mime_id
+				FROM file_info
+				WHERE record_id = $1
+			)SQL",
+			pqxx::params{ record_id } )
+	};
+	REQUIRE( rows.size() == 1 );
+	CHECK( rows[ 0 ][ 0 ].as< MimeID >() == mime_ids::COMICBOOK_ZIP );
+}
+
+TEST_CASE_METHOD(
+	ClusterMarkerFixture,
 	"Missing and mismatched markers block media access without detaching records",
 	"[api][cluster-markers]" )
 {
@@ -225,7 +273,14 @@ TEST_CASE_METHOD(
 		pqxx::work transaction { db() };
 		CHECK(
 			transaction.query_value< ClusterID >(
-				"SELECT cluster_id FROM file_info WHERE record_id = $1", pqxx::params { record_id } )
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    cluster_id
+					FROM file_info
+					WHERE record_id = $1
+				)SQL",
+				pqxx::params { record_id } )
 			== cluster_id );
 	}
 	auto wrong { original };
@@ -288,13 +343,22 @@ TEST_CASE_METHOD(
 		const auto path { orphan( std::format( "progress file {}", index ), true ) };
 		pqxx::work transaction { db() };
 		transaction.exec(
-			"INSERT INTO records (sha256) VALUES (decode($1, 'hex'))", pqxx::params { path.stem().string() } );
+			//language=postgresql
+			R"SQL(
+				INSERT INTO records (sha256)
+				    VALUES (decode($1, 'hex'))
+			)SQL",
+			pqxx::params{ path.stem().string() } );
 		transaction.commit();
 	}
 
 	// Hold record lookups so live progress is observable without timing assumptions about hashing or modules.
 	pqxx::work blocked { db() };
-	blocked.exec( "LOCK TABLE records IN ACCESS EXCLUSIVE MODE" );
+	blocked.exec(
+		//language=postgresql
+		R"SQL(
+			LOCK TABLE records IN ACCESS EXCLUSIVE MODE
+		)SQL" );
 	const auto queued { api().postWithoutBody(
 		std::format( "/clusters/{}/scan", cluster_id ),
 		{ { "concurrency", "2" }, { "scan_mime", "false" }, { "scan_metadata", "false" } } ) };
@@ -373,7 +437,11 @@ TEST_CASE_METHOD(
 
 	// Permit reads while blocking image metadata writes, leaving the parser free to finish.
 	pqxx::work blocked { db() };
-	blocked.exec( "LOCK TABLE image_metadata IN SHARE MODE" );
+	blocked.exec(
+		//language=postgresql
+		R"SQL(
+			LOCK TABLE image_metadata IN SHARE MODE
+		)SQL" );
 	JobEventStream events { serverPort(), api().key() };
 	REQUIRE( events.waitFor( "snapshot" )[ "jobs" ].isArray() );
 	const auto queued { api().postWithoutBody(
@@ -396,7 +464,7 @@ TEST_CASE_METHOD(
 	}
 	REQUIRE( storing );
 	CHECK_FALSE( status[ "completed" ].asBool() );
-	const auto streamed { events.waitFor( "update", queued.json[ "job_id" ].as< JobID >(), "storing_metadata" ) };
+	const auto streamed { events.waitFor( "status", queued.json[ "job_id" ].as< JobID >(), "storing_metadata" ) };
 	REQUIRE_FALSE( streamed.isNull() );
 	CHECK_FALSE( streamed[ "completed" ].asBool() );
 	blocked.commit();
@@ -442,7 +510,14 @@ TEST_CASE_METHOD(
 	pqxx::work transaction { db() };
 	CHECK(
 		transaction.query_value< std::int64_t >(
-			"SELECT count(*) FROM records WHERE sha256 = decode($1, 'hex')", pqxx::params { path.stem().string() } )
+			//language=postgresql
+			R"SQL(
+				SELECT
+				    count(*)
+				FROM records
+				WHERE sha256 = decode($1, 'hex')
+			)SQL",
+			pqxx::params { path.stem().string() } )
 		== 0 );
 }
 
@@ -468,9 +543,16 @@ TEST_CASE_METHOD(
 		const auto row {
 			transaction
 				.exec(
-					"SELECT fi.record_id, fi.xmin::text FROM file_info fi JOIN records USING (record_id) "
-					"WHERE sha256 = decode($1, 'hex')",
-					pqxx::params { hash.hex() } )
+				//language=postgresql
+				R"SQL(
+						SELECT
+						    fi.record_id,
+						    fi.xmin::text
+						FROM file_info fi
+						    JOIN records USING (record_id)
+						WHERE sha256 = decode($1, 'hex')
+					)SQL",
+				pqxx::params { hash.hex() } )
 				.one_row()
 		};
 		record_id = row[ 0 ].as< RecordID >();
@@ -484,7 +566,14 @@ TEST_CASE_METHOD(
 		pqxx::work transaction { db() };
 		CHECK(
 			transaction.query_value< std::string >(
-				"SELECT xmin::text FROM file_info WHERE record_id = $1", pqxx::params { record_id } )
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    xmin::text
+					FROM file_info
+					WHERE record_id = $1
+				)SQL",
+				pqxx::params { record_id } )
 			== version );
 	}
 }
@@ -507,7 +596,11 @@ TEST_CASE_METHOD(
 	{
 		pqxx::work transaction { db() };
 		transaction.exec(
-			"INSERT INTO metadata (record_id, simple_mime_type) VALUES ($1, $2)",
+			//language=postgresql
+			R"SQL(
+				INSERT INTO metadata (record_id, simple_mime_type)
+				    VALUES ($1, $2)
+			)SQL",
 			pqxx::params {
 				imported.json[ "record_id" ].as< RecordID >(), std::to_underlying( SimpleMimeType::NONE ) } );
 		transaction.commit();
@@ -571,10 +664,23 @@ TEST_CASE_METHOD(
 	{
 		pqxx::work transaction { db() };
 		transaction.exec(
-			"WITH inserted AS (INSERT INTO records (sha256) "
-			"SELECT digest('missing-' || number::text, 'sha256') FROM generate_series(1, 1025) AS number "
-			"RETURNING record_id) INSERT INTO file_info (record_id, cluster_id, size, extension) "
-			"SELECT record_id, $1, 1, 'bin' FROM inserted",
+			//language=postgresql
+			R"SQL(
+				WITH inserted AS (
+				    INSERT INTO records (sha256)
+				    SELECT
+				        digest('missing-' || number::text, 'sha256')
+				    FROM generate_series(1, 1025) AS number
+				    RETURNING record_id
+				)
+				INSERT INTO file_info (record_id, cluster_id, size, extension)
+				SELECT
+				    record_id,
+				    $1,
+				    1,
+				    'bin'
+				FROM inserted
+			)SQL",
 			pqxx::params { cluster_id } );
 		transaction.commit();
 	}
@@ -588,7 +694,14 @@ TEST_CASE_METHOD(
 	pqxx::work transaction { db() };
 	CHECK(
 		transaction.query_value< std::int64_t >(
-			"SELECT count(*) FROM file_info WHERE cluster_id = $1", pqxx::params { cluster_id } )
+			//language=postgresql
+			R"SQL(
+				SELECT
+				    count(*)
+				FROM file_info
+				WHERE cluster_id = $1
+			)SQL",
+			pqxx::params { cluster_id } )
 		== 0 );
 }
 

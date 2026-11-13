@@ -9,7 +9,6 @@ const record = (over: Partial<RecordMetadata> = {}): RecordMetadata => ({
     ...over,
 });
 
-/** Only the record list decides availability and labels, so the host is never touched. */
 const ctx = (ids: number[], target = ids[0]!): RecordActionContext =>
     ({host: undefined, ids, target}) as unknown as RecordActionContext;
 
@@ -28,7 +27,7 @@ describe('describeRecord', () => {
     });
 
     it('reports size in both units', () => {
-        expect(describeRecord(record({size: 2048}))).toContain('size: 2.00 KB (2048 bytes)');
+        expect(describeRecord(record({size: 2048}))).toContain('size: 2 KiB (2048 bytes)');
     });
 });
 

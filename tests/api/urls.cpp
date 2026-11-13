@@ -29,7 +29,16 @@ static std::vector< UrlDomainPair > storedUrlDomains( pqxx::connection& connecti
 	std::vector< UrlDomainPair > pairs {};
 
 	for ( const auto& [ url, domain ] : tx.query< std::string, std::string >(
-			  "SELECT url, url_domain FROM urls JOIN url_domains USING (url_domain_id) ORDER BY url" ) )
+			  //language=postgresql
+			  R"SQL(
+				  SELECT
+				      url,
+				      url_domain
+				  FROM urls
+				      JOIN url_domains USING (url_domain_id)
+				  ORDER BY
+				      url
+			  )SQL" ) )
 	{
 		pairs.emplace_back( url, domain );
 	}
@@ -40,7 +49,14 @@ static std::vector< UrlDomainPair > storedUrlDomains( pqxx::connection& connecti
 static int tableCount( pqxx::connection& connection, const std::string_view table )
 {
 	pqxx::nontransaction tx { connection };
-	return tx.query_value< int >( "SELECT count(*) FROM " + tx.quote_name( table ) );
+	return tx.query_value< int >(
+		//language=postgresql
+		R"SQL(
+			SELECT
+			    count(*)
+			FROM
+		)SQL"
+		+ tx.quote_name( table ) );
 }
 
 SCENARIO_METHOD( ServerFixture, "URL batches preserve their hostname associations", "[api][urls]" )

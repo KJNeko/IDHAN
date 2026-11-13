@@ -1,0 +1,7 @@
+{
+  "name": "@idhan/parser-e621",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "idhanParser": "index.ts"
+}

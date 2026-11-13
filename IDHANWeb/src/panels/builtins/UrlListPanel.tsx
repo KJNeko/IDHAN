@@ -1,9 +1,3 @@
-/**
- * URLs: known source URLs for the focused record. Reads /records/{id}/urls (a bare string array) and
- * edits via /urls/add and /urls/remove ({ urls: [...] }). Follows the selection like Record Info: the
- * most recently selected record is the subject.
- */
-
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import type { PanelProps, RecordId } from '../../host/types';
 import {readApiError} from '../../api/client';
@@ -92,7 +86,7 @@ function UrlListPanel({ host }: PanelProps) {
 
   return (
     <div className="panel-body url-list">
-      {focused === null && <p className="muted">Select a record to see its URLs.</p>}
+		{focused === null && <p className="muted">No record selected.</p>}
 
       {focused !== null && (
         <>
@@ -142,7 +136,7 @@ function UrlListPanel({ host }: PanelProps) {
 export const urlListPanel = {
   type: 'url-list',
   title: 'URLs',
-  description: 'Known source URLs for the focused record; add and remove them.',
+	description: 'Record URLs.',
   component: UrlListPanel,
   configVersion: 1,
 } as const;

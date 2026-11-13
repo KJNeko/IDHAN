@@ -19,30 +19,17 @@
 #include "idhan/SHA256.hpp"
 #include "idhan/db/DBContext.hpp"
 #include "idhan/db/DBTransaction.hpp"
+#include "idhan/http/routing/ReflectedRoutes.hpp"
 #include "jsonBody.hpp"
 #include "logging/log.hpp"
 #include "recordValidator.hpp"
 #include "splitTag.hpp"
 #include "tagHelpers.hpp"
 #include "urls/UrlDomain.hpp"
+#include "urls/UrlNormalization.hpp"
 
 namespace idhan::httpapi
 {
-
-[[nodiscard]] static http::Response jsonResponse(
-	simdjson::builder::string_builder& builder,
-	const std::uint16_t status = 200 )
-{
-	auto json { builder.view() };
-	if ( json.error() ) throw std::runtime_error( simdjson::error_message( json.error() ) );
-
-	return http::Response::json( status, folly::IOBuf::copyBuffer( *json ) );
-}
-
-[[nodiscard]] static http::Response emptyJsonResponse()
-{
-	return http::Response::json( 200, folly::IOBuf::copyBuffer( std::string_view { "{}" } ) );
-}
 
 [[nodiscard]] static std::expected< SHA256, http::Response > parseSha256Hex( const std::string_view text )
 {
@@ -96,7 +83,15 @@ static runtime::Task< std::vector< RecordID > > massCreateRecord(
 	insert_bindings.bind( raw );
 	co_await db
 		.query(
-			"INSERT INTO records (sha256) SELECT * FROM UNNEST($1) ON CONFLICT DO NOTHING",
+			//language=postgresql
+			R"SQL(
+				INSERT INTO records (sha256)
+				SELECT
+				    *
+				FROM UNNEST($1)
+				ON CONFLICT
+				    DO NOTHING
+			)SQL",
 			std::move( insert_bindings ) )
 		.result();
 
@@ -104,8 +99,17 @@ static runtime::Task< std::vector< RecordID > > massCreateRecord(
 	select_bindings.bind( raw );
 	const auto rows {
 		co_await db
-			.query( "SELECT record_id, sha256 FROM records WHERE sha256 = ANY($1)", std::move( select_bindings ) )
-			.rows< RecordID, std::span< const std::byte > >()
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    record_id,
+					    sha256
+					FROM records
+					WHERE sha256 = ANY ($1)
+				)SQL",
+					 std::move( select_bindings ) )
+				 .rows< RecordID, std::span< const std::byte > >()
 	};
 
 	std::unordered_map< SHA256, RecordID > record_id_map {};
@@ -281,7 +285,13 @@ static runtime::Task<> removeTagMappings(
 
 	co_await db
 		.query(
-			"DELETE FROM tag_mappings WHERE record_id = $1 AND tag_id = ANY($2) AND tag_domain_id = $3",
+			//language=postgresql
+			R"SQL(
+				DELETE FROM tag_mappings
+				WHERE record_id = $1
+				    AND tag_id = ANY ($2)
+				    AND tag_domain_id = $3
+			)SQL",
 			std::move( bindings ) )
 		.result();
 }
@@ -300,8 +310,17 @@ static runtime::Task< std::expected< void, http::Response > > addTagsToRecord(
 		bindings.bind( tag_domain_id );
 		co_await db
 			.query(
-				"INSERT INTO tag_mappings (record_id, tag_id, tag_domain_id) "
-				"SELECT $1, t, $3 FROM UNNEST($2) AS t ON CONFLICT DO NOTHING",
+				//language=postgresql
+				R"SQL(
+					INSERT INTO tag_mappings (record_id, tag_id, tag_domain_id)
+					SELECT
+					    $1,
+					    t,
+					    $3
+					FROM UNNEST($2) AS t
+					ON CONFLICT
+					    DO NOTHING
+				)SQL",
 				std::move( bindings ) )
 			.result();
 	}
@@ -329,8 +348,18 @@ static runtime::Task< std::expected< void, http::Response > > addTagsToRecords(
 		bindings.bind( tag_domain_id );
 		co_await db
 			.query(
-				"INSERT INTO tag_mappings (record_id, tag_id, tag_domain_id) "
-				"SELECT r, t, $3 FROM UNNEST($1) AS r CROSS JOIN UNNEST($2) AS t ON CONFLICT DO NOTHING",
+				//language=postgresql
+				R"SQL(
+					INSERT INTO tag_mappings (record_id, tag_id, tag_domain_id)
+					SELECT
+					    r,
+					    t,
+					    $3
+					FROM UNNEST($1) AS r
+					    CROSS JOIN UNNEST($2) AS t
+					ON CONFLICT
+					    DO NOTHING
+				)SQL",
 				std::move( bindings ) )
 			.result();
 	}
@@ -368,9 +397,18 @@ static runtime::Task< std::expected< void, http::Response > > addTagSetsToRecord
 		bindings.bind( tag_domain_id );
 		co_await db
 			.query(
-				"INSERT INTO tag_mappings (record_id, tag_id, tag_domain_id) "
-				"SELECT pairs.record_id, pairs.tag_id, $3 "
-				"FROM UNNEST($1, $2) AS pairs(record_id, tag_id) ON CONFLICT DO NOTHING",
+				//language=postgresql
+				R"SQL(
+					INSERT INTO tag_mappings (record_id, tag_id, tag_domain_id)
+					SELECT
+					    pairs.record_id,
+					    pairs.tag_id,
+					    $3
+					FROM UNNEST($1, $2) AS pairs (record_id,
+					        tag_id)
+					ON CONFLICT
+					    DO NOTHING
+				)SQL",
 				std::move( bindings ) )
 			.result();
 	}
@@ -389,7 +427,14 @@ static runtime::Task< std::expected< NoteID, http::Response > > findOrCreateNote
 	const auto created {
 		co_await db
 			.query(
-				"INSERT INTO notes (note) VALUES ($1) ON CONFLICT (note) DO NOTHING RETURNING note_id",
+				//language=postgresql
+				R"SQL(
+					INSERT INTO notes (note)
+					    VALUES ($1)
+					ON CONFLICT (note)
+					    DO NOTHING
+					RETURNING note_id
+				)SQL",
 				std::move( insert_bindings ) )
 			.rows< NoteID >()
 	};
@@ -399,7 +444,17 @@ static runtime::Task< std::expected< NoteID, http::Response > > findOrCreateNote
 	db::DBBindings select_bindings {};
 	select_bindings.bind( text );
 	const auto existing {
-		co_await db.query( "SELECT note_id FROM notes WHERE note = $1", std::move( select_bindings ) ).rows< NoteID >()
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    note_id
+					FROM notes
+					WHERE note = $1
+				)SQL",
+					 std::move( select_bindings ) )
+				 .rows< NoteID >()
 	};
 
 	if ( !existing.empty() ) co_return std::get< 0 >( existing.row( 0 ) );
@@ -407,43 +462,46 @@ static runtime::Task< std::expected< NoteID, http::Response > > findOrCreateNote
 	co_return std::unexpected( http::Response::error( 500, "Failed to create or find note" ) );
 }
 
-static runtime::Task< http::Response > recordNotesResponse( const RecordID record_id, db::DBContext& db )
+static runtime::Task< http::JsonResponse< std::vector< RecordNoteResponse > > > recordNotesResponse(
+	const RecordID record_id,
+	db::DBContext& db )
 {
 	db::DBBindings bindings {};
 	bindings.bind( record_id );
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT note, note_id FROM record_notes JOIN notes USING (note_id) WHERE record_id = $1",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    note,
+					    note_id
+					FROM record_notes
+					    JOIN notes USING (note_id)
+					WHERE record_id = $1
+				)SQL",
 				std::move( bindings ) )
 			.rows< std::string, NoteID >()
 	};
 
-	simdjson::builder::string_builder builder;
-	builder.start_array();
-	bool first { true };
-	for ( const auto& [ note, note_id ] : rows )
-	{
-		if ( !first ) builder.append_comma();
-		first = false;
-		builder.start_object();
-		builder.append_key_value( "note_id", note_id );
-		builder.append_comma();
-		builder.append_key_value( "text", note );
-		builder.end_object();
-	}
-	builder.end_array();
+	std::vector< RecordNoteResponse > response;
+	response.reserve( rows.size() );
+	for ( const auto& [ note, note_id ] : rows ) response.push_back( { note_id, note } );
 
-	co_return jsonResponse( builder );
+	co_return http::JsonResponse< std::vector< RecordNoteResponse > > { std::move( response ) };
 }
 
-static http::HTTPTask< http::Response > getNotes( db::DBContext& db, http::RequestContext context )
+http::HTTPTask< http::JsonResult< std::vector< RecordNoteResponse > > > getNotes(
+	db::DBContext& db,
+	http::RequestContext context )
 {
 	const auto record_id { *context.parameters().scalar< RecordID >( "record_id" ) };
 	co_return co_await recordNotesResponse( record_id, db );
 }
 
-static http::HTTPTask< http::Response > addNote( db::DBContext& db, http::RequestContext context )
+http::HTTPTask< http::JsonResult< std::vector< RecordNoteResponse > > > addNote(
+	db::DBContext& db,
+	http::RequestContext context )
 {
 	const auto record_id { *context.parameters().scalar< RecordID >( "record_id" ) };
 
@@ -462,14 +520,22 @@ static http::HTTPTask< http::Response > addNote( db::DBContext& db, http::Reques
 	bindings.bind( *note_id );
 	co_await db
 		.query(
-			"INSERT INTO record_notes (record_id, note_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+			//language=postgresql
+			R"SQL(
+				INSERT INTO record_notes (record_id, note_id)
+				    VALUES ($1, $2)
+				ON CONFLICT
+				    DO NOTHING
+			)SQL",
 			std::move( bindings ) )
 		.result();
 
 	co_return co_await recordNotesResponse( record_id, db );
 }
 
-static http::HTTPTask< http::Response > removeNote( db::DBContext& db, http::RequestContext context )
+http::HTTPTask< http::JsonResult< std::vector< RecordNoteResponse > > > removeNote(
+	db::DBContext& db,
+	http::RequestContext context )
 {
 	const auto record_id { *context.parameters().scalar< RecordID >( "record_id" ) };
 	const auto note_id_e { context.parameters().scalar< NoteID >( "note_id" ) };
@@ -478,13 +544,23 @@ static http::HTTPTask< http::Response > removeNote( db::DBContext& db, http::Req
 	db::DBBindings bindings {};
 	bindings.bind( record_id );
 	bindings.bind( *note_id_e );
-	co_await db.query( "DELETE FROM record_notes WHERE record_id = $1 AND note_id = $2", std::move( bindings ) )
-		.result();
+	co_await db
+			 .query(
+				 //language=postgresql
+				 R"SQL(
+				DELETE FROM record_notes
+				WHERE record_id = $1
+				    AND note_id = $2
+			)SQL",
+				 std::move( bindings ) )
+			 .result();
 
 	co_return co_await recordNotesResponse( record_id, db );
 }
 
-static http::HTTPTask< http::Response > fetchUrls( db::DBContext& db, http::RequestContext context )
+http::HTTPTask< http::JsonResult< std::vector< std::string > > > fetchUrls(
+	db::DBContext& db,
+	http::RequestContext context )
 {
 	const auto record_id { *context.parameters().scalar< RecordID >( "record_id" ) };
 
@@ -493,26 +569,28 @@ static http::HTTPTask< http::Response > fetchUrls( db::DBContext& db, http::Requ
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT url FROM url_mappings JOIN urls USING (url_id) WHERE record_id = $1 ORDER BY url",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    url
+					FROM url_mappings
+					    JOIN urls USING (url_id)
+					WHERE record_id = $1
+					ORDER BY
+					    url
+				)SQL",
 				std::move( bindings ) )
 			.rows< std::string >()
 	};
 
-	simdjson::builder::string_builder builder;
-	builder.start_array();
-	bool first { true };
-	for ( const auto& [ url ] : rows )
-	{
-		if ( !first ) builder.append_comma();
-		builder.append( url );
-		first = false;
-	}
-	builder.end_array();
+	std::vector< std::string > response;
+	response.reserve( rows.size() );
+	for ( const auto& [ url ] : rows ) response.push_back( url );
 
-	co_return jsonResponse( builder );
+	co_return http::JsonResponse< std::vector< std::string > > { std::move( response ) };
 }
 
-static http::HTTPTask< http::Response > addUrls( db::DBContext& db, http::RequestContext context )
+http::HTTPTask< http::JsonResult< RecordUrlsAddedResponse > > addUrls( db::DBContext& db, http::RequestContext context )
 {
 	const auto record_id { *context.parameters().scalar< RecordID >( "record_id" ) };
 
@@ -534,17 +612,26 @@ static http::HTTPTask< http::Response > addUrls( db::DBContext& db, http::Reques
 		co_return http::Response::error( 400, e.what() );
 	}
 
-	if ( urls_array.size() == 0 ) co_return emptyJsonResponse();
+	if ( urls_array.size() == 0 ) co_return http::JsonResponse< RecordUrlsAddedResponse > {};
 
-	std::vector< std::string > urls {};
-	urls.reserve( urls_array.size() );
+	std::vector< std::string > submitted {};
+	submitted.reserve( urls_array.size() );
 	for ( const simdjson::dom::element item : urls_array )
 	{
 		std::string_view url {};
 		if ( item.get_string().get( url ) != simdjson::SUCCESS )
 			co_return http::Response::error( 400, "Invalid item in urls array: Expected string" );
-		urls.emplace_back( url );
+		submitted.emplace_back( url );
 	}
+
+	auto urls_e { co_await idhan::helpers::normalizeUrls( std::move( submitted ) ) };
+	if ( !urls_e.has_value() )
+	{
+		const auto& error { urls_e.error() };
+		co_return http::Response::error( idhan::helpers::httpStatus( error ), error.message );
+	}
+
+	auto& urls { urls_e.value() };
 
 	std::vector< std::string > domains {};
 	domains.reserve( urls.size() );
@@ -554,7 +641,14 @@ static http::HTTPTask< http::Response > addUrls( db::DBContext& db, http::Reques
 	domain_bindings.bind( domains );
 	co_await db
 		.query(
-			"INSERT INTO url_domains (url_domain) SELECT DISTINCT unnest($1) ON CONFLICT (url_domain) DO NOTHING",
+			//language=postgresql
+			R"SQL(
+				INSERT INTO url_domains (url_domain)
+				SELECT DISTINCT
+				    unnest($1)
+				ON CONFLICT (url_domain)
+				    DO NOTHING
+			)SQL",
 			std::move( domain_bindings ) )
 		.result();
 
@@ -574,15 +668,26 @@ static http::HTTPTask< http::Response > addUrls( db::DBContext& db, http::Reques
 	mapping_bindings.bind( record_id );
 	co_await db
 		.query(
-			"INSERT INTO url_mappings (url_id, record_id) "
-			"SELECT url_id, $2 FROM urls WHERE url = ANY($1) ON CONFLICT DO NOTHING",
+			//language=postgresql
+			R"SQL(
+				INSERT INTO url_mappings (url_id, record_id)
+				SELECT
+				    url_id,
+				    $2
+				FROM urls
+				WHERE url = ANY ($1)
+				ON CONFLICT
+				    DO NOTHING
+			)SQL",
 			std::move( mapping_bindings ) )
 		.result();
 
-	co_return emptyJsonResponse();
+	co_return http::JsonResponse< RecordUrlsAddedResponse > {};
 }
 
-static http::HTTPTask< http::Response > removeUrls( db::DBContext& db, http::RequestContext context )
+http::HTTPTask< std::variant< http::EmptyResponse< 200 >, http::Response > > removeUrls(
+	db::DBContext& db,
+	http::RequestContext context )
 {
 	const auto record_id { *context.parameters().scalar< RecordID >( "record_id" ) };
 
@@ -614,50 +719,44 @@ static http::HTTPTask< http::Response > removeUrls( db::DBContext& db, http::Req
 		urls.emplace_back( url );
 	}
 
+	auto spellings_e { co_await idhan::helpers::urlSpellings( std::move( urls ) ) };
+	if ( !spellings_e.has_value() )
+	{
+		const auto& error { spellings_e.error() };
+		co_return http::Response::error( idhan::helpers::httpStatus( error ), error.message );
+	}
+
 	db::DBBindings bindings {};
-	bindings.bind( urls );
+	bindings.bind( spellings_e.value() );
 	bindings.bind( record_id );
 	co_await db
 		.query(
-			"DELETE FROM url_mappings um USING urls u "
-			"WHERE u.url = ANY($1) AND um.url_id = u.url_id AND um.record_id = $2",
+			//language=postgresql
+			R"SQL(
+				DELETE FROM url_mappings um USING urls u
+				WHERE u.url = ANY ($1)
+				    AND um.url_id = u.url_id
+				    AND um.record_id = $2
+			)SQL",
 			std::move( bindings ) )
 		.result();
 
-	co_return http::Response::json( 200, folly::IOBuf::copyBuffer( std::string_view {} ) );
+	co_return http::EmptyResponse< 200 > {};
 }
 
-static void appendDomainTagGroups(
-	simdjson::builder::string_builder& builder,
-	const std::unordered_map< TagDomainID, std::vector< TagID > >& domain_map )
+[[nodiscard]] static std::vector< RecordDomainTagsResponse > recordDomainTagGroups(
+	std::unordered_map< TagDomainID, std::vector< TagID > > domain_map )
 {
-	builder.start_array();
-	bool first { true };
-	for ( const auto& [ domain_id, tag_ids ] : domain_map )
-	{
-		if ( !first ) builder.append_comma();
-		first = false;
+	std::vector< RecordDomainTagsResponse > groups;
+	groups.reserve( domain_map.size() );
+	for ( auto& [ domain_id, tag_ids ] : domain_map ) groups.push_back( { domain_id, std::move( tag_ids ) } );
 
-		builder.start_object();
-		builder.append_key_value( "tag_domain_id", domain_id );
-		builder.append_comma();
-		builder.escape_and_append_with_quotes( "tag_ids" );
-		builder.append_colon();
-		builder.start_array();
-		bool first_id { true };
-		for ( const auto tag_id : tag_ids )
-		{
-			if ( !first_id ) builder.append_comma();
-			builder.append( tag_id );
-			first_id = false;
-		}
-		builder.end_array();
-		builder.end_object();
-	}
-	builder.end_array();
+	return groups;
 }
 
-static http::HTTPTask< http::Response > listTags( db::DBContext& db, http::RequestContext context )
+http::HTTPTask< http::JsonResult< std::vector< RecordDomainTagsResponse > > > listTags(
+	db::DBContext& db,
+	http::RequestContext context )
 {
 	const auto record_id { *context.parameters().scalar< RecordID >( "record_id" ) };
 
@@ -665,19 +764,30 @@ static http::HTTPTask< http::Response > listTags( db::DBContext& db, http::Reque
 	bindings.bind( record_id );
 	const auto rows {
 		co_await db
-			.query( "SELECT tag_domain_id, tag_id FROM tag_mappings WHERE record_id = $1", std::move( bindings ) )
-			.rows< TagDomainID, TagID >()
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    tag_domain_id,
+					    tag_id
+					FROM tag_mappings
+					WHERE record_id = $1
+				)SQL",
+					 std::move( bindings ) )
+				 .rows< TagDomainID, TagID >()
 	};
 
 	std::unordered_map< TagDomainID, std::vector< TagID > > domain_map {};
 	for ( const auto& [ tag_domain_id, tag_id ] : rows ) domain_map[ tag_domain_id ].push_back( tag_id );
 
-	simdjson::builder::string_builder builder;
-	appendDomainTagGroups( builder, domain_map );
-	co_return jsonResponse( builder );
+	co_return http::JsonResponse< std::vector< RecordDomainTagsResponse > > {
+		recordDomainTagGroups( std::move( domain_map ) )
+	};
 }
 
-static http::HTTPTask< http::Response > listActiveTags( db::DBContext& db, http::RequestContext context )
+http::HTTPTask< http::JsonResult< std::vector< RecordDomainTagsResponse > > > listActiveTags(
+	db::DBContext& db,
+	http::RequestContext context )
 {
 	const auto record_id { *context.parameters().scalar< RecordID >( "record_id" ) };
 
@@ -686,7 +796,14 @@ static http::HTTPTask< http::Response > listActiveTags( db::DBContext& db, http:
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT DISTINCT tag_id, tag_domain_id FROM active_tag_mappings_final WHERE record_id = $1",
+				//language=postgresql
+				R"SQL(
+					SELECT DISTINCT
+					    tag_id,
+					    tag_domain_id
+					FROM active_tag_mappings_final
+					WHERE record_id = $1
+				)SQL",
 				std::move( bindings ) )
 			.rows< TagID, TagDomainID >()
 	};
@@ -694,12 +811,14 @@ static http::HTTPTask< http::Response > listActiveTags( db::DBContext& db, http:
 	std::unordered_map< TagDomainID, std::vector< TagID > > domain_map {};
 	for ( const auto& [ tag_id, tag_domain_id ] : rows ) domain_map[ tag_domain_id ].push_back( tag_id );
 
-	simdjson::builder::string_builder builder;
-	appendDomainTagGroups( builder, domain_map );
-	co_return jsonResponse( builder );
+	co_return http::JsonResponse< std::vector< RecordDomainTagsResponse > > {
+		recordDomainTagGroups( std::move( domain_map ) )
+	};
 }
 
-static http::HTTPTask< http::Response > listActiveTagsVerbose( db::DBContext& db, http::RequestContext context )
+http::HTTPTask< http::JsonResult< std::vector< RecordTagProvenanceResponse > > > listActiveTagsVerbose(
+	db::DBContext& db,
+	http::RequestContext context )
 {
 	const auto record_id { *context.parameters().scalar< RecordID >( "record_id" ) };
 
@@ -741,58 +860,25 @@ static http::HTTPTask< http::Response > listActiveTagsVerbose( db::DBContext& db
 		}
 	}
 
-	simdjson::builder::string_builder builder;
-	builder.start_array();
-	bool first { true };
-	for ( const auto& [ domain_id, tag_map ] : provenance_map )
-		for ( const auto& [ tag_id, prov ] : tag_map )
-		{
-			if ( !first ) builder.append_comma();
-			first = false;
+	std::vector< RecordTagProvenanceResponse > response;
+	for ( auto& [ domain_id, tag_map ] : provenance_map )
+		for ( auto& [ tag_id, provenance ] : tag_map )
+			response.push_back(
+				{ tag_id,
+				  domain_id,
+				  provenance.is_explicit,
+				  std::move( provenance.aliased_from ),
+				  std::move( provenance.inherited_from ) } );
 
-			builder.start_object();
-			builder.append_key_value( "tag_id", tag_id );
-			builder.append_comma();
-			builder.append_key_value( "tag_domain_id", domain_id );
-			builder.append_comma();
-			builder.append_key_value( "explicit", prov.is_explicit );
-			builder.append_comma();
-			builder.escape_and_append_with_quotes( "aliased_from" );
-			builder.append_colon();
-			builder.start_array();
-			bool first_a { true };
-			for ( const auto id : prov.aliased_from )
-			{
-				if ( !first_a ) builder.append_comma();
-				builder.append( id );
-				first_a = false;
-			}
-			builder.end_array();
-			builder.append_comma();
-			builder.escape_and_append_with_quotes( "inherited_from" );
-			builder.append_colon();
-			builder.start_array();
-			bool first_i { true };
-			for ( const auto id : prov.inherited_from )
-			{
-				if ( !first_i ) builder.append_comma();
-				builder.append( id );
-				first_i = false;
-			}
-			builder.end_array();
-			builder.end_object();
-		}
-	builder.end_array();
-
-	co_return jsonResponse( builder );
+	co_return http::JsonResponse< std::vector< RecordTagProvenanceResponse > > { std::move( response ) };
 }
 
-static http::HTTPTask< http::Response > addTags( db::DBContext& db, http::RequestContext context )
+http::HTTPTask< http::JsonResult< TagUpdateResponse > > addTags(
+	db::DBContext& db,
+	http::RequestContext context,
+	http::Query< AddTagsQuery > query )
 {
 	const auto record_id { *context.parameters().scalar< RecordID >( "record_id" ) };
-
-	auto tag_domain_id_e { tagDomainIdParameter( context.parameters() ) };
-	if ( !tag_domain_id_e ) co_return std::move( tag_domain_id_e.error() );
 
 	auto body_e { readValidatedJsonBody( context ) };
 	if ( !body_e ) co_return std::move( body_e.error() );
@@ -815,18 +901,18 @@ static http::HTTPTask< http::Response > addTags( db::DBContext& db, http::Reques
 	auto tag_ids { co_await resolveTagPairIds( *pairs, db ) };
 	if ( !tag_ids ) co_return std::move( tag_ids.error() );
 
-	auto result { co_await addTagsToRecord( record_id, std::move( *tag_ids ), *tag_domain_id_e, db ) };
+	auto result { co_await addTagsToRecord( record_id, std::move( *tag_ids ), query.value.tag_domain_id, db ) };
 	if ( !result ) co_return std::move( result.error() );
 
-	co_return emptyJsonResponse();
+	co_return http::JsonResponse< TagUpdateResponse > {};
 }
 
-static http::HTTPTask< http::Response > removeTags( db::DBContext& db, http::RequestContext context )
+http::HTTPTask< http::JsonResult< std::variant< TagUpdateResponse, TagUpdateStatusResponse > > > removeTags(
+	db::DBContext& db,
+	http::RequestContext context,
+	http::Query< RemoveTagsQuery > query )
 {
 	const auto record_id { *context.parameters().scalar< RecordID >( "record_id" ) };
-
-	auto tag_domain_id_e { tagDomainIdParameter( context.parameters() ) };
-	if ( !tag_domain_id_e ) co_return std::move( tag_domain_id_e.error() );
 
 	auto body_e { readValidatedJsonBody( context ) };
 	if ( !body_e ) co_return std::move( body_e.error() );
@@ -853,131 +939,129 @@ static http::HTTPTask< http::Response > removeTags( db::DBContext& db, http::Req
 		tag_ids.push_back( *id );
 	}
 
-	if ( tag_ids.empty() ) co_return emptyJsonResponse();
+	if ( tag_ids.empty() )
+		co_return http::JsonResponse< std::variant< TagUpdateResponse, TagUpdateStatusResponse > > {
+			TagUpdateResponse {}
+		};
 
 	try
 	{
-		co_await removeTagMappings( record_id, std::move( tag_ids ), *tag_domain_id_e, db );
+		co_await removeTagMappings( record_id, std::move( tag_ids ), query.value.tag_domain_id, db );
 	}
 	catch ( const std::exception& e )
 	{
 		co_return http::Response::error( 500, std::format( "Error removing tags: {}", e.what() ) );
 	}
 
-	simdjson::builder::string_builder builder;
-	builder.start_object();
-	builder.append_key_value( "status", 200 );
-	builder.end_object();
-	co_return jsonResponse( builder );
+	co_return http::JsonResponse< std::variant< TagUpdateResponse, TagUpdateStatusResponse > > {
+		TagUpdateStatusResponse {}
+	};
 }
 
-static http::HTTPTask< http::Response > addMultipleTags( db::DBContext& db, http::RequestContext context )
+static std::expected< std::vector< TagPair >, http::Response > ownedTagPairs(
+	const std::vector< RecordTagInput >& tags )
 {
-	auto tag_domain_id_e { tagDomainIdParameter( context.parameters() ) };
-	if ( !tag_domain_id_e ) co_return std::move( tag_domain_id_e.error() );
-	const auto tag_domain_id { *tag_domain_id_e };
-
-	auto body_e { readValidatedJsonBody( context ) };
-	if ( !body_e ) co_return std::move( body_e.error() );
-
-	simdjson::dom::parser parser;
-	simdjson::dom::object root {};
-	simdjson::dom::array records_array {}, tags_array {}, sets_array {};
-	bool has_tags { false }, has_sets { false };
-	try
+	std::vector< TagPair > pairs;
+	for ( const auto& tag : tags )
 	{
-		if ( parser.parse( body_e->data(), body_e->size() ).get( root ) != simdjson::SUCCESS )
-			co_return http::Response::error( 400, "Invalid json object. Expected object as root item" );
-
-		if ( root[ "records" ].get( records_array ) != simdjson::SUCCESS )
-			co_return http::Response::error( 400, "Invalid json: Array of ids called 'records' must be present." );
-
-		has_tags = root[ "tags" ].get( tags_array ) == simdjson::SUCCESS;
-		has_sets = root[ "sets" ].get( sets_array ) == simdjson::SUCCESS;
-	}
-	catch ( const simdjson::simdjson_error& e )
-	{
-		co_return http::Response::error( 400, e.what() );
-	}
-
-	if ( records_array.size() == 0 ) co_return http::Response::error( 400, "records must not be empty" );
-
-	if ( const auto domain { co_await findTagDomain( tag_domain_id, db ) }; !domain )
-		co_return http::Response::error(
-			400, std::format( "Invalid domain ID given: Got no IDs (searched for {})", tag_domain_id ) );
-
-	std::vector< RecordID > record_ids {};
-	record_ids.reserve( records_array.size() );
-	for ( const simdjson::dom::element item : records_array )
-	{
-		auto id { parsePositiveId< RecordID >( item, "record_id" ) };
-		if ( !id ) co_return std::move( id.error() );
-
-		record_ids.push_back( *id );
-	}
-
-	auto record_validation { co_await validateRecordIds( record_ids, db ) };
-	if ( !record_validation ) co_return std::move( record_validation.error() );
-
-	if ( has_tags )
-	{
-		auto pairs { parseTagPairs( tags_array ) };
-		if ( !pairs ) co_return std::move( pairs.error() );
-
-		auto tag_ids { co_await resolveTagPairIds( *pairs, db ) };
-		if ( !tag_ids ) co_return std::move( tag_ids.error() );
-
-		auto result { co_await addTagsToRecords( record_ids, *tag_ids, tag_domain_id, db ) };
-		if ( !result ) co_return std::move( result.error() );
-	}
-
-	if ( has_sets )
-	{
-		if ( sets_array.size() != records_array.size() )
-			co_return http::Response::error(
-				400,
-				std::format(
-					"Sets vs Records size mismatch. Number of sets must match number of records. Got {} expected {}",
-					sets_array.size(),
-					records_array.size() ) );
-
-		std::vector< runtime::Task< std::expected< std::vector< TagID >, http::Response > > > tasks {};
-		tasks.reserve( sets_array.size() );
-
-		for ( const simdjson::dom::element set_item : sets_array )
+		TagPair pair;
+		if ( std::holds_alternative< TagID >( tag ) )
 		{
-			simdjson::dom::array set_array {};
-			if ( set_item.get_array().get( set_array ) != simdjson::SUCCESS )
-				co_return http::Response::error( 400, "Invalid json: Each set must be an array of tag_ids" );
+			const auto tag_id { std::get< TagID >( tag ) };
+			if ( tag_id <= 0 ) return std::unexpected( http::Response::error( 400, "Tag IDs must be positive" ) );
 
-			auto pairs { parseTagPairs( set_array ) };
-			if ( !pairs ) co_return std::move( pairs.error() );
-
-			tasks.push_back( resolveOwnedTagPairIds( std::move( *pairs ), db ) );
+			pair.tag_id = tag_id;
 		}
-
-		auto sets { co_await folly::coro::collectAllRange( std::move( tasks ) ) };
-
-		std::vector< std::vector< TagID > > tag_sets {};
-		tag_sets.reserve( sets.size() );
-		for ( auto& set_result : sets )
+		else if ( std::holds_alternative< std::string >( tag ) )
 		{
-			if ( !set_result ) co_return std::move( set_result.error() );
-			tag_sets.push_back( std::move( *set_result ) );
+			auto split { splitTag( std::get< std::string >( tag ) ) };
+			pair.tag_namespace = std::move( split.first );
+			pair.tag_subtag = std::move( split.second );
 		}
-
-		auto result { co_await addTagSetsToRecords( record_ids, tag_sets, tag_domain_id, db ) };
-		if ( !result ) co_return std::move( result.error() );
+		else
+		{
+			const auto& object { std::get< RecordTagObject >( tag ) };
+			if ( std::holds_alternative< NamespaceID >( object.tag_namespace ) )
+			{
+				if ( std::get< NamespaceID >( object.tag_namespace ) <= 0 )
+					return std::unexpected( http::Response::error( 400, "Namespace IDs must be positive" ) );
+			}
+			pair.tag_namespace = object.tag_namespace;
+			pair.tag_subtag = object.subtag;
+		}
+		pairs.push_back( std::move( pair ) );
 	}
-
-	co_return emptyJsonResponse();
+	return pairs;
 }
 
-static http::HTTPTask< http::Response > removeMultipleTags( db::DBContext& db, http::RequestContext context )
+http::HTTPTask< http::JsonResult< TagUpdateResponse > > addMultipleTags(
+	db::DBContext& db,
+	http::Query< RecordTagDomainQuery > query,
+	http::JsonBody< AddRecordTagsBody > body )
 {
-	auto tag_domain_id_e { tagDomainIdParameter( context.parameters() ) };
-	if ( !tag_domain_id_e ) co_return std::move( tag_domain_id_e.error() );
-	const auto tag_domain_id { *tag_domain_id_e };
+	const auto tag_domain_id { query.value.tag_domain_id };
+	auto& request { body.value };
+	if ( request.records.empty() ) co_return http::Response::error( 400, "records must not be empty" );
+
+	for ( const auto record_id : request.records )
+	{
+		if ( record_id <= 0 ) co_return http::Response::error( 400, "Record IDs must be positive" );
+	}
+
+	if ( request.sets.has_value() )
+	{
+		if ( request.sets.value().size() != request.records.size() )
+			co_return http::Response::error( 400, "Number of sets must match number of records" );
+	}
+
+	const auto domain { co_await findTagDomain( tag_domain_id, db ) };
+	if ( !domain.has_value() ) co_return http::Response::error( 400, "Invalid tag domain ID" );
+
+	auto validation_e { co_await validateRecordIds( request.records, db ) };
+	if ( !validation_e.has_value() ) co_return std::move( validation_e.error() );
+
+	if ( request.tags.has_value() )
+	{
+		auto pairs_e { ownedTagPairs( request.tags.value() ) };
+		if ( !pairs_e.has_value() ) co_return std::move( pairs_e.error() );
+
+		auto tags_e { co_await resolveTagPairIds( *pairs_e, db ) };
+		if ( !tags_e.has_value() ) co_return std::move( tags_e.error() );
+
+		auto result_e { co_await addTagsToRecords( request.records, std::move( *tags_e ), tag_domain_id, db ) };
+		if ( !result_e.has_value() ) co_return std::move( result_e.error() );
+	}
+
+	if ( request.sets.has_value() )
+	{
+		std::vector< runtime::Task< std::expected< std::vector< TagID >, http::Response > > > tasks;
+		for ( const auto& set : request.sets.value() )
+		{
+			auto pairs_e { ownedTagPairs( set ) };
+			if ( !pairs_e.has_value() ) co_return std::move( pairs_e.error() );
+
+			tasks.push_back( resolveOwnedTagPairIds( std::move( *pairs_e ), db ) );
+		}
+		auto results { co_await folly::coro::collectAllRange( std::move( tasks ) ) };
+		std::vector< std::vector< TagID > > sets;
+		for ( auto& result_e : results )
+		{
+			if ( !result_e.has_value() ) co_return std::move( result_e.error() );
+
+			sets.push_back( std::move( *result_e ) );
+		}
+		auto result_e { co_await addTagSetsToRecords( request.records, sets, tag_domain_id, db ) };
+		if ( !result_e.has_value() ) co_return std::move( result_e.error() );
+	}
+	co_return http::JsonResponse< TagUpdateResponse > {};
+}
+
+http::HTTPTask< http::JsonResult< TagUpdateStatusResponse > > removeMultipleTags(
+	db::DBContext& db,
+	http::RequestContext context,
+	http::Query< RemoveMultipleTagsQuery > query )
+{
+	const auto tag_domain_id { query.value.tag_domain_id };
 
 	auto body_e { readValidatedJsonBody( context ) };
 	if ( !body_e ) co_return std::move( body_e.error() );
@@ -1055,14 +1139,12 @@ static http::HTTPTask< http::Response > removeMultipleTags( db::DBContext& db, h
 		co_return http::Response::error( 500, std::format( "Error removing tags: {}", e.what() ) );
 	}
 
-	simdjson::builder::string_builder builder;
-	builder.start_object();
-	builder.append_key_value( "status", 200 );
-	builder.end_object();
-	co_return jsonResponse( builder );
+	co_return http::JsonResponse< TagUpdateStatusResponse > {};
 }
 
-static http::HTTPTask< http::Response > createRecord( db::DBContext& db, http::RequestContext context )
+http::HTTPTask< http::JsonResult< CreatedRecordResponse > > createRecord(
+	db::DBContext& db,
+	http::RequestContext context )
 {
 	auto body_e { readValidatedJsonBody( context ) };
 	if ( !body_e ) co_return std::move( body_e.error() );
@@ -1111,17 +1193,11 @@ static http::HTTPTask< http::Response > createRecord( db::DBContext& db, http::R
 				hashes_order.size(),
 				record_id_map.size() );
 
-		simdjson::builder::string_builder builder;
-		builder.start_array();
-		bool first { true };
-		for ( const auto& hash : hashes_order )
-		{
-			if ( !first ) builder.append_comma();
-			builder.append( record_id_map[ hash ] );
-			first = false;
-		}
-		builder.end_array();
-		co_return jsonResponse( builder );
+		std::vector< RecordID > response;
+		response.reserve( hashes_order.size() );
+		for ( const auto& hash : hashes_order ) response.push_back( record_id_map.at( hash ) );
+
+		co_return http::JsonResponse< CreatedRecordResponse > { std::move( response ) };
 	}
 
 	std::string_view hash_text {};
@@ -1133,61 +1209,54 @@ static http::HTTPTask< http::Response > createRecord( db::DBContext& db, http::R
 		auto record_id { co_await createRecord( *hash, db ) };
 		if ( !record_id ) co_return std::move( record_id.error() );
 
-		simdjson::builder::string_builder builder;
-		builder.start_object();
-		builder.append_key_value( "record_id", *record_id );
-		builder.end_object();
-		co_return jsonResponse( builder );
+		co_return http::JsonResponse< CreatedRecordResponse > { RecordIdResponse { *record_id } };
 	}
 
 	co_return http::Response::error( 400, "Invalid json: 'sha256' must be a hex string or an array of hex strings" );
 }
 
-static http::HTTPTask< http::Response > searchHash( db::DBContext& db, http::RequestContext context )
+http::HTTPTask< http::JsonResult< RecordHashSearchResponse > > searchHash(
+	db::DBContext& db,
+	http::Query< SearchHashQuery > query )
 {
-	const auto hash_e { context.parameters().scalar< std::string >( "sha256" ) };
-	if ( !hash_e ) co_return http::Response::error( 400, "sha256 was not provided in query" );
-
-	auto hash { parseSha256Hex( *hash_e ) };
+	auto hash { parseSha256Hex( query.value.sha256 ) };
 	if ( !hash ) co_return std::move( hash.error() );
 
 	const auto record_id { co_await findRecord( *hash, db ) };
 
-	simdjson::builder::string_builder builder;
-	builder.start_object();
-	if ( !record_id )
-		builder.append_key_value( "found", false );
-	else
-	{
-		builder.append_key_value( "found", true );
-		builder.append_comma();
-		builder.append_key_value( "record_id", *record_id );
-	}
-	builder.end_object();
-
-	co_return jsonResponse( builder );
+	co_return http::JsonResponse< RecordHashSearchResponse > {
+		{ record_id.has_value(), http::possiblyMissing< RecordID > { record_id } }
+	};
 }
 
-static http::HTTPTask< http::Response > getRandomActiveRecord(
+http::HTTPTask< http::JsonResult< RecordIdResponse > > getRandomActiveRecord(
 	db::DBContext& db,
 	[[maybe_unused]] http::RequestContext context )
 {
 	const auto rows {
-		co_await db.query( "SELECT record_id FROM file_info WHERE mime_id IS NOT NULL ORDER BY RANDOM() LIMIT 1" )
-			.rows< RecordID >()
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    record_id
+					FROM file_info
+					WHERE mime_id IS NOT NULL
+					ORDER BY
+					    RANDOM()
+					LIMIT 1
+				)SQL" )
+				 .rows< RecordID >()
 	};
 
 	if ( rows.empty() ) co_return http::Response::error( 404, "No active records found" );
 
-	simdjson::builder::string_builder builder;
-	builder.start_object();
-	builder.append_key_value( "record_id", std::get< 0 >( rows.row( 0 ) ) );
-	builder.end_object();
-
-	co_return jsonResponse( builder );
+	co_return http::JsonResponse< RecordIdResponse > { { std::get< 0 >( rows.row( 0 ) ) } };
 }
 
-static http::HTTPTask< http::Response > deleteRecordFile( db::DBContext& db, http::RequestContext context )
+http::HTTPTask< http::JsonResult< RecordFileDeletedResponse > > deleteRecordFile(
+	db::DBContext& db,
+	http::RequestContext context )
 {
 	const auto record_id_e { context.parameters().scalar< RecordID >( "record_id" ) };
 	if ( !record_id_e.has_value() ) co_return http::Response::error( 400, record_id_e.error().message );
@@ -1197,8 +1266,14 @@ static http::HTTPTask< http::Response > deleteRecordFile( db::DBContext& db, htt
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT file_info.cluster_id, file_info.cluster_delete_time IS NOT NULL "
-				"FROM file_info WHERE file_info.record_id = $1",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    file_info.cluster_id,
+					    file_info.cluster_delete_time IS NOT NULL
+					FROM file_info
+					WHERE file_info.record_id = $1
+				)SQL",
 				std::move( bindings ) )
 			.rows< std::optional< ClusterID >, std::optional< bool > >()
 	};
@@ -1211,11 +1286,7 @@ static http::HTTPTask< http::Response > deleteRecordFile( db::DBContext& db, htt
 
 	if ( deletion_recorded.value() )
 	{
-		simdjson::builder::string_builder builder;
-		builder.start_object();
-		builder.append_key_value( "deleted", false );
-		builder.end_object();
-		co_return jsonResponse( builder );
+		co_return http::JsonResponse< RecordFileDeletedResponse > { { false } };
 	}
 
 	if ( cluster_id.has_value() )
@@ -1231,7 +1302,7 @@ static http::HTTPTask< http::Response > deleteRecordFile( db::DBContext& db, htt
 		if ( location.cluster().readonly() )
 			co_return http::Response::error( 409, "The record's cluster is read-only" );
 
-		const auto verified_e { location.verify() };
+		const auto verified_e { location.verifySync() };
 		if ( !verified_e.has_value() ) co_return http::Response::error( 503, verified_e.error() );
 
 		const auto removed { co_await IOUring::getInstance().removeFile( location.path() ) };
@@ -1243,84 +1314,18 @@ static http::HTTPTask< http::Response > deleteRecordFile( db::DBContext& db, htt
 	update_bindings.bind( record_id );
 	co_await db
 		.query(
-			"UPDATE file_info SET cluster_id = NULL, cluster_delete_time = now() "
-			"WHERE record_id = $1 AND cluster_delete_time IS NULL",
+			//language=postgresql
+			R"SQL(
+				UPDATE
+				    file_info
+				SET cluster_id = NULL,
+				    cluster_delete_time = now()
+				WHERE record_id = $1
+				    AND cluster_delete_time IS NULL
+			)SQL",
 			std::move( update_bindings ) )
 		.result();
-	simdjson::builder::string_builder builder;
-	builder.start_object();
-	builder.append_key_value( "deleted", true );
-	builder.end_object();
-	co_return jsonResponse( builder );
-}
-
-std::vector< http::RouteDefinition > recordRoutes( db::DBContext& db )
-{
-	std::vector< http::RouteDefinition > routes {};
-
-	const auto add =
-		[ &routes, &db ](
-			const proxygen::HTTPMethod method,
-			std::string path,
-			std::vector< http::PathParameter > path_parameters,
-			const bool needs_record,
-			http::HTTPTask< http::Response > ( *handler )( db::DBContext&, http::RequestContext ) )
-	{
-		std::vector< http::RequestValidation > before_body { apiAuthValidation( db ) };
-		if ( needs_record ) before_body.push_back( recordExistsValidation( db ) );
-
-		auto bound = [ &db, handler ]( http::RequestContext context ) -> http::HTTPTask< http::Response >
-		{ co_return co_await handler( db, std::move( context ) ); };
-
-		routes.push_back(
-			http::RouteDefinition {
-				http::RouteMetadata {
-					method, std::move( path ), std::move( path_parameters ), std::move( before_body ) },
-				std::move( bound ) } );
-	};
-
-	add( proxygen::HTTPMethod::GET, "/records/{record_id}/notes", { recordIdPathParameter() }, true, getNotes );
-	add( proxygen::HTTPMethod::DELETE,
-	     "/records/{record_id}/file",
-	     { recordIdPathParameter() },
-	     true,
-	     deleteRecordFile );
-	add( proxygen::HTTPMethod::POST, "/records/{record_id}/add_note", { recordIdPathParameter() }, true, addNote );
-	add( proxygen::HTTPMethod::DELETE,
-	     "/records/{record_id}/remove_note/{note_id}",
-	     { recordIdPathParameter(), noteIdPathParameter() },
-	     true,
-	     removeNote );
-
-	add( proxygen::HTTPMethod::POST, "/records/create", {}, false, createRecord );
-
-	add( proxygen::HTTPMethod::GET, "/records/{record_id}/urls", { recordIdPathParameter() }, true, fetchUrls );
-	add( proxygen::HTTPMethod::POST, "/records/{record_id}/urls/add", { recordIdPathParameter() }, true, addUrls );
-	add(
-		proxygen::HTTPMethod::POST, "/records/{record_id}/urls/remove", { recordIdPathParameter() }, true, removeUrls );
-
-	add( proxygen::HTTPMethod::POST, "/records/tags/add", {}, false, addMultipleTags );
-	add( proxygen::HTTPMethod::POST, "/records/tags/remove", {}, false, removeMultipleTags );
-
-	add( proxygen::HTTPMethod::POST, "/records/{record_id}/tags/add", { recordIdPathParameter() }, true, addTags );
-	add(
-		proxygen::HTTPMethod::POST, "/records/{record_id}/tags/remove", { recordIdPathParameter() }, true, removeTags );
-	add( proxygen::HTTPMethod::GET, "/records/{record_id}/tags", { recordIdPathParameter() }, true, listTags );
-	add( proxygen::HTTPMethod::GET,
-	     "/records/{record_id}/tags/active",
-	     { recordIdPathParameter() },
-	     true,
-	     listActiveTags );
-	add( proxygen::HTTPMethod::GET,
-	     "/records/{record_id}/tags/active/verbose",
-	     { recordIdPathParameter() },
-	     true,
-	     listActiveTagsVerbose );
-
-	add( proxygen::HTTPMethod::GET, "/records/search", {}, false, searchHash );
-	add( proxygen::HTTPMethod::GET, "/records/random", {}, false, getRandomActiveRecord );
-
-	return routes;
+	co_return http::JsonResponse< RecordFileDeletedResponse > { { true } };
 }
 
 } // namespace idhan::httpapi

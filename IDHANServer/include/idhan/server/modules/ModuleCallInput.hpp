@@ -13,8 +13,8 @@
 namespace idhan::server::modules
 {
 
-// Owns the descriptor lifetime for one module call. The descriptor is moved
-// into the frame only after the call has been admitted by a worker.
+//! Owns the descriptor lifetime for one module call. The descriptor is moved
+//! into the frame only after the call has been admitted by a worker.
 class ModuleCallInput
 {
 	std::shared_ptr< const void > m_owner;

@@ -210,7 +210,6 @@ describe('markBoxes', () => {
     });
 
     it('follows the letterboxing when the frame is wider than the image', () => {
-        // 1000x1000 into 800x400 fits at 0.4, leaving 200px of empty frame on each side.
         const [box] = markBoxes([region], {width: 800, height: 400}, {width: 1000, height: 1000}, 0);
 
         expect(box).toEqual({left: 200 + 40, top: 40, width: 20, height: 20});

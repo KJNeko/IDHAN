@@ -3,7 +3,6 @@
 #include <folly/io/IOBuf.h>
 
 #include <algorithm>
-#include <charconv>
 #include <chrono>
 #include <cstdint>
 #include <expected>
@@ -22,10 +21,11 @@
 #include "embeddings/embeddings.hpp"
 #include "embeddings/queryVector.hpp"
 #include "embeddings/resolveTerms.hpp"
+#include "idValidation.hpp"
 #include "idhan/db/DBContext.hpp"
+#include "idhan/http/routing/ReflectedRoutes.hpp"
 #include "jobs/JobContext.hpp"
 #include "jsonBody.hpp"
-#include "idValidation.hpp"
 #include "logging/log.hpp"
 #include "modules/ModuleLoader.hpp"
 #include "modules/RemoteModule.hpp"
@@ -39,16 +39,6 @@ constexpr std::size_t max_search_limit { max_ef_search };
 constexpr std::size_t default_search_limit { 200 };
 constexpr std::size_t max_compare_terms { 64 };
 constexpr std::size_t max_compare_records { 8 };
-
-[[nodiscard]] static http::Response jsonResponse(
-	simdjson::builder::string_builder& builder,
-	const std::uint16_t status = 200 )
-{
-	auto json { builder.view() };
-	if ( json.error() ) throw std::runtime_error( simdjson::error_message( json.error() ) );
-
-	return http::Response::json( status, folly::IOBuf::copyBuffer( *json ) );
-}
 
 [[nodiscard]] static std::expected< embeddings::QueryTerm, http::Response > parseQueryTerm(
 	const simdjson::dom::element entry )
@@ -144,7 +134,15 @@ constexpr std::size_t max_compare_records { 8 };
 			co_await db
 				.query(
 					std::format(
-						"SELECT record_id, embedding::text AS embedding FROM {} WHERE record_id = ANY($1)", table ),
+						//language=postgresql
+						R"SQL(
+							SELECT
+							    record_id,
+							    embedding::text AS embedding
+							FROM {}
+							WHERE record_id = ANY ($1)
+						)SQL",
+						table ),
 					std::move( bindings ) )
 				.rows< RecordID, std::string >()
 		};
@@ -191,58 +189,69 @@ constexpr std::size_t max_compare_records { 8 };
 	co_return resolved;
 }
 
-static http::HTTPTask< http::Response > listModels( db::DBContext& db, [[maybe_unused]] http::RequestContext context )
+http::HTTPTask< http::JsonResult< std::vector< EmbeddingModelResponse > > > listModels(
+	db::DBContext& db,
+	[[maybe_unused]] http::RequestContext context )
 {
 	const auto rows {
-		co_await db.query( "SELECT model_id, model_name, model_dimensions FROM embedding_models ORDER BY model_id" )
-			.rows< std::int32_t, std::string, std::int32_t >()
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    model_id,
+					    model_name,
+					    model_dimensions
+					FROM embedding_models
+					ORDER BY
+					    model_id
+				)SQL" )
+				 .rows< std::int32_t, std::string, std::int32_t >()
 	};
 
-	simdjson::builder::string_builder builder;
-	builder.start_array();
-	bool first { true };
+	std::vector< EmbeddingModelResponse > response;
+	response.reserve( rows.size() );
 	for ( const auto& [ model_id, model_name, dimensions ] : rows )
 	{
-		if ( !first ) builder.append_comma();
-		first = false;
-
 		const auto module { modules::ModuleLoader::instance().getEmbedderFor( model_name ) };
-
-		builder.start_object();
-		builder.append_key_value( "model_id", model_id );
-		builder.append_comma();
-		builder.append_key_value( "model_name", model_name );
-		builder.append_comma();
-		builder.append_key_value( "dimensions", dimensions );
-		builder.append_comma();
-		builder.append_key_value( "available", module != nullptr );
-		builder.append_comma();
-		builder.append_key_value( "supports_text", module != nullptr && module->supportsText() );
+		EmbeddingModelResponse model {
+			model_id, model_name, dimensions, module != nullptr, module != nullptr && module->supportsText()
+		};
 
 		db::DBBindings bindings {};
 		bindings.bind( std::format( "embeddings_{}", model_id ) );
 		const auto stats {
-			co_await db.query( "SELECT reltuples FROM pg_class WHERE oid = to_regclass($1)", std::move( bindings ) )
-				.rows< std::optional< float > >()
+			co_await db
+					 .query(
+						 //language=postgresql
+						 R"SQL(
+						SELECT
+						    reltuples
+						FROM pg_class
+						WHERE oid = to_regclass($1)
+					)SQL",
+						 std::move( bindings ) )
+					 .rows< std::optional< float > >()
 		};
 
 		if ( !stats.empty() )
 		{
-			if ( const auto estimate { std::get< 0 >( stats.row( 0 ) ) }; estimate && *estimate >= 0.0f )
+			const auto estimate { std::get< 0 >( stats.row( 0 ) ) };
+			if ( estimate && *estimate >= 0.0f )
 			{
-				builder.append_comma();
-				builder.append_key_value( "embedding_estimate", static_cast< std::int64_t >( *estimate ) );
+				model.embedding_estimate.emplace( static_cast< std::int64_t >( *estimate ) );
 			}
 		}
 
-		builder.end_object();
+		response.push_back( std::move( model ) );
 	}
-	builder.end_array();
 
-	co_return jsonResponse( builder );
+	co_return http::JsonResponse< std::vector< EmbeddingModelResponse > > { std::move( response ) };
 }
 
-static http::HTTPTask< http::Response > deleteModel( db::DBContext& db, http::RequestContext context )
+http::HTTPTask< http::JsonResult< DeletedEmbeddingModelResponse > > deleteModel(
+	db::DBContext& db,
+	http::RequestContext context )
 {
 	const auto model_id_e { context.parameters().scalar< std::int32_t >( "model_id" ) };
 	if ( !model_id_e ) co_return http::Response::error( 400, model_id_e.error().message );
@@ -251,8 +260,17 @@ static http::HTTPTask< http::Response > deleteModel( db::DBContext& db, http::Re
 	db::DBBindings find_bindings {};
 	find_bindings.bind( model_id );
 	const auto rows {
-		co_await db.query( "SELECT model_name FROM embedding_models WHERE model_id = $1", std::move( find_bindings ) )
-			.rows< std::string >()
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    model_name
+					FROM embedding_models
+					WHERE model_id = $1
+				)SQL",
+					 std::move( find_bindings ) )
+				 .rows< std::string >()
 	};
 
 	if ( rows.empty() )
@@ -270,7 +288,15 @@ static http::HTTPTask< http::Response > deleteModel( db::DBContext& db, http::Re
 	{
 		db::DBBindings delete_bindings {};
 		delete_bindings.bind( model_id );
-		co_await db.query( "DELETE FROM embedding_models WHERE model_id = $1", std::move( delete_bindings ) ).result();
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					DELETE FROM embedding_models
+					WHERE model_id = $1
+				)SQL",
+					 std::move( delete_bindings ) )
+				 .result();
 	}
 	catch ( const std::exception& e )
 	{
@@ -282,19 +308,12 @@ static http::HTTPTask< http::Response > deleteModel( db::DBContext& db, http::Re
 
 	log::info( "Deleted embedding model '{}' (id {}) and every embedding it held", model_name, model_id );
 
-	simdjson::builder::string_builder builder;
-	builder.start_object();
-	builder.append_key_value( "model_id", model_id );
-	builder.append_comma();
-	builder.append_key_value( "model_name", model_name );
-	builder.append_comma();
-	builder.append_key_value( "deleted", true );
-	builder.end_object();
-
-	co_return jsonResponse( builder );
+	co_return http::JsonResponse< DeletedEmbeddingModelResponse > { { model_id, model_name, true } };
 }
 
-static http::HTTPTask< http::Response > generateEmbeddings( db::DBContext& db, http::RequestContext context )
+http::HTTPTask< http::JsonResult< GenerateEmbeddingsResponse > > generateEmbeddings(
+	db::DBContext& db,
+	http::RequestContext context )
 {
 	auto body_e { readValidatedJsonBody( context ) };
 	if ( !body_e ) co_return std::move( body_e.error() );
@@ -343,19 +362,12 @@ static http::HTTPTask< http::Response > generateEmbeddings( db::DBContext& db, h
 	auto job_ctx { queueJob(
 		embeddings::backfillJob( model_id, model_name, db ), std::format( "Embedding backfill for {}", model_name ) ) };
 
-	simdjson::builder::string_builder builder;
-	builder.start_object();
-	builder.append_key_value( "job_id", job_ctx->id() );
-	builder.append_comma();
-	builder.append_key_value( "model_id", model_id );
-	builder.append_comma();
-	builder.append_key_value( "status", "dispatched" );
-	builder.end_object();
-
-	co_return jsonResponse( builder );
+	co_return http::JsonResponse< GenerateEmbeddingsResponse > { { job_ctx->id(), model_id, "dispatched" } };
 }
 
-static http::HTTPTask< http::Response > searchEmbeddings( db::DBContext& db, http::RequestContext context )
+http::HTTPTask< http::JsonResult< SearchEmbeddingsResponse > > searchEmbeddings(
+	db::DBContext& db,
+	http::RequestContext context )
 {
 	auto body_e { readValidatedJsonBody( context ) };
 	if ( !body_e ) co_return std::move( body_e.error() );
@@ -440,8 +452,21 @@ static http::HTTPTask< http::Response > searchEmbeddings( db::DBContext& db, htt
 
 	auto transaction { co_await db.transaction() };
 
-	co_await transaction.query( std::format( "SET LOCAL hnsw.ef_search = {}", ef_search ) ).result();
-	co_await transaction.query( "SET LOCAL enable_indexscan = off" ).result();
+	co_await transaction
+			 .query( std::format(
+				 //language=postgresql
+				 R"SQL(
+				SET LOCAL hnsw.ef_search = {}
+			)SQL",
+				 ef_search ) )
+			 .result();
+	co_await transaction
+			 .query(
+				 //language=postgresql
+				 R"SQL(
+				SET LOCAL enable_indexscan = off
+			)SQL" )
+			 .result();
 
 	const auto literal { embeddings::toHalfvecLiteral( *query_vector ) };
 	const auto table { std::format( "embeddings_{}", model_id ) };
@@ -452,7 +477,16 @@ static http::HTTPTask< http::Response > searchEmbeddings( db::DBContext& db, htt
 		co_await transaction
 			.query(
 				std::format(
-					"SELECT record_id, embedding <=> $1::halfvec AS distance FROM {} ORDER BY distance LIMIT {}",
+					//language=postgresql
+					R"SQL(
+						SELECT
+						    record_id,
+						    embedding <=> $1::halfvec AS distance
+						FROM {}
+						ORDER BY
+						    distance
+						LIMIT {}
+					)SQL",
 					table,
 					limit ),
 				std::move( bindings ) )
@@ -461,43 +495,26 @@ static http::HTTPTask< http::Response > searchEmbeddings( db::DBContext& db, htt
 
 	co_await transaction.commit();
 
-	simdjson::builder::string_builder builder;
-	builder.start_object();
-	builder.escape_and_append_with_quotes( "record_ids" );
-	builder.append_colon();
-	builder.start_array();
-	bool first { true };
-	for ( const auto& [ record_id, distance ] : rows )
-	{
-		if ( !first ) builder.append_comma();
-		first = false;
-		builder.append( record_id );
-	}
-	builder.end_array();
-	builder.append_comma();
-	builder.escape_and_append_with_quotes( "distances" );
-	builder.append_colon();
-	builder.start_array();
-	first = true;
-	for ( const auto& [ record_id, distance ] : rows )
-	{
-		if ( !first ) builder.append_comma();
-		first = false;
-		builder.append( distance );
-	}
-	builder.end_array();
-	builder.append_comma();
-	builder.append_key_value(
-		"query_ms",
+	SearchEmbeddingsResponse response {
+		{},
+		{},
 		static_cast< std::uint64_t >(
 			std::chrono::duration_cast< std::chrono::milliseconds >( std::chrono::steady_clock::now() - started )
-				.count() ) );
-	builder.end_object();
-
-	co_return jsonResponse( builder );
+				.count() )
+	};
+	response.record_ids.reserve( rows.size() );
+	response.distances.reserve( rows.size() );
+	for ( const auto& [ record_id, distance ] : rows )
+	{
+		response.record_ids.push_back( record_id );
+		response.distances.push_back( distance );
+	}
+	co_return http::JsonResponse< SearchEmbeddingsResponse > { std::move( response ) };
 }
 
-static http::HTTPTask< http::Response > compareEmbeddings( db::DBContext& db, http::RequestContext context )
+http::HTTPTask< http::JsonResult< CompareEmbeddingsResponse > > compareEmbeddings(
+	db::DBContext& db,
+	http::RequestContext context )
 {
 	auto body_e { readValidatedJsonBody( context ) };
 	if ( !body_e ) co_return std::move( body_e.error() );
@@ -604,7 +621,15 @@ static http::HTTPTask< http::Response > compareEmbeddings( db::DBContext& db, ht
 	const auto present_rows {
 		co_await db
 			.query(
-				std::format( "SELECT record_id FROM {} WHERE record_id = ANY($1)", table ),
+				std::format(
+					//language=postgresql
+					R"SQL(
+						SELECT
+						    record_id
+						FROM {}
+						WHERE record_id = ANY ($1)
+					)SQL",
+					table ),
 				std::move( present_bindings ) )
 			.rows< RecordID >()
 	};
@@ -654,8 +679,17 @@ static http::HTTPTask< http::Response > compareEmbeddings( db::DBContext& db, ht
 			co_await db
 				.query(
 					std::format(
-						"SELECT t.idx, e.record_id, e.embedding <=> t.vec::halfvec AS distance FROM {} e "
-						"CROSS JOIN UNNEST($2::text[]) WITH ORDINALITY AS t(vec, idx) WHERE e.record_id = ANY($1)",
+						//language=postgresql
+						R"SQL(
+							SELECT
+							    t.idx,
+							    e.record_id,
+							    e.embedding <=> t.vec::halfvec AS distance
+							FROM {} e
+							    CROSS JOIN UNNEST($2::text[])
+							    WITH ORDINALITY AS t (vec, idx)
+							WHERE e.record_id = ANY ($1)
+						)SQL",
 						table ),
 					std::move( compare_bindings ) )
 				.rows< std::int64_t, RecordID, double >()
@@ -681,8 +715,15 @@ static http::HTTPTask< http::Response > compareEmbeddings( db::DBContext& db, ht
 			co_await db
 				.query(
 					std::format(
-						"SELECT a.embedding <=> b.embedding AS distance FROM {} a, {} b "
-						"WHERE a.record_id = $1 AND b.record_id = $2",
+						//language=postgresql
+						R"SQL(
+							SELECT
+							    a.embedding <=> b.embedding AS distance
+							FROM {} a,
+							    {} b
+							WHERE a.record_id = $1
+							    AND b.record_id = $2
+						)SQL",
 						table,
 						table ),
 					std::move( pair_bindings ) )
@@ -692,114 +733,14 @@ static http::HTTPTask< http::Response > compareEmbeddings( db::DBContext& db, ht
 		if ( !pair_rows.empty() ) pair_distance = std::get< 0 >( pair_rows.row( 0 ) );
 	}
 
-	simdjson::builder::string_builder builder;
-	builder.start_object();
-	builder.escape_and_append_with_quotes( "record_ids" );
-	builder.append_colon();
-	builder.start_array();
-	bool first { true };
-	for ( const auto record_id : record_ids )
-	{
-		if ( !first ) builder.append_comma();
-		first = false;
-		builder.append( record_id );
-	}
-	builder.end_array();
-	builder.append_comma();
-	builder.escape_and_append_with_quotes( "distances" );
-	builder.append_colon();
-	builder.start_array();
-	first = true;
-	for ( const auto& row : distances )
-	{
-		if ( !first ) builder.append_comma();
-		first = false;
-		builder.start_array();
-		bool row_first { true };
-		for ( const auto distance : row )
-		{
-			if ( !row_first ) builder.append_comma();
-			row_first = false;
-			builder.append( distance );
-		}
-		builder.end_array();
-	}
-	builder.end_array();
-
-	if ( pair_distance )
-	{
-		builder.append_comma();
-		builder.append_key_value( "pair_distance", *pair_distance );
-	}
-
-	builder.append_comma();
-	builder.append_key_value(
-		"query_ms",
-		static_cast< std::uint64_t >(
-			std::chrono::duration_cast< std::chrono::milliseconds >( std::chrono::steady_clock::now() - started )
-				.count() ) );
-	builder.end_object();
-
-	co_return jsonResponse( builder );
-}
-
-std::vector< http::RouteDefinition > embeddingRoutes( db::DBContext& db )
-{
-	std::vector< http::RouteDefinition > routes {};
-
-	auto list_handler = [ &db ]( http::RequestContext context ) -> http::HTTPTask< http::Response >
-	{ co_return co_await listModels( db, std::move( context ) ); };
-	routes.push_back(
-		http::RouteDefinition {
-			http::RouteMetadata { proxygen::HTTPMethod::GET, "/embeddings/models", {}, { apiAuthValidation( db ) } },
-			std::move( list_handler ) } );
-
-	auto delete_handler = [ &db ]( http::RequestContext context ) -> http::HTTPTask< http::Response >
-	{ co_return co_await deleteModel( db, std::move( context ) ); };
-
-	auto model_id_parameter = http::PathParameter {
-		"model_id",
-		[]( const std::string_view value ) -> std::expected< void, http::ParseError >
-		{
-			std::int32_t id {};
-			const auto result { std::from_chars( value.data(), value.data() + value.size(), id ) };
-			if ( result.ec != std::errc {} || result.ptr != value.data() + value.size() )
-				return std::unexpected( http::ParseError { "model_id", "must be a valid integer" } );
-			return {};
-		}
+	co_return http::JsonResponse< CompareEmbeddingsResponse > {
+		{ std::move( record_ids ),
+		  std::move( distances ),
+		  http::possiblyMissing< double > { pair_distance },
+		  static_cast< std::uint64_t >(
+			  std::chrono::duration_cast< std::chrono::milliseconds >( std::chrono::steady_clock::now() - started )
+				  .count() ) }
 	};
-
-	routes.push_back(
-		http::RouteDefinition {
-			http::RouteMetadata {
-				proxygen::HTTPMethod::DELETE,
-				"/embeddings/models/{model_id}",
-				{ std::move( model_id_parameter ) },
-				{ apiAuthValidation( db ) } },
-			std::move( delete_handler ) } );
-
-	auto generate_handler = [ &db ]( http::RequestContext context ) -> http::HTTPTask< http::Response >
-	{ co_return co_await generateEmbeddings( db, std::move( context ) ); };
-	routes.push_back(
-		http::RouteDefinition {
-			http::RouteMetadata { proxygen::HTTPMethod::POST, "/embeddings/generate", {}, { apiAuthValidation( db ) } },
-			std::move( generate_handler ) } );
-
-	auto search_handler = [ &db ]( http::RequestContext context ) -> http::HTTPTask< http::Response >
-	{ co_return co_await searchEmbeddings( db, std::move( context ) ); };
-	routes.push_back(
-		http::RouteDefinition {
-			http::RouteMetadata { proxygen::HTTPMethod::POST, "/embeddings/search", {}, { apiAuthValidation( db ) } },
-			std::move( search_handler ) } );
-
-	auto compare_handler = [ &db ]( http::RequestContext context ) -> http::HTTPTask< http::Response >
-	{ co_return co_await compareEmbeddings( db, std::move( context ) ); };
-	routes.push_back(
-		http::RouteDefinition {
-			http::RouteMetadata { proxygen::HTTPMethod::POST, "/embeddings/compare", {}, { apiAuthValidation( db ) } },
-			std::move( compare_handler ) } );
-
-	return routes;
 }
 
 } // namespace idhan::httpapi

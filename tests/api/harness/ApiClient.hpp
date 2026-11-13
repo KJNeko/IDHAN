@@ -25,7 +25,7 @@ struct ApiResponse
 	long status {};
 	Json::Value json;
 	std::string body;
-	// Header names are normalized to lowercase.
+	//! Header names are normalized to lowercase.
 	std::unordered_map< std::string, std::string > headers {};
 
 	//! The named header, or an empty string when the response did not carry it.
@@ -103,7 +103,6 @@ class ApiClient
 		const RecordIDs& record_ids,
 		const TagIDs& tag_ids );
 
-	//! The record ids the search endpoint answers with, sorted.
 	[[nodiscard]] RecordIDs search( TagDomainID tag_domain_id, const TagIDs& tag_ids );
 };
 
@@ -116,16 +115,13 @@ class ApiClient
 //! [{"parent_id": ..., "child_id": ...}, ...]
 [[nodiscard]] Json::Value parentBody( const IdPairs& parent_to_child );
 
-//! {"name": ...}
 [[nodiscard]] Json::Value domainBody( const std::string& name );
 
-//! {"records": [...], "tags": [...]}
 [[nodiscard]] Json::Value recordTagBody( const RecordIDs& record_ids, const TagIDs& tag_ids );
 
 //! {"records": [...], "sets": [[...], ...]}, one set per record
 [[nodiscard]] Json::Value recordTagSetBody( const RecordIDs& record_ids, const TagIDs& tag_ids );
 
-//! The 32 byte hash a record is addressed by, filled from a seed so each record gets a distinct one.
 [[nodiscard]] std::string hashFor( int seed );
 
 [[nodiscard]] TagDomainID domainOf( const ApiResponse& response );

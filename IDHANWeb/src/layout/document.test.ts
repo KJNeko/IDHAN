@@ -19,9 +19,9 @@ describe('migrateLayout', () => {
   });
 
   it('rejects a document missing required fields', () => {
-    expect(migrateLayout({ id: 'x', name: 'y' })).toBeNull(); // no engine/panels
+	  expect(migrateLayout({id: 'x', name: 'y'})).toBeNull();
     expect(migrateLayout({ id: 'x', name: 'y', engine: { kind: 'other' }, panels: {} })).toBeNull();
-    expect(migrateLayout({ name: 'y', engine: { kind: 'dockview' }, panels: {} })).toBeNull(); // no id
+	  expect(migrateLayout({name: 'y', engine: {kind: 'dockview'}, panels: {}})).toBeNull();
   });
 
   it('rejects an unknown-schema document rather than guessing', () => {

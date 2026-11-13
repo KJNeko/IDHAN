@@ -11,7 +11,7 @@ struct PendingPromise
 	JSValue resolve { JS_UNDEFINED };
 	JSValue reject { JS_UNDEFINED };
 
-	void settle( bool ok, JSValue value );
+	void resolveOrReject( bool ok, JSValue value );
 	void discard();
 };
 

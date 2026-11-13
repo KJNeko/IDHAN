@@ -13,7 +13,6 @@
 namespace psd
 {
 
-//! The fallback behind openWholeFile: allocate the file and copy it in through read().
 static std::expected< std::vector< std::uint8_t >, idhan::ModuleError > readWholeFile( const idhan::ModuleFile& file )
 {
 	std::vector< std::uint8_t > buffer( file.size() );
@@ -221,7 +220,6 @@ std::expected< std::vector< std::uint8_t >, idhan::ModuleError > convertCMYKtoIn
 	const std::basic_string_view< std::uint8_t > cmyk,
 	const std::size_t pixelCount )
 {
-	// need four planes (C, M, Y, K) of pixelCount bytes each; division form avoids overflow
 	if ( pixelCount > cmyk.size() / 4 ) return std::unexpected( idhan::ModuleError { "CMYK plane data too small" } );
 
 	std::vector< std::uint8_t > rgb( pixelCount * 3 );
@@ -325,20 +323,16 @@ std::expected< std::vector< std::uint8_t >, idhan::ModuleError > convertPlanarTo
 
 std::uint32_t countPSDLayers( const std::uint8_t* data, std::size_t length )
 {
-	// Start past the file header.
 	std::size_t offset { 26 };
 
-	// Then, skip the color mode data.
 	if ( offset + 4 > length ) return 0;
 	const std::uint32_t colorModeLength { readUint32BE( data + offset ) };
 	offset += 4 + colorModeLength;
 
-	// Next, skip image resources section.
 	if ( offset + 4 > length ) return 0;
 	const std::uint32_t resourcesLength { readUint32BE( data + offset ) };
 	offset += 4 + resourcesLength;
 
-	// Read layer and mask info
 	if ( offset + 4 > length ) return 0;
 	const std::uint32_t layerMaskLength { readUint32BE( data + offset ) };
 	offset += 4;
@@ -346,13 +340,11 @@ std::uint32_t countPSDLayers( const std::uint8_t* data, std::size_t length )
 	const std::size_t layerMaskEnd { offset + layerMaskLength };
 	if ( layerMaskEnd > length ) return 0;
 
-	// Read layer info length
 	if ( offset + 4 > length ) return 0;
 	const std::uint32_t layerInfoLength { readUint32BE( data + offset ) };
 	offset += 4;
 	if ( layerInfoLength == 0 ) return 0;
 
-	// Read layer count
 	if ( offset + 2 > length ) return 0;
 	const std::int16_t rawLayerCount { static_cast< int16_t >( readUint16BE( data + offset ) ) };
 	offset += 2;
@@ -360,27 +352,21 @@ std::uint32_t countPSDLayers( const std::uint8_t* data, std::size_t length )
 	const std::uint16_t layerCount { static_cast< std::uint16_t >( std::abs( rawLayerCount ) ) };
 	std::uint32_t realLayerCount = 0;
 
-	// Parse each layer to determine groupType
 	for ( std::uint16_t i = 0; i < layerCount; ++i )
 	{
-		// Skip bounds (top, left, bottom, right)
 		if ( offset + 16 > length ) return realLayerCount;
 		offset += 16;
 
-		// Read channel count
 		if ( offset + 2 > length ) return realLayerCount;
 		const std::uint16_t channelCount { readUint16BE( data + offset ) };
 		offset += 2;
 
-		// Skip channel info
 		if ( offset + static_cast< std::size_t >( channelCount ) * 6 > length ) return realLayerCount;
 		offset += static_cast< std::size_t >( channelCount ) * 6;
 
-		// Skip signature, blend mode, opacity, clipping, flags, filler
 		if ( offset + 12 > length ) return realLayerCount;
 		offset += 12;
 
-		// Read extra data length
 		if ( offset + 4 > length ) return realLayerCount;
 		const std::uint32_t extraDataLength { readUint32BE( data + offset ) };
 		offset += 4;
@@ -388,23 +374,19 @@ std::uint32_t countPSDLayers( const std::uint8_t* data, std::size_t length )
 		const std::size_t extraDataEnd { offset + extraDataLength };
 		if ( extraDataEnd > length ) return realLayerCount;
 
-		// Skip mask data length + mask data
 		if ( offset + 4 > length ) return realLayerCount;
 		const std::uint32_t maskLength { readUint32BE( data + offset ) };
 		offset += 4 + maskLength;
 
-		// Skip blending ranges
 		if ( offset + 4 > length ) return realLayerCount;
 		const std::uint32_t blendingRangesLength { readUint32BE( data + offset ) };
 		offset += 4 + blendingRangesLength;
 
-		// Skip layer name
 		if ( offset >= length ) return realLayerCount;
 		const std::uint8_t nameLen { data[ offset ] };
 		offset += std::size_t { 1 } + ( ( std::size_t { nameLen } + 1 + 3 ) & ~std::size_t { 3 } ); // Padded to 4 bytes
 
-		// Parse additional layer info to find "lsct" (layer section divider)
-		std::uint32_t groupType { 0 }; // Default to NORMA}
+		std::uint32_t groupType{ 0 };
 
 		while ( offset + 12 <= extraDataEnd && offset + 12 <= length )
 		{
@@ -429,7 +411,6 @@ std::uint32_t countPSDLayers( const std::uint8_t* data, std::size_t length )
 			offset = dataEnd;
 		}
 
-		// Move to end of extra data
 		offset = extraDataEnd;
 
 		if ( groupType != 3 ) // Ignore layer section dividers.

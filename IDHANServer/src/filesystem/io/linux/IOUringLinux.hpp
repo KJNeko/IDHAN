@@ -51,11 +51,9 @@ struct IOUringUserData
 
 class IOUringLinux final : public IOUring
 {
-	// Member order matters for initializer-list construction order
+	//! setupUring() uses m_params when initializing uring_fd.
 	io_uring_params m_params;
-	// Signed: io_uring_setup() returns a negative errno on failure. A previous `unsigned` type made a
-	// failed setup (e.g. -ENOMEM) read as a huge positive fd, so `uring_fd > 0` wrongly reported
-	// success and the watcher spun on io_uring_enter with a bogus fd instead of using the sync fallback.
+	//! Keep signed so a negative setup error triggers the synchronous fallback.
 	int uring_fd;
 	std::shared_ptr< std::atomic< bool > > io_run;
 
@@ -134,19 +132,22 @@ class IOUringLinux final : public IOUring
 
 	runtime::Task< std::vector< std::byte > > read( NativeHandle handle, std::size_t offset, std::size_t len ) override;
 
-	runtime::Task< void > write( NativeHandle handle, std::vector< std::byte > data, std::size_t offset ) override;
+	runtime::Task< void > write( NativeHandle handle, std::span< const std::byte > data, std::size_t offset ) override;
 
 	runtime::Task< int > removeFile( std::filesystem::path path ) override;
+	runtime::Task< int > openFile( std::filesystem::path path, int flags, unsigned int mode ) override;
+	runtime::Task< int > closeFile( NativeHandle handle ) override;
+	runtime::Task< int > syncFile( NativeHandle handle ) override;
 	runtime::Task< int > renameFile( std::filesystem::path from, std::filesystem::path to ) override;
 	runtime::Task< int > createDirectories( std::filesystem::path path ) override;
 	runtime::Task< std::expected< std::uint64_t, int > > fileSize( std::filesystem::path path ) override;
 
+	runtime::Task< std::expected< std::filesystem::file_status, int > > fileStatus( std::filesystem::path path )
+		override;
+
   private:
 
-	//! Whether a completion means "this kernel does not implement the opcode" rather than "the
-	//! operation failed". unlinkat/renameat arrived in 5.11 and mkdirat in 5.15, so a server running
-	//! on an older kernel gets a hard error for an op that is otherwise fine; those fall back to the
-	//! blocking call rather than surfacing as an I/O failure.
+	//! Unsupported opcodes use the synchronous fallback, including on older kernels.
 	static bool opUnsupported( int result );
 
   public:
@@ -157,4 +158,4 @@ class IOUringLinux final : public IOUring
 
 } // namespace idhan
 
-#endif // __linux__
+#endif

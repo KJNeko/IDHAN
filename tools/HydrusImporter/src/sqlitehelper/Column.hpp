@@ -73,4 +73,4 @@ namespace atlas::database::utility
 	}
 } // namespace atlas::database::utility
 
-#endif //ATLASGAMEMANAGER_COLUMN_HPP
+#endif

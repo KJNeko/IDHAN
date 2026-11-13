@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include <format>
 #include <string>
 #include <utility>
 #include <vector>
@@ -31,8 +32,17 @@ static std::vector< int > createBatchTags(
 		subtags += tx.quote( subtag_text );
 	}
 
-	const auto result { tx.exec(
-		"SELECT tag_id FROM createbatchtags(ARRAY[" + namespaces + "]::TEXT[], ARRAY[" + subtags + "]::TEXT[])" ) };
+	const auto result{
+		tx.exec( std::format(
+			//language=postgresql
+			R"SQL(
+			SELECT
+			    tag_id
+			FROM createbatchtags (ARRAY[{}]::TEXT[], ARRAY[{}]::TEXT[])
+		)SQL",
+			namespaces,
+			subtags ) )
+	};
 
 	std::vector< int > ids {};
 	ids.reserve( static_cast< std::size_t >( result.size() ) );
@@ -61,10 +71,25 @@ SCENARIO_METHOD( MigratedSchema, "Batch tag creation", "[db][tags][batch]" )
 				CHECK( ids[ 1 ] > 0 );
 				CHECK( ids[ 2 ] > 0 );
 
-				CHECK( tx.query_value< int >( "SELECT count(*) FROM tags" ) == 3 );
+				CHECK(
+					tx.query_value< int >(
+						//language=postgresql
+						R"SQL(
+							SELECT
+							    count(*)
+							FROM tags
+						)SQL" )
+					== 3 );
 				CHECK(
 					tx.query_value< std::string >(
-						"SELECT tag_text FROM tags WHERE tag_id = " + std::to_string( ids[ 0 ] ) )
+						//language=postgresql
+						R"SQL(
+							SELECT
+							    tag_text
+							FROM tags
+							WHERE tag_id =
+						)SQL"
+						+ std::to_string( ids[ 0 ] ) )
 					== "character:samus aran" );
 			}
 		}
@@ -78,7 +103,15 @@ SCENARIO_METHOD( MigratedSchema, "Batch tag creation", "[db][tags][batch]" )
 				REQUIRE( ids.size() == 2 );
 				CHECK( ids[ 0 ] > 0 );
 				CHECK( ids[ 0 ] == ids[ 1 ] );
-				CHECK( tx.query_value< int >( "SELECT count(*) FROM tags" ) == 1 );
+				CHECK(
+					tx.query_value< int >(
+						//language=postgresql
+						R"SQL(
+							SELECT
+							    count(*)
+							FROM tags
+						)SQL" )
+					== 1 );
 			}
 		}
 
@@ -90,7 +123,15 @@ SCENARIO_METHOD( MigratedSchema, "Batch tag creation", "[db][tags][batch]" )
 			THEN( "the second run returns the tags the first one created" )
 			{
 				CHECK( first == second );
-				CHECK( tx.query_value< int >( "SELECT count(*) FROM tags" ) == 2 );
+				CHECK(
+					tx.query_value< int >(
+						//language=postgresql
+						R"SQL(
+							SELECT
+							    count(*)
+							FROM tags
+						)SQL" )
+					== 2 );
 			}
 		}
 	}
@@ -107,7 +148,15 @@ SCENARIO_METHOD( MigratedSchema, "Batch tag creation", "[db][tags][batch]" )
 			{
 				REQUIRE( ids.size() == 1 );
 				CHECK( ids[ 0 ] == existing_id );
-				CHECK( tx.query_value< int >( "SELECT count(*) FROM tags" ) == 1 );
+				CHECK(
+					tx.query_value< int >(
+						//language=postgresql
+						R"SQL(
+							SELECT
+							    count(*)
+							FROM tags
+						)SQL" )
+					== 1 );
 			}
 		}
 	}
