@@ -1,7 +1,3 @@
-include(proxygen)
-include(simdjson)
-find_package(OpenSSL REQUIRED COMPONENTS Crypto)
-
 AddFGLLibrary(IDHANHttp OBJECT ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 if (NOT FGL_HAS_REFLECTION)

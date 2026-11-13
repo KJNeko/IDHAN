@@ -1,9 +1,10 @@
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTOUIC ON)
+include(sqlite3)
+add_subdirectory(ptr-core)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Network Concurrent Widgets)
 find_package(ZLIB REQUIRED)
 AddFGLExecutable(HydrusImporter ${CMAKE_CURRENT_SOURCE_DIR}/src)
+set_target_properties(HydrusImporter PROPERTIES AUTOMOC ON AUTOUIC ON)
 target_link_libraries(HydrusImporter PUBLIC Qt6::Core Qt6::Concurrent Qt6::Network IDHANClient sqlite3 spdlog::spdlog Qt6::Widgets ZLIB::ZLIB PTRCore)
 
 file(GLOB_RECURSE UI_FILES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/**.ui)
@@ -26,8 +27,6 @@ endif ()
 if (DEFINED IMPORTER_PROCESS_PTR_DEFAULT AND IMPORTER_PROCESS_PTR_DEFAULT EQUAL 1)
 	target_compile_definitions(HydrusImporter PUBLIC IMPORTER_PROCESS_PTR_DEFAULT=1)
 endif ()
-
-option(IDHAN_PACKAGE_HYDRUS_IMPORTER "Bundle the Hydrus Importer runtime for releases" OFF)
 
 if (IDHAN_PACKAGE_HYDRUS_IMPORTER)
 	find_package(Qt6 6.10 REQUIRED COMPONENTS Core Network Concurrent Widgets)

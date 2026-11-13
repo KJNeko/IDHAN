@@ -1,6 +1,6 @@
 #pragma once
 
-#include "hydrus/HydrusConstants_gen.hpp"
+#include <hydrus/HydrusConstants_gen.hpp>
 #include "mime_type_map.hpp"
 
 namespace idhan::hydrus::hy_constants

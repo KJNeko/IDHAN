@@ -1,7 +1,3 @@
-find_package(Catch2 3 REQUIRED)
-
-include(Catch)
-
 AddFGLExecutable(IDHANDbTests ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(IDHANDbTests PRIVATE Catch2::Catch2 IDHANDb
 		Folly::folly_coro_blocking_wait Folly::folly_coro_collect

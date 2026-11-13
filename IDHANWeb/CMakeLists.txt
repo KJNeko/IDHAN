@@ -1,6 +1,3 @@
-
-option(IDHAN_WEB_AUTO_REBUILD "Rebuild the WebUI whenever IDHANServer is built" ON)
-
 find_program(PNPM_EXECUTABLE pnpm)
 
 set(WEB_STAGING_DIR ${CMAKE_BINARY_DIR}/webui-dist)

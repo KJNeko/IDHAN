@@ -1,9 +1,7 @@
-
-set(CMAKE_AUTOMOC ON)
-
 find_package(Qt6 REQUIRED COMPONENTS Core Network Concurrent)
 
 AddFGLLibrary(IDHANClient SHARED ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set_target_properties(IDHANClient PROPERTIES AUTOMOC ON)
 include(GenerateExportHeader)
 # Explicit API exports avoid MinGW auto-exporting STL templates during LTO.
 generate_export_header(IDHANClient

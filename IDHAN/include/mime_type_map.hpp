@@ -2,7 +2,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "hydrus/HydrusConstants_gen.hpp"
+#include <hydrus/HydrusConstants_gen.hpp>
 
 #define UNKNOWN_MIME_TYPE "unknown"
 
