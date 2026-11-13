@@ -89,6 +89,7 @@ IDHANClient& IDHANClient::instance()
 }
 
 IDHANClient::IDHANClient(
+	[[maybe_unused]] QCoreApplication& app,
 	const QString& client_name,
 	const QString& hostname,
 	const qint16 port,

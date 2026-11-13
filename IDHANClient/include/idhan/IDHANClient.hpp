@@ -82,10 +82,8 @@ class IDHAN_CLIENT_EXPORT IDHANClient
 
 	IDHANClient() = delete;
 
-	//! Requires a QCoreApplication instance first; only one client may exist at a time.
-	//! client_name names the client's local spdlog logger.
-	//! \throws std::runtime_error if a client already exists, no Qt application exists, or hostname is empty.
 	IDHANClient(
+		QCoreApplication& app,
 		const QString& client_name,
 		const QString& hostname,
 		qint16 port,
