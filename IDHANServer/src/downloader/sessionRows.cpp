@@ -9,6 +9,36 @@
 
 namespace idhan::downloader::rows
 {
+DbResult< std::vector< DownloadSessionUrlID > > unfinishedUrls( const DownloadSessionID session_id, db::DBContext& db )
+{
+	try
+	{
+		db::DBBindings bindings;
+		bindings.bind( session_id );
+		const auto rows {
+			co_await db
+				.query(
+					//language=postgresql
+					R"SQL(
+					SELECT download_session_url_id
+					FROM download_session_urls
+					WHERE download_session_id = $1
+					    AND state IN ('pending', 'processing')
+					ORDER BY download_session_url_id
+				)SQL",
+					std::move( bindings ) )
+				.rows< DownloadSessionUrlID >()
+		};
+		std::vector< DownloadSessionUrlID > ids;
+		for ( const auto& [ id ] : rows ) ids.push_back( id );
+		co_return ids;
+	}
+	catch ( const std::exception& error )
+	{
+		co_return std::unexpected( std::string { error.what() } );
+	}
+}
+
 DbResult< std::vector< SavedUrl > > savedUrls( const DownloadSessionID session_id, db::DBContext& db )
 {
 	try

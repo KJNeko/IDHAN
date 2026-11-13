@@ -20,8 +20,7 @@ enum HttpMethod
 	GET
 };
 
-//! Marshals requests onto QNetworkAccessManager's owning thread.
-class IDHAN_CLIENT_EXPORT Network : public QObject
+class IDHAN_CLIENT_EXPORT Network final : public QObject
 {
 	Q_OBJECT
 
@@ -36,11 +35,9 @@ class IDHAN_CLIENT_EXPORT Network : public QObject
 
 	Network( QObject* parent = nullptr );
 
-	//! Thread-safe; returns a pending reply owned by the network thread.
 	[[nodiscard]] QNetworkReply* send( HttpMethod method, const QNetworkRequest& request, const QByteArray& body );
 
   public slots:
-	//! Runs on the network thread and fulfills the promise with the pending reply.
 	void doSendData(
 		HttpMethod method,
 		const QNetworkRequest& request,
@@ -49,7 +46,7 @@ class IDHAN_CLIENT_EXPORT Network : public QObject
 
   signals:
 	void sendData(
-		const HttpMethod method,
+		HttpMethod method,
 		const QNetworkRequest& request,
 		const QByteArray& body,
 		std::shared_ptr< QPromise< QNetworkReply* > > promise );

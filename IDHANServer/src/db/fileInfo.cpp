@@ -9,6 +9,33 @@
 namespace idhan::db
 {
 
+runtime::Task< UrlRecordLookup > recordsForUrl( DBContext& db, std::string url )
+{
+	DBBindings bindings {};
+	bindings.bind( std::move( url ) );
+	const auto rows {
+		co_await db
+			.query(
+				//language=postgresql
+				R"SQL(
+				SELECT u.url_type = 'file', m.record_id
+				FROM urls u
+				    LEFT JOIN url_mappings m USING (url_id)
+				WHERE u.url = $1
+				ORDER BY m.record_id
+			)SQL",
+				std::move( bindings ) )
+			.rows< bool, std::optional< RecordID > >()
+	};
+	UrlRecordLookup result {};
+	for ( const auto& [ direct, record_id ] : rows )
+	{
+		result.known_direct = direct;
+		if ( record_id ) result.record_ids.push_back( *record_id );
+	}
+	co_return result;
+}
+
 runtime::Task< std::optional< RecordID > > findStoredDirectRecordByUrl( DBContext& db, std::string url )
 {
 	DBBindings bindings {};

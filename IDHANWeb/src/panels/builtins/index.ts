@@ -14,6 +14,7 @@ import { notesPanel } from './NotesPanel';
 import { importPanel } from './ImportPanel';
 import {advancedImportPanel} from './AdvancedImportPanel';
 import {downloadsPanel} from './DownloadsPanel';
+import {urlCheckPanel} from './UrlCheck';
 import {subscriptionsPanel} from './SubscriptionsPanel';
 import { jobMonitorPanel } from './JobMonitorPanel';
 import { logViewerPanel } from './LogViewerPanel';
@@ -43,6 +44,7 @@ export function registerBuiltinPanels(): void {
   registerPanel(importPanel);
     registerPanel(advancedImportPanel);
     registerPanel(downloadsPanel);
+	registerPanel(urlCheckPanel);
 	registerPanel(subscriptionsPanel);
   registerPanel(jobMonitorPanel);
   registerPanel(logViewerPanel);

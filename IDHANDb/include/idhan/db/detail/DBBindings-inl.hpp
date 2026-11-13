@@ -9,6 +9,7 @@
 #include <utility>
 
 #include "../DBError.hpp"
+#include "fgl/defines.hpp"
 
 namespace idhan::db
 {
@@ -87,7 +88,6 @@ inline std::span< const std::byte > parameterBytes( const DBParameter& parameter
 	return {};
 }
 
-//! Escaping keeps diagnostics single-line and avoids treating binary storage as text.
 inline std::string diagnostic( const DBParameter& parameter, std::size_t max_bytes )
 {
 	std::string result {};
@@ -213,10 +213,12 @@ T DBCodec< T >::decode( std::span< const std::byte > bytes )
 	}
 	else
 		static_assert( detail::unsupported_codec< T >, "No decoder for this borrowed/input-only type" );
+
+	FGL_UNREACHABLE();
 }
 
 template < typename T >
-std::string DBCodec< T >::diagnostic( const T& value, std::size_t max_bytes )
+std::string DBCodec< T >::diagnostic( const T& value, const std::size_t max_bytes )
 {
 	return detail::diagnostic( encode( value ), max_bytes );
 }
@@ -241,8 +243,6 @@ struct DBCodec< std::optional< T > >
 	}
 };
 
-//! PostgreSQL's binary `bit(64)` wire format is a 4-byte bit-length header followed by the bits packed
-//! MSB-first into 8 bytes, which for a length fixed at 64 is exactly a big-endian uint64 payload.
 template <>
 struct DBCodec< std::bitset< 64 > >
 {
@@ -319,7 +319,6 @@ struct DBCodec< std::vector< T, Allocator > >
 				if ( encoded.binary && encoded.format != ResultFormat::binary )
 					throw std::invalid_argument( "Array element binary format mismatch" );
 
-				// Only TEXT's text and binary field representations coincide.
 				if ( encoded.text && ( encoded.format != ResultFormat::text || encoded.oid != 25 ) )
 					throw std::invalid_argument( "Array element requires a binary encoding" );
 
@@ -411,9 +410,9 @@ SecretParameter< T > secret( T value )
 namespace detail
 {
 template < typename T >
-inline constexpr bool secret_parameter { false };
+inline constexpr auto secret_parameter { false };
 template < typename T >
-inline constexpr bool secret_parameter< SecretParameter< T > > = true;
+inline constexpr auto secret_parameter< SecretParameter< T > > = true;
 } // namespace detail
 
 template < typename T >

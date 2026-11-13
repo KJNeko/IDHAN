@@ -45,6 +45,8 @@ struct SavedUrl
 
 DbResult< std::vector< SavedUrl > > savedUrls( DownloadSessionID session_id, db::DBContext& db );
 
+DbResult< std::vector< DownloadSessionUrlID > > unfinishedUrls( DownloadSessionID session_id, db::DBContext& db );
+
 struct LoggedError
 {
 	std::int64_t id {};

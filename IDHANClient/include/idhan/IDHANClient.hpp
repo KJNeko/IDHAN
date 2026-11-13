@@ -13,8 +13,8 @@
 #include <string>
 
 #include "IDHANTypes.hpp"
-#include "idhan/IDHANClientExport.hpp"
 #include "Network.hpp"
+#include "idhan/IDHANClientExport.hpp"
 #include "logging/logger.hpp"
 
 namespace spdlog
@@ -92,7 +92,6 @@ class IDHAN_CLIENT_EXPORT IDHANClient
 
 	~IDHANClient();
 
-	//! True if the server responds with valid version info.
 	[[nodiscard]] QFuture< bool > validConnection();
 
 	void setAPIKey( const QString& key );
@@ -101,38 +100,32 @@ class IDHAN_CLIENT_EXPORT IDHANClient
 
 	QFuture< std::vector< RecordID > > createRecords( const std::vector< std::array< std::byte, 32 > >& hashes );
 
-	//! Accepts hex-encoded hashes.
 	QFuture< std::vector< RecordID > > createRecords( const std::vector< std::string >& hashes );
 
-	//! Accepts a hex SHA-256; returns nullopt if no record matches.
 	QFuture< std::optional< RecordID > > getRecordID( const std::string& sha256 );
 
-	//! Selects a random record whose file has a resolved MIME type.
 	QFuture< RecordID > getRandomActiveRecord();
 
 	QFuture< VersionInfo > queryVersion();
 
-	//! Creates missing tags and returns IDs in input order.
 	QFuture< std::vector< TagID > > createTags( const std::vector< std::string >& tags );
+
 	QFuture< std::vector< TagID > > createTags( const std::vector< std::pair< std::string, std::string > >& tags );
 
 	QFuture< TagID > createTag( const std::string& namespace_text, const std::string& subtag_text );
 
 	QFuture< TagID > createTag( const std::string& tag_text );
 
-	//! Returns stored tag IDs before alias, sibling, and parent resolution.
 	QFuture< std::vector< TagID > > getRecordTags( RecordID record_id, TagDomainID tag_domain_id );
-	//! Returns tag IDs after alias, sibling, and parent resolution.
+
 	QFuture< std::vector< TagID > > getActiveRecordTags( RecordID record_id, TagDomainID tag_domain_id );
 
-	//! Returns "namespace:subtag" text in input order.
 	QFuture< std::vector< std::string > > getTagText( const std::vector< TagID >& tag_ids );
 
 	QFuture< std::string > getTagText( TagID tag_id );
 
 	QFuture< std::vector< std::pair< TagID, std::string > > > autocompleteTag( const QString& text );
 
-	//! Returns at most 8 matches. An empty domain set selects all domains.
 	QFuture< std::vector< std::pair< TagID, std::string > > > autocompleteTag(
 		const QString& text,
 		const std::vector< TagDomainID >& domains,
@@ -165,15 +158,14 @@ class IDHAN_CLIENT_EXPORT IDHANClient
 
 	QFuture< void > setDuplicates( RecordID worse_duplicate, RecordID better_duplicate );
 
-	//! Each pair is {worse_id, better_id}.
 	QFuture< void > setDuplicates( const std::vector< std::pair< RecordID, RecordID > >& pairs );
 
 	QFuture< void > createParentRelationship( TagDomainID tag_domian_id, TagID parent_id, TagID child_id );
+
 	QFuture< void > createParentRelationship(
 		TagDomainID tag_domian_id,
 		const std::vector< std::pair< TagID, TagID > >& pairs );
 
-	//! The future fails with std::runtime_error carrying the server's error message.
 	QFuture< void > createAliasRelationship( TagDomainID tag_domain_id, TagID aliased_id, TagID alias_id );
 
 	QFuture< void > createAliasRelationship(
@@ -187,24 +179,25 @@ class IDHAN_CLIENT_EXPORT IDHANClient
 		const std::vector< std::pair< TagID, TagID > >& pairs );
 
 	QFuture< void > removeParentRelationship( TagDomainID tag_domain_id, TagID parent_id, TagID child_id );
+
 	QFuture< void > removeParentRelationship(
 		TagDomainID tag_domain_id,
 		const std::vector< std::pair< TagID, TagID > >& pairs );
 
 	QFuture< void > removeSiblingRelationship( TagDomainID tag_domain_id, TagID older_id, TagID younger_id );
+
 	QFuture< void > removeSiblingRelationship(
 		TagDomainID tag_domain_id,
 		const std::vector< std::pair< TagID, TagID > >& pairs );
 
 	QFuture< void > removeAliasRelationship( TagDomainID tag_domain_id, TagID aliased_id, TagID alias_id );
+
 	QFuture< void > removeAliasRelationship(
 		TagDomainID tag_domain_id,
 		const std::vector< std::pair< TagID, TagID > >& pairs );
 
-	//! The future fails with std::runtime_error on any server error, including an existing domain.
 	QFuture< TagDomainID > createTagDomain( const std::string& name );
 
-	//! Resolves to nullopt if no domain has this name.
 	QFuture< std::optional< TagDomainID > > getTagDomain( std::string_view name );
 
 	struct TagRelationshipInfo
@@ -240,7 +233,7 @@ class IDHAN_CLIENT_EXPORT IDHANClient
 			std::string m_text;
 		} m_subtag;
 
-		std::string toStdString() const
+		[[nodiscard]] std::string toStdString() const
 		{
 			FGL_ASSERT( m_namespace.m_id != 0, "Namespace ID invalid" );
 
@@ -248,7 +241,7 @@ class IDHAN_CLIENT_EXPORT IDHANClient
 			return format_ns::format( "{}:{}", m_namespace.m_text, m_subtag.m_text );
 		}
 
-		QString toQString() const { return QString::fromStdString( toStdString() ); }
+		[[nodiscard]] QString toQString() const { return QString::fromStdString( toStdString() ); }
 
 		struct DomainCounts
 		{
@@ -328,5 +321,4 @@ using TagRelationshipInfo = IDHANClient::TagRelationshipInfo;
 using TagInfo = IDHANClient::TagInfo;
 using TagDomainInfo = IDHANClient::TagDomainInfo;
 using ActiveTagVerboseInfo = IDHANClient::ActiveTagVerboseInfo;
-
 } // namespace idhan

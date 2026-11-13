@@ -8,6 +8,8 @@
 #include <memory>
 #include <sstream>
 #include <stdexcept>
+#include <thread>
+#include <vector>
 
 #include "IDHANDB.hpp"
 #include "idhan/db/DBConnection.hpp"
@@ -47,6 +49,74 @@ static DBConfig testConfig()
 	}
 	PQconninfoFree( options );
 	return config;
+}
+
+TEST_CASE( "Database connection drains backlogs across budgets and sends isolated queries", "[postgres][reactor]" )
+{
+	auto role { ConnectionRole::normal };
+	SECTION( "pipeline" )
+	{
+		role = ConnectionRole::normal;
+	}
+	SECTION( "management" )
+	{
+		role = ConnectionRole::management;
+	}
+
+	DBReactor reactor { 1 };
+	reactor.start();
+	folly::CPUThreadPoolExecutor application { 1 };
+	auto connection { std::make_shared< DBConnection >( 1, role, testConfig(), reactor ) };
+	std::vector< std::shared_ptr< DBOperation > > operations;
+	constexpr auto count { connection_operation_budget * 3 + 1 };
+	constexpr auto failure_index { connection_operation_budget + 3 };
+	for ( std::size_t index = 0; index < count; ++index )
+	{
+		auto operation { std::make_shared< DBOperation >(
+			index == failure_index ? "SELECT 1 / 0" : std::format( "SELECT {}::integer", index ),
+			DBBindings {},
+			QueryOptions {},
+			folly::getKeepAliveToken( &application ) ) };
+		operations.push_back( operation );
+		// Queue before connecting so the backlog deterministically exceeds a connection work budget.
+		connection->enqueue( std::move( operation ) );
+	}
+	folly::coro::blockingWait( connection->connect() );
+
+	const auto deadline { std::chrono::steady_clock::now() + std::chrono::seconds { 10 } };
+	for ( std::size_t index = 0; index < count; ++index )
+	{
+		const auto& operation { operations[ index ] };
+		while ( operation->phase() != OperationPhase::completed && std::chrono::steady_clock::now() < deadline )
+			std::this_thread::sleep_for( std::chrono::milliseconds { 1 } );
+
+		REQUIRE( operation->phase() == OperationPhase::completed );
+		if ( index == failure_index )
+		{
+			CHECK_THROWS_AS( folly::coro::blockingWait( DBTask { operation }.result() ), DBQueryError );
+			continue;
+		}
+
+		const auto rows { folly::coro::blockingWait( DBTask { operation }.rows< std::int32_t >() ) };
+		REQUIRE( rows.size() == 1 );
+		CHECK( std::get< 0 >( rows.row( 0 ) ) == static_cast< std::int32_t >( index ) );
+	}
+	folly::coro::blockingWait( connection->drain() );
+	CHECK( connection->stats().unfinished == 0 );
+
+	auto isolated { std::make_shared< DBOperation >(
+		"SELECT 42::integer", DBBindings {}, QueryOptions {}, folly::getKeepAliveToken( &application ) ) };
+	connection->enqueue( isolated );
+	const auto isolated_deadline { std::chrono::steady_clock::now() + std::chrono::seconds { 5 } };
+	while ( isolated->phase() != OperationPhase::completed && std::chrono::steady_clock::now() < isolated_deadline )
+		std::this_thread::sleep_for( std::chrono::milliseconds { 1 } );
+
+	REQUIRE( isolated->phase() == OperationPhase::completed );
+	const auto rows { folly::coro::blockingWait( DBTask { isolated }.rows< std::int32_t >() ) };
+	REQUIRE( rows.size() == 1 );
+	CHECK( std::get< 0 >( rows.row( 0 ) ) == 42 );
+	folly::coro::blockingWait( connection->drain() );
+	reactor.stop();
 }
 
 TEST_CASE( "Test basic management connection", "[postgres][management]" )

@@ -15,20 +15,11 @@
 
 class QNetworkReply;
 
-//! Local logging through the IDHANClient's spdlog logger.
-//!
-//! - notify: explicitly notify the user of an event, such as a final completion.
-//! - info: silently notify the user, such as an intermediate completion state.
-//! - warn: a possible issue.
-//! - error: an error.
-//! - critical: the process is about to end, violently or willingly.
 namespace idhan::logging
 {
 
-//! \return The logger the IDHANClient instance created. Requires a live IDHANClient.
 IDHAN_CLIENT_EXPORT std::shared_ptr< spdlog::logger > getLogger();
 
-//! Logs at "notify" level, written as spdlog info.
 template < typename... Ts >
 void notify( format_ns::format_string< Ts... > fmt, Ts&&... ts )
 {
@@ -85,10 +76,8 @@ void critical( format_ns::format_string< Ts... > fmt, Ts&&... ts )
 	logger->critical( format_ns::format( fmt, std::forward< Ts >( ts )... ) );
 }
 
-//! Logs the network error response to the local log only.
 IDHAN_CLIENT_EXPORT void logResponse( QNetworkReply* reply );
 
-//! Bitmask of log levels a callback subscribes to (see registerCallback).
 enum CallbackLevel : uint8_t
 {
 	Notify = 1 << 0,
@@ -101,8 +90,7 @@ enum CallbackLevel : uint8_t
 
 using CallbackFunction = std::function< void( CallbackLevel level, std::string_view message ) >;
 
-//! Registers a callback for the log levels set in \p level.
-//! TODO: declared but not implemented; nothing defines or invokes it yet.
+//! TODO: Implement callbacks
 IDHAN_CLIENT_EXPORT void registerCallback( CallbackFunction& func, CallbackLevel level );
 
 } // namespace idhan::logging

@@ -1,5 +1,5 @@
 import {watchEvents} from './client';
-import type {Subscription, SubscriptionGroup, SubscriptionsEvent, SubscriptionsSnapshot} from './types';
+import type {SubscriptionListItem, SubscriptionGroup, SubscriptionsEvent, SubscriptionsSnapshot} from './types';
 
 type Listener = {
 	onChange: (snapshot: SubscriptionsSnapshot) => void;
@@ -9,7 +9,11 @@ type Listener = {
 type Store = {
 	state: SubscriptionsSnapshot;
 	ready: boolean;
-	pending: { groups: Map<number, SubscriptionGroup>; items: Map<number, Subscription> } | null;
+	pending: {
+		groups: Map<number, SubscriptionGroup>;
+		items: Map<number, SubscriptionListItem>;
+		defaults?: SubscriptionListItem
+	} | null;
 	listeners: Set<Listener>;
 	close: () => void;
 };
@@ -36,7 +40,7 @@ export function applySubscriptionsEvent(state: SubscriptionsSnapshot, event: Sub
 	}
 	return {
 		groups: event.groups ? mergeRows<SubscriptionGroup>(state.groups, event.groups) : state.groups,
-		items: event.items ? mergeRows<Subscription>(state.items, event.items) : state.items,
+		items: event.items ? mergeRows<SubscriptionListItem>(state.items, event.items) : state.items,
 	};
 }
 
@@ -59,13 +63,13 @@ function receiveSubscriptionsEvent(store: Store, payload: Record<string, unknown
 	if (!isSubscriptionsEvent(payload)) return;
 	if (payload.type === 'snapshot_start') {
 		store.ready = false;
-		store.pending = {groups: new Map(), items: new Map()};
+		store.pending = {groups: new Map(), items: new Map(), defaults: payload.item_defaults};
 		return;
 	}
 	if (payload.type === 'snapshot_chunk') {
 		if (!store.pending) return;
 		for (const group of payload.groups) store.pending.groups.set(group.id, group);
-		for (const item of payload.items) store.pending.items.set(item.id, item);
+		for (const item of payload.items) store.pending.items.set(item.id, {...store.pending.defaults, ...item} as SubscriptionListItem);
 		return;
 	}
 	if (payload.type === 'snapshot_complete') {

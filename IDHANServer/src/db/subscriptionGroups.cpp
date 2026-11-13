@@ -29,13 +29,7 @@ static runtime::Task< std::vector< SubscriptionGroup > > loadSubscriptionGroups(
 					        FROM subscriptions s
 					        WHERE s.subscription_group_id = g.subscription_group_id
 					    ),
-					    (
-					        SELECT
-					            count(DISTINCT log.record_id)
-					        FROM subscriptions s
-					            JOIN subscription_records log USING (subscription_id)
-					        WHERE s.subscription_group_id = g.subscription_group_id
-					    ),
+					    COALESCE(stats.record_count, 0),
 					    (
 					        SELECT
 					            count(*)
@@ -58,20 +52,9 @@ static runtime::Task< std::vector< SubscriptionGroup > > loadSubscriptionGroups(
 					            AND last_error IS NOT NULL
 					    ),
 					    origin,
-					    (
-					        SELECT
-					            COALESCE(sum(f.size), 0)::bigint
-					        FROM file_info f
-					        WHERE EXISTS (
-					                SELECT
-					                    1
-					                FROM subscriptions s
-					                    JOIN subscription_records log USING (subscription_id)
-					                WHERE s.subscription_group_id = g.subscription_group_id
-					                    AND log.record_id = f.record_id
-					        )
-					    )
+					    COALESCE(stats.total_size_bytes, 0)
 					FROM subscription_groups g
+					    LEFT JOIN group_record_stats stats USING (subscription_group_id)
 					WHERE ($1::integer = 0
 					    OR subscription_group_id = $1)
 					ORDER BY

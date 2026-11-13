@@ -197,6 +197,9 @@ export const api = {
         },
     },
     downloadSessions: {
+		checkUrl(url: string): Promise<import('./types').UrlCheckResult> {
+			return request('/download_sessions/check_url', {method: 'POST', body: {url}});
+		},
 		installParser(filename: string, source: string, replace: boolean): Promise<{ installed: boolean }> {
 			return request('/download_sessions/parsers', {method: 'POST', body: {filename, source, replace}});
 		},

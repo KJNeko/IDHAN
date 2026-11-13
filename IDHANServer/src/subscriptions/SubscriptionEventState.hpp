@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "db/subscriptions.hpp"
+#include "SubscriptionListItem.hpp"
 #include "idhan/http/response/ReflectedResponses.hpp"
 
 namespace idhan::subscriptions
@@ -60,11 +61,11 @@ template < typename T >
 }
 
 //! Maximum combined group and subscription rows in each baseline event.
-inline constexpr std::size_t snapshot_chunk_size{ 1000 };
+inline constexpr std::size_t snapshot_chunk_size { 64 };
 
 class SubscriptionEventState
 {
-	std::map< SubscriptionID, db::Subscription > m_items {};
+	std::map< SubscriptionID, SubscriptionListItem > m_items {};
 	std::map< SubscriptionGroupID, db::SubscriptionGroup > m_groups {};
 
 	template < typename ID, typename T >
@@ -89,7 +90,7 @@ class SubscriptionEventState
 			bool in_scope { true };
 			if ( group_id.has_value() )
 			{
-				if constexpr ( std::same_as< T, db::Subscription > )
+				if constexpr ( std::same_as< T, SubscriptionListItem > )
 					in_scope = it->second.group_id == group_id.value();
 				else
 					in_scope = it->first == group_id.value();
@@ -131,7 +132,10 @@ class SubscriptionEventState
 		std::vector< SubscriptionGroupID > removed_groups;
 		std::vector< SubscriptionID > removed_items;
 		reconcileRows( m_groups, std::move( groups ), group_patches, removed_groups, group_id );
-		reconcileRows( m_items, std::move( items ), item_patches, removed_items, group_id );
+		std::vector< SubscriptionListItem > list_items;
+		list_items.reserve( items.size() );
+		for ( auto& item : items ) list_items.push_back( subscriptionListItem( std::move( item ) ) );
+		reconcileRows( m_items, std::move( list_items ), item_patches, removed_items, group_id );
 		Patch patch {};
 		const bool changed { !group_patches.empty() || !item_patches.empty() };
 		if ( !group_patches.empty() ) patch.groups = std::move( group_patches );
@@ -165,11 +169,18 @@ class SubscriptionEventState
 		{
 			std::string type{ "snapshot_chunk" };
 			std::vector< db::SubscriptionGroup > groups {};
-			std::vector< db::Subscription > items {};
+			std::vector< http::JsonDocument > items {};
+		};
+
+		struct Start
+		{
+			std::string type { "snapshot_start" };
+			SubscriptionListItem item_defaults {};
 		};
 
 		std::vector< http::ValidatedJson > events;
-		events.push_back( subscriptionJson( Marker{ "snapshot_start" } ) );
+		const Start start {};
+		events.push_back( subscriptionJson( start ) );
 		Chunk chunk{};
 		for ( const auto& [ id, group ] : m_groups )
 		{
@@ -182,7 +193,7 @@ class SubscriptionEventState
 		}
 		for ( const auto& [ id, item ] : m_items )
 		{
-			chunk.items.push_back( item );
+			chunk.items.push_back( changedFields( &start.item_defaults, item ).value() );
 			if ( chunk.groups.size() + chunk.items.size() == snapshot_chunk_size )
 			{
 				events.push_back( subscriptionJson( chunk ) );

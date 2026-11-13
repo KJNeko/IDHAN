@@ -642,6 +642,7 @@ runtime::Task< void > DownloadSessionManager::destroy( const DownloadSessionID s
 
 	if ( removed->context )
 	{
+		removed->observer->stop();
 		removed->context->cancel();
 		co_await removed->context->wait();
 		removed->context->close();
@@ -664,6 +665,8 @@ runtime::Task< void > DownloadSessionManager::shutdown()
 		sessions.swap( m_sessions );
 		downloader = std::move( m_downloader );
 	}
+
+	for ( const auto& [ id, session ] : sessions ) session->observer->stop();
 
 	if ( downloader ) co_await downloader->shutdown();
 

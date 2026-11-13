@@ -68,7 +68,7 @@ TEST_CASE(
 	CHECK( state.reconcile( {}, {}, 7 ).empty() );
 }
 
-TEST_CASE( "New subscription entities contain the complete state", "[http][subscription-events]" )
+TEST_CASE( "New subscription entities contain the complete list state", "[http][subscription-events]" )
 {
 	SubscriptionEventState state;
 	(void)state.reconcile( {}, {} );
@@ -79,6 +79,9 @@ TEST_CASE( "New subscription entities contain the complete state", "[http][subsc
 	const auto patch { document( changes.front() ) };
 	CHECK( patch[ "items" ][ 0 ][ "parameters" ][ "tags" ] == "artist" );
 	CHECK( patch[ "items" ][ 0 ].isMember( "active_session_id" ) );
+	CHECK_FALSE( patch[ "items" ][ 0 ].isMember( "tags" ) );
+	CHECK_FALSE( patch[ "items" ][ 0 ].isMember( "last_session_id" ) );
+	CHECK_FALSE( patch[ "items" ][ 0 ].isMember( "post_dates_complete" ) );
 	CHECK( patch[ "groups" ][ 0 ][ "name" ] == "Artists" );
 }
 
@@ -99,6 +102,7 @@ TEST_CASE (
 	const auto snapshots { state.snapshots() };
 	REQUIRE( snapshots.size() == 5 );
 	CHECK( document( snapshots.front() )[ "type" ] == "snapshot_start" );
+	CHECK( document( snapshots.front() )[ "item_defaults" ][ "active_session_id" ].isNull() );
 	CHECK( document( snapshots.back() )[ "type" ] == "snapshot_complete" );
 	SubscriptionGroupID group_id {};
 	SubscriptionID item_id {};
@@ -118,7 +122,8 @@ TEST_CASE (
 		{
 			CHECK( item[ "id" ].asInt64() == ++item_id );
 			CHECK( item[ "parameters" ][ "tags" ] == "artist" );
-			CHECK( item.isMember( "active_session_id" ) );
+			CHECK_FALSE( item.isMember( "active_session_id" ) );
+			CHECK_FALSE( item.isMember( "last_error" ) );
 		}
 	}
 	CHECK( group_id == snapshot_chunk_size + 1 );
@@ -153,6 +158,46 @@ TEST_CASE (
 	REQUIRE( snapshots.size() == 2 );
 	CHECK( document( snapshots.front() )[ "type" ] == "snapshot_start" );
 	CHECK( document( snapshots.back() )[ "type" ] == "snapshot_complete" );
+}
+
+TEST_CASE( "Compact subscription baselines cut repeated fields for a large list", "[http][subscription-events]" )
+{
+	std::vector< db::Subscription > items;
+	for ( SubscriptionID id { 1 }; id <= 588; ++id )
+	{
+		items.push_back(
+			{ .id = id,
+			  .group_id = 1,
+			  .tags = "example_artist",
+			  .enabled = true,
+			  .next_run_at = 1794662632,
+			  .initial_sync_complete = true,
+			  .last_session_id = id,
+			  .last_finished_at = 1794576232,
+			  .latest_post_at = 1791658842,
+			  .post_dates_complete = true,
+			  .record_count = 350,
+			  .parameters = { { "tags", "example_artist" } },
+			  .session_id = id,
+			  .known_count = 350,
+			  .total_size_bytes = 1425117 } );
+	}
+	const auto original { subscriptionJson( items ) };
+	SubscriptionEventState state;
+	(void)state.reconcile( {}, std::move( items ) );
+	const auto snapshots { state.snapshots() };
+	std::size_t bytes {};
+	for ( const auto& snapshot : snapshots ) bytes += snapshot.text().size();
+	CAPTURE( bytes, original.text().size() );
+	CHECK( bytes * 2 < original.text().size() );
+	CHECK( snapshots.size() == 12 );
+
+	// Changes to unused history fields must not wake the list or resend an entity.
+	db::Subscription item { .id = 1, .group_id = 1 };
+	(void)state.reconcile( {}, { item } );
+	item.last_finished_at = 1794576232;
+	item.known_count = 123;
+	CHECK( state.reconcile( {}, { item } ).empty() );
 }
 
 TEST_CASE( "Subscription baselines discard only covered subscription updates", "[http][subscription-events]" )

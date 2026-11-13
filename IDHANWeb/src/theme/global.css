@@ -4513,6 +4513,10 @@ body {
     margin: 0.4rem 0;
 }
 
+.url-check-normalized {
+    overflow-wrap: anywhere;
+}
+
 .download-options > summary {
     padding: 0.4rem 0;
     cursor: pointer;

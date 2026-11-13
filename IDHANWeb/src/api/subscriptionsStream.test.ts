@@ -21,6 +21,47 @@ function send(payload: unknown) {
 
 afterEach(() => vi.clearAllMocks());
 
+it('expands shared defaults for compact rows and replaces them on reconnect', () => {
+	const onChange = vi.fn();
+	const close = watchSubscriptions({onChange});
+	const defaults = {
+		id: 0, group_id: 0, parameters: {}, enabled: true, next_run_at: 0,
+		session_id: null, active_session_id: null, last_error: null, dead: false,
+		record_count: 0, imported_count: 0, total_size_bytes: 0,
+	};
+	try {
+		send({type: 'snapshot_start', item_defaults: defaults});
+		send({
+			type: 'snapshot_chunk',
+			groups: initial.groups,
+			items: [{id: 42, group_id: 7, parameters: {tags: 'artist'}}]
+		});
+		expect(onChange).not.toHaveBeenCalled();
+		send({type: 'snapshot_complete'});
+		expect(onChange.mock.lastCall![0].items[0]).toEqual({
+			...defaults,
+			id: 42,
+			group_id: 7,
+			parameters: {tags: 'artist'}
+		});
+		send({type: 'patch', items: [{id: 42, active_session_id: 9, imported_count: 4}]});
+		send({type: 'patch', items: [{id: 42, active_session_id: null, last_error: 'failed'}]});
+		expect(onChange.mock.lastCall![0].items[0]).toMatchObject({
+			enabled: true,
+			active_session_id: null,
+			imported_count: 4,
+			last_error: 'failed'
+		});
+		vi.mocked(watchEvents).mock.lastCall![0].onOpen?.();
+		send({type: 'snapshot_start', item_defaults: {...defaults, enabled: false}});
+		send({type: 'snapshot_chunk', groups: [], items: [{id: 43, group_id: 7}]});
+		send({type: 'snapshot_complete'});
+		expect(onChange.mock.lastCall![0].items).toEqual([{...defaults, id: 43, group_id: 7, enabled: false}]);
+	} finally {
+		close();
+	}
+});
+
 it('merges disjoint fields, preserves omissions and clears explicit nulls', () => {
 	const onChange = vi.fn();
 	const close = watchSubscriptions({onChange});

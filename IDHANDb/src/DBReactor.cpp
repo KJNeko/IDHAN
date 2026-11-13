@@ -54,7 +54,7 @@ DBReactor::DBReactor( const std::size_t workers )
 		throw;
 	}
 	m_workers = std::make_unique< folly::CPUThreadPoolExecutor >(
-		workers, std::make_shared< folly::NamedThreadFactory >( "idhan-db-pump-" ) );
+		workers, std::make_shared< folly::NamedThreadFactory >( "idhan-db-io-" ) );
 }
 
 DBReactor::~DBReactor()
@@ -82,7 +82,7 @@ void DBReactor::request( const std::shared_ptr< Watch >& watch )
 			while ( true )
 			{
 				watch->pending.store( false, std::memory_order_release );
-				watch->connection->pump();
+				watch->connection->processWork();
 
 				if ( watch->pending.exchange( false, std::memory_order_acq_rel ) ) continue;
 

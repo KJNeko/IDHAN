@@ -38,6 +38,34 @@ static ApiResponse createTestSubscription( ApiClient& api, const Json::Value& bo
 	return api.post( "/subscription_groups/" + group.json[ "id" ].asString() + "/subscriptions", body );
 }
 
+static void addSubscriptionSessionRecord( pqxx::work& transaction, SubscriptionID id, RecordID record )
+{
+	transaction.exec(
+		//language=postgresql
+		R"SQL(
+			WITH created AS (
+			    INSERT INTO download_sessions (name, is_subscription)
+			    SELECT 'subscription records fixture ' || gen_random_uuid(), true
+			    FROM subscriptions
+			    WHERE subscription_id = $1 AND session_id IS NULL
+			    RETURNING download_session_id
+			), assigned AS (
+			    UPDATE subscriptions
+			    SET session_id = created.download_session_id
+			    FROM created
+			    WHERE subscription_id = $1
+			    RETURNING session_id
+			)
+			INSERT INTO download_session_records (download_session_id, record_id)
+			SELECT COALESCE(
+			    (SELECT session_id FROM assigned),
+			    (SELECT session_id FROM subscriptions WHERE subscription_id = $1)
+			), $2
+			ON CONFLICT DO NOTHING
+		)SQL",
+		pqxx::params { id, record } );
+}
+
 SCENARIO_METHOD(
 	ServerFixture,
 	"Groups own subscription names, generators, intervals and statistics",
@@ -78,22 +106,9 @@ SCENARIO_METHOD(
 	const auto other_record_id { api().createRecord( 900004 ) };
 	{
 		pqxx::work transaction { db() };
-		transaction.exec(
-			//language=postgresql
-			R"SQL(
-				INSERT INTO subscriptions_log (subscription_id, record_id)
-				VALUES
-				    ($1, $2),
-				    ($3, $2)
-			)SQL",
-			pqxx::params { created.json[ "id" ].asInt(), record_id, second.json[ "id" ].asInt() } );
-		transaction.exec(
-			//language=postgresql
-			R"SQL(
-				INSERT INTO subscriptions_log (subscription_id, record_id)
-				    VALUES ($1, $2)
-			)SQL",
-			pqxx::params { second.json[ "id" ].asInt(), other_record_id } );
+		addSubscriptionSessionRecord( transaction, created.json[ "id" ].as< SubscriptionID >(), record_id );
+		addSubscriptionSessionRecord( transaction, second.json[ "id" ].as< SubscriptionID >(), record_id );
+		addSubscriptionSessionRecord( transaction, second.json[ "id" ].as< SubscriptionID >(), other_record_id );
 		// Equal-sized files must both count; the record shared by two queries counts once in the group.
 		transaction.exec(
 			//language=postgresql
@@ -369,7 +384,8 @@ SCENARIO_METHOD(
 				R"SQL(
 					SELECT
 					    count(*)
-					FROM subscriptions_log
+					FROM subscriptions s
+					    JOIN download_session_records r ON r.download_session_id = s.session_id
 					WHERE subscription_id = $1
 				)SQL",
 				pqxx::params{ id } )
@@ -393,7 +409,8 @@ SCENARIO_METHOD(
 				R"SQL(
 					SELECT
 					    count(*)
-					FROM subscriptions_log
+					FROM subscriptions s
+					    JOIN download_session_records r ON r.download_session_id = s.session_id
 					WHERE subscription_id = $1
 				)SQL",
 				pqxx::params{ id } )
@@ -897,15 +914,9 @@ SCENARIO_METHOD( ServerFixture, "Latest subscription run counts and files exclud
 	CHECK( running.json[ 0 ][ "imported_count" ].asInt() == 2 );
 	{
 		pqxx::work transaction { db() };
-		transaction.exec(
-			//language=postgresql
-			R"SQL(
-				INSERT INTO subscriptions_log (subscription_id, record_id)
-				VALUES
-				    ($1, $2),
-				    ($1, $3)
-			)SQL",
-			pqxx::params { id, old_record, known_record } );
+		addSubscriptionSessionRecord( transaction, id, old_record );
+		addSubscriptionSessionRecord( transaction, id, known_record );
+		addSubscriptionSessionRecord( transaction, id, new_record );
 		transaction.exec(
 			//language=postgresql
 			R"SQL(

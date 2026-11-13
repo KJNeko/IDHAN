@@ -646,16 +646,26 @@ export interface ParserCacheSnapshot {
 
 export interface SubscriptionsSnapshot {
 	groups: SubscriptionGroup[];
-	items: Subscription[];
+	items: SubscriptionListItem[];
 }
+
+export type SubscriptionListItem = Pick<Subscription,
+	'id' | 'group_id' | 'parameters' | 'enabled' | 'next_run_at' | 'session_id' | 'active_session_id'
+	| 'last_error' | 'dead' | 'record_count' | 'imported_count' | 'total_size_bytes'>;
 
 export type SubscriptionsEvent =
 	| ({ type: 'snapshot' } & SubscriptionsSnapshot)
-	| ({ type: 'snapshot_chunk' } & SubscriptionsSnapshot)
-	| { type: 'snapshot_start' }
+	| { type: 'snapshot_chunk'; groups: SubscriptionGroup[]; items: (Partial<SubscriptionListItem> & { id: number })[] }
+	| { type: 'snapshot_start'; item_defaults?: SubscriptionListItem }
 	| { type: 'snapshot_complete' }
 	| {
 	type: 'patch'; groups?: (Partial<SubscriptionGroup> & { id: number })[];
-	items?: (Partial<Subscription> & { id: number })[]
+	items?: (Partial<SubscriptionListItem> & { id: number })[]
 }
 	| { type: 'remove'; groups?: number[]; items?: number[] };
+
+export interface UrlCheckResult {
+	normalized_url: string;
+	known_direct: boolean;
+	record_ids: number[];
+}

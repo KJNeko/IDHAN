@@ -327,17 +327,18 @@ it('uses streamed updates without refetching lists or parsers after commands', a
 });
 
 
-it('puts running subscriptions first and sorts displayed labels A–Z as live status changes', async () => {
+it('puts running subscriptions first, then earliest next runs, with dead subscriptions last as live status changes', async () => {
 	const items: Subscription[] = [
-		{...item, id: 1, tags: 'zebra', active_session_id: null},
-		{...item, id: 2, tags: 'Zorro', active_session_id: 22},
-		{...item, id: 3, tags: '', parameters: {creator: 'alpha'}, active_session_id: null},
-		{...item, id: 4, tags: 'beta', active_session_id: 44},
+		{...item, id: 1, tags: 'zebra', parameters: {tags: 'zebra'}, active_session_id: null, next_run_at: 100},
+		{...item, id: 2, tags: 'Zorro', parameters: {tags: 'Zorro'}, active_session_id: 22, next_run_at: 200},
+		{...item, id: 3, tags: '', parameters: {creator: 'alpha'}, active_session_id: null, next_run_at: 300},
+		{...item, id: 4, tags: 'beta', parameters: {tags: 'beta'}, active_session_id: 44, next_run_at: 400},
+		{...item, id: 5, tags: 'dead', parameters: {tags: 'dead'}, dead: true, next_run_at: 0},
 	];
 	vi.mocked(api.subscriptions.list).mockResolvedValue(items);
 	await render();
 	const labels = () => [...view.querySelectorAll('.subscription-label')].map(cell => cell.textContent);
-	expect(labels()).toEqual(['beta', 'Zorro', 'alpha', 'zebra']);
+	expect(labels()).toEqual(['Zorro', 'beta', 'zebra', 'alpha', 'dead']);
 	const field = view.querySelector<HTMLInputElement>('input[aria-label="Tags"]')!;
 	await input(field, 'new artist');
 	await act(() => {
@@ -345,10 +346,10 @@ it('puts running subscriptions first and sorts displayed labels A–Z as live st
 			groups: [group], items: items.map(row => ({...row, active_session_id: row.id === 1 ? 11 : null})),
 		});
 	});
-	expect(labels()).toEqual(['zebra', 'alpha', 'beta', 'Zorro']);
+	expect(labels()).toEqual(['zebra', 'Zorro', 'alpha', 'beta', 'dead']);
 	expect(field.value).toBe('new artist');
 	expect(view.querySelector('input[aria-label="Tags"]')).toBe(field);
-	expect(items.map(row => row.id)).toEqual([1, 2, 3, 4]);
+	expect(items.map(row => row.id)).toEqual([1, 2, 3, 4, 5]);
 });
 
 it('puts groups with running subscriptions first and sorts group names A–Z', async () => {

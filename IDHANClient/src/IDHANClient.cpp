@@ -13,7 +13,6 @@
 
 namespace idhan
 {
-
 IDHANClient* IDHANClient::m_instance { nullptr };
 
 VersionInfo handleVersionInfo( QNetworkReply* reply )
@@ -262,7 +261,6 @@ void IDHANClient::sendClientJson(
 		responseHandler( response );
 	};
 
-	// Read errors on finished so the complete response body is available.
 	const auto response_connection { QObject::connect( response, &QNetworkReply::finished, responseSlot ) };
 
 	if ( response->isFinished() )
@@ -344,5 +342,4 @@ void IDHANClient::openConnection( const QString& hostname, const qint16 port, co
 
 	m_url_template.setScheme( use_tls ? "https" : "http" );
 }
-
 } // namespace idhan

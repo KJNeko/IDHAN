@@ -1,6 +1,5 @@
 AddFGLLibrary(IDHAN OBJECT ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-# Replacement runtime does not depend on the legacy IDHAN objects.
 if (BUILD_IDHAN_SERVER OR BUILD_IDHAN_HTTP OR BUILD_IDHAN_DOWNLOADER)
 	add_subdirectory(runtime)
 endif ()

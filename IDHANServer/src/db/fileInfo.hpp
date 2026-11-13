@@ -14,6 +14,15 @@ namespace idhan::db
 {
 class DBContext;
 
+struct UrlRecordLookup
+{
+	bool known_direct {};
+	std::vector< RecordID > record_ids;
+};
+
+//! Takes a normalized URL and includes every associated record, even if its file is missing.
+[[nodiscard]] runtime::Task< UrlRecordLookup > recordsForUrl( DBContext& db, std::string url );
+
 struct RecordFileState
 {
 	RecordID record_id;

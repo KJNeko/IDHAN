@@ -3690,6 +3690,30 @@
         ],
         "type": "object"
       },
+      "idhan__httpapi__UrlCheckResponse_Output": {
+        "properties": {
+          "known_direct": {
+            "type": "boolean"
+          },
+          "normalized_url": {
+            "type": "string"
+          },
+          "record_ids": {
+            "items": {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "normalized_url",
+          "known_direct",
+          "record_ids"
+        ],
+        "type": "object"
+      },
       "idhan__httpapi__VersionInfo_Output": {
         "properties": {
           "branch": {
@@ -4611,6 +4635,71 @@
               }
             },
             "description": "HTTP 500"
+          },
+          "default": {
+            "description": "Custom handler response"
+          }
+        },
+        "security": [],
+        "tags": [
+          "Downloader"
+        ]
+      }
+    },
+    "/download_sessions/check_url": {
+      "post": {
+        "operationId": "post__download_sessions_check_url",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/idhan__httpapi__SubmitUrlBody_Input"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/idhan__httpapi__UrlCheckResponse_Output"
+                }
+              }
+            },
+            "description": "HTTP 200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/idhan__http__ErrorResponse_Output"
+                }
+              }
+            },
+            "description": "HTTP 400"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/idhan__http__ErrorResponse_Output"
+                }
+              }
+            },
+            "description": "HTTP 500"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/idhan__http__ErrorResponse_Output"
+                }
+              }
+            },
+            "description": "HTTP 503"
           },
           "default": {
             "description": "Custom handler response"

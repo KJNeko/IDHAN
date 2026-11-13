@@ -851,7 +851,7 @@ TEST_CASE_METHOD(
 
 TEST_CASE_METHOD(
 	ServerFixture,
-	"Restart recovery preserves new and existing imports in the session",
+	"Restart recovery preserves imports and settles children missing from the replay",
 	"[api][download-sessions][recovery][import-history]" )
 {
 	DownloadSessionHttpFixture fixture;
@@ -890,6 +890,21 @@ TEST_CASE_METHOD(
 					    AND download_session_url_id = $2
 				)SQL",
 				pqxx::params { session_id, root } );
+			if ( restart == 0 )
+			{
+				// The remote page changed after the crash and no longer emits this child.
+				tx.exec(
+					//language=postgresql
+					R"SQL(
+						INSERT INTO download_session_urls
+						    (download_session_id, download_session_url_id, parent_url_id, url, state)
+						SELECT $1, max(download_session_url_id) + 1, $2, 'https://example.invalid/orphan', 'pending'
+						FROM download_session_urls
+						WHERE download_session_id = $1
+					)SQL",
+					pqxx::params { session_id, root } );
+			}
+
 			tx.commit();
 		}
 		testServer().restart( false );
@@ -902,6 +917,16 @@ TEST_CASE_METHOD(
 
 		CHECK( downloadSessionImportStates( db(), session_id ) == original );
 		pqxx::read_transaction tx { db() };
+		CHECK(
+			tx.query_value< std::string >(
+				//language=postgresql
+				R"SQL(
+				SELECT state
+				FROM download_session_urls
+				WHERE download_session_id = $1 AND url = 'https://example.invalid/orphan'
+			)SQL",
+				pqxx::params { session_id } )
+		    == "failed" );
 		CHECK(
 			tx.query_value< int >(
 				//language=postgresql

@@ -3,7 +3,7 @@ import {api} from '../../api/client';
 import {watchSubscriptions} from '../../api/subscriptionsStream';
 import {formatBytes} from './RecordInfoView';
 import type {
-	Subscription,
+	SubscriptionListItem,
 	SubscriptionGroup,
 	SubscriptionGroupInput,
 	DownloaderParser,
@@ -47,14 +47,16 @@ function GeneratorSelect({choices, value, change}: {
 	</select>;
 }
 
-function itemLabel(item: Subscription): string {
-	return item.tags || Object.values(item.parameters).join(' · ');
+function itemLabel(item: SubscriptionListItem): string {
+	return Object.values(item.parameters).join(' · ');
 }
 
 const subscriptionOrder = new Intl.Collator(undefined, {sensitivity: 'base'});
 
-function compareSubscriptions(left: Subscription, right: Subscription): number {
-	return Number(right.active_session_id !== null) - Number(left.active_session_id !== null)
+function compareSubscriptions(left: SubscriptionListItem, right: SubscriptionListItem): number {
+	return Number(left.dead) - Number(right.dead)
+		|| Number(right.active_session_id !== null) - Number(left.active_session_id !== null)
+		|| left.next_run_at - right.next_run_at
 		|| subscriptionOrder.compare(itemLabel(left), itemLabel(right)) || left.id - right.id;
 }
 
@@ -189,7 +191,7 @@ function NextRun({at, paused, running}: {
 	</time>;
 }
 
-function SubscriptionRunStatus({item, groupEnabled}: { item: Subscription; groupEnabled: boolean }) {
+function SubscriptionRunStatus({item, groupEnabled}: { item: SubscriptionListItem; groupEnabled: boolean }) {
 	if (item.active_session_id !== null) return <>Running</>;
 
 	if (!groupEnabled || !item.enabled) return <>Paused</>;
@@ -200,7 +202,7 @@ function SubscriptionRunStatus({item, groupEnabled}: { item: Subscription; group
 }
 
 function SubscriptionGroupView({group, items, choices, busy, act}: {
-	group: SubscriptionGroup; items: Subscription[]; choices: GeneratorChoice[]; busy: boolean;
+	group: SubscriptionGroup; items: SubscriptionListItem[]; choices: GeneratorChoice[]; busy: boolean;
 	act: (action: () => Promise<unknown>) => Promise<void>;
 }) {
 	const [settings, setSettings] = useState(false);
@@ -301,7 +303,7 @@ function SubscriptionGroupView({group, items, choices, busy, act}: {
 
 function SubscriptionsPanel() {
 	const [groups, setGroups] = useState<SubscriptionGroup[]>([]);
-	const [items, setItems] = useState<Subscription[]>([]);
+	const [items, setItems] = useState<SubscriptionListItem[]>([]);
 	const [name, setName] = useState('');
 	const [choices, setChoices] = useState<GeneratorChoice[]>([]);
 	const [generator, setGenerator] = useState('');

@@ -29,12 +29,36 @@
 #include "idhan/db/DBContext.hpp"
 #include "idhan/http/routing/ReflectedRoutes.hpp"
 #include "jsonBody.hpp"
+#include "db/fileInfo.hpp"
+#include "urls/UrlNormalization.hpp"
 
 namespace idhan::httpapi
 {
 
 constexpr std::size_t max_name_length { 200 };
 constexpr std::size_t max_url_length { 8192 };
+
+http::HTTPTask< http::JsonResult< UrlCheckResponse > > checkUrl(
+	db::DBContext& db,
+	http::JsonBody< SubmitUrlBody > body )
+{
+	const auto& url { body.value.url };
+	if ( url.empty() || url.size() > max_url_length )
+		co_return http::Response::error( 400, "url must be 1 to 8192 characters" );
+
+	auto normalized_e { co_await helpers::normalizeUrl( url ) };
+	if ( !normalized_e.has_value() )
+	{
+		const auto& error { normalized_e.error() };
+		co_return http::Response::error( helpers::httpStatus( error ), error.message );
+	}
+
+	auto& normalized { normalized_e.value() };
+	auto result { co_await db::recordsForUrl( db, normalized ) };
+	co_return http::JsonResponse< UrlCheckResponse > {
+		{ std::move( normalized ), result.known_direct, std::move( result.record_ids ) }
+	};
+}
 
 //! Returns the new last_used_at, or nothing when the session does not exist.
 static http::HTTPTask< std::optional< std::int64_t > > touchSession(

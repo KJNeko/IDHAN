@@ -202,7 +202,12 @@ folly::coro::Task< DownloadSessionUrlID > SessionRowObserver::addRow(
 	events::UrlState state )
 {
 	const auto saved { takeSavedRow( parent, url ) };
-	if ( saved.has_value() ) co_return saved.value();
+	if ( saved.has_value() )
+	{
+		if ( isTerminal( state.state ) ) co_await finishRow( saved.value(), std::move( state ) );
+
+		co_return saved.value();
+	}
 
 	// A failure is stored apart from the row, so the row starts pending and fails afterwards.
 	const bool failed { state.state == "failed" };
@@ -240,6 +245,25 @@ folly::coro::Task< DownloadSessionUrlID > SessionRowObserver::addRow(
 
 folly::coro::Task< void > SessionRowObserver::onFinished()
 {
+	if ( m_stopping.load() ) co_return;
+
+	// All parser, import and observer tasks have drained. Recovery may have left saved
+	// children that the replay never emitted, so they cannot remain queued indefinitely.
+	const auto unfinished_e { co_await rows::unfinishedUrls( m_session_id, DownloadSessionManager::dbContext() ) };
+	if ( !unfinished_e.has_value() ) throw std::runtime_error( unfinished_e.error() );
+
+	for ( const auto row : unfinished_e.value() )
+	{
+		if ( m_stopping.load() ) co_return;
+
+		co_await finishRow(
+			row,
+			events::UrlState {
+				.state = "failed",
+				.stage = failureStage( FailureStage::CLOSED ),
+				.error = "The download session finished without completing this URL; retry the URL to recover it" } );
+	}
+
 	DownloadSessionEventHub::instance().finished( m_session_id );
 	co_return;
 }

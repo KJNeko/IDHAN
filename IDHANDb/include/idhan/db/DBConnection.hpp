@@ -65,8 +65,8 @@ class DBConnection : public std::enable_shared_from_this< DBConnection >
 	[[nodiscard]] static runtime::Task<> connectImpl( std::shared_ptr< DBConnection > );
 	[[nodiscard]] static runtime::Task<> drainImpl( std::shared_ptr< DBConnection > );
 
-	void pumpConnected();
-	void pumpHandshake( ConnectionState );
+	void processConnectedWork();
+	void processHandshake( ConnectionState );
 
 	[[nodiscard]] std::shared_ptr< DBOperation > popDispatchable( bool use_pipeline );
 
@@ -92,8 +92,7 @@ class DBConnection : public std::enable_shared_from_this< DBConnection >
 	void enqueue( std::shared_ptr< DBOperation > );
 	void wake();
 
-	//! Only the serialized pump may operate on its PGconn.
-	void pump();
+	void processWork();
 	[[nodiscard]] ConnectionStats stats() const;
 	[[nodiscard]] runtime::Task<> drain();
 	[[nodiscard]] runtime::Task<> restoreLease();

@@ -32,6 +32,20 @@ struct SubmitUrlBody
 	std::string url;
 };
 
+struct UrlCheckResponse
+{
+	std::string normalized_url;
+	bool known_direct {};
+	std::vector< RecordID > record_ids;
+};
+
+// clang-format off
+[[= http::Endpoint{proxygen::HTTPMethod::POST, "/download_sessions/check_url"}]]
+[[= http::Group{"Downloader"}]]
+[[= http::Output< http::ErrorResponse >{503}]]
+http::HTTPTask< http::JsonResult< UrlCheckResponse > > checkUrl( db::DBContext& db, http::JsonBody< SubmitUrlBody > body );
+// clang-format on
+
 struct SubmitUrlSessionBodyOptions
 {
 	http::possiblyMissing< bool > force_import;

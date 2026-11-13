@@ -3,6 +3,7 @@ import {DownloadOptions} from './DownloadOptions';
 import {DownloadRateLimits} from './DownloadRateLimits';
 import {DownloadParserCache} from './DownloadParserCache';
 import {ParserInfo} from './ParserInfo';
+import {UrlCheck} from './UrlCheck';
 import type {DownloadSettings} from '../../api/types';
 import {api, watchDownloadSessions} from '../../api/client';
 import type {
@@ -996,6 +997,7 @@ function DownloadsPanel({host}: PanelProps) {
                                  disabled={busy || !canImport}/>
             </form>
 			<ParserInfo/>
+			<UrlCheck onShowRecords={showRecords}/>
 			<DownloadRateLimits/>
 			<DownloadParserCache/>
             <div className="download-tree-toolbar">

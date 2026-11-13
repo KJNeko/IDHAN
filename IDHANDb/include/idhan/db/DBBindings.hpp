@@ -51,8 +51,6 @@ class DBBindings
 	[[nodiscard]] std::span< const DBParameter > values() const noexcept;
 	[[nodiscard]] std::vector< Oid > oids() const;
 
-	//! The returned pointers borrow this binding set. Do not move or mutate it, including appending
-	//! another parameter, while they are in use.
 	[[nodiscard]] std::vector< const char* > pointers() const;
 	[[nodiscard]] std::vector< int > lengths() const;
 	[[nodiscard]] std::vector< int > formats() const;

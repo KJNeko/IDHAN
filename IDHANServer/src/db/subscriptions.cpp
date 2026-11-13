@@ -72,30 +72,15 @@ static runtime::Task< std::vector< Subscription > > loadSubscriptions(
 						    extract(epoch FROM latest_post_at)::bigint,
 						    post_dates_complete,
 						    dead,
-						    (
-						        SELECT
-						            count(*)
-						        FROM subscription_records log
-						        WHERE log.subscription_id = subscriptions.subscription_id
-						    ),
+						    COALESCE(stats.record_count, 0),
 						    values::text,
 						    session_id,
 						    active_root_id,
 						    run.imported_count,
 						    run.known_count,
-						    (
-						        SELECT
-						            COALESCE(sum(f.size), 0)::bigint
-						        FROM file_info f
-						        WHERE EXISTS (
-						                SELECT
-						                    1
-						                FROM subscription_records log
-						                WHERE log.subscription_id = subscriptions.subscription_id
-						                    AND log.record_id = f.record_id
-						        )
-						    )
+						    COALESCE(stats.total_size_bytes, 0)
 						FROM subscriptions
+						    LEFT JOIN subscription_record_stats stats USING (subscription_id)
 						    LEFT JOIN LATERAL ( WITH RECURSIVE run_urls AS (
 						            SELECT
 						                u.download_session_url_id,
@@ -708,8 +693,7 @@ runtime::Task< > finishSubscription( DBContext& db, const SubscriptionID id, con
 					                 FROM run_urls
 					                 WHERE record_id IS NOT NULL
 					             ) AS dates_complete
-					 ),
-					 finished AS (
+					 )
 					     UPDATE
 					         subscriptions
 					     SET active_session_id = NULL,
@@ -748,22 +732,6 @@ runtime::Task< > finishSubscription( DBContext& db, const SubscriptionID id, con
 					                 FROM run_urls
 					                 WHERE state IN ('pending', 'processing')
 					             )
-					         RETURNING subscription_id
-					 )
-					 INSERT INTO subscriptions_log (subscription_id, record_id)
-					 SELECT DISTINCT
-					     finished.subscription_id,
-					     run_urls.record_id
-					 FROM finished
-					     CROSS JOIN run_urls
-					 WHERE run_urls.record_id IS NOT NULL
-					     AND NOT EXISTS (
-					         SELECT
-					             1
-					         FROM subscriptions_log
-					         WHERE subscription_id = finished.subscription_id
-					             AND record_id = run_urls.record_id
-					     )
 				 )SQL",
 				 std::move( bindings ) )
 			 .result();

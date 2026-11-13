@@ -3,6 +3,7 @@
 #include <IDHANDownloader/session/SessionObserver.hpp>
 
 #include <deque>
+#include <atomic>
 #include <map>
 #include <mutex>
 #include <string>
@@ -27,6 +28,7 @@ class SessionRowObserver final : public SessionObserver
 	};
 
 	DownloadSessionID m_session_id {};
+	std::atomic_bool m_stopping {};
 	mutable std::mutex m_mutex {};
 	std::unordered_map< WorkID, DownloadSessionUrlID > m_rows {};
 	std::unordered_set< DownloadSessionUrlID > m_import_rows {};
@@ -53,6 +55,9 @@ class SessionRowObserver final : public SessionObserver
   public:
 
 	explicit SessionRowObserver( DownloadSessionID session_id );
+
+	//! Shutdown leaves unfinished rows available for replay on the next startup.
+	void stop() { m_stopping.store( true ); }
 
 	//! Called before starting the session's workers. Replays consume matching rows once,
 	//! in original ID order, including repeated imports of the same URL.

@@ -187,7 +187,7 @@ void DBConnection::wake()
 	reactor.schedule( shared_from_this() );
 }
 
-void DBConnection::pump()
+void DBConnection::processWork()
 {
 	const auto current_state { state.load( std::memory_order_acquire ) };
 
@@ -196,10 +196,10 @@ void DBConnection::pump()
 		case ConnectionState::connecting:
 			[[fallthrough]];
 		case ConnectionState::configuring:
-			pumpHandshake( current_state );
+			processHandshake( current_state );
 			return;
 		case ConnectionState::connected:
-			pumpConnected();
+			processConnectedWork();
 			return;
 		case ConnectionState::cold:
 		case ConnectionState::failed:
@@ -207,10 +207,10 @@ void DBConnection::pump()
 	}
 }
 
-void DBConnection::pumpConnected()
+void DBConnection::processConnectedWork()
 {
-	constexpr std::size_t dispatch_budget { pump_operation_budget };
-	bool use_pipeline { role != ConnectionRole::management };
+	constexpr std::size_t dispatch_budget { connection_operation_budget };
+	const bool use_pipeline { role != ConnectionRole::management };
 	for ( std::size_t dispatched = 0; dispatched < dispatch_budget; ++dispatched )
 	{
 		std::shared_ptr< DBOperation > operation { popDispatchable( use_pipeline ) };
@@ -228,17 +228,21 @@ void DBConnection::pumpConnected()
 		pushInflight( std::move( operation ) );
 	}
 
+	// Flush immediately, even for a single request. Backlogs naturally share this flush.
 	const int flush { PQflush( connection ) };
 	if ( flush < 0 ) throw connectionError( connection, "Could not flush PostgreSQL operations" );
 
 	if ( PQconsumeInput( connection ) != 1 )
 		throw connectionError( connection, "Could not read PostgreSQL operation results" );
 
+	std::size_t retrieved { 0 };
 	if ( PQisBusy( connection ) == 0 )
 	{
 		bool advanced_delimiter { false };
-		for ( std::size_t retrieved = 0; retrieved < pump_operation_budget; ++retrieved )
+		for ( ; retrieved < connection_operation_budget; ++retrieved )
 		{
+			if ( PQisBusy( connection ) != 0 ) break;
+
 			PGresult* raw { PQgetResult( connection ) };
 			if ( raw == nullptr )
 			{
@@ -298,9 +302,17 @@ void DBConnection::pumpConnected()
 
 		reactor.watch( shared_from_this(), socket, flush == 0 ? SocketInterest::read : SocketInterest::read_write );
 	}
+
+	bool dispatchable { false };
+	{
+		std::lock_guard lock { queue_mutex };
+		dispatchable = !queued.empty() && ( use_pipeline || inflight.empty() );
+	}
+	// Work left by either budget may need no further socket edge to make progress.
+	if ( dispatchable || ( retrieved == connection_operation_budget && PQisBusy( connection ) == 0 ) ) wake();
 }
 
-void DBConnection::pumpHandshake( const ConnectionState current_state )
+void DBConnection::processHandshake( const ConnectionState current_state )
 {
 	try
 	{
@@ -417,6 +429,8 @@ void DBConnection::pumpHandshake( const ConnectionState current_state )
 		{
 			this->state.store( ConnectionState::connected, std::memory_order_release );
 			connected.post();
+			if ( hasWork() ) wake();
+
 			return;
 		}
 
