@@ -1,32 +1,34 @@
-# JavaScript dependencies
+# Environments
 node_modules/
-/IDHANDownloader/dist/
+/venv/
 
-# Build dirs
+# Build & CMake
 /build/
 /cmake-build-*/
-
-# IDE specific
-#	# clion
-/venv/
-.idea/
-.run/
-/.clangd
-#	# Visual Studio
 /out/build/x64-Debug
 /CMakeFiles
 /CMakeCache.txt
+/IDHANDownloader/dist/
+/docs/out
+
+# Generated Hydrus headers
+/IDHAN/include/hydrus
+
+# JetBrains
+.idea/
+.run/
+/.clangd
+
+# Visual Studio
 *.user
 *.autosave
-#	#Visual Studio Indexes
 *.vsidx
 read.lock
-#	# Visual Studio profiler
 *.psess
 *.vsp
 *.vspx
 
-# Random garbage
+# Cache and AI Garbage
 .air/
 .cache/
 .claude/
@@ -34,20 +36,19 @@ read.lock
 .agents/
 .codex/
 
-/docs/out
-
-/IDHAN/include/hydrus
-
-# Used for allowing easy setup of development environments for testing
+# DB Setup hooks
 IDHANServer/src/db/dev.sql
 IDHANServer/src/db/pre-dev.sql
 
+# Local environment configuration
 .env
 .env.*
+
+# Dev helpers
 publish.sh
 push-nas.sh
 run-dev-remote.sh
 
-# Local downloader parser credentials
+# Credentials and private downloaders
 /IDHANDownloader/premade/secrets.json
 /IDHANDownloader/premade/url-classes/private/**
