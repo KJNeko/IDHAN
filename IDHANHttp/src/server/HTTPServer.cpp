@@ -183,7 +183,6 @@ static void addCorsHeaders( proxygen::HTTPMessage& message )
 			{
 				if ( !end_of_message ) source.setReadTimeout( std::chrono::milliseconds { 0 } );
 
-				// co_await body.append( event.event.body.move() ).scheduleOn( &executor );
 				co_await folly::coro::co_withExecutor( &executor, body.append( event.event.body.move() ) );
 				if ( !end_of_message ) source.setReadTimeout( config.upload_idle_timeout );
 			}

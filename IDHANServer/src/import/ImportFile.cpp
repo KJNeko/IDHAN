@@ -97,7 +97,16 @@ struct ImportTarget
 		co_return std::unexpected(
 			ImportError { 400, "All clusters are read-only, You must mark one as writable before importing files" } );
 	const auto usage {
-		co_await db.query( "SELECT cluster_id, size_used FROM file_clusters" ).rows< ClusterID, std::int64_t >()
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    cluster_id,
+					    size_used
+					FROM file_clusters
+				)SQL" )
+				 .rows< ClusterID, std::int64_t >()
 	};
 
 	struct ClusterCandidate
@@ -146,7 +155,14 @@ struct ImportTarget
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT best_extension FROM mime JOIN file_info USING (mime_id) WHERE file_info.record_id = $1",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    best_extension
+					FROM mime
+					    JOIN file_info USING (mime_id)
+					WHERE file_info.record_id = $1
+				)SQL",
 				std::move( bindings ) )
 			.rows< std::optional< std::string > >()
 	};
@@ -218,8 +234,13 @@ struct ImportTarget
 	const auto current {
 		co_await db
 			.query(
-				"SELECT cluster_id FROM file_info "
-				"WHERE file_info.record_id = $1",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    cluster_id
+					FROM file_info
+					WHERE file_info.record_id = $1
+				)SQL",
 				std::move( current_bindings ) )
 			.rows< std::optional< ClusterID > >()
 	};
@@ -257,8 +278,15 @@ struct ImportTarget
 	update_bindings.bind( target.id );
 	co_await db
 		.query(
-			"UPDATE file_info SET cluster_store_time = now(), cluster_id = $2, cluster_delete_time = NULL "
-			"WHERE record_id = $1",
+			//language=postgresql
+			R"SQL(
+				UPDATE
+				    file_info
+				SET cluster_store_time = now(),
+				    cluster_id = $2,
+				    cluster_delete_time = NULL
+				WHERE record_id = $1
+			)SQL",
 			std::move( update_bindings ) )
 		.result();
 
@@ -291,9 +319,14 @@ runtime::Task< std::expected< ImportOutcome, ImportError > > importFile(
 			const auto timestamps {
 				co_await db
 					.query(
-						"SELECT cluster_delete_time IS NULL, "
-						"extract(epoch FROM cluster_delete_time)::bigint "
-						"FROM file_info WHERE record_id = $1",
+						//language=postgresql
+						R"SQL(
+							SELECT
+							    cluster_delete_time IS NULL,
+							    extract(epoch FROM cluster_delete_time)::bigint
+							FROM file_info
+							WHERE record_id = $1
+						)SQL",
 						std::move( ts_bindings ) )
 					.rows< bool, std::optional< std::int64_t > >()
 			};
@@ -336,8 +369,13 @@ runtime::Task< std::expected< ImportOutcome, ImportError > > importFile(
 	insert_bindings.bind( target_cluster_e->id );
 	co_await db
 		.query(
-			"INSERT INTO file_info (record_id, mime_id, size, cluster_id, file_mtime) "
-			"VALUES ($1, $2, $3, $4, now()) ON CONFLICT DO NOTHING",
+			//language=postgresql
+			R"SQL(
+				INSERT INTO file_info (record_id, mime_id, size, cluster_id, file_mtime)
+				    VALUES ($1, $2, $3, $4, now())
+				ON CONFLICT
+				    DO NOTHING
+			)SQL",
 			std::move( insert_bindings ) )
 		.result();
 
@@ -346,9 +384,15 @@ runtime::Task< std::expected< ImportOutcome, ImportError > > importFile(
 	const auto timestamps {
 		co_await db
 			.query(
-				"SELECT cluster_delete_time IS NULL, cluster_store_time IS NULL, "
-				"extract(epoch FROM cluster_delete_time)::bigint "
-				"FROM file_info WHERE record_id = $1",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    cluster_delete_time IS NULL,
+					    cluster_store_time IS NULL,
+					    extract(epoch FROM cluster_delete_time)::bigint
+					FROM file_info
+					WHERE record_id = $1
+				)SQL",
 				std::move( ts_bindings ) )
 			.rows< bool, bool, std::optional< std::int64_t > >()
 	};

@@ -61,11 +61,12 @@ Set Set::merge( const Set& lhs, const Set& rhs, const MergeOp op, const bool inv
 	out.m_keys = emptyColumnLike( lhs.m_keys );
 	if ( lhs.m_hashes || rhs.m_hashes ) out.m_hashes.emplace();
 
+	//TODO: Rewrite
 	std::visit(
-		[ & ]( const auto& lhs_keys, const auto& rhs_keys )
+		[ & ]< typename T0, typename T1 >( const T0& lhs_keys, const T1& rhs_keys )
 		{
-			using Left = std::decay_t< decltype( lhs_keys ) >;
-			using Right = std::decay_t< decltype( rhs_keys ) >;
+			using Left = std::decay_t< T0 >;
+			using Right = std::decay_t< T1 >;
 
 			if constexpr ( !std::same_as< Left, Right > )
 			{
@@ -98,19 +99,16 @@ Set Set::merge( const Set& lhs, const Set& rhs, const MergeOp op, const bool inv
 				{
 					if ( compositeLess( lhs_keys, lhs.m_ids, i, rhs_keys, rhs.m_ids, j ) )
 					{
-						// present only in the left operand
 						if ( op != MergeOp::Intersect ) emit( lhs, lhs_keys, i );
 						++i;
 					}
 					else if ( compositeLess( rhs_keys, rhs.m_ids, j, lhs_keys, lhs.m_ids, i ) )
 					{
-						// present only in the right operand
 						if ( op == MergeOp::Union || op == MergeOp::SymmetricDifference ) emit( rhs, rhs_keys, j );
 						++j;
 					}
 					else
 					{
-						// present in both
 						if ( op == MergeOp::Intersect || op == MergeOp::Union ) emit( lhs, lhs_keys, i );
 						++i;
 						++j;
@@ -139,28 +137,23 @@ Set Set::merge( const Set& lhs, const Set& rhs, const MergeOp op, const bool inv
 Set Set::operator&( const Set& other ) const
 {
 	if ( !m_inverted && !other.m_inverted ) return merge( *this, other, MergeOp::Intersect, false );
-	//  A & ~B  ->  A \ B
 	if ( !m_inverted && other.m_inverted ) return merge( *this, other, MergeOp::Difference, false );
-	// ~A &  B  ->  B \ A
 	if ( m_inverted && !other.m_inverted ) return merge( other, *this, MergeOp::Difference, false );
-	// ~A & ~B  ->  ~(A | B)
+
 	return merge( *this, other, MergeOp::Union, true );
 }
 
 Set Set::operator|( const Set& other ) const
 {
 	if ( !m_inverted && !other.m_inverted ) return merge( *this, other, MergeOp::Union, false );
-	//  A | ~B  ->  ~(B \ A)
 	if ( !m_inverted && other.m_inverted ) return merge( other, *this, MergeOp::Difference, true );
-	// ~A |  B  ->  ~(A \ B)
 	if ( m_inverted && !other.m_inverted ) return merge( *this, other, MergeOp::Difference, true );
-	// ~A | ~B  ->  ~(A & B)
+
 	return merge( *this, other, MergeOp::Intersect, true );
 }
 
 Set Set::operator^( const Set& other ) const
 {
-	// A △ ~B == ~(A △ B): negating either operand negates the result, and negating both cancels.
 	return merge( *this, other, MergeOp::SymmetricDifference, m_inverted != other.m_inverted );
 }
 
@@ -181,9 +174,9 @@ void Set::reverse()
 {
 	std::ranges::reverse( m_ids );
 	std::visit(
-		[]( auto& held )
+		[]< typename T0 >( T0& held )
 		{
-			if constexpr ( !std::same_as< std::decay_t< decltype( held ) >, std::monostate > )
+			if constexpr ( !std::same_as< std::decay_t< T0 >, std::monostate > )
 				std::ranges::reverse( held );
 		},
 		m_keys );

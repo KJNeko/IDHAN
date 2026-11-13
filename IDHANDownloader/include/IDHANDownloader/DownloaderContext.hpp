@@ -45,11 +45,11 @@ class DownloaderContext
 	//! Returns an error when the URL is invalid or no URL class accepts it.
 	[[nodiscard]] std::expected< void, std::string > validate( std::string_view url ) const;
 
-	//! See ScriptRegistry::normalizeUrl.
 	[[nodiscard]] std::expected< NormalizedUrl, std::string > normalizeUrl( std::string_view url ) const;
 
 	[[nodiscard]] std::expected< ParserUpdateReport, std::string > updateParsers();
-	// Relative paths are resolved within parser_directory; files must already be installed there.
+
+	//! Relative paths are resolved within parser_directory; files must already be installed there.
 	[[nodiscard]] std::expected< ParserUpdateReport, std::string > updateParser( const std::filesystem::path& path );
 	[[nodiscard]] ParserUpdateReport parserStatus() const;
 	[[nodiscard]] Json::Value downloadOptions() const;
@@ -72,8 +72,8 @@ class DownloaderContext
 	//! Returns live sessions in creation order.
 	[[nodiscard]] std::vector< SessionSnapshot > sessionSnapshots( std::uint64_t since = 0 ) const;
 
-	// Idempotently stops sessions and lanes, drains host writes, and aborts partial
-	// transfers without failure notifications. Hosts can resume their unfinished rows.
+	//! Idempotently stops sessions and lanes, drains host writes, and aborts partial
+	//! transfers without failure notifications. Hosts can resume their unfinished rows.
 	folly::coro::Task< void > shutdown();
 };
 

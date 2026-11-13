@@ -49,7 +49,7 @@ struct TransferOptions
 {
 	std::optional< HttpVersion > http_version {};
 	bool follow_redirects { true };
-	// Reject missing URLs as soon as the response headers arrive.
+	//! Reject missing URLs as soon as the response headers arrive.
 	bool stop_on_not_found { true };
 	int max_redirects { 10 };
 	//! Ignored for streamed responses.
@@ -75,7 +75,7 @@ struct TransferResponse
 	std::vector< TransferHop > hops {};
 	std::optional< ImportResult > import {};
 	bool import_pending {};
-	// Releases the lane slot after worker-side finalization, limiting queued file buffers.
+	//! Releases the lane slot after worker-side finalization, limiting queued file buffers.
 	std::move_only_function< void() > import_finished {};
 	ImportMetadata import_metadata {};
 	//! Hops that deliver no file preserve the sink and discard their bodies.

@@ -54,14 +54,12 @@ constexpr std::size_t INSERT_CHUNK { 128 };
 //! forward pass, so this is what actually determines the batch size it gets to work with.
 constexpr std::size_t IN_FLIGHT { 32 };
 
-//! One record's pending work.
 struct Candidate
 {
 	RecordID m_record_id { 0 };
 	MimeID m_mime_id { 0 };
 };
 
-//! Formats a vector as the text pgvector parses into a halfvec.
 [[nodiscard]] std::string toVectorLiteral( const std::vector< float >& values )
 {
 	std::string literal {};
@@ -88,11 +86,18 @@ static runtime::Task< std::optional< modules::CallInput > > openRecordInput(
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT records.sha256, file_info.cluster_id, "
-				"COALESCE(file_info.extension, mime.best_extension, '') "
-				"FROM records JOIN file_info USING (record_id) "
-				"LEFT JOIN mime ON mime.mime_id = file_info.mime_id "
-				"WHERE records.record_id = $1 AND file_info.cluster_id IS NOT NULL",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    records.sha256,
+					    file_info.cluster_id,
+					    COALESCE(file_info.extension, mime.best_extension, '')
+					FROM records
+					    JOIN file_info USING (record_id)
+					    LEFT JOIN mime ON mime.mime_id = file_info.mime_id
+					WHERE records.record_id = $1
+					    AND file_info.cluster_id IS NOT NULL
+				)SQL",
 				std::move( bindings ) )
 			.rows< std::span< const std::byte >, ClusterID, std::string >()
 	};
@@ -122,7 +127,6 @@ static runtime::Task< std::optional< modules::CallInput > > openRecordInput(
 	co_return std::move( *input_e );
 }
 
-//! Embeds one record. Captureless by requirement, not by style.
 runtime::Task< std::optional< std::pair< RecordID, std::string > > > embedOne(
 	std::shared_ptr< modules::RemoteModule > module,
 	RecordID record_id,
@@ -163,7 +167,15 @@ runtime::Task< std::optional< EmbeddingModelInfo > > findEmbeddingModel(
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT model_id, model_dimensions FROM embedding_models WHERE model_name = $1", std::move( bindings ) )
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    model_id,
+					    model_dimensions
+					FROM embedding_models
+					WHERE model_name = $1
+				)SQL",
+				std::move( bindings ) )
 			.rows< std::int32_t, std::int32_t >()
 	};
 
@@ -198,7 +210,12 @@ runtime::Task< void > registerEmbeddingModels( db::DBContext& db )
 				const auto inserted {
 					co_await db
 						.query(
-							"INSERT INTO embedding_models (model_name, model_dimensions) VALUES ($1, $2) RETURNING model_id",
+							//language=postgresql
+							R"SQL(
+								INSERT INTO embedding_models (model_name, model_dimensions)
+								    VALUES ($1, $2)
+								RETURNING model_id
+							)SQL",
 							std::move( bindings ) )
 						.rows< std::int32_t >()
 				};
@@ -264,21 +281,40 @@ JobTask backfillJob( const std::int32_t model_id, std::string model_name, db::DB
 	RecordID cursor { 0 };
 
 	const auto sweep { std::format(
-		"SELECT fi.record_id as record_id, fi.mime_id as mime_id "
-		"FROM file_info fi "
-		"JOIN mime m USING (mime_id) "
-		"WHERE fi.cluster_id IS NOT NULL "
-		"  AND m.name LIKE 'image/%' "
-		"  AND fi.record_id > $1 "
-		"  AND NOT EXISTS ( SELECT 1 FROM {} e WHERE e.record_id = fi.record_id ) "
-		"ORDER BY fi.record_id LIMIT {}",
+		//language=postgresql
+		R"SQL(
+			SELECT
+			    fi.record_id as record_id,
+			    fi.mime_id as mime_id
+			FROM file_info fi
+			    JOIN mime m USING (mime_id)
+			WHERE fi.cluster_id IS NOT NULL
+			    AND m.name LIKE 'image/%'
+			    AND fi.record_id > $1
+			    AND NOT EXISTS (
+			        SELECT
+			            1
+			        FROM {} e
+			        WHERE e.record_id = fi.record_id
+			    )
+			ORDER BY
+			    fi.record_id
+			LIMIT {}
+		)SQL",
 		table,
 		SWEEP_PAGE ) };
 
 	const auto insert { std::format(
-		"INSERT INTO {} (record_id, embedding) "
-		"SELECT * FROM UNNEST($1::integer[], $2::text[]::halfvec[]) "
-		"ON CONFLICT (record_id) DO UPDATE SET embedding = EXCLUDED.embedding",
+		//language=postgresql
+		R"SQL(
+			INSERT INTO {} (record_id, embedding)
+			SELECT
+			    *
+			FROM UNNEST($1::integer[], $2::text[]::halfvec[])
+			ON CONFLICT (record_id)
+			    DO UPDATE SET
+			        embedding = EXCLUDED.embedding
+		)SQL",
 		table ) };
 
 	const auto executor { getJobRuntime().executor() };

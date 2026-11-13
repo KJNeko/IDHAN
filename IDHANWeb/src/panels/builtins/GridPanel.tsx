@@ -56,7 +56,6 @@ function readTileSize(raw: Partial<Config>): number {
   return typeof size === 'number' && Number.isFinite(size) && size > 0 ? Math.round(size) : DEFAULT_CONFIG.tileSize;
 }
 
-/** Tracks the scroll container's content width, to pack a whole number of fixed-width tiles per row. */
 function useColumns(ref: React.RefObject<HTMLDivElement | null>, tile: number): number {
   const [width, setWidth] = useState(0);
   useLayoutEffect(() => {

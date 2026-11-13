@@ -52,7 +52,6 @@ runtime::Task< std::span< const std::byte > > MimeReader::at( const std::size_t 
 
 	const std::size_t start { offset - m_window_offset };
 
-	// a short read leaves the window holding less than was asked for
 	const std::size_t available { std::min( wanted, m_window.size() - start ) };
 
 	co_return std::span< const std::byte > { m_window.data() + start, available };
@@ -80,12 +79,10 @@ runtime::Task< std::optional< std::size_t > > MimeReader::find(
 
 	if ( from >= total ) co_return std::nullopt;
 
-	// the last offset a match may start at, exclusive
 	const std::size_t last { std::min( from + limit, total ) };
 
 	for ( std::size_t pos { from }; pos < last; )
 	{
-		// a match starting just below `last` still runs pattern.size() bytes past it
 		const std::size_t span_len { ( last - pos ) + pattern.size() - 1 };
 		const auto chunk { co_await at( pos, std::clamp( span_len, pattern.size(), min_read_size ) ) };
 

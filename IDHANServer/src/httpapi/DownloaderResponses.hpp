@@ -132,7 +132,7 @@ struct DownloadSessionErrorsResponse
 	std::vector< DownloadErrorResponse > errors;
 };
 
-// Parser option names, metadata extensions, and secrets are supplied by installed scripts.
+//! Parser option names, metadata extensions, and secrets are supplied by installed scripts.
 using DownloaderJsonObject = std::map< std::string, http::JsonDocument >;
 using DownloaderSecrets = std::map< std::string, DownloaderJsonObject >;
 using ParserOptionValue =

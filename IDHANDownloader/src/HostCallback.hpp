@@ -14,7 +14,7 @@
 
 namespace idhan::downloader
 {
-// Host adapters may call databases or user code. Never let their exceptions escape a worker.
+//! Host adapters may call databases or user code. Never let their exceptions escape a worker.
 template < typename Function >
 auto hostCallback( Function&& function ) -> std::expected< std::invoke_result_t< Function >, std::string >
 {
@@ -42,7 +42,7 @@ auto hostCallback( Function&& function ) -> std::expected< std::invoke_result_t<
 	}
 }
 
-// Flatten a fallible host operation while preserving its ordinary error result.
+//! Flatten a fallible host operation while preserving its ordinary error result.
 template < typename Function >
 auto hostOperation( Function&& function ) -> std::invoke_result_t< Function >
 {
@@ -52,7 +52,6 @@ auto hostOperation( Function&& function ) -> std::invoke_result_t< Function >
 	return std::move( *result );
 }
 
-// Coroutine adapters retain the task until completion and catch errors after suspension.
 template < typename T >
 folly::coro::Task< std::expected< T, std::string > > hostOperation(
 	folly::coro::Task< std::expected< T, std::string > > operation )

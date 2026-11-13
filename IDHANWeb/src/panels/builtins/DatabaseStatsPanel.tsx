@@ -12,7 +12,6 @@ import type { PanelProps } from '../../host/types';
 import type { DatabaseStats, MimeCount, StorageNode, VersionInfo } from '../../api/types';
 import { formatBytes } from './RecordInfoView';
 
-/** One on-disk cluster, matching the GET /clusters/list shape (see ClusterManagerPanel). */
 interface Cluster {
   cluster_id: number;
   name: string;
@@ -32,16 +31,11 @@ export interface TableFootprint {
 }
 
 export interface StorageBreakdown {
-  /** Tables large enough to show on their own, largest first. */
   major: TableFootprint[];
-  /** Tables below the threshold, folded into a single "Other" row. */
   minor: TableFootprint[];
-  /** Sum of every table's footprint. */
   grand: number;
 }
 
-/** Turns the raw storage tree into a sorted breakdown, folding tables below `minFraction` of the
- * grand total into `minor`. */
 export function buildStorageBreakdown(root: StorageNode | null, minFraction = 0.01): StorageBreakdown {
   const empty: StorageBreakdown = { major: [], minor: [], grand: 0 };
   if (!root?.children) return empty;
@@ -81,7 +75,6 @@ export interface DonutSegment {
   label: string;
   value: number;
   color: string;
-    /** Secondary line shown under the label in DonutLegend, such as capacity or a status flag. */
   sub?: string;
 }
 
@@ -122,7 +115,6 @@ export function aggregateMimeBytes(clusters: { by_mime: MimeCount[] }[]): { name
   return Array.from(totals, ([name, value]) => ({ name, value }));
 }
 
-/** All segments of a ring, including the synthetic "Other" one when non-empty. */
 function ringItems(ring: DonutRing): DonutSegment[] {
   return ring.otherValue > 0
     ? [...ring.segments, { label: `Other (${ring.otherCount})`, value: ring.otherValue, color: OTHER_COLOR }]
@@ -153,7 +145,6 @@ interface HoverInfo {
   total: number;
 }
 
-/** A donut chart: an outer ring, plus an optional inner ring detailing the selected outer segment. */
 function Donut({
   outer,
   inner,
@@ -217,7 +208,6 @@ function Donut({
   );
 }
 
-/** One row of a DonutLegend: swatch, label (plus sub), formatted value, share. */
 function LegendRow({
   color,
   label,
@@ -352,7 +342,6 @@ function readoutText(hover: HoverInfo | null, format: (n: number) => string, fal
     return `${hover.label}: ${format(hover.value)}${share}`;
 }
 
-/** A collapsible section with a caret header and an optional right-aligned summary. */
 function Section({
   title,
   summary,
@@ -581,7 +570,6 @@ function DatabaseStatsPanel({ host }: PanelProps) {
   );
 }
 
-/** One row of the Overview list: label left, value (+ optional inline sub) right. */
 function StatRow({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <li className="dbstat-overview-row">

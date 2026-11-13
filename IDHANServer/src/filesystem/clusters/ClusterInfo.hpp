@@ -10,7 +10,7 @@
 
 namespace idhan::filesystem
 {
-// Configuration only. Usage counters and filesystem free space must remain live.
+//! Configuration only. Usage counters and filesystem free space must remain live.
 struct ClusterInfo
 {
 	ClusterID id;

@@ -50,7 +50,6 @@ class ModuleLoader
 	//! Registers everything one library exports. Returns false if the library was unusable.
 	bool registerLibrary( const std::filesystem::path& path );
 
-	//! Services a callback a module raised: a probe, or a re-dispatched thumbnail or generate.
 	void serviceCallback( std::shared_ptr< WorkerProcess > worker, ipc::Frame frame );
 
 	//! Applies the process-wide half of IDHAN_HARDEN, before the first worker can exist.
@@ -72,10 +71,7 @@ class ModuleLoader
 
 	void unloadModules();
 
-	//! Retires workers that have outgrown their memory ceiling or gone idle.
 	void maintainWorkers();
-
-	//! Aggregates heartbeat samples across persistent, single-run and isolated workers.
 
 	[[nodiscard]] std::vector< std::shared_ptr< RemoteModule > > getThumbnailerFor( MimeID mime_id ) const;
 	[[nodiscard]] std::vector< std::shared_ptr< RemoteModule > > getParserFor( MimeID mime_id ) const;

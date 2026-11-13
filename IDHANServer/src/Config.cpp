@@ -12,7 +12,6 @@ inline static std::unordered_map< std::pair< std::string, std::string >, std::st
 
 void addCLIConfig( const std::string_view group, const std::string_view name, const std::string_view value )
 {
-	// The parser lets a repeated option win, so registering one twice has to overwrite.
 	CLI_CONFIG.insert_or_assign( std::pair< std::string, std::string >( group, name ), std::string { value } );
 }
 

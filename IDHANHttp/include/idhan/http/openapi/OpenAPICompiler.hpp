@@ -20,7 +20,7 @@ enum class SchemaDirection
 	custom
 };
 
-// Specialize for codec wire representations that cannot be inferred from members.
+//! Specialize for codec wire representations that cannot be inferred from members.
 template < typename T >
 struct OpenAPISchema;
 
@@ -547,7 +547,6 @@ consteval OpenAPIOperation openAPIOperation( OpenAPICompilation& compilation, Op
 	using Task = [:std::meta::return_type_of( Function ):];
 	using Result = typename OpenAPITaskResult< Task >::Value;
 	std::flat_map< std::string, std::string > parameters;
-	// Context-based handlers retain their declared path names without invented constraints.
 	std::size_t offset {};
 	while ( ( offset = path.find( '{', offset ) ) != std::string::npos )
 	{
@@ -699,8 +698,8 @@ consteval OpenAPIOperation openAPIOperation( OpenAPICompilation& compilation, Op
 	return { path, method, std::move( json ), std::move( operation_id ) };
 }
 
-// Internal fields carry a fixed-width length so assembly can skip JSON bodies
-// without scanning every byte for a separator. The format is independent of ABI.
+//! Internal fields carry a fixed-width length so assembly can skip JSON bodies
+//! without scanning every byte for a separator. The format is independent of ABI.
 constexpr void appendOpenAPIRecordField( std::string& records, std::string_view field )
 {
 	if ( field.size() > std::numeric_limits< std::uint32_t >::max() ) throw "OpenAPI fragment field is too large";
@@ -783,8 +782,8 @@ consteval auto compiledOpenAPIGroup()
 	return freezeOpenAPI< text.size() >( { text.data(), text.size() } );
 }
 
-// Each route has its own constant evaluation budget. Static arrays also let
-// document sizing and assembly reuse the schemas instead of reflecting twice.
+//! Each route has its own constant evaluation budget. Static arrays also let
+//! document sizing and assembly reuse the schemas instead of reflecting twice.
 template < std::meta::info Function, OpenAPIAuthentication const & Authentication >
 inline constexpr auto compiledOpenAPIFragment { compiledOpenAPIGroup<
 	std::meta::reflect_constant_array( std::array< std::meta::info, 1 > { { Function } } ),
@@ -829,7 +828,6 @@ consteval std::string compileOpenAPIDocument(
 	std::string_view version = "1.0.0",
 	OpenAPIAuthentication authentication = {} )
 {
-	// Fragments outlive assembly; views avoid copying every operation and schema.
 	std::vector< std::tuple< std::string_view, std::string_view, std::string_view, std::string_view > > operations;
 	std::vector< std::tuple< std::string_view, std::string_view, std::string_view > > schemas;
 	std::vector< std::string_view > operation_ids;
@@ -858,7 +856,6 @@ consteval std::string compileOpenAPIDocument(
 				throw "Invalid compiled OpenAPI record";
 		}
 	}
-	// Bulk sorting avoids quadratic insertion/shifting in constexpr flat_maps.
 	std::ranges::sort( operations );
 	std::ranges::sort( schemas, {}, []( const auto& schema ) { return std::get< 0 >( schema ); } );
 	std::ranges::sort( operation_ids );

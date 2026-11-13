@@ -87,7 +87,7 @@ inline std::span< const std::byte > parameterBytes( const DBParameter& parameter
 	return {};
 }
 
-// Escaping keeps diagnostics single-line and avoids treating binary storage as text.
+//! Escaping keeps diagnostics single-line and avoids treating binary storage as text.
 inline std::string diagnostic( const DBParameter& parameter, std::size_t max_bytes )
 {
 	std::string result {};
@@ -241,12 +241,12 @@ struct DBCodec< std::optional< T > >
 	}
 };
 
-// PostgreSQL's binary `bit(64)` wire format is a 4-byte bit-length header followed by the bits packed
-// MSB-first into 8 bytes, which for a length fixed at 64 is exactly a big-endian uint64 payload.
+//! PostgreSQL's binary `bit(64)` wire format is a 4-byte bit-length header followed by the bits packed
+//! MSB-first into 8 bytes, which for a length fixed at 64 is exactly a big-endian uint64 payload.
 template <>
 struct DBCodec< std::bitset< 64 > >
 {
-	static constexpr Oid oid() { return 1560; } // bit
+	static constexpr Oid oid() { return 1560; } //!< bit
 
 	static DBParameter encode( const std::bitset< 64 >& value )
 	{
@@ -312,7 +312,6 @@ struct DBCodec< std::vector< T, Allocator > >
 			}
 			for ( const auto& stored : values )
 			{
-				// Materialize vector<bool>'s proxy without copying other element types.
 				const auto encoded { DBCodec< T >::encode( stored ) };
 				if ( encoded.binary && encoded.text )
 					throw std::invalid_argument( "Array element has conflicting storage" );

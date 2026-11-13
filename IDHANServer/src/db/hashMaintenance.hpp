@@ -33,20 +33,20 @@ struct MissingPhashRecord
 };
 
 [[nodiscard]] runtime::Task< std::optional< RecordID > > queuedHammingHighWater( DBContext& db );
-// The caller acquires the relationship advisory lock before claiming queue rows.
-// Deletion is transactional: rollback restores work, while concurrent requeues
-// wait for completion and remain pending after it commits.
+//! The caller acquires the relationship advisory lock before claiming queue rows.
+//! Deletion is transactional: rollback restores work, while concurrent requeues
+//! wait for completion and remain pending after it commits.
 [[nodiscard]] runtime::Task< std::vector< RecordID > > claimHammingBatch(
 	DBTransaction& transaction,
 	std::optional< RecordID > after,
 	RecordID through,
 	std::size_t limit );
 [[nodiscard]] runtime::Task< hamming::PhashIndex > loadPhashIndex( DBContext& db );
-// One entry per requested record, without a hash when it has none.
+//! One entry per requested record, without a hash when it has none.
 [[nodiscard]] runtime::Task< std::vector< RecordPhash > > currentPhashes(
 	DBTransaction& transaction,
 	std::vector< RecordID > records );
-// Drops every pair touching `records`, then stores the `pairs` whose duplicate groups are still undecided.
+//! Drops every pair touching `records`, then stores the `pairs` whose duplicate groups are still undecided.
 [[nodiscard]] runtime::Task< std::int64_t > replaceHammingPairs(
 	DBTransaction& transaction,
 	std::vector< RecordID > records,
@@ -61,8 +61,8 @@ struct MissingPhashRecord
 	RecordID through,
 	std::size_t limit,
 	std::vector< MimeID > phash_mimes );
-// Updates only a still-missing hash on the same active file assignment. It never
-// overwrites a foreground parser's result or other metadata fields.
+//! Updates only a still-missing hash on the same active file assignment. It never
+//! overwrites a foreground parser's result or other metadata fields.
 [[nodiscard]] runtime::Task< bool > updateMissingPhash(
 	DBContext& db,
 	const MissingPhashRecord& record,

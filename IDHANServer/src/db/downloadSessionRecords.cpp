@@ -17,12 +17,17 @@ runtime::Task< bool > recordDownloadSessionImport(
 	const auto rows {
 		co_await db
 			.query(
-				"INSERT INTO download_session_records (download_session_id, record_id, posted_at, post_dates_complete) "
-				"VALUES ($1, $2, to_timestamp($3::double precision), $3 IS NOT NULL) "
-				"ON CONFLICT (download_session_id, record_id) DO UPDATE SET "
-				"posted_at=GREATEST(download_session_records.posted_at, EXCLUDED.posted_at), "
-				"post_dates_complete=download_session_records.post_dates_complete AND EXCLUDED.post_dates_complete "
-				"RETURNING (xmax = 0)",
+				//language=postgresql
+				R"SQL(
+					INSERT INTO download_session_records (download_session_id, record_id, posted_at, post_dates_complete)
+					    VALUES ($1, $2, to_timestamp($3::double precision), $3 IS NOT NULL)
+					ON CONFLICT (download_session_id, record_id)
+					    DO UPDATE SET
+					        posted_at = GREATEST (download_session_records.posted_at, EXCLUDED.posted_at),
+					        post_dates_complete = download_session_records.post_dates_complete
+					        AND EXCLUDED.post_dates_complete
+					    RETURNING (xmax = 0)
+				)SQL",
 				std::move( bindings ) )
 			.rows< bool >()
 	};

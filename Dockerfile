@@ -1,6 +1,5 @@
 # syntax=docker/dockerfile:1.7
 
-# WebUI build environment
 FROM --platform=$BUILDPLATFORM node:22-slim AS webbuilder
 
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
@@ -13,7 +12,6 @@ RUN --mount=type=cache,target=/pnpm-store,id=idhan-pnpm-v1,sharing=locked \
 COPY IDHANWeb/ ./
 RUN pnpm exec vite build --outDir /web/dist
 
-# TypeScript parser build environment, independent of the native toolchain.
 FROM --platform=$BUILDPLATFORM node:22-slim AS parserbuilder
 WORKDIR /parsers
 
@@ -25,7 +23,6 @@ COPY IDHANDownloader/tsconfig.json ./
 COPY IDHANDownloader/scripts/build-parsers.mjs ./scripts/build-parsers.mjs
 RUN npm run build:parsers
 
-# Build IDHANServer using precompiled parser assets.
 FROM --platform=$BUILDPLATFORM ubuntu:26.10 AS builder
 
 ARG BUILDARCH
@@ -191,7 +188,6 @@ RUN --mount=type=cache,target=/root/.ccache,id=idhan-ccache-v1 \
     cp /build/build/bin /build/bin -r && \
     find /build/bin -name '*.debug' -delete
 
-# Runtime environment
 FROM ubuntu:26.10
 
 RUN sed -i 's/^Components: main$/Components: main universe/' /etc/apt/sources.list.d/ubuntu.sources
@@ -250,7 +246,6 @@ COPY --from=builder /build/bin/config.toml /usr/share/idhan/config.toml
 # Parser bundles come from parserbuilder and are staged with non-code assets by CMake.
 COPY --from=builder /build/bin/downloaders/parsers/ /usr/share/idhan/downloaders/parsers
 
-# Embedding folder
 RUN mkdir -p /usr/share/idhan/models
 
 ENV IDHAN_DATABASE_HOST=localhost \

@@ -66,18 +66,49 @@ TEST_CASE( "Test basic management connection", "[postgres][management]" )
 		return DBTask { std::move( operation ) };
 	};
 
-	folly::coro::blockingWait( makeTask( "DROP TABLE IF EXISTS management_connection_test" ) );
-	folly::coro::blockingWait( makeTask( "CREATE TABLE management_connection_test ( id integer )" ) );
+	folly::coro::blockingWait( makeTask(
+		//language=postgresql
+		R"SQL(
+			DROP TABLE IF EXISTS management_connection_test
+		)SQL" ) );
+	folly::coro::blockingWait( makeTask(
+		//language=postgresql
+		R"SQL(
+			CREATE TABLE management_connection_test (
+			    id integer
+			)
+		)SQL" ) );
 
-	folly::coro::blockingWait( makeTask( "BEGIN" ) );
-	folly::coro::blockingWait( makeTask( "ALTER TABLE management_connection_test ADD COLUMN label text" ) );
-	folly::coro::blockingWait( makeTask( "COMMIT" ) );
+	folly::coro::blockingWait( makeTask(
+		//language=postgresql
+		R"SQL(
+			BEGIN
+		)SQL" ) );
+	folly::coro::blockingWait( makeTask(
+		//language=postgresql
+		R"SQL(
+			ALTER TABLE management_connection_test
+			    ADD COLUMN label text
+		)SQL" ) );
+	folly::coro::blockingWait( makeTask(
+		//language=postgresql
+		R"SQL(
+			COMMIT
+		)SQL" ) );
 
 	DBBindings table_name;
 	table_name.bind( std::string { "management_connection_test" } );
 	auto columns = folly::coro::blockingWait(
 		makeTask(
-			"SELECT column_name::text FROM information_schema.columns WHERE table_name = $1 ORDER BY ordinal_position",
+			//language=postgresql
+			R"SQL(
+				SELECT
+				    column_name::text
+				FROM information_schema.columns
+				WHERE table_name = $1
+				ORDER BY
+				    ordinal_position
+			)SQL",
 			std::move( table_name ) )
 			.rows< std::string >() );
 
@@ -85,7 +116,11 @@ TEST_CASE( "Test basic management connection", "[postgres][management]" )
 	CHECK( std::get< 0 >( columns.row( 0 ) ) == "id" );
 	CHECK( std::get< 0 >( columns.row( 1 ) ) == "label" );
 
-	folly::coro::blockingWait( makeTask( "DROP TABLE management_connection_test" ) );
+	folly::coro::blockingWait( makeTask(
+		//language=postgresql
+		R"SQL(
+			DROP TABLE management_connection_test
+		)SQL" ) );
 
 	connection.reset();
 	reactor.stop();

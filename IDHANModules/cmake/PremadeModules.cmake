@@ -31,7 +31,6 @@ endif ()
 target_link_libraries(IDHANFFmpeg PRIVATE PkgConfig::FFMPEG)
 target_link_libraries(IDHANArchive PRIVATE LibArchive::LibArchive chardet)
 
-# Convenience target so consumers can depend on "all premade modules" without naming each one.
 add_custom_target(IDHANPremadeModules)
 add_dependencies(IDHANPremadeModules IDHANVips IDHANFFmpeg IDHANPsd IDHANArchive IDHANUgoira)
 

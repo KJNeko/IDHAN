@@ -22,8 +22,17 @@ runtime::Task< std::expected< void, http::Response > > validateRecordIds(
 	bindings.bind( record_ids );
 
 	const auto rows {
-		co_await db.query( "SELECT record_id FROM records WHERE record_id = ANY($1)", std::move( bindings ) )
-			.rows< RecordID >()
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    record_id
+					FROM records
+					WHERE record_id = ANY ($1)
+				)SQL",
+					 std::move( bindings ) )
+				 .rows< RecordID >()
 	};
 
 	if ( rows.size() == record_ids.size() ) co_return {};

@@ -83,7 +83,15 @@ static runtime::Task< std::vector< RecordID > > massCreateRecord(
 	insert_bindings.bind( raw );
 	co_await db
 		.query(
-			"INSERT INTO records (sha256) SELECT * FROM UNNEST($1) ON CONFLICT DO NOTHING",
+			//language=postgresql
+			R"SQL(
+				INSERT INTO records (sha256)
+				SELECT
+				    *
+				FROM UNNEST($1)
+				ON CONFLICT
+				    DO NOTHING
+			)SQL",
 			std::move( insert_bindings ) )
 		.result();
 
@@ -91,8 +99,17 @@ static runtime::Task< std::vector< RecordID > > massCreateRecord(
 	select_bindings.bind( raw );
 	const auto rows {
 		co_await db
-			.query( "SELECT record_id, sha256 FROM records WHERE sha256 = ANY($1)", std::move( select_bindings ) )
-			.rows< RecordID, std::span< const std::byte > >()
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    record_id,
+					    sha256
+					FROM records
+					WHERE sha256 = ANY ($1)
+				)SQL",
+					 std::move( select_bindings ) )
+				 .rows< RecordID, std::span< const std::byte > >()
 	};
 
 	std::unordered_map< SHA256, RecordID > record_id_map {};
@@ -268,7 +285,13 @@ static runtime::Task<> removeTagMappings(
 
 	co_await db
 		.query(
-			"DELETE FROM tag_mappings WHERE record_id = $1 AND tag_id = ANY($2) AND tag_domain_id = $3",
+			//language=postgresql
+			R"SQL(
+				DELETE FROM tag_mappings
+				WHERE record_id = $1
+				    AND tag_id = ANY ($2)
+				    AND tag_domain_id = $3
+			)SQL",
 			std::move( bindings ) )
 		.result();
 }
@@ -287,8 +310,17 @@ static runtime::Task< std::expected< void, http::Response > > addTagsToRecord(
 		bindings.bind( tag_domain_id );
 		co_await db
 			.query(
-				"INSERT INTO tag_mappings (record_id, tag_id, tag_domain_id) "
-				"SELECT $1, t, $3 FROM UNNEST($2) AS t ON CONFLICT DO NOTHING",
+				//language=postgresql
+				R"SQL(
+					INSERT INTO tag_mappings (record_id, tag_id, tag_domain_id)
+					SELECT
+					    $1,
+					    t,
+					    $3
+					FROM UNNEST($2) AS t
+					ON CONFLICT
+					    DO NOTHING
+				)SQL",
 				std::move( bindings ) )
 			.result();
 	}
@@ -316,8 +348,18 @@ static runtime::Task< std::expected< void, http::Response > > addTagsToRecords(
 		bindings.bind( tag_domain_id );
 		co_await db
 			.query(
-				"INSERT INTO tag_mappings (record_id, tag_id, tag_domain_id) "
-				"SELECT r, t, $3 FROM UNNEST($1) AS r CROSS JOIN UNNEST($2) AS t ON CONFLICT DO NOTHING",
+				//language=postgresql
+				R"SQL(
+					INSERT INTO tag_mappings (record_id, tag_id, tag_domain_id)
+					SELECT
+					    r,
+					    t,
+					    $3
+					FROM UNNEST($1) AS r
+					    CROSS JOIN UNNEST($2) AS t
+					ON CONFLICT
+					    DO NOTHING
+				)SQL",
 				std::move( bindings ) )
 			.result();
 	}
@@ -355,9 +397,18 @@ static runtime::Task< std::expected< void, http::Response > > addTagSetsToRecord
 		bindings.bind( tag_domain_id );
 		co_await db
 			.query(
-				"INSERT INTO tag_mappings (record_id, tag_id, tag_domain_id) "
-				"SELECT pairs.record_id, pairs.tag_id, $3 "
-				"FROM UNNEST($1, $2) AS pairs(record_id, tag_id) ON CONFLICT DO NOTHING",
+				//language=postgresql
+				R"SQL(
+					INSERT INTO tag_mappings (record_id, tag_id, tag_domain_id)
+					SELECT
+					    pairs.record_id,
+					    pairs.tag_id,
+					    $3
+					FROM UNNEST($1, $2) AS pairs (record_id,
+					        tag_id)
+					ON CONFLICT
+					    DO NOTHING
+				)SQL",
 				std::move( bindings ) )
 			.result();
 	}
@@ -376,7 +427,14 @@ static runtime::Task< std::expected< NoteID, http::Response > > findOrCreateNote
 	const auto created {
 		co_await db
 			.query(
-				"INSERT INTO notes (note) VALUES ($1) ON CONFLICT (note) DO NOTHING RETURNING note_id",
+				//language=postgresql
+				R"SQL(
+					INSERT INTO notes (note)
+					    VALUES ($1)
+					ON CONFLICT (note)
+					    DO NOTHING
+					RETURNING note_id
+				)SQL",
 				std::move( insert_bindings ) )
 			.rows< NoteID >()
 	};
@@ -386,7 +444,17 @@ static runtime::Task< std::expected< NoteID, http::Response > > findOrCreateNote
 	db::DBBindings select_bindings {};
 	select_bindings.bind( text );
 	const auto existing {
-		co_await db.query( "SELECT note_id FROM notes WHERE note = $1", std::move( select_bindings ) ).rows< NoteID >()
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    note_id
+					FROM notes
+					WHERE note = $1
+				)SQL",
+					 std::move( select_bindings ) )
+				 .rows< NoteID >()
 	};
 
 	if ( !existing.empty() ) co_return std::get< 0 >( existing.row( 0 ) );
@@ -403,7 +471,15 @@ static runtime::Task< http::JsonResponse< std::vector< RecordNoteResponse > > > 
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT note, note_id FROM record_notes JOIN notes USING (note_id) WHERE record_id = $1",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    note,
+					    note_id
+					FROM record_notes
+					    JOIN notes USING (note_id)
+					WHERE record_id = $1
+				)SQL",
 				std::move( bindings ) )
 			.rows< std::string, NoteID >()
 	};
@@ -444,7 +520,13 @@ http::HTTPTask< http::JsonResult< std::vector< RecordNoteResponse > > > addNote(
 	bindings.bind( *note_id );
 	co_await db
 		.query(
-			"INSERT INTO record_notes (record_id, note_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+			//language=postgresql
+			R"SQL(
+				INSERT INTO record_notes (record_id, note_id)
+				    VALUES ($1, $2)
+				ON CONFLICT
+				    DO NOTHING
+			)SQL",
 			std::move( bindings ) )
 		.result();
 
@@ -462,8 +544,16 @@ http::HTTPTask< http::JsonResult< std::vector< RecordNoteResponse > > > removeNo
 	db::DBBindings bindings {};
 	bindings.bind( record_id );
 	bindings.bind( *note_id_e );
-	co_await db.query( "DELETE FROM record_notes WHERE record_id = $1 AND note_id = $2", std::move( bindings ) )
-		.result();
+	co_await db
+			 .query(
+				 //language=postgresql
+				 R"SQL(
+				DELETE FROM record_notes
+				WHERE record_id = $1
+				    AND note_id = $2
+			)SQL",
+				 std::move( bindings ) )
+			 .result();
 
 	co_return co_await recordNotesResponse( record_id, db );
 }
@@ -479,7 +569,16 @@ http::HTTPTask< http::JsonResult< std::vector< std::string > > > fetchUrls(
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT url FROM url_mappings JOIN urls USING (url_id) WHERE record_id = $1 ORDER BY url",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    url
+					FROM url_mappings
+					    JOIN urls USING (url_id)
+					WHERE record_id = $1
+					ORDER BY
+					    url
+				)SQL",
 				std::move( bindings ) )
 			.rows< std::string >()
 	};
@@ -542,7 +641,14 @@ http::HTTPTask< http::JsonResult< RecordUrlsAddedResponse > > addUrls( db::DBCon
 	domain_bindings.bind( domains );
 	co_await db
 		.query(
-			"INSERT INTO url_domains (url_domain) SELECT DISTINCT unnest($1) ON CONFLICT (url_domain) DO NOTHING",
+			//language=postgresql
+			R"SQL(
+				INSERT INTO url_domains (url_domain)
+				SELECT DISTINCT
+				    unnest($1)
+				ON CONFLICT (url_domain)
+				    DO NOTHING
+			)SQL",
 			std::move( domain_bindings ) )
 		.result();
 
@@ -562,8 +668,17 @@ http::HTTPTask< http::JsonResult< RecordUrlsAddedResponse > > addUrls( db::DBCon
 	mapping_bindings.bind( record_id );
 	co_await db
 		.query(
-			"INSERT INTO url_mappings (url_id, record_id) "
-			"SELECT url_id, $2 FROM urls WHERE url = ANY($1) ON CONFLICT DO NOTHING",
+			//language=postgresql
+			R"SQL(
+				INSERT INTO url_mappings (url_id, record_id)
+				SELECT
+				    url_id,
+				    $2
+				FROM urls
+				WHERE url = ANY ($1)
+				ON CONFLICT
+				    DO NOTHING
+			)SQL",
 			std::move( mapping_bindings ) )
 		.result();
 
@@ -616,8 +731,13 @@ http::HTTPTask< std::variant< http::EmptyResponse< 200 >, http::Response > > rem
 	bindings.bind( record_id );
 	co_await db
 		.query(
-			"DELETE FROM url_mappings um USING urls u "
-			"WHERE u.url = ANY($1) AND um.url_id = u.url_id AND um.record_id = $2",
+			//language=postgresql
+			R"SQL(
+				DELETE FROM url_mappings um USING urls u
+				WHERE u.url = ANY ($1)
+				    AND um.url_id = u.url_id
+				    AND um.record_id = $2
+			)SQL",
 			std::move( bindings ) )
 		.result();
 
@@ -644,8 +764,17 @@ http::HTTPTask< http::JsonResult< std::vector< RecordDomainTagsResponse > > > li
 	bindings.bind( record_id );
 	const auto rows {
 		co_await db
-			.query( "SELECT tag_domain_id, tag_id FROM tag_mappings WHERE record_id = $1", std::move( bindings ) )
-			.rows< TagDomainID, TagID >()
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    tag_domain_id,
+					    tag_id
+					FROM tag_mappings
+					WHERE record_id = $1
+				)SQL",
+					 std::move( bindings ) )
+				 .rows< TagDomainID, TagID >()
 	};
 
 	std::unordered_map< TagDomainID, std::vector< TagID > > domain_map {};
@@ -667,7 +796,14 @@ http::HTTPTask< http::JsonResult< std::vector< RecordDomainTagsResponse > > > li
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT DISTINCT tag_id, tag_domain_id FROM active_tag_mappings_final WHERE record_id = $1",
+				//language=postgresql
+				R"SQL(
+					SELECT DISTINCT
+					    tag_id,
+					    tag_domain_id
+					FROM active_tag_mappings_final
+					WHERE record_id = $1
+				)SQL",
 				std::move( bindings ) )
 			.rows< TagID, TagDomainID >()
 	};
@@ -1098,8 +1234,19 @@ http::HTTPTask< http::JsonResult< RecordIdResponse > > getRandomActiveRecord(
 	[[maybe_unused]] http::RequestContext context )
 {
 	const auto rows {
-		co_await db.query( "SELECT record_id FROM file_info WHERE mime_id IS NOT NULL ORDER BY RANDOM() LIMIT 1" )
-			.rows< RecordID >()
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    record_id
+					FROM file_info
+					WHERE mime_id IS NOT NULL
+					ORDER BY
+					    RANDOM()
+					LIMIT 1
+				)SQL" )
+				 .rows< RecordID >()
 	};
 
 	if ( rows.empty() ) co_return http::Response::error( 404, "No active records found" );
@@ -1119,8 +1266,14 @@ http::HTTPTask< http::JsonResult< RecordFileDeletedResponse > > deleteRecordFile
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT file_info.cluster_id, file_info.cluster_delete_time IS NOT NULL "
-				"FROM file_info WHERE file_info.record_id = $1",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    file_info.cluster_id,
+					    file_info.cluster_delete_time IS NOT NULL
+					FROM file_info
+					WHERE file_info.record_id = $1
+				)SQL",
 				std::move( bindings ) )
 			.rows< std::optional< ClusterID >, std::optional< bool > >()
 	};
@@ -1161,8 +1314,15 @@ http::HTTPTask< http::JsonResult< RecordFileDeletedResponse > > deleteRecordFile
 	update_bindings.bind( record_id );
 	co_await db
 		.query(
-			"UPDATE file_info SET cluster_id = NULL, cluster_delete_time = now() "
-			"WHERE record_id = $1 AND cluster_delete_time IS NULL",
+			//language=postgresql
+			R"SQL(
+				UPDATE
+				    file_info
+				SET cluster_id = NULL,
+				    cluster_delete_time = now()
+				WHERE record_id = $1
+				    AND cluster_delete_time IS NULL
+			)SQL",
 			std::move( update_bindings ) )
 		.result();
 	co_return http::JsonResponse< RecordFileDeletedResponse > { { true } };

@@ -1,63 +1,58 @@
 #pragma once
+#include <cstddef>
+#include <list>
 #include <mutex>
-#include <optional>
+#include <unordered_map>
 
 #include "IDHANTypes.hpp"
-#include "caching/LRUCache.hpp"
-#include "idhan/SHA256.hpp"
 
 namespace idhan::caching
 {
 
-inline constexpr std::size_t kRecordCacheBytes { 64ull * 1024 * 1024 }; // 64 MiB per cache
-
-// record_id -> sha256 (immutable, content-addressed).
-class RecordSha256Cache
-{
-	LRUCache< RecordID, SHA256 > m_cache { kRecordCacheBytes };
-	std::mutex m_mutex {};
-
-  public:
-
-	[[nodiscard]] std::optional< SHA256 > get( const RecordID id )
-	{
-		const std::lock_guard< std::mutex > lock { m_mutex };
-		return m_cache.value( id );
-	}
-
-	void put( const RecordID id, const SHA256& sha256 )
-	{
-		const std::lock_guard< std::mutex > lock { m_mutex };
-		m_cache.add( id, sha256 );
-	}
-};
-
-// Membership of record_ids known to exist (append-only, positives only).
+//! LRU membership of record_ids known to exist (append-only, positives only).
 class RecordExistsCache
 {
-	ValidLRUCache< RecordID > m_cache { kRecordCacheBytes };
+	static constexpr std::size_t MAX_ENTRIES{ 512 * 1024 };
+
+	std::list< RecordID > m_recency{};
+	std::unordered_map< RecordID, std::list< RecordID >::iterator > m_positions{};
 	std::mutex m_mutex {};
 
-  public:
-
-	[[nodiscard]] bool contains( const RecordID id )
+	bool touch( const RecordID record_id )
 	{
-		const std::lock_guard< std::mutex > lock { m_mutex };
-		return m_cache.exists( id );
+		const auto it{ m_positions.find( record_id ) };
+		if ( it == m_positions.end() )
+			return false;
+
+		m_recency.splice( m_recency.begin(), m_recency, it->second );
+		return true;
 	}
 
-	void insert( const RecordID id )
+
+public:
+	RecordExistsCache() { m_positions.reserve( MAX_ENTRIES ); }
+
+	[[nodiscard]] bool contains( const RecordID record_id )
 	{
 		const std::lock_guard< std::mutex > lock { m_mutex };
-		m_cache.add( id );
+		return touch( record_id );
+	}
+
+	void insert( const RecordID record_id )
+	{
+		const std::lock_guard< std::mutex > lock { m_mutex };
+		if ( touch( record_id ) )
+			return;
+
+		m_recency.push_front( record_id );
+		m_positions.emplace( record_id, m_recency.begin() );
+		if ( m_recency.size() <= MAX_ENTRIES )
+			return;
+
+		m_positions.erase( m_recency.back() );
+		m_recency.pop_back();
 	}
 };
-
-inline RecordSha256Cache& recordSha256Cache()
-{
-	static RecordSha256Cache instance;
-	return instance;
-}
 
 inline RecordExistsCache& recordExistsCache()
 {

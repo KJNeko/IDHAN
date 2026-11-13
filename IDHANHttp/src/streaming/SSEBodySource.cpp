@@ -16,7 +16,6 @@ std::string encodeSSEFrame( const std::string_view event, const std::string_view
 
 [[nodiscard]] static std::string encodeEvent( const SSEEvent& event )
 {
-	// A comment, so it holds the connection open without any client seeing an event for it.
 	if ( event.kind == SSEEvent::Kind::keepalive ) return ": keepalive\n\n";
 
 	if ( event.kind == SSEEvent::Kind::shutdown ) return encodeSSEFrame( "shutdown", "" );
@@ -41,8 +40,7 @@ folly::coro::Task< proxygen::coro::HTTPHeaderEvent > SSEBodySource::readHeaderEv
 	m_message->getHeaders().set( "Content-Type", "text/event-stream; charset=utf-8" );
 	m_message->getHeaders().set( "Cache-Control", "no-cache" );
 	m_message->getHeaders().set( "X-Accel-Buffering", "no" );
-	// Compression is selected before transport framing; an unknown-length stream must be
-	// marked chunked here to bypass the filter's Content-Length threshold.
+	// Unknown-length streams must be chunked to bypass the compression filter's Content-Length threshold.
 	m_message->setIsChunked( true );
 
 	auto message { std::make_unique< proxygen::HTTPMessage >( std::move( *m_message ) ) };
@@ -60,9 +58,7 @@ folly::coro::Task< proxygen::coro::HTTPBodyEvent > SSEBodySource::readBodyEvent(
 		co_return event;
 	}
 
-	// The retry preamble rides in the same chunk as the first event. Returning it on its own would
-	// spend the first body event, leaving a subscriber's opening snapshot to wait for proxygen to
-	// write that chunk and read from us again.
+	// Send the retry preamble with the first event so the opening snapshot is not delayed a round trip.
 	std::string payload {};
 	if ( m_initial )
 	{

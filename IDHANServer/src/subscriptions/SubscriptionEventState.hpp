@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <map>
 #include <optional>
 #include <stdexcept>
@@ -10,7 +11,7 @@
 
 namespace idhan::subscriptions
 {
-// Partial objects deliberately use the same field names and null semantics as REST responses.
+//! Partial objects deliberately use the same field names and null semantics as REST responses.
 template < typename T >
 [[nodiscard]] std::optional< http::JsonDocument > changedFields( const T* previous, const T& current )
 {
@@ -58,6 +59,9 @@ template < typename T >
 	return std::move( json_e.value() );
 }
 
+//! Maximum combined group and subscription rows in each baseline event.
+inline constexpr std::size_t snapshot_chunk_size{ 1000 };
+
 class SubscriptionEventState
 {
 	std::map< SubscriptionID, db::Subscription > m_items {};
@@ -103,8 +107,7 @@ class SubscriptionEventState
 	}
 
   public:
-
-	// A group scope also detects cascade deletions without emitting every remaining entity.
+	//! A group scope also detects cascade deletions without emitting every remaining entity.
 	[[nodiscard]] std::vector< http::ValidatedJson > reconcile(
 		std::vector< db::SubscriptionGroup > groups,
 		std::vector< db::Subscription > items,
@@ -151,19 +154,47 @@ class SubscriptionEventState
 		return events;
 	}
 
-	[[nodiscard]] http::ValidatedJson snapshot() const
+	[[nodiscard]] std::vector< http::ValidatedJson > snapshots() const
 	{
-		struct Snapshot
+		struct Marker
 		{
-			std::string type { "snapshot" };
+			std::string type;
+		};
+
+		struct Chunk
+		{
+			std::string type{ "snapshot_chunk" };
 			std::vector< db::SubscriptionGroup > groups {};
 			std::vector< db::Subscription > items {};
 		};
 
-		Snapshot result {};
-		for ( const auto& [ id, group ] : m_groups ) result.groups.push_back( group );
-		for ( const auto& [ id, item ] : m_items ) result.items.push_back( item );
-		return subscriptionJson( result );
+		std::vector< http::ValidatedJson > events;
+		events.push_back( subscriptionJson( Marker{ "snapshot_start" } ) );
+		Chunk chunk{};
+		for ( const auto& [ id, group ] : m_groups )
+		{
+			chunk.groups.push_back( group );
+			if ( chunk.groups.size() == snapshot_chunk_size )
+			{
+				events.push_back( subscriptionJson( chunk ) );
+				chunk.groups.clear();
+			}
+		}
+		for ( const auto& [ id, item ] : m_items )
+		{
+			chunk.items.push_back( item );
+			if ( chunk.groups.size() + chunk.items.size() == snapshot_chunk_size )
+			{
+				events.push_back( subscriptionJson( chunk ) );
+				chunk.groups.clear();
+				chunk.items.clear();
+			}
+		}
+		if ( !chunk.groups.empty() || !chunk.items.empty() )
+			events.push_back( subscriptionJson( chunk ) );
+
+		events.push_back( subscriptionJson( Marker{ "snapshot_complete" } ) );
+		return events;
 	}
 };
 } // namespace idhan::subscriptions

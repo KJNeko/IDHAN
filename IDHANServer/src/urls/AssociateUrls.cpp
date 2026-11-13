@@ -33,12 +33,39 @@ runtime::Task< std::expected< void, std::string > > setUrlTypes(
 		bindings.bind( values );
 		co_await db
 			.query(
-				"WITH input AS MATERIALIZED (SELECT * FROM unnest($1::text[], $2::text[], $3::text[]) AS i(url, domain, type)), "
-				"domains AS (INSERT INTO url_domains (url_domain) SELECT DISTINCT domain FROM input "
-				"ON CONFLICT (url_domain) DO UPDATE SET url_domain = EXCLUDED.url_domain RETURNING url_domain_id, url_domain) "
-				"INSERT INTO urls (url, url_domain_id, url_type) SELECT i.url, d.url_domain_id, i.type::UrlType "
-				"FROM input i JOIN domains d ON d.url_domain = i.domain "
-				"ON CONFLICT (url) DO UPDATE SET url_type = EXCLUDED.url_type",
+				//language=postgresql
+				R"SQL(
+					WITH input AS MATERIALIZED (
+					    SELECT
+					        *
+					    FROM unnest(
+					            $1::text[], $2::text[], $3::text[]
+					    ) AS i (
+					            url,
+					            domain,
+					            type
+					    )
+					),
+					domains AS (
+					    INSERT INTO url_domains (url_domain)
+					    SELECT DISTINCT
+					        domain
+					    FROM input
+					    ON CONFLICT (url_domain)
+					        DO UPDATE SET
+					            url_domain = EXCLUDED.url_domain
+					        RETURNING url_domain_id, url_domain
+					)
+					INSERT INTO urls (url, url_domain_id, url_type)
+					SELECT
+					    i.url,
+					    d.url_domain_id,
+					    i.type::UrlType FROM input i
+					    JOIN domains d ON d.url_domain = i.domain
+					ON CONFLICT (url)
+					    DO UPDATE SET
+					        url_type = EXCLUDED.url_type
+				)SQL",
 				std::move( bindings ) )
 			.result();
 		co_return std::expected< void, std::string > {};
@@ -59,12 +86,25 @@ runtime::Task< std::expected< void, std::string > > setUrlType( std::string url,
 		bindings.bind( type );
 		co_await db
 			.query(
-				"WITH domain AS ("
-				"INSERT INTO url_domains (url_domain) VALUES ($2) "
-				"ON CONFLICT (url_domain) DO UPDATE SET url_domain = EXCLUDED.url_domain RETURNING url_domain_id) "
-				"INSERT INTO urls (url, url_domain_id, url_type) "
-				"SELECT $1, url_domain_id, $3::UrlType FROM domain "
-				"ON CONFLICT (url) DO UPDATE SET url_type = EXCLUDED.url_type",
+				//language=postgresql
+				R"SQL(
+					WITH domain AS (
+					    INSERT INTO url_domains (url_domain)
+					        VALUES ($2)
+					    ON CONFLICT (url_domain)
+					        DO UPDATE SET
+					            url_domain = EXCLUDED.url_domain
+					        RETURNING url_domain_id
+					)
+					INSERT INTO urls (url, url_domain_id, url_type)
+					SELECT
+					    $1,
+					    url_domain_id,
+					    $3::UrlType FROM domain
+					ON CONFLICT (url)
+					    DO UPDATE SET
+					        url_type = EXCLUDED.url_type
+				)SQL",
 				std::move( bindings ) )
 			.result();
 	}
@@ -93,8 +133,14 @@ runtime::Task< std::expected< void, std::string > > associateUrls(
 		domain_bindings.bind( domains );
 		co_await db
 			.query(
-				"INSERT INTO url_domains (url_domain) SELECT DISTINCT unnest($1::text[]) "
-				"ON CONFLICT (url_domain) DO NOTHING",
+				//language=postgresql
+				R"SQL(
+					INSERT INTO url_domains (url_domain)
+					SELECT DISTINCT
+					    unnest($1::text[])
+					ON CONFLICT (url_domain)
+					    DO NOTHING
+				)SQL",
 				std::move( domain_bindings ) )
 			.result();
 
@@ -103,11 +149,18 @@ runtime::Task< std::expected< void, std::string > > associateUrls(
 		url_bindings.bind( domains );
 		co_await db
 			.query(
-				"INSERT INTO urls (url, url_domain_id) "
-				"SELECT pairs.url, ud.url_domain_id "
-				"FROM unnest($1::text[], $2::text[]) AS pairs(url, domain) "
-				"JOIN url_domains ud ON ud.url_domain = pairs.domain "
-				"ON CONFLICT (url) DO NOTHING",
+				//language=postgresql
+				R"SQL(
+					INSERT INTO urls (url, url_domain_id)
+					SELECT
+					    pairs.url,
+					    ud.url_domain_id
+					FROM unnest($1::text[], $2::text[]) AS pairs (url,
+					        domain)
+					    JOIN url_domains ud ON ud.url_domain = pairs.domain
+					ON CONFLICT (url)
+					    DO NOTHING
+				)SQL",
 				std::move( url_bindings ) )
 			.result();
 
@@ -116,8 +169,17 @@ runtime::Task< std::expected< void, std::string > > associateUrls(
 		mapping_bindings.bind( record_id );
 		co_await db
 			.query(
-				"INSERT INTO url_mappings (url_id, record_id) "
-				"SELECT url_id, $2 FROM urls WHERE url = ANY($1::text[]) ON CONFLICT DO NOTHING",
+				//language=postgresql
+				R"SQL(
+					INSERT INTO url_mappings (url_id, record_id)
+					SELECT
+					    url_id,
+					    $2
+					FROM urls
+					WHERE url = ANY ($1::text[])
+					ON CONFLICT
+					    DO NOTHING
+				)SQL",
 				std::move( mapping_bindings ) )
 			.result();
 	}

@@ -46,8 +46,14 @@ static http::HTTPTask< std::optional< std::int64_t > > touchSession(
 	const auto rows {
 		co_await db
 			.query(
-				"UPDATE download_sessions SET last_used_at = now() WHERE download_session_id = $1 "
-				"RETURNING extract(epoch FROM last_used_at)::bigint",
+				//language=postgresql
+				R"SQL(
+					UPDATE
+					    download_sessions
+					SET last_used_at = now()
+					WHERE download_session_id = $1
+					RETURNING extract(epoch FROM last_used_at)::bigint
+				)SQL",
 				std::move( bindings ) )
 			.rows< std::int64_t >()
 	};
@@ -184,8 +190,17 @@ static http::HTTPTask< std::string > freeSessionName( db::DBContext& db, const s
 		db::DBBindings bindings {};
 		bindings.bind( candidate );
 		const auto taken {
-			co_await db.query( "SELECT 1 FROM download_sessions WHERE lower(name) = lower($1)", std::move( bindings ) )
-				.rows< std::int32_t >()
+			co_await db
+					 .query(
+						 //language=postgresql
+						 R"SQL(
+						SELECT
+						    1
+						FROM download_sessions
+						WHERE lower(name) = lower($1)
+					)SQL",
+						 std::move( bindings ) )
+					 .rows< std::int32_t >()
 		};
 		if ( taken.empty() ) co_return candidate;
 	}
@@ -229,12 +244,25 @@ http::HTTPTask< http::JsonResult< std::vector< DownloadSessionResponse > > > lis
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT download_session_id, name, "
-				"extract(epoch FROM created_at)::bigint AS created_at, "
-				"extract(epoch FROM last_used_at)::bigint AS last_used_at, "
-				"(SELECT count(*) FROM download_session_errors "
-				"WHERE download_session_errors.download_session_id = download_sessions.download_session_id) AS error_count "
-				"FROM download_sessions WHERE NOT is_subscription ORDER BY last_used_at DESC, download_session_id DESC" )
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    download_session_id,
+					    name,
+					    extract(epoch FROM created_at)::bigint AS created_at,
+					    extract(epoch FROM last_used_at)::bigint AS last_used_at,
+					    (
+					        SELECT
+					            count(*)
+					        FROM download_session_errors
+					        WHERE download_session_errors.download_session_id = download_sessions.download_session_id
+					    ) AS error_count
+					FROM download_sessions
+					WHERE NOT is_subscription
+					ORDER BY
+					    last_used_at DESC,
+					    download_session_id DESC
+				)SQL" )
 			.rows< DownloadSessionID, std::string, std::int64_t, std::int64_t, std::int64_t >()
 	};
 
@@ -259,8 +287,16 @@ http::HTTPTask< http::JsonResult< DownloadSessionResponse, 201 > > createSession
 	existing_bindings.bind( name );
 	const auto existing {
 		co_await db
-			.query( "SELECT 1 FROM download_sessions WHERE lower(name) = lower($1)", std::move( existing_bindings ) )
-			.rows< std::int32_t >()
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    1
+					FROM download_sessions
+					WHERE lower(name) = lower($1)
+				)SQL",
+					 std::move( existing_bindings ) )
+				 .rows< std::int32_t >()
 	};
 
 	if ( !existing.empty() )
@@ -271,10 +307,12 @@ http::HTTPTask< http::JsonResult< DownloadSessionResponse, 201 > > createSession
 	const auto created {
 		co_await db
 			.query(
-				"INSERT INTO download_sessions (name) VALUES ($1) "
-				"RETURNING download_session_id, name, "
-				"extract(epoch FROM created_at)::bigint AS created_at, "
-				"extract(epoch FROM last_used_at)::bigint AS last_used_at, 0::bigint AS error_count",
+				//language=postgresql
+				R"SQL(
+					INSERT INTO download_sessions (name)
+					    VALUES ($1)
+					RETURNING download_session_id, name, extract(epoch FROM created_at)::bigint AS created_at, extract(epoch FROM last_used_at)::bigint AS last_used_at, 0::bigint AS error_count
+				)SQL",
 				std::move( insert_bindings ) )
 			.rows< DownloadSessionID, std::string, std::int64_t, std::int64_t, std::int64_t >()
 	};
@@ -306,12 +344,23 @@ http::HTTPTask< http::JsonResult< DownloadSessionResponse > > getSession(
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT download_session_id, name, "
-				"extract(epoch FROM created_at)::bigint AS created_at, "
-				"extract(epoch FROM last_used_at)::bigint AS last_used_at, "
-				"(SELECT count(*) FROM download_session_errors "
-				"WHERE download_session_errors.download_session_id = download_sessions.download_session_id) AS error_count, is_subscription "
-				"FROM download_sessions WHERE download_session_id = $1",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    download_session_id,
+					    name,
+					    extract(epoch FROM created_at)::bigint AS created_at,
+					    extract(epoch FROM last_used_at)::bigint AS last_used_at,
+					    (
+					        SELECT
+					            count(*)
+					        FROM download_session_errors
+					        WHERE download_session_errors.download_session_id = download_sessions.download_session_id
+					    ) AS error_count,
+					    is_subscription
+					FROM download_sessions
+					WHERE download_session_id = $1
+				)SQL",
 				std::move( bindings ) )
 			.rows< DownloadSessionID, std::string, std::int64_t, std::int64_t, std::int64_t, bool >()
 	};
@@ -339,8 +388,15 @@ http::HTTPTask< http::JsonResult< DownloaderDeletedResponse > > destroySession(
 	db::DBBindings bindings {};
 	bindings.bind( session_id );
 	const auto deleted {
-		co_await db.query( "DELETE FROM download_sessions WHERE download_session_id = $1", std::move( bindings ) )
-			.result()
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					DELETE FROM download_sessions
+					WHERE download_session_id = $1
+				)SQL",
+					 std::move( bindings ) )
+				 .result()
 	};
 
 	if ( std::atoll( PQcmdTuples( deleted.get() ) ) == 0 )
@@ -480,7 +536,6 @@ http::HTTPTask< http::JsonResult< ParserListResponse > > listParsers( db::DBCont
 	co_return simdjson::to_string( settings );
 }
 
-//! Inserts a user-submitted URL and announces it.
 static http::HTTPTask< std::expected< downloader::rows::InsertedUrl, std::string > > createRootUrl(
 	db::DBContext& db,
 	const DownloadSessionID session_id,
@@ -500,7 +555,6 @@ static http::HTTPTask< std::expected< downloader::rows::InsertedUrl, std::string
 	co_return inserted_e;
 }
 
-//! Withdraws a submitted URL that the downloader refused.
 static http::HTTPTask< void > deleteRootUrl(
 	db::DBContext& db,
 	const DownloadSessionID session_id,
@@ -511,7 +565,12 @@ static http::HTTPTask< void > deleteRootUrl(
 	bindings.bind( url_id );
 	co_await db
 		.query(
-			"DELETE FROM download_session_urls WHERE download_session_id = $1 AND download_session_url_id = $2",
+			//language=postgresql
+			R"SQL(
+				DELETE FROM download_session_urls
+				WHERE download_session_id = $1
+				    AND download_session_url_id = $2
+			)SQL",
 			std::move( bindings ) )
 		.result();
 	downloader::events::urlRemoved( session_id, url_id );
@@ -579,8 +638,16 @@ http::HTTPTask< http::JsonResult< SubmittedDownloadSessionResponse, 201 > > subm
 	existing_bindings.bind( name );
 	const auto existing {
 		co_await db
-			.query( "SELECT 1 FROM download_sessions WHERE lower(name) = lower($1)", std::move( existing_bindings ) )
-			.rows< std::int32_t >()
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    1
+					FROM download_sessions
+					WHERE lower(name) = lower($1)
+				)SQL",
+					 std::move( existing_bindings ) )
+				 .rows< std::int32_t >()
 	};
 
 	if ( !existing.empty() )
@@ -592,10 +659,12 @@ http::HTTPTask< http::JsonResult< SubmittedDownloadSessionResponse, 201 > > subm
 	const auto created {
 		co_await db
 			.query(
-				"INSERT INTO download_sessions (name, options) VALUES ($1, $2::jsonb) "
-				"RETURNING download_session_id, name, "
-				"extract(epoch FROM created_at)::bigint AS created_at, "
-				"extract(epoch FROM last_used_at)::bigint AS last_used_at, 0::bigint AS error_count",
+				//language=postgresql
+				R"SQL(
+					INSERT INTO download_sessions (name, options)
+					    VALUES ($1, $2::jsonb)
+					RETURNING download_session_id, name, extract(epoch FROM created_at)::bigint AS created_at, extract(epoch FROM last_used_at)::bigint AS last_used_at, 0::bigint AS error_count
+				)SQL",
 				std::move( insert_bindings ) )
 			.rows< DownloadSessionID, std::string, std::int64_t, std::int64_t, std::int64_t >()
 	};
@@ -622,8 +691,14 @@ http::HTTPTask< http::JsonResult< SubmittedDownloadSessionResponse, 201 > > subm
 		db::DBBindings delete_bindings {};
 		delete_bindings.bind( session_id );
 		co_await db
-			.query( "DELETE FROM download_sessions WHERE download_session_id = $1", std::move( delete_bindings ) )
-			.result();
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					DELETE FROM download_sessions
+					WHERE download_session_id = $1
+				)SQL",
+					 std::move( delete_bindings ) )
+				 .result();
 		downloader::DownloadSessionEventHub::instance().removed( session_id );
 		downloader::SessionUrlIds::instance().remove( session_id );
 		co_return http::Response::error( 400, std::format( "Unable to schedule URL: {}", scheduled.error() ) );
@@ -658,20 +733,30 @@ http::HTTPTask< http::JsonResult< DownloadUrlListResponse > > listUrls(
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT download_session_urls.download_session_url_id, parent_url_id, url, state, failures.message, "
-				"failures.stage, download_session_urls.record_id, "
-				"(extract(epoch FROM download_session_records.imported_at) * 1000000)::bigint AS imported_at, "
-				"extract(epoch FROM created_at)::bigint AS created_at, "
-				"extract(epoch FROM finished_at)::bigint AS finished_at, file_info.size "
-				"FROM download_session_urls "
-				"LEFT JOIN download_session_url_failures failures "
-				"ON failures.download_session_id = download_session_urls.download_session_id "
-				"AND failures.download_session_url_id = download_session_urls.download_session_url_id "
-				"LEFT JOIN file_info ON file_info.record_id = download_session_urls.record_id "
-				"LEFT JOIN download_session_records ON download_session_records.download_session_id = $1 "
-				"AND download_session_records.record_id = download_session_urls.record_id "
-				"WHERE download_session_urls.download_session_id = $1 "
-				"ORDER BY download_session_urls.download_session_url_id",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    download_session_urls.download_session_url_id,
+					    parent_url_id,
+					    url,
+					    state,
+					    failures.message,
+					    failures.stage,
+					    download_session_urls.record_id,
+					    (extract(epoch FROM download_session_records.imported_at) * 1000000)::bigint AS imported_at,
+					    extract(epoch FROM created_at)::bigint AS created_at,
+					    extract(epoch FROM finished_at)::bigint AS finished_at,
+					    file_info.size
+					FROM download_session_urls
+					    LEFT JOIN download_session_url_failures failures ON failures.download_session_id = download_session_urls.download_session_id
+					        AND failures.download_session_url_id = download_session_urls.download_session_url_id
+					    LEFT JOIN file_info ON file_info.record_id = download_session_urls.record_id
+					    LEFT JOIN download_session_records ON download_session_records.download_session_id = $1
+					        AND download_session_records.record_id = download_session_urls.record_id
+					WHERE download_session_urls.download_session_id = $1
+					ORDER BY
+					    download_session_urls.download_session_url_id
+				)SQL",
 				std::move( bindings ) )
 			.rows<
 				DownloadSessionUrlID,
@@ -764,8 +849,15 @@ http::HTTPTask< http::JsonResult< DownloadUrlNodeResponse > > retryUrl(
 	const auto existing {
 		co_await db
 			.query(
-				"SELECT url, state FROM download_session_urls "
-				"WHERE download_session_url_id = $1 AND download_session_id = $2",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    url,
+					    state
+					FROM download_session_urls
+					WHERE download_session_url_id = $1
+					    AND download_session_id = $2
+				)SQL",
 				std::move( existing_bindings ) )
 			.rows< std::string, std::string >()
 	};
@@ -796,14 +888,35 @@ http::HTTPTask< http::JsonResult< DownloadUrlNodeResponse > > retryUrl(
 	const auto reset {
 		co_await db
 			.query(
-				"WITH reset AS (UPDATE download_session_urls "
-				"SET state = 'pending', finished_at = NULL, record_id = NULL "
-				"WHERE download_session_id = $1 AND download_session_url_id = $2 "
-				"AND state IN ('completed', 'failed', 'imported', 'imported_previously') "
-				"RETURNING parent_url_id, extract(epoch FROM created_at)::bigint AS created_at), "
-				"cleared AS (DELETE FROM download_session_url_failures "
-				"WHERE download_session_id = $1 AND download_session_url_id = $2 AND EXISTS (SELECT 1 FROM reset)) "
-				"SELECT parent_url_id, created_at FROM reset",
+				//language=postgresql
+				R"SQL(
+					WITH reset AS (
+					    UPDATE
+					        download_session_urls
+					    SET state = 'pending',
+					        finished_at = NULL,
+					        record_id = NULL
+					    WHERE download_session_id = $1
+					        AND download_session_url_id = $2
+					        AND state IN ('completed', 'failed', 'imported', 'imported_previously')
+					    RETURNING parent_url_id,
+					        extract(epoch FROM created_at)::bigint AS created_at
+					),
+					cleared AS (
+					    DELETE FROM download_session_url_failures
+					    WHERE download_session_id = $1
+					        AND download_session_url_id = $2
+					        AND EXISTS (
+					            SELECT
+					                1
+					            FROM reset
+					        )
+					)
+					SELECT
+					    parent_url_id,
+					    created_at
+					FROM reset
+				)SQL",
 				std::move( reset_bindings ) )
 			.rows< std::optional< DownloadSessionUrlID >, std::int64_t >()
 	};
@@ -855,8 +968,16 @@ http::HTTPTask< http::JsonResult< DownloadSessionRecordsResponse > > listRecords
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT record_id FROM download_session_records "
-				"WHERE download_session_id = $1 ORDER BY imported_at DESC, record_id DESC",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    record_id
+					FROM download_session_records
+					WHERE download_session_id = $1
+					ORDER BY
+					    imported_at DESC,
+					    record_id DESC
+				)SQL",
 				std::move( bindings ) )
 			.rows< RecordID >()
 	};
@@ -893,8 +1014,18 @@ http::HTTPTask< http::JsonResult< DownloadSessionErrorsResponse > > listErrors(
 	const auto counts {
 		co_await db
 			.query(
-				"SELECT status, count(*)::bigint AS count FROM download_session_errors "
-				"WHERE download_session_id = $1 GROUP BY status ORDER BY status",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    status,
+					    count(*)::bigint AS count
+					FROM download_session_errors
+					WHERE download_session_id = $1
+					GROUP BY
+					    status
+					ORDER BY
+					    status
+				)SQL",
 				std::move( count_bindings ) )
 			.rows< std::optional< Int >, std::int64_t >()
 	};
@@ -907,12 +1038,26 @@ http::HTTPTask< http::JsonResult< DownloadSessionErrorsResponse > > listErrors(
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT download_session_error_id, download_session_url_id, url, status, lane, message, "
-				"extract(epoch FROM occurred_at)::bigint AS occurred_at "
-				"FROM download_session_errors "
-				"WHERE download_session_id = $1 "
-				"AND ($2 OR status = ANY($3::integer[]) OR ($4 AND status IS NULL)) "
-				"ORDER BY download_session_error_id DESC LIMIT 1000",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    download_session_error_id,
+					    download_session_url_id,
+					    url,
+					    status,
+					    lane,
+					    message,
+					    extract(epoch FROM occurred_at)::bigint AS occurred_at
+					FROM download_session_errors
+					WHERE download_session_id = $1
+					    AND ($2
+					        OR status = ANY ($3::integer[])
+					        OR ($4
+					            AND status IS NULL))
+					ORDER BY
+					    download_session_error_id DESC
+					LIMIT 1000
+				)SQL",
 				std::move( row_bindings ) )
 			.rows<
 				std::int64_t,

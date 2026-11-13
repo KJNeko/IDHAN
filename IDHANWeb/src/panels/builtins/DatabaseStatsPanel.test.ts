@@ -18,7 +18,7 @@ describe('buildStorageBreakdown', () => {
       ],
     };
     const { major, grand } = buildStorageBreakdown(root, 0);
-    expect(grand).toBe(165); // 15 + 150
+	  expect(grand).toBe(165);
     expect(major.map((t) => t.name)).toEqual(['big', 'small']);
     expect(major[0].footprint).toBe(150);
     expect(major[1].footprint).toBe(15);
@@ -34,7 +34,6 @@ describe('buildStorageBreakdown', () => {
         { name: 'tiny_b', value: 4 },
       ],
     };
-    // grand = 1000; threshold 1% = 10. tiny_a (6) and tiny_b (4) fall below.
     const { major, minor } = buildStorageBreakdown(root, 0.01);
     expect(major.map((t) => t.name)).toEqual(['huge']);
     expect(minor.map((t) => t.name)).toEqual(['tiny_a', 'tiny_b']);
@@ -85,12 +84,10 @@ describe('buildDonutRing', () => {
     expect(ring.otherCount).toBe(2);
     expect(ring.otherValue).toBe(45);
     expect(ring.total).toBe(1995);
-    // The folded items themselves survive, sorted descending, so a legend can reveal what "Other" is.
     expect(ring.otherItems.map((i) => [i.label, i.value])).toEqual([
       ['tiny_but_not_smallest', 40],
       ['tiny', 5],
     ]);
-    // All folded items share one neutral color (they didn't earn an individual palette slot).
     expect(new Set(ring.otherItems.map((i) => i.color)).size).toBe(1);
   });
 
@@ -105,9 +102,8 @@ describe('buildDonutRing', () => {
       { name: 'a', value: 5 },
       { name: 'b', value: 4 },
     ]);
-    // Same ranking (a > b > c) regardless of input order, so the same color goes to the same rank.
     expect(forward.segments.map((s) => [s.label, s.color])).toEqual(shuffled.segments.map((s) => [s.label, s.color]));
-    expect(new Set(forward.segments.map((s) => s.color)).size).toBe(3); // each rank gets a distinct slot
+	  expect(new Set(forward.segments.map((s) => s.color)).size).toBe(3);
   });
 
   it('omits the "Other" bucket entirely when nothing is folded', () => {

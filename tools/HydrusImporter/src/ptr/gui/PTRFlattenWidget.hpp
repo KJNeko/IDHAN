@@ -51,20 +51,15 @@ class PTRFlattenWidget : public QWidget
 	void onFinishedSync( bool success, const QString& message );
 
   private:
-
-	//! The compacted subdirectory of \p source, which is where output goes by default.
+	//! The corpus's COMPACT_SUBDIRECTORY, or empty when \p source is empty.
 	static QString defaultOutputFor( const QString& source );
 
-	//! Zeroes the stats panel at the start of a run, so it never shows a stale count from a
-	//! previous flatten.
 	void resetStats();
 
 	Ui::PTRFlattenWidget* ui;
 	std::unique_ptr< idhan::hydrus::ptr::PTRFlattenWorker > m_worker {};
 	bool m_flattening { false };
 
-	//! Set once the user picks an output directory themselves, after which it stops tracking
-	//! the source. Without this, choosing an output and then changing the source would silently
-	//! discard the choice.
+	//! Set once the user picks an output directory, after which it stops tracking the source.
 	bool m_output_overridden { false };
 };

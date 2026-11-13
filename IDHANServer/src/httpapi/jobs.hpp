@@ -27,7 +27,7 @@ struct JobStatusResponse
 	std::string status;
 	http::possiblyMissing< std::int64_t > end_time {};
 	http::possiblyMissing< std::string > error {};
-	// Each job defines its own progress and final response payloads.
+	//! Each job defines its own progress and final response payloads.
 	http::possiblyMissing< http::JsonDocument > progress {};
 	http::possiblyMissing< http::JsonDocument > response {};
 };

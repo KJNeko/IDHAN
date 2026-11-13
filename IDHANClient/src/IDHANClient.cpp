@@ -24,18 +24,8 @@ VersionInfo handleVersionInfo( QNetworkReply* reply )
 	const QJsonDocument json_doc { QJsonDocument::fromJson( data ) };
 	const auto json = json_doc.object();
 
-	// logging::info( "Data recieved: {}", std::string_view( data.data(), data.size() ) );
-
 	const auto server_version { json[ "idhan_server_version" ].toObject() };
 	const auto api_version { json[ "idhan_api_version" ].toObject() };
-
-	/*
-	logging::debug(
-		"Recieved info from server at {}, IDHAN version: {}, API version: {}",
-		reply->url().toString(),
-		server_version[ "string" ].toString(),
-		api_version[ "string" ].toString() );
-		*/
 
 	VersionInfo info {};
 
@@ -187,10 +177,7 @@ void IDHANClient::sendClientJson(
 
 	setUrlInfo( url );
 
-	// logging::debug( "Sending request to {}", url.toString().toStdString() );
-
 	QNetworkRequest request { url };
-	// request.setTransferTimeout( std::chrono::seconds( 10 ) );
 	request.setHeader( QNetworkRequest::ContentTypeHeader, json_str_thing );
 	request.setRawHeader( "accept", json_str_thing );
 	addKeyHeader( request );
@@ -327,7 +314,6 @@ QFuture< void > IDHANClient::createFileCluster(
 
 IDHANClient::~IDHANClient()
 {
-	//cleanup logger we created
 	spdlog::info( "Destroying logger" );
 	m_logger->flush();
 	spdlog::drop( m_logger->name() );

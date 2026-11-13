@@ -10,7 +10,7 @@ struct JobTask;
 
 namespace idhan::jobs
 {
-// The scheduler owns the run; this suspended job exposes its progress and final response.
+//! The scheduler owns the run; this suspended job exposes its progress and final response.
 class SubscriptionJob
 {
 	class Progress;

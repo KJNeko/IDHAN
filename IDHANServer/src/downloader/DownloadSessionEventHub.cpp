@@ -192,14 +192,27 @@ runtime::Task< void > DownloadSessionEventHub::initializeSubscription(
 	const auto sessions {
 		co_await db
 			.query(
-				"SELECT sessions.download_session_id, sessions.name, "
-				"extract(epoch FROM sessions.created_at)::bigint, extract(epoch FROM sessions.last_used_at)::bigint, "
-				"EXISTS (SELECT 1 FROM download_session_urls urls "
-				"WHERE urls.download_session_id = sessions.download_session_id "
-				"AND urls.state IN ('pending', 'processing')) "
-				"FROM download_sessions sessions "
-				"WHERE (cardinality($1::bigint[]) = 0 AND NOT sessions.is_subscription) OR sessions.download_session_id = ANY($1::bigint[]) "
-				"ORDER BY sessions.download_session_id",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    sessions.download_session_id,
+					    sessions.name,
+					    extract(epoch FROM sessions.created_at)::bigint,
+					    extract(epoch FROM sessions.last_used_at)::bigint,
+					    EXISTS (
+					        SELECT
+					            1
+					        FROM download_session_urls urls
+					        WHERE urls.download_session_id = sessions.download_session_id
+					            AND urls.state IN ('pending', 'processing')
+					    )
+					FROM download_sessions sessions
+					WHERE (cardinality($1::bigint[]) = 0
+					    AND NOT sessions.is_subscription)
+					    OR sessions.download_session_id = ANY ($1::bigint[])
+					ORDER BY
+					    sessions.download_session_id
+				)SQL",
 				std::move( session_bindings ) )
 			.rows< DownloadSessionID, std::string, std::int64_t, std::int64_t, bool >()
 	};
@@ -209,16 +222,37 @@ runtime::Task< void > DownloadSessionEventHub::initializeSubscription(
 	const auto urls {
 		co_await db
 			.query(
-				"SELECT urls.download_session_id, urls.download_session_url_id, urls.parent_url_id, urls.url, "
-				"urls.state, urls.record_id, file_info.size, failures.stage, failures.message, "
-				"extract(epoch FROM urls.created_at)::bigint, extract(epoch FROM urls.finished_at)::bigint "
-				"FROM download_session_urls urls "
-				"LEFT JOIN file_info ON file_info.record_id = urls.record_id "
-				"LEFT JOIN download_session_url_failures failures "
-				"ON failures.download_session_id = urls.download_session_id "
-				"AND failures.download_session_url_id = urls.download_session_url_id "
-				"WHERE (cardinality($1::bigint[]) = 0 AND EXISTS (SELECT 1 FROM download_sessions sessions WHERE sessions.download_session_id=urls.download_session_id AND NOT sessions.is_subscription)) OR urls.download_session_id = ANY($1::bigint[]) "
-				"ORDER BY urls.download_session_id, urls.download_session_url_id",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    urls.download_session_id,
+					    urls.download_session_url_id,
+					    urls.parent_url_id,
+					    urls.url,
+					    urls.state,
+					    urls.record_id,
+					    file_info.size,
+					    failures.stage,
+					    failures.message,
+					    extract(epoch FROM urls.created_at)::bigint,
+					    extract(epoch FROM urls.finished_at)::bigint
+					FROM download_session_urls urls
+					    LEFT JOIN file_info ON file_info.record_id = urls.record_id
+					    LEFT JOIN download_session_url_failures failures ON failures.download_session_id = urls.download_session_id
+					        AND failures.download_session_url_id = urls.download_session_url_id
+					WHERE (cardinality($1::bigint[]) = 0
+					    AND EXISTS (
+					        SELECT
+					            1
+					        FROM download_sessions sessions
+					        WHERE sessions.download_session_id = urls.download_session_id
+					            AND NOT sessions.is_subscription
+					    ))
+					    OR urls.download_session_id = ANY ($1::bigint[])
+					ORDER BY
+					    urls.download_session_id,
+					    urls.download_session_url_id
+				)SQL",
 				std::move( url_bindings ) )
 			.rows<
 				DownloadSessionID,
@@ -239,11 +273,31 @@ runtime::Task< void > DownloadSessionEventHub::initializeSubscription(
 	const auto errors {
 		co_await db
 			.query(
-				"SELECT download_session_id, download_session_error_id, download_session_url_id, url, lane, status, "
-				"message, extract(epoch FROM occurred_at)::bigint "
-				"FROM download_session_errors "
-				"WHERE (cardinality($1::bigint[]) = 0 AND EXISTS (SELECT 1 FROM download_sessions sessions WHERE sessions.download_session_id=download_session_errors.download_session_id AND NOT sessions.is_subscription)) OR download_session_id = ANY($1::bigint[]) "
-				"ORDER BY download_session_id, download_session_error_id",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    download_session_id,
+					    download_session_error_id,
+					    download_session_url_id,
+					    url,
+					    lane,
+					    status,
+					    message,
+					    extract(epoch FROM occurred_at)::bigint
+					FROM download_session_errors
+					WHERE (cardinality($1::bigint[]) = 0
+					    AND EXISTS (
+					        SELECT
+					            1
+					        FROM download_sessions sessions
+					        WHERE sessions.download_session_id = download_session_errors.download_session_id
+					            AND NOT sessions.is_subscription
+					    ))
+					    OR download_session_id = ANY ($1::bigint[])
+					ORDER BY
+					    download_session_id,
+					    download_session_error_id
+				)SQL",
 				std::move( error_bindings ) )
 			.rows<
 				DownloadSessionID,

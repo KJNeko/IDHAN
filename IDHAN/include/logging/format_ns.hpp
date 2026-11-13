@@ -1,6 +1,5 @@
 #pragma once
 
-// Use format_ns at call sites to support both std::format and {fmt}.
 #ifdef IDHAN_USE_STD_FORMAT
 #include <format>
 #include "logging/std_formatters/path.hpp"

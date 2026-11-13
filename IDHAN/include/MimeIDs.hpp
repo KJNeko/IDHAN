@@ -15,7 +15,6 @@ struct MimeMetadata
 	const char* name;
 	const char* extension;
 
-	// Annotation extraction requires pointers to promoted static strings.
 	consteval MimeMetadata( std::string_view mime_name, std::string_view best_extension ) :
 	  name { std::define_static_string( mime_name ) },
 	  extension { std::define_static_string( best_extension ) }
@@ -59,7 +58,6 @@ inline constexpr MimeID FIRST_UNRESERVED { 10000 };
 	return static_cast< SimpleMimeType >( mime_id / 1000 );
 }
 
-//! Excludes INVALID, which represents an absent MIME.
 consteval auto allMimeIDs()
 {
 	std::array< MimeID, std::meta::enumerators_of( ^^KnownMimeID ).size() - 1 > ids {};

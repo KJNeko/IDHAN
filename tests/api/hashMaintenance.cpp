@@ -123,7 +123,13 @@ class BackfillCluster
 		try
 		{
 			pqxx::work transaction { m_connection };
-			transaction.exec( "DELETE FROM file_info WHERE cluster_id = $1", pqxx::params { m_id } );
+			transaction.exec(
+				//language=postgresql
+				R"SQL(
+					DELETE FROM file_info
+					WHERE cluster_id = $1
+				)SQL",
+				pqxx::params{ m_id } );
 			transaction.commit();
 			CHECK( m_api.del( std::format( "/clusters/{}/remove", m_id ) ).status == 200 );
 			std::filesystem::remove_all( m_path );
@@ -142,7 +148,15 @@ class BackfillCluster
 	{
 		pqxx::work transaction { m_connection };
 		const auto hash { transaction.query_value< std::string >(
-			"SELECT encode(sha256, 'hex') FROM records WHERE record_id = $1", pqxx::params { id } ) };
+				//language=postgresql
+				R"SQL(
+				SELECT
+				    encode(sha256, 'hex')
+				FROM records
+				WHERE record_id = $1
+			)SQL",
+				pqxx::params{ id } )
+		};
 		if ( with_file )
 		{
 			const auto directory { m_path / ( "f" + hash.substr( 0, 2 ) ) };
@@ -151,11 +165,18 @@ class BackfillCluster
 				IDHAN_SOURCE_DIR "/IDHANServer/src/static/Titorv2.png", directory / ( hash + ".png" ) );
 		}
 		transaction.exec(
-			"INSERT INTO file_info (record_id, size, mime_id, extension, cluster_id, cluster_store_time, file_mtime) "
-			"VALUES ($1, 987, $2, 'png', $3, to_timestamp(123456), to_timestamp(123456))",
+			//language=postgresql
+			R"SQL(
+				INSERT INTO file_info (record_id, size, mime_id, extension, cluster_id, cluster_store_time, file_mtime)
+				    VALUES ($1, 987, $2, 'png', $3, to_timestamp(123456), to_timestamp(123456))
+			)SQL",
 			pqxx::params { id, mime_ids::IMAGE_PNG, m_id } );
 		transaction.exec(
-			"INSERT INTO image_metadata (record_id, width, height, channels, has_exif) VALUES ($1, 123, 456, 3, true)",
+			//language=postgresql
+			R"SQL(
+				INSERT INTO image_metadata (record_id, width, height, channels, has_exif)
+				    VALUES ($1, 123, 456, 3, true)
+			)SQL",
 			pqxx::params { id } );
 		transaction.commit();
 	}
@@ -165,8 +186,14 @@ static std::string backfillMetadataSignature( pqxx::connection& connection, cons
 {
 	pqxx::nontransaction transaction { connection };
 	return transaction.query_value< std::string >(
-		"SELECT ((to_jsonb(i) - 'phash') || to_jsonb(f))::text "
-		"FROM image_metadata i JOIN file_info f USING(record_id) WHERE i.record_id = $1",
+		//language=postgresql
+		R"SQL(
+			SELECT
+			    ((to_jsonb (i) - 'phash') || to_jsonb (f))::text
+			FROM image_metadata i
+			    JOIN file_info f USING (record_id)
+			WHERE i.record_id = $1
+		)SQL",
 		pqxx::params { id } );
 }
 
@@ -174,7 +201,14 @@ static bool hasBackfilledHash( pqxx::connection& connection, const RecordID id )
 {
 	pqxx::nontransaction transaction { connection };
 	return transaction.query_value< bool >(
-		"SELECT phash IS NOT NULL FROM image_metadata WHERE record_id = $1", pqxx::params { id } );
+		//language=postgresql
+		R"SQL(
+			SELECT
+			    phash IS NOT NULL
+			FROM image_metadata
+			WHERE record_id = $1
+		)SQL",
+		pqxx::params{ id } );
 }
 
 static bool awaitBackfill( pqxx::connection& connection, const RecordID id )
@@ -210,10 +244,20 @@ TEST_CASE_METHOD(
 	testServer().stop();
 	{
 		pqxx::nontransaction reset { db() };
-		reset.exec( "UPDATE image_metadata SET phash = NULL" );
+		reset.exec(
+			//language=postgresql
+			R"SQL(
+				UPDATE
+				    image_metadata
+				SET phash = NULL
+			)SQL" );
 	}
 	pqxx::work blocked { db() };
-	blocked.exec( "LOCK TABLE image_metadata IN ACCESS EXCLUSIVE MODE" );
+	blocked.exec(
+		//language=postgresql
+		R"SQL(
+			LOCK TABLE image_metadata IN ACCESS EXCLUSIVE MODE
+		)SQL" );
 	testServer().restart( false );
 	cluster.hideMarker();
 	blocked.commit();
@@ -240,7 +284,14 @@ TEST_CASE_METHOD(
 		CHECK_FALSE( hasBackfilledHash( db(), id ) );
 		pqxx::nontransaction transaction { db() };
 		CHECK( transaction.query_value< bool >(
-			"SELECT cluster_id IS NOT NULL FROM file_info WHERE record_id = $1", pqxx::params { id } ) );
+			//language=postgresql
+			R"SQL(
+				SELECT
+				    cluster_id IS NOT NULL
+				FROM file_info
+				WHERE record_id = $1
+			)SQL",
+			pqxx::params{ id } ) );
 	}
 }
 
@@ -287,9 +338,19 @@ TEST_CASE_METHOD(
 		pqxx::nontransaction transaction { db() };
 		// This record has no file; its pre-existing hash still needs pair maintenance.
 		const auto other { transaction.query_value< RecordID >(
-			"INSERT INTO records (sha256) VALUES (decode(repeat('ff', 32), 'hex')) RETURNING record_id" ) };
+				//language=postgresql
+				R"SQL(
+				INSERT INTO records (sha256)
+				    VALUES (decode(repeat('ff', 32), 'hex'))
+				RETURNING record_id
+			)SQL" )
+		};
 		transaction.exec(
-			"INSERT INTO image_metadata (record_id, width, height, channels, phash) VALUES ($1, 1, 1, 3, 'x0000000000000000')",
+			//language=postgresql
+			R"SQL(
+				INSERT INTO image_metadata (record_id, width, height, channels, phash)
+				    VALUES ($1, 1, 1, 3, 'x0000000000000000')
+			)SQL",
 			pqxx::params { other } );
 	}
 	testServer().restart( false );
@@ -301,7 +362,15 @@ TEST_CASE_METHOD(
 	while ( !drained && std::chrono::steady_clock::now() < deadline )
 	{
 		pqxx::nontransaction transaction { db() };
-		drained = transaction.query_value< bool >( "SELECT NOT EXISTS(SELECT FROM hamming_distance_queue)" );
+		drained = transaction.query_value< bool >(
+			//language=postgresql
+			R"SQL(
+				SELECT
+				    NOT EXISTS (
+				        SELECT
+				        FROM hamming_distance_queue
+				    )
+			)SQL" );
 		if ( !drained ) std::this_thread::sleep_for( std::chrono::milliseconds { 50 } );
 	}
 	CHECK( drained );

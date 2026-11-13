@@ -15,7 +15,7 @@
 namespace idhan::test
 {
 
-// Extension fixtures need an isolated database to preserve the shared test database.
+//! Extension fixtures need an isolated database to preserve the shared test database.
 class InitializationDatabase
 {
 	pqxx::connection admin { connectionString() };
@@ -30,7 +30,12 @@ class InitializationDatabase
 		name = "idhan_init_test_" + std::to_string( ::getpid() ) + "_" + std::to_string( ++counter );
 		pqxx::nontransaction tx { admin };
 		const auto can_create { tx.query_value< bool >(
-			"SELECT rolcreatedb OR rolsuper FROM pg_catalog.pg_roles WHERE rolname = current_user" ) };
+				"SELECT\n"
+				"    rolcreatedb\n"
+				"    OR rolsuper\n"
+				"FROM pg_catalog.pg_roles\n"
+				"WHERE rolname = current_user" )
+		};
 		if ( !can_create ) SKIP( "Database initialization tests require a PostgreSQL role with CREATEDB" );
 		tx.exec( "CREATE DATABASE " + tx.quote_name( name ) + " TEMPLATE template0" );
 		try
@@ -82,28 +87,38 @@ void requireAvailableExtensions( pqxx::transaction_base& tx )
 	for ( const auto name : { "pgcrypto", "pg_trgm", "pg_stat_statements", "vector" } )
 	{
 		const bool available { tx.query_value< bool >(
-			"SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_available_extensions WHERE name = $1)",
+			"SELECT\n"
+			"    EXISTS (\n"
+			"        SELECT\n"
+			"            1\n"
+			"        FROM pg_catalog.pg_available_extensions\n"
+			"        WHERE name = $1\n"
+			"    )",
 			pqxx::params { name } ) };
 		if ( !available ) SKIP( "PostgreSQL extension supporting files are unavailable: " << name );
 	}
 }
 
-// Fixtures provision existing extensions to verify their identities remain unchanged.
+//! Fixtures provision existing extensions to verify their identities remain unchanged.
 void installTestExtensions( pqxx::transaction_base& tx )
 {
 	requireAvailableExtensions( tx );
 	tx.exec(
-		"CREATE EXTENSION pgcrypto WITH SCHEMA public; "
-		"CREATE EXTENSION pg_trgm WITH SCHEMA public; "
-		"CREATE EXTENSION pg_stat_statements WITH SCHEMA public; "
+		"CREATE EXTENSION pgcrypto WITH SCHEMA public;\n"
+		"\n"
+		"CREATE EXTENSION pg_trgm WITH SCHEMA public;\n"
+		"\n"
+		"CREATE EXTENSION pg_stat_statements WITH SCHEMA public;\n"
+		"\n"
 		"CREATE EXTENSION vector WITH SCHEMA public" );
 }
 
 std::string installedExtensions( pqxx::transaction_base& tx )
 {
 	return tx.query_value< std::string >(
-		"SELECT string_agg(oid::text || ':' || extname || ':' || extnamespace::text || ':' || extversion, "
-		"';' ORDER BY extname) FROM pg_catalog.pg_extension" );
+		"SELECT string_agg(oid::text || ':' || extname || ':' || extnamespace::text || ':' || extversion, ';'\n"
+		"                  ORDER BY extname)\n"
+		"FROM pg_catalog.pg_extension" );
 }
 
 TEST_CASE_METHOD(
@@ -115,14 +130,23 @@ TEST_CASE_METHOD(
 	installTestExtensions( tx );
 	const auto extensions { installedExtensions( tx ) };
 	db::initializeDatabase( tx, "idhan" );
-	CHECK( tx.query_value< std::string >( "SELECT current_schema()" ) == "idhan" );
-	tx.exec( "CREATE TABLE schema_probe (id integer)" );
+	CHECK( tx.query_value< std::string >( "SELECT\n"
+			   "    current_schema()" ) == "idhan" );
+	tx.exec( "CREATE TABLE schema_probe (\n"
+		"    id integer\n"
+		")" );
 	CHECK(
 		tx.query_value< std::string >(
-			"SELECT n.nspname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE c.relname = 'schema_probe'" )
+			"SELECT\n"
+			"    n.nspname\n"
+			"FROM pg_class c\n"
+			"    JOIN pg_namespace n ON n.oid = c.relnamespace\n"
+			"WHERE c.relname = 'schema_probe'" )
 		== "idhan" );
-	CHECK( tx.query_value< double >( "SELECT B'1010' <~> B'1000'" ) == 1.0 );
-	CHECK( tx.query_value< double >( "SELECT '[1,0]'::halfvec <=> '[1,0]'::halfvec" ) == 0.0 );
+	CHECK( tx.query_value< double >( "SELECT\n"
+			   "    B'1010' <~> B'1000'" ) == 1.0 );
+	CHECK( tx.query_value< double >( "SELECT\n"
+			   "    '[1,0]'::halfvec <=> '[1,0]'::halfvec" ) == 0.0 );
 	db::initializeDatabase( tx, "idhan" );
 	CHECK( installedExtensions( tx ) == extensions );
 	tx.commit();
@@ -135,7 +159,10 @@ TEST_CASE_METHOD(
 {
 	pqxx::work tx { connection() };
 	const bool superuser {
-		tx.query_value< bool >( "SELECT rolsuper FROM pg_catalog.pg_roles WHERE rolname = current_user" )
+		tx.query_value< bool >( "SELECT\n"
+			"    rolsuper\n"
+			"FROM pg_catalog.pg_roles\n"
+			"WHERE rolname = current_user" )
 	};
 	if ( !superuser ) SKIP( "Permission-denial fixture requires SET ROLE privileges" );
 
@@ -150,7 +177,13 @@ TEST_CASE_METHOD(
 	}
 	CHECK_THROWS_WITH( db::initializeDatabase( tx, "idhan" ), Catch::Matchers::ContainsSubstring( "SQLSTATE 42501" ) );
 	CHECK( installedExtensions( tx ) == extensions );
-	CHECK_FALSE( tx.query_value< bool >( "SELECT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'idhan')" ) );
+	CHECK_FALSE( tx.query_value< bool >( "SELECT\n"
+		"    EXISTS (\n"
+		"        SELECT\n"
+		"            1\n"
+		"        FROM pg_namespace\n"
+		"        WHERE nspname = 'idhan'\n"
+		"    )" ) );
 	tx.commit();
 }
 
@@ -164,25 +197,43 @@ TEST_CASE_METHOD(
 	installTestExtensions( tx );
 	tx.exec( "DROP EXTENSION " + tx.quote_name( missing ) );
 	tx.exec(
-		"CREATE SCHEMA other_app; CREATE TABLE other_app.records (id integer); "
-		"INSERT INTO other_app.records VALUES (42)" );
+		"CREATE SCHEMA other_app;\n"
+		"\n"
+		"CREATE TABLE other_app.records (\n"
+		"    id integer\n"
+		");\n"
+		"\n"
+		"INSERT INTO other_app.records\n"
+		"    VALUES (42)" );
 	const auto other_extensions { tx.query_value< std::string >(
-		"SELECT string_agg(oid::text, ',' ORDER BY extname) FROM pg_catalog.pg_extension WHERE extname <> $1",
+		"SELECT string_agg(oid::text, ','\n"
+		"                  ORDER BY extname)\n"
+		"FROM pg_catalog.pg_extension\n"
+		"WHERE extname <> $1",
 		pqxx::params { missing } ) };
 	db::initializeDatabase( tx, "idhan" );
 	CHECK(
 		tx.query_value< std::string >(
-			"SELECT n.nspname FROM pg_catalog.pg_extension e JOIN pg_catalog.pg_namespace n ON n.oid = e.extnamespace "
+			"SELECT\n"
+			"    n.nspname\n"
+			"FROM pg_catalog.pg_extension e\n"
+			"    JOIN pg_catalog.pg_namespace n ON n.oid = e.extnamespace\n"
 			"WHERE e.extname = $1",
 			pqxx::params { missing } )
 		== "public" );
 	CHECK(
 		tx.query_value< std::string >(
-			"SELECT string_agg(oid::text, ',' ORDER BY extname) FROM pg_catalog.pg_extension WHERE extname <> $1",
+			"SELECT string_agg(oid::text, ','\n"
+			"                  ORDER BY extname)\n"
+			"FROM pg_catalog.pg_extension\n"
+			"WHERE extname <> $1",
 			pqxx::params { missing } )
 		== other_extensions );
-	CHECK( tx.query_value< int >( "SELECT id FROM other_app.records" ) == 42 );
-	CHECK( tx.query_value< std::string >( "SELECT current_schema()" ) == "idhan" );
+	CHECK( tx.query_value< int >( "SELECT\n"
+			   "    id\n"
+			   "FROM other_app.records" ) == 42 );
+	CHECK( tx.query_value< std::string >( "SELECT\n"
+			   "    current_schema()" ) == "idhan" );
 	tx.commit();
 }
 
@@ -196,13 +247,18 @@ TEST_CASE_METHOD(
 	db::initializeDatabase( tx, "idhan" );
 	CHECK(
 		tx.query_value< int >(
-			"SELECT count(*) FROM pg_catalog.pg_extension e JOIN pg_catalog.pg_namespace n ON n.oid = e.extnamespace "
-			"WHERE e.extname IN ('pgcrypto', 'pg_trgm', 'pg_stat_statements', 'vector') AND n.nspname = 'public'" )
+			"SELECT\n"
+			"    count(*)\n"
+			"FROM pg_catalog.pg_extension e\n"
+			"    JOIN pg_catalog.pg_namespace n ON n.oid = e.extnamespace\n"
+			"WHERE e.extname IN ('pgcrypto', 'pg_trgm', 'pg_stat_statements', 'vector')\n"
+			"    AND n.nspname = 'public'" )
 		== 4 );
 	const auto extensions { installedExtensions( tx ) };
 	db::initializeDatabase( tx, "idhan" );
 	CHECK( installedExtensions( tx ) == extensions );
-	CHECK( tx.query_value< std::string >( "SELECT current_schema()" ) == "idhan" );
+	CHECK( tx.query_value< std::string >( "SELECT\n"
+			   "    current_schema()" ) == "idhan" );
 	tx.commit();
 }
 
@@ -213,8 +269,21 @@ TEST_CASE_METHOD(
 {
 	pqxx::work tx { connection() };
 	const auto missing { tx.exec(
-		"SELECT name FROM (VALUES ('pgcrypto'), ('pg_trgm'), ('pg_stat_statements'), ('vector')) required(name) "
-		"WHERE NOT EXISTS (SELECT 1 FROM pg_catalog.pg_available_extensions a WHERE a.name = required.name)" ) };
+			"SELECT\n"
+			"    name\n"
+			"FROM (\n"
+			"    VALUES ('pgcrypto'),\n"
+			"        ('pg_trgm'),\n"
+			"        ('pg_stat_statements'),\n"
+			"        ('vector')\n"
+			") required (name)\n"
+			"WHERE NOT EXISTS (\n"
+			"        SELECT\n"
+			"            1\n"
+			"        FROM pg_catalog.pg_available_extensions a\n"
+			"        WHERE a.name = required.name\n"
+			")" )
+	};
 	if ( missing.empty() ) SKIP( "All required extension files are available" );
 
 	const auto extensions { installedExtensions( tx ) };
@@ -224,7 +293,13 @@ TEST_CASE_METHOD(
 			Catch::Matchers::ContainsSubstring(
 				"Could not install " + row[ 0 ].as< std::string >() + " in \"public\"" ) );
 	CHECK( installedExtensions( tx ) == extensions );
-	CHECK_FALSE( tx.query_value< bool >( "SELECT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'idhan')" ) );
+	CHECK_FALSE( tx.query_value< bool >( "SELECT\n"
+		"    EXISTS (\n"
+		"        SELECT\n"
+		"            1\n"
+		"        FROM pg_namespace\n"
+		"        WHERE nspname = 'idhan'\n"
+		"    )" ) );
 	tx.commit();
 }
 
@@ -236,20 +311,55 @@ TEST_CASE_METHOD(
 	pqxx::work tx { connection() };
 	installTestExtensions( tx );
 	tx.exec(
-		"CREATE SCHEMA other_app; CREATE SCHEMA another_app; "
-		"CREATE TABLE other_app.records (id integer); INSERT INTO other_app.records VALUES (42); "
-		"CREATE TABLE public.records (id integer); INSERT INTO public.records VALUES (84); "
-		"CREATE VIEW other_app.record_view AS SELECT * FROM other_app.records; "
-		"CREATE SEQUENCE public.user_sequence START WITH 17" );
+		"CREATE SCHEMA other_app;\n"
+		"\n"
+		"CREATE SCHEMA another_app;\n"
+		"\n"
+		"CREATE TABLE other_app.records (\n"
+		"    id integer\n"
+		");\n"
+		"\n"
+		"INSERT INTO other_app.records\n"
+		"    VALUES (42);\n"
+		"\n"
+		"CREATE TABLE public.records (\n"
+		"    id integer\n"
+		");\n"
+		"\n"
+		"INSERT INTO public.records\n"
+		"    VALUES (84);\n"
+		"\n"
+		"CREATE VIEW other_app.record_view AS\n"
+		"SELECT\n"
+		"    *\n"
+		"FROM other_app.records;\n"
+		"\n"
+		"CREATE SEQUENCE public.user_sequence\n"
+		"    START WITH 17" );
 	const auto extensions { installedExtensions( tx ) };
 	db::initializeDatabase( tx, "idhan" );
-	tx.exec( "CREATE TABLE records (id integer); INSERT INTO records VALUES (21)" );
-	CHECK( tx.query_value< std::string >( "SELECT current_schema()" ) == "idhan" );
-	CHECK( tx.query_value< int >( "SELECT id FROM records" ) == 21 );
-	CHECK( tx.query_value< int >( "SELECT id FROM other_app.records" ) == 42 );
-	CHECK( tx.query_value< int >( "SELECT id FROM public.records" ) == 84 );
-	CHECK( tx.query_value< int >( "SELECT id FROM other_app.record_view" ) == 42 );
-	CHECK( tx.query_value< int >( "SELECT nextval('public.user_sequence')" ) == 17 );
+	tx.exec( "CREATE TABLE records (\n"
+		"    id integer\n"
+		");\n"
+		"\n"
+		"INSERT INTO records\n"
+		"    VALUES (21)" );
+	CHECK( tx.query_value< std::string >( "SELECT\n"
+			   "    current_schema()" ) == "idhan" );
+	CHECK( tx.query_value< int >( "SELECT\n"
+			   "    id\n"
+			   "FROM records" ) == 21 );
+	CHECK( tx.query_value< int >( "SELECT\n"
+			   "    id\n"
+			   "FROM other_app.records" ) == 42 );
+	CHECK( tx.query_value< int >( "SELECT\n"
+			   "    id\n"
+			   "FROM public.records" ) == 84 );
+	CHECK( tx.query_value< int >( "SELECT\n"
+			   "    id\n"
+			   "FROM other_app.record_view" ) == 42 );
+	CHECK( tx.query_value< int >( "SELECT\n"
+			   "    nextval('public.user_sequence')" ) == 17 );
 	db::initializeDatabase( tx, "idhan" );
 	CHECK( installedExtensions( tx ) == extensions );
 	tx.commit();
@@ -265,9 +375,19 @@ TEST_CASE_METHOD(
 	const std::string extension_schema { GENERATE( "public", "extensions" ) };
 	pqxx::work tx { connection() };
 	tx.exec(
-		"CREATE TABLE public.idhan_info (object_name text PRIMARY KEY); "
-		"INSERT INTO public.idhan_info VALUES ('table_records'); "
-		"CREATE TABLE public.records (id integer); INSERT INTO public.records VALUES (42)" );
+		"CREATE TABLE public.idhan_info (\n"
+		"    object_name text PRIMARY KEY\n"
+		");\n"
+		"\n"
+		"INSERT INTO public.idhan_info\n"
+		"    VALUES ('table_records');\n"
+		"\n"
+		"CREATE TABLE public.records (\n"
+		"    id integer\n"
+		");\n"
+		"\n"
+		"INSERT INTO public.records\n"
+		"    VALUES (42)" );
 	if ( initialized && schema != "public" )
 	{
 		tx.exec( "CREATE SCHEMA " + tx.quote_name( schema ) );
@@ -284,12 +404,23 @@ TEST_CASE_METHOD(
 		Catch::Matchers::ContainsSubstring( "Migrate the existing installation manually" ) );
 	CHECK( tx.query_value< std::string >( "SHOW search_path" ) == search_path );
 	CHECK( installedExtensions( tx ) == extensions );
-	CHECK( tx.query_value< int >( "SELECT id FROM public.records" ) == 42 );
-	CHECK( tx.query_value< std::string >( "SELECT object_name FROM public.idhan_info" ) == "table_records" );
+	CHECK( tx.query_value< int >( "SELECT\n"
+			   "    id\n"
+			   "FROM public.records" ) == 42 );
+	CHECK( tx.query_value< std::string >( "SELECT\n"
+			   "    object_name\n"
+			   "FROM public.idhan_info" ) == "table_records" );
 	if ( schema != "public" )
 		CHECK(
 			tx.query_value< bool >(
-				"SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_namespace WHERE nspname = $1)", pqxx::params { schema } )
+				"SELECT\n"
+				"    EXISTS (\n"
+				"        SELECT\n"
+				"            1\n"
+				"        FROM pg_catalog.pg_namespace\n"
+				"        WHERE nspname = $1\n"
+				"    )",
+				pqxx::params{ schema } )
 			== initialized );
 	tx.commit();
 }
@@ -303,8 +434,10 @@ TEST_CASE_METHOD(
 	installTestExtensions( tx );
 	const std::string schema { "Mixed Case,\"schema" };
 	db::initializeDatabase( tx, schema );
-	CHECK( tx.query_value< std::string >( "SELECT current_schema()" ) == schema );
-	CHECK( tx.query_value< double >( "SELECT B'1010' <~> B'1000'" ) == 1.0 );
+	CHECK( tx.query_value< std::string >( "SELECT\n"
+			   "    current_schema()" ) == schema );
+	CHECK( tx.query_value< double >( "SELECT\n"
+			   "    B'1010' <~> B'1000'" ) == 1.0 );
 	tx.commit();
 }
 
@@ -316,13 +449,21 @@ TEST_CASE_METHOD(
 	const std::string extension { GENERATE( "pgcrypto", "pg_trgm", "pg_stat_statements", "vector" ) };
 	pqxx::work tx { connection() };
 	installTestExtensions( tx );
-	tx.exec( "CREATE SCHEMA extensions; ALTER EXTENSION " + tx.quote_name( extension ) + " SET SCHEMA extensions" );
+	tx.exec( "CREATE SCHEMA extensions;\n"
+			 "\n"
+			 "ALTER EXTENSION " + tx.quote_name( extension ) + " SET SCHEMA extensions" );
 	const auto extensions { installedExtensions( tx ) };
 	CHECK_THROWS_WITH(
 		db::initializeDatabase( tx, "idhan" ),
 		Catch::Matchers::ContainsSubstring( "Extension " + extension + " is installed in" ) );
 	CHECK( installedExtensions( tx ) == extensions );
-	CHECK_FALSE( tx.query_value< bool >( "SELECT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'idhan')" ) );
+	CHECK_FALSE( tx.query_value< bool >( "SELECT\n"
+		"    EXISTS (\n"
+		"        SELECT\n"
+		"            1\n"
+		"        FROM pg_namespace\n"
+		"        WHERE nspname = 'idhan'\n"
+		"    )" ) );
 	tx.commit();
 }
 
@@ -334,13 +475,21 @@ TEST_CASE_METHOD(
 	pqxx::work tx { connection() };
 	installTestExtensions( tx );
 	tx.exec(
-		"CREATE SCHEMA legacy_app; ALTER EXTENSION pgcrypto SET SCHEMA legacy_app; "
-		"ALTER EXTENSION pg_trgm SET SCHEMA legacy_app; ALTER EXTENSION pg_stat_statements SET SCHEMA legacy_app" );
+		"CREATE SCHEMA legacy_app;\n"
+		"\n"
+		"ALTER EXTENSION pgcrypto SET SCHEMA legacy_app;\n"
+		"\n"
+		"ALTER EXTENSION pg_trgm SET SCHEMA legacy_app;\n"
+		"\n"
+		"ALTER EXTENSION pg_stat_statements SET SCHEMA legacy_app" );
 	const auto extensions { installedExtensions( tx ) };
 	db::initializeDatabase( tx, "legacy_app" );
-	CHECK( tx.query_value< std::string >( "SELECT current_schema()" ) == "legacy_app" );
-	CHECK( tx.query_value< int >( "SELECT length(gen_random_bytes(32))" ) == 32 );
-	CHECK( tx.query_value< double >( "SELECT similarity('test', 'test')" ) == 1.0 );
+	CHECK( tx.query_value< std::string >( "SELECT\n"
+			   "    current_schema()" ) == "legacy_app" );
+	CHECK( tx.query_value< int >( "SELECT\n"
+			   "    length(gen_random_bytes(32))" ) == 32 );
+	CHECK( tx.query_value< double >( "SELECT\n"
+			   "    similarity ('test', 'test')" ) == 1.0 );
 	CHECK( installedExtensions( tx ) == extensions );
 	tx.commit();
 }
@@ -356,13 +505,19 @@ TEST_CASE_METHOD(
 	db::initializeDatabase( tx, "idhan", extensions );
 	CHECK(
 		tx.query_value< int >(
-			"SELECT count(*) FROM pg_catalog.pg_extension e JOIN pg_catalog.pg_namespace n ON n.oid = e.extnamespace "
-			"WHERE e.extname IN ('pgcrypto', 'pg_trgm', 'pg_stat_statements', 'vector') AND n.nspname = $1",
+			"SELECT\n"
+			"    count(*)\n"
+			"FROM pg_catalog.pg_extension e\n"
+			"    JOIN pg_catalog.pg_namespace n ON n.oid = e.extnamespace\n"
+			"WHERE e.extname IN ('pgcrypto', 'pg_trgm', 'pg_stat_statements', 'vector')\n"
+			"    AND n.nspname = $1",
 			pqxx::params { extensions } )
 		== 4 );
 	CHECK( tx.query_value< std::string >( "SHOW search_path" ) == db::makeSearchPath( "idhan", extensions ) );
-	CHECK( tx.query_value< double >( "SELECT B'1010' <~> B'1000'" ) == 1.0 );
-	CHECK( tx.query_value< double >( "SELECT '[1,0]'::halfvec <=> '[1,0]'::halfvec" ) == 0.0 );
+	CHECK( tx.query_value< double >( "SELECT\n"
+			   "    B'1010' <~> B'1000'" ) == 1.0 );
+	CHECK( tx.query_value< double >( "SELECT\n"
+			   "    '[1,0]'::halfvec <=> '[1,0]'::halfvec" ) == 0.0 );
 	const auto installed { installedExtensions( tx ) };
 	db::initializeDatabase( tx, "idhan", extensions );
 	CHECK( installedExtensions( tx ) == installed );
@@ -383,7 +538,13 @@ TEST_CASE_METHOD(
 			"Extension pgcrypto is installed in \"public\"; it must be available in \"extensions\"" ) );
 	CHECK( installedExtensions( tx ) == installed );
 	CHECK_FALSE( tx.query_value< bool >(
-		"SELECT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname IN ('idhan', 'extensions'))" ) );
+		"SELECT\n"
+		"    EXISTS (\n"
+		"        SELECT\n"
+		"            1\n"
+		"        FROM pg_namespace\n"
+		"        WHERE nspname IN ('idhan', 'extensions')\n"
+		"    )" ) );
 	tx.commit();
 }
 
@@ -394,8 +555,21 @@ TEST_CASE_METHOD(
 {
 	pqxx::work tx { connection() };
 	const auto missing { tx.exec(
-		"SELECT name FROM (VALUES ('pgcrypto'), ('pg_trgm'), ('pg_stat_statements'), ('vector')) required(name) "
-		"WHERE NOT EXISTS (SELECT 1 FROM pg_catalog.pg_available_extensions a WHERE a.name = required.name)" ) };
+			"SELECT\n"
+			"    name\n"
+			"FROM (\n"
+			"    VALUES ('pgcrypto'),\n"
+			"        ('pg_trgm'),\n"
+			"        ('pg_stat_statements'),\n"
+			"        ('vector')\n"
+			") required (name)\n"
+			"WHERE NOT EXISTS (\n"
+			"        SELECT\n"
+			"            1\n"
+			"        FROM pg_catalog.pg_available_extensions a\n"
+			"        WHERE a.name = required.name\n"
+			")" )
+	};
 	if ( missing.empty() ) SKIP( "All required extension files are available" );
 
 	const auto installed { installedExtensions( tx ) };
@@ -404,7 +578,14 @@ TEST_CASE_METHOD(
 		Catch::Matchers::ContainsSubstring( "WITH SCHEMA \"Mixed,\"\"extensions\";" ) );
 	CHECK( installedExtensions( tx ) == installed );
 	CHECK_FALSE( tx.query_value< bool >(
-		"SELECT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = $1)", pqxx::params { "Mixed,\"extensions" } ) );
+		"SELECT\n"
+		"    EXISTS (\n"
+		"        SELECT\n"
+		"            1\n"
+		"        FROM pg_namespace\n"
+		"        WHERE nspname = $1\n"
+		"    )",
+		pqxx::params{ "Mixed,\"extensions" } ) );
 	tx.commit();
 }
 
@@ -415,7 +596,10 @@ TEST_CASE_METHOD(
 {
 	pqxx::work tx { connection() };
 	const bool superuser {
-		tx.query_value< bool >( "SELECT rolsuper FROM pg_catalog.pg_roles WHERE rolname = current_user" )
+		tx.query_value< bool >( "SELECT\n"
+			"    rolsuper\n"
+			"FROM pg_catalog.pg_roles\n"
+			"WHERE rolname = current_user" )
 	};
 	if ( !superuser ) SKIP( "Permission-denial fixture requires SET ROLE privileges" );
 
@@ -424,7 +608,13 @@ TEST_CASE_METHOD(
 	CHECK_THROWS_AS( db::initializeDatabase( tx, "idhan", "extensions" ), pqxx::insufficient_privilege );
 	CHECK( installedExtensions( tx ) == installed );
 	CHECK_FALSE( tx.query_value< bool >(
-		"SELECT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname IN ('idhan', 'extensions'))" ) );
+		"SELECT\n"
+		"    EXISTS (\n"
+		"        SELECT\n"
+		"            1\n"
+		"        FROM pg_namespace\n"
+		"        WHERE nspname IN ('idhan', 'extensions')\n"
+		"    )" ) );
 	tx.commit();
 }
 

@@ -20,8 +20,6 @@ class DBContext;
 
 namespace idhan::downloader
 {
-//! Tracks which sessions are active and publishes the downloader stream's periodic and snapshot events.
-//! Per-URL events are published where the change happens; see SessionRowObserver.
 class DownloadSessionEventHub
 {
 	struct Progress

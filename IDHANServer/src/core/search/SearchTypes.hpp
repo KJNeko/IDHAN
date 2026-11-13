@@ -5,7 +5,6 @@
 namespace idhan
 {
 
-//! Direction results are ordered in.
 enum class SortOrder
 {
 	ASC,
@@ -14,8 +13,6 @@ enum class SortOrder
 	DEFAULT = ASC
 };
 
-//! Column/metric results are ordered by. The HY_* aliases map Hydrus sort types onto the subset
-//! IDHAN implements; several collapse to DEFAULT.
 enum class SortType
 {
 	FILESIZE,
@@ -39,7 +36,6 @@ enum class SortType
 	DEFAULT = FILESIZE,
 	UNSUPPORTED = DEFAULT,
 
-	// BEGIN_HYDRUS_CONVERT
 	HY_FILESIZE = FILESIZE,
 	HY_DURATION = DURATION,
 	HY_IMPORT_TIME = IMPORT_TIME,
@@ -50,30 +46,21 @@ enum class SortType
 	HY_RATIO = RATIO,
 	HY_NUM_PIXELS = NUM_PIXELS,
 	HY_NUM_TAGS = NUM_TAGS,
-	// no per-file view-tracking subsystem exists yet
 	HY_MEDIA_VIEWS = UNSUPPORTED,
 	HY_MEDIA_VIEWTIME = UNSUPPORTED,
-	// Hydrus derives this from num_frames, which IDHAN doesn't store
 	HY_APPROX_BITRATE = UNSUPPORTED,
 	HY_HAS_AUDIO = HAS_AUDIO,
 	HY_FILE_MODIFIED_TIMESTAMP = FILE_MODIFIED_TIME,
 	HY_FRAMERATE = FRAMERATE,
-	// num_frames isn't captured at import time
 	HY_NUM_FRAMES = UNSUPPORTED,
-	// IDHAN has no collections concept
 	HY_NUM_COLLECTION_FILES = UNSUPPORTED,
-	// no per-file view-tracking subsystem exists yet
 	HY_LAST_VIEWED_TIME = UNSUPPORTED,
 	HY_ARCHIVED_TIMESTAMP = UNSUPPORTED,
 	HY_HASH = HASH,
-	// no pixel_hash column
 	HY_PIXEL_HASH = UNSUPPORTED,
-	// blurhash isn't generated
 	HY_BLURHASH = UNSUPPORTED,
-	// END_HYDRUS_CONVERT
 };
 
-//! Hydrus API sort-type constants, as received from Hydrus-compatible clients.
 enum HydrusSortType
 {
 	HY_FILESIZE = hydrus::gen_constants::SORT_FILES_BY_FILESIZE,
@@ -102,8 +89,6 @@ enum HydrusSortType
 	DEFAULT = HY_IMPORT_TIME
 };
 
-//! Which mapping layer a search runs against: raw STORED mappings, or the sibling/parent-resolved
-//! DISPLAY mappings.
 enum class HydrusDisplayType
 {
 	STORED,
@@ -112,7 +97,6 @@ enum class HydrusDisplayType
 	DEFAULT = DISPLAY
 };
 
-//! Maps a Hydrus sort type onto the nearest IDHAN SortType (see SortType's HY_* aliases).
 constexpr SortType hyToIDHANSortType( const HydrusSortType hy_sort )
 {
 	switch ( hy_sort )

@@ -34,7 +34,8 @@ struct ServerConfig
 	bool purge_thumbnails_on_startup { false };
 
 	[[nodiscard]] static ServerConfig defaults();
-	// Precedence is CLI > environment > local TOML > user TOML > system TOML.
+
+	//! Precedence is CLI > environment > local TOML > user TOML > system TOML.
 	[[nodiscard]] static ServerConfig load( ConfigInputs );
 	[[nodiscard]] std::size_t ioThreadCount( std::size_t hardware_concurrency ) const;
 	[[nodiscard]] std::size_t applicationThreadCount( std::size_t hardware_concurrency ) const;

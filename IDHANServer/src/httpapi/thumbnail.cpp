@@ -157,11 +157,21 @@ http::HTTPTask< http::Response > recordThumbnailResponse(
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT file_info.mime_id, records.sha256, file_info.cluster_id, "
-				"COALESCE(file_info.extension, mime.best_extension, ''), COALESCE(metadata.json::text, '{}') "
-				"FROM records JOIN file_info USING (record_id) "
-				"LEFT JOIN mime ON mime.mime_id = file_info.mime_id "
-				"LEFT JOIN metadata USING (record_id) WHERE records.record_id = $1 AND file_info.cluster_id IS NOT NULL",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    file_info.mime_id,
+					    records.sha256,
+					    file_info.cluster_id,
+					    COALESCE(file_info.extension, mime.best_extension, ''),
+					    COALESCE(metadata.json::text, '{}')
+					FROM records
+					    JOIN file_info USING (record_id)
+					    LEFT JOIN mime ON mime.mime_id = file_info.mime_id
+					    LEFT JOIN metadata USING (record_id)
+					WHERE records.record_id = $1
+					    AND file_info.cluster_id IS NOT NULL
+				)SQL",
 				std::move( bindings ) )
 			.rows< MimeID, std::span< const std::byte >, ClusterID, std::string, std::string >()
 	};
@@ -194,9 +204,17 @@ http::HTTPTask< http::Response > recordThumbnailResponse(
 	const auto archive_rows {
 		co_await db
 			.query(
-				"SELECT archive_metadata.encrypted, encode(records.sha256, 'hex'), archive_map.path "
-				"FROM archive_metadata LEFT JOIN archive_map ON archive_map.archive_id = archive_metadata.archive_id "
-				"LEFT JOIN records ON records.record_id = archive_map.record_id WHERE archive_metadata.record_id = $1",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    archive_metadata.encrypted,
+					    encode(records.sha256, 'hex'),
+					    archive_map.path
+					FROM archive_metadata
+					    LEFT JOIN archive_map ON archive_map.archive_id = archive_metadata.archive_id
+					    LEFT JOIN records ON records.record_id = archive_map.record_id
+					WHERE archive_metadata.record_id = $1
+				)SQL",
 				std::move( archive_bindings ) )
 			.rows< bool, std::optional< std::string >, std::optional< std::string > >()
 	};

@@ -15,7 +15,6 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: kjneko/idhan
 
-# Only one build per PR at a time; a new push supersedes the running build.
 concurrency:
   group: pr-build-${{ github.event.number }}
   cancel-in-progress: true

@@ -31,7 +31,7 @@ namespace idhan::downloader
 	return initial == '<' || initial == '{' || initial == '[';
 }
 
-// The MIME type must already be normalized, with parameters removed.
+//! The MIME type must already be normalized, with parameters removed.
 [[nodiscard]] inline bool isDirectResponseContentType( const std::string_view type )
 {
 	if ( type.ends_with( "+xml" ) || type.ends_with( "+json" ) ) return false;

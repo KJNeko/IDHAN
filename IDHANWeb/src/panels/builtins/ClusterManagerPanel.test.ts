@@ -37,7 +37,7 @@ describe('fastScanPreset', () => {
     const out = fastScanPreset(input);
     expect(out.verify_hash).toBe(true);
     expect(out.stop_on_fail).toBe(true);
-    expect(input.scan_mime).toBe(true); // input untouched
+	  expect(input.scan_mime).toBe(true);
   });
 });
 
@@ -55,7 +55,7 @@ describe('sanitizeScanParams', () => {
   it('leaves params untouched on a writable cluster', () => {
     const input: ScanParams = { ...DEFAULT_SCAN_PARAMS, fix_extensions: true };
     const out = sanitizeScanParams(input, false);
-      expect(out).toBe(input); // same reference, no copy when nothing to void
+	  expect(out).toBe(input);
     expect(out.fix_extensions).toBe(true);
   });
 });

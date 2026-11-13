@@ -10,8 +10,8 @@
 
 namespace idhan::downloader::quickjs
 {
-// Ada's provider interface is static. Scope selects the calling realm for
-// allocation and interruption without retaining a context in compiled patterns.
+//! Ada's provider interface is static. Scope selects the calling realm for
+//! allocation and interruption without retaining a context in compiled patterns.
 class QuickJSRegexProvider
 {
   public:

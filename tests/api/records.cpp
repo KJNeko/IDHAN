@@ -26,7 +26,13 @@ static RecordID recordFor( ApiClient& api, const int seed )
 static int recordCount( pqxx::connection& connection )
 {
 	pqxx::nontransaction tx { connection };
-	return tx.query_value< int >( "SELECT count(*) FROM records" );
+	return tx.query_value< int >(
+		//language=postgresql
+		R"SQL(
+			SELECT
+			    count(*)
+			FROM records
+		)SQL" );
 }
 
 static Json::Value singleHashBody( const int seed )

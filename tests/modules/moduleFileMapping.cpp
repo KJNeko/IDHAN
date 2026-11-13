@@ -48,7 +48,6 @@ TEST_CASE( "ModuleFile::mapped exposes the transport's own memory", "[modules][f
 		const auto file { idhan::ModuleFile::fromBytes( source ) };
 
 		REQUIRE( file->mapped().size() == source.size() );
-		// The point of the call: the same address, not a copy of the contents.
 		REQUIRE( file->mapped().data() == source.data() );
 	}
 
@@ -62,7 +61,6 @@ TEST_CASE( "ModuleFile::mapped exposes the transport's own memory", "[modules][f
 
 		REQUIRE( file.mapped().size() == source.size() );
 		REQUIRE( file.mapped().data() == mapping );
-		// It is a distinct mapping of a copy, so it must not alias the source it was built from.
 		REQUIRE( file.mapped().data() != source.data() );
 		REQUIRE( std::equal( file.mapped().begin(), file.mapped().end(), source.begin() ) );
 	}

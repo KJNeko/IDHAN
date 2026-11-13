@@ -1,5 +1,3 @@
-// You may need to build the project (run Qt uic code generator) to get "ui_MainWindow.h" resolved
-
 #include "MainWindow.hpp"
 
 #include <moc_MainWindow.cpp>
@@ -196,11 +194,9 @@ void MainWindow::onDetachRecordTag()
 {
 	if ( m_recordTagDialog != nullptr ) return;
 
-	// Remove widget from tab
 	m_recordTagTabIndex = ui->importTabs->indexOf( m_recordTagWidget );
 	ui->importTabs->removeTab( m_recordTagTabIndex );
 
-	// Create dialog and add widget
 	m_recordTagDialog = new QDialog( nullptr, Qt::Window );
 	m_recordTagDialog->setWindowTitle( "Record Tag Editor" );
 	m_recordTagDialog->resize( 800, 600 );
@@ -220,13 +216,11 @@ void MainWindow::onReattachRecordTag( [[maybe_unused]] int result )
 {
 	if ( m_recordTagDialog == nullptr ) return;
 
-	// Remove widget from dialog
 	m_recordTagWidget->setParent( this );
 	m_recordTagDialog->hide();
 	m_recordTagDialog->deleteLater();
 	m_recordTagDialog = nullptr;
 
-	// Add widget back to tab
 	m_recordTagTabIndex = ui->importTabs->insertTab( m_recordTagTabIndex, m_recordTagWidget, "Record Tag Editor" );
 	ui->importTabs->setCurrentIndex( m_recordTagTabIndex );
 }

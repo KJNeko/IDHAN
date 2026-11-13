@@ -10,7 +10,6 @@
 namespace idhan::modules
 {
 
-//! Owns the worker process(es) for one module library and decides how long they live.
 class WorkerPool
 {
 	WorkerSettings m_settings;

@@ -24,8 +24,8 @@ class ParserHostPersistence
 
 	virtual ~ParserHostPersistence() = default;
 	virtual folly::coro::Task< std::expected< std::vector< ParserHost >, std::string > > loadAll() = 0;
-	// Existing mappings win, including their user-supplied provenance.
 
+	//! Existing mappings win, including their user-supplied provenance.
 	virtual folly::coro::Task< std::expected< ParserHost, std::string > > discover(
 		std::string host,
 		std::string parser ) = 0;

@@ -403,8 +403,8 @@ static int traceOp( const int result, const std::string_view op, const std::stri
 	return result;
 }
 
-// liburing's SQE contains GNU zero-length arrays. Prepare it outside coroutine
-// frames, then let the awaiter own the submission until await_suspend copies it.
+//! Liburing's SQE contains GNU zero-length arrays. Prepare it outside coroutine
+//! frames, then let the awaiter own the submission until await_suspend copies it.
 static ReadAwaiter prepareRead(
 	IOUringLinux& uring,
 	const IOUring::NativeHandle handle,
@@ -691,7 +691,6 @@ runtime::Task< int > IOUringLinux::createDirectories( const std::filesystem::pat
 			result = traceOp( mkdir( prefix.c_str(), 0777 ) == 0 ? 0 : -errno, "mkdir", prefix.native() );
 		}
 
-		// Every component but the last is expected to exist already on the common path.
 		if ( result != 0 && result != -EEXIST )
 		{
 			log::trace( "create directories {} aborted at {}", path.native(), prefix.native() );
@@ -780,4 +779,4 @@ runtime::Task< std::expected< std::filesystem::file_status, int > > IOUringLinux
 
 } // namespace idhan
 
-#endif // __linux__
+#endif

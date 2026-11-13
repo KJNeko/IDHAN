@@ -57,7 +57,6 @@ function MediaViewerPanel({ host }: PanelProps) {
     if (ids.length > 0) setActiveId(ids[ids.length - 1]!);
   }), [host]);
 
-    // Resolve the active record's kind from the shared metadata cache.
   useEffect(() => {
     if (activeId === null) {
       setMeta(null);

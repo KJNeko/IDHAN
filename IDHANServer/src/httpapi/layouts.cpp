@@ -63,10 +63,18 @@ http::HTTPTask< http::JsonResult< std::vector< LayoutSummaryResponse > > > listL
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT layout_id::text, name, schema_ver, "
-				"extract(epoch FROM created_at)::bigint AS created, "
-				"extract(epoch FROM updated_at)::bigint AS updated "
-				"FROM webui_layouts ORDER BY lower(name)" )
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    layout_id::text,
+					    name,
+					    schema_ver,
+					    extract(epoch FROM created_at)::bigint AS created,
+					    extract(epoch FROM updated_at)::bigint AS updated
+					FROM webui_layouts
+					ORDER BY
+					    lower(name)
+				)SQL" )
 			.rows< std::string, std::string, std::int32_t, std::int64_t, std::int64_t >()
 	};
 
@@ -95,8 +103,17 @@ http::HTTPTask< http::JsonResult< LayoutIdResponse, 201 > > createLayout(
 	db::DBBindings id_bindings {};
 	id_bindings.bind( parsed.id );
 	const auto id_exists {
-		co_await db.query( "SELECT 1 FROM webui_layouts WHERE layout_id = $1::uuid", std::move( id_bindings ) )
-			.rows< std::int32_t >()
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    1
+					FROM webui_layouts
+					WHERE layout_id = $1::uuid
+				)SQL",
+					 std::move( id_bindings ) )
+				 .rows< std::int32_t >()
 	};
 	if ( !id_exists.empty() )
 		co_return http::Response::error(
@@ -105,8 +122,17 @@ http::HTTPTask< http::JsonResult< LayoutIdResponse, 201 > > createLayout(
 	db::DBBindings name_bindings {};
 	name_bindings.bind( parsed.name );
 	const auto name_taken {
-		co_await db.query( "SELECT 1 FROM webui_layouts WHERE lower(name) = lower($1)", std::move( name_bindings ) )
-			.rows< std::int32_t >()
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    1
+					FROM webui_layouts
+					WHERE lower(name) = lower($1)
+				)SQL",
+					 std::move( name_bindings ) )
+				 .rows< std::int32_t >()
 	};
 	if ( !name_taken.empty() )
 		co_return http::Response::error( 409, std::format( "A layout named '{}' already exists", parsed.name ) );
@@ -118,8 +144,11 @@ http::HTTPTask< http::JsonResult< LayoutIdResponse, 201 > > createLayout(
 	insert_bindings.bind( parsed.schema );
 	co_await db
 		.query(
-			"INSERT INTO webui_layouts (layout_id, name, document, schema_ver) "
-			"VALUES ($1::uuid, $2, $3::jsonb, $4)",
+			//language=postgresql
+			R"SQL(
+				INSERT INTO webui_layouts (layout_id, name, document, schema_ver)
+				    VALUES ($1::uuid, $2, $3::jsonb, $4)
+			)SQL",
 			std::move( insert_bindings ) )
 		.result();
 
@@ -134,8 +163,16 @@ http::HTTPTask< http::JsonResult< http::JsonDocument > > getLayout( db::DBContex
 	bindings.bind( id );
 	const auto rows {
 		co_await db
-			.query( "SELECT document::text FROM webui_layouts WHERE layout_id = $1::uuid", std::move( bindings ) )
-			.rows< std::string >()
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    document::text
+					FROM webui_layouts
+					WHERE layout_id = $1::uuid
+				)SQL",
+					 std::move( bindings ) )
+				 .rows< std::string >()
 	};
 
 	if ( rows.empty() ) co_return http::Response::error( 404, std::format( "No layout with id {}", id ) );
@@ -165,7 +202,14 @@ http::HTTPTask< http::JsonResult< LayoutIdResponse > > putLayout( db::DBContext&
 	const auto name_taken {
 		co_await db
 			.query(
-				"SELECT 1 FROM webui_layouts WHERE lower(name) = lower($1) AND layout_id <> $2::uuid",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    1
+					FROM webui_layouts
+					WHERE lower(name) = lower($1)
+					    AND layout_id <> $2::uuid
+				)SQL",
 				std::move( name_bindings ) )
 			.rows< std::int32_t >()
 	};
@@ -180,10 +224,17 @@ http::HTTPTask< http::JsonResult< LayoutIdResponse > > putLayout( db::DBContext&
 	upsert_bindings.bind( parsed.schema );
 	co_await db
 		.query(
-			"INSERT INTO webui_layouts (layout_id, name, document, schema_ver, updated_at) "
-			"VALUES ($1::uuid, $2, $3::jsonb, $4, now()) "
-			"ON CONFLICT (layout_id) DO UPDATE SET "
-			"name = EXCLUDED.name, document = EXCLUDED.document, schema_ver = EXCLUDED.schema_ver, updated_at = now()",
+			//language=postgresql
+			R"SQL(
+				INSERT INTO webui_layouts (layout_id, name, document, schema_ver, updated_at)
+				    VALUES ($1::uuid, $2, $3::jsonb, $4, now())
+				ON CONFLICT (layout_id)
+				    DO UPDATE SET
+				        name = EXCLUDED.name,
+				        document = EXCLUDED.document,
+				        schema_ver = EXCLUDED.schema_ver,
+				        updated_at = now()
+			)SQL",
 			std::move( upsert_bindings ) )
 		.result();
 
@@ -199,8 +250,16 @@ http::HTTPTask< http::JsonResult< DeletedLayoutResponse > > deleteLayout(
 	db::DBBindings bindings {};
 	bindings.bind( id );
 	const auto rows {
-		co_await db.query( "DELETE FROM webui_layouts WHERE layout_id = $1::uuid RETURNING 1", std::move( bindings ) )
-			.rows< std::int32_t >()
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					DELETE FROM webui_layouts
+					WHERE layout_id = $1::uuid
+					RETURNING 1
+				)SQL",
+					 std::move( bindings ) )
+				 .rows< std::int32_t >()
 	};
 
 	co_return http::JsonResponse< DeletedLayoutResponse > { { !rows.empty() } };

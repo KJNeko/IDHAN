@@ -23,7 +23,12 @@ static void flushTagCounts( pqxx::transaction_base& tx )
 static std::pair< int, int > counts( pqxx::transaction_base& tx, const int tag_id, const int tag_domain_id )
 {
 	const auto result { tx.exec(
-		"SELECT storage_count, display_count FROM tag_counts WHERE tag_id = $1 AND tag_domain_id = $2",
+		"SELECT\n"
+		"    storage_count,\n"
+		"    display_count\n"
+		"FROM tag_counts\n"
+		"WHERE tag_id = $1\n"
+		"    AND tag_domain_id = $2",
 		pqxx::params { tag_id, tag_domain_id } ) };
 
 	if ( result.empty() ) return { 0, 0 };
@@ -36,7 +41,11 @@ static std::pair< int, int > counts( pqxx::transaction_base& tx, const int tag_i
 static std::string countsVersion( pqxx::transaction_base& tx, const int tag_id, const int tag_domain_id )
 {
 	return tx.query_value< std::string >(
-		"SELECT ctid::text FROM tag_counts WHERE tag_id = $1 AND tag_domain_id = $2",
+		"SELECT\n"
+		"    ctid::text\n"
+		"FROM tag_counts\n"
+		"WHERE tag_id = $1\n"
+		"    AND tag_domain_id = $2",
 		pqxx::params { tag_id, tag_domain_id } );
 }
 
@@ -95,7 +104,9 @@ SCENARIO_METHOD( MigratedSchema, "Tag counts", "[db][tags][counts]" )
 		{
 			const auto before { countsVersion( tx, ahri, domain ) };
 
-			tx.exec( "UPDATE active_tag_mappings SET ideal_tag_id = ideal_tag_id" );
+			tx.exec( "UPDATE\n"
+				"    active_tag_mappings\n"
+				"SET ideal_tag_id = ideal_tag_id" );
 
 			THEN( "the counts are left alone rather than decremented and incremented again" )
 			{
@@ -130,8 +141,12 @@ SCENARIO_METHOD( MigratedSchema, "Tag counts", "[db][tags][counts]" )
 			{
 				CHECK(
 					tx.query_value< int >(
-						"SELECT COUNT(*) FROM tag_counts WHERE storage_count <> 0 OR display_count <> 0" )
-				    == 0 );
+						"SELECT\n"
+						"    COUNT(*)\n"
+						"FROM tag_counts\n"
+						"WHERE storage_count <> 0\n"
+						"    OR display_count <> 0" )
+					== 0 );
 			}
 		}
 	}
@@ -154,20 +169,44 @@ static void commitTagCountTransaction( pqxx::work& tx )
 static void checkTagCountsMatchMappings( pqxx::transaction_base& tx )
 {
 	CHECK( tx.query_value< int >( R"(
-        WITH expected AS (
-            SELECT tag_id, tag_domain_id, SUM(storage_count) AS storage_count, SUM(display_count) AS display_count
-            FROM (
-                SELECT tag_id, tag_domain_id, COUNT(*) AS storage_count, 0 AS display_count
-                FROM active_tag_mappings GROUP BY tag_domain_id, tag_id
-                UNION ALL
-                SELECT tag_id, tag_domain_id, 0, COUNT(*)
-                FROM active_tag_mappings_final GROUP BY tag_domain_id, tag_id
-            ) contributions GROUP BY tag_domain_id, tag_id
-        )
-        SELECT COUNT(*) FROM expected e FULL JOIN tag_counts c USING (tag_id, tag_domain_id)
-        WHERE COALESCE(e.storage_count, 0) <> COALESCE(c.storage_count, 0)
-            OR COALESCE(e.display_count, 0) <> COALESCE(c.display_count, 0)
-    )" ) == 0 );
+			WITH expected AS (
+			    SELECT
+			        tag_id,
+			        tag_domain_id,
+			        SUM(storage_count) AS storage_count,
+			        SUM(display_count) AS display_count
+			    FROM (
+			        SELECT
+			            tag_id,
+			            tag_domain_id,
+			            COUNT(*) AS storage_count,
+			            0 AS display_count
+			        FROM active_tag_mappings
+			        GROUP BY
+			            tag_domain_id,
+			            tag_id
+			        UNION ALL
+			        SELECT
+			            tag_id,
+			            tag_domain_id,
+			            0,
+			            COUNT(*)
+			        FROM active_tag_mappings_final
+			        GROUP BY
+			            tag_domain_id,
+			            tag_id
+			    ) contributions
+			    GROUP BY
+			        tag_domain_id,
+			        tag_id
+			)
+			SELECT
+			    COUNT(*)
+			FROM expected e
+			    FULL JOIN tag_counts c USING (tag_id, tag_domain_id)
+			WHERE COALESCE(e.storage_count, 0) <> COALESCE(c.storage_count, 0)
+			    OR COALESCE(e.display_count, 0) <> COALESCE(c.display_count, 0)
+		)" ) == 0 );
 }
 
 TEST_CASE_METHOD(
@@ -184,26 +223,44 @@ TEST_CASE_METHOD(
 	insertAlias( tx, domain, middle, target );
 	for ( int seed { 1 }; seed <= 64; ++seed ) insertRecord( tx, seed );
 	tx.exec(
-		"INSERT INTO tag_mappings (record_id, tag_id, tag_domain_id) "
-		"SELECT record_id, $1, $2 FROM records",
+		"INSERT INTO tag_mappings (record_id, tag_id, tag_domain_id)\n"
+		"SELECT\n"
+		"    record_id,\n"
+		"    $1,\n"
+		"    $2\n"
+		"FROM records",
 		pqxx::params { source, domain } );
 
 	CHECK(
 		tx.query_value< int >(
-			"SELECT COUNT(*) FROM active_tag_mappings WHERE ideal_tag_id = $1", pqxx::params { target } )
-	    == 64 );
-	CHECK( tx.query_value< int >( "SELECT COUNT(*) FROM tag_counts" ) == 0 );
-	CHECK( tx.query_value< int >( "SELECT COUNT(*) FROM tag_count_delta" ) == 2 );
+			"SELECT\n"
+			"    COUNT(*)\n"
+			"FROM active_tag_mappings\n"
+			"WHERE ideal_tag_id = $1",
+			pqxx::params{ target } )
+		== 64 );
+	CHECK( tx.query_value< int >( "SELECT\n"
+			   "    COUNT(*)\n"
+			   "FROM tag_counts" ) == 0 );
+	CHECK( tx.query_value< int >( "SELECT\n"
+			   "    COUNT(*)\n"
+			   "FROM tag_count_delta" ) == 2 );
 	tx.commit();
 
 	pqxx::nontransaction read { connection() };
-	CHECK( read.query_value< int >( "SELECT COUNT(*) FROM tag_counts" ) == 0 );
-	CHECK( read.query_value< int >( "SELECT COUNT(*) FROM tag_count_delta" ) == 2 );
+	CHECK( read.query_value< int >( "SELECT\n"
+			   "    COUNT(*)\n"
+			   "FROM tag_counts" ) == 0 );
+	CHECK( read.query_value< int >( "SELECT\n"
+			   "    COUNT(*)\n"
+			   "FROM tag_count_delta" ) == 2 );
 	flushTagCounts( read );
 	CHECK( counts( read, source, domain ) == std::pair { 64, 0 } );
 	CHECK( counts( read, middle, domain ) == std::pair { 0, 0 } );
 	CHECK( counts( read, target, domain ) == std::pair { 0, 64 } );
-	CHECK( read.query_value< int >( "SELECT COUNT(*) FROM tag_count_delta" ) == 0 );
+	CHECK( read.query_value< int >( "SELECT\n"
+			   "    COUNT(*)\n"
+			   "FROM tag_count_delta" ) == 0 );
 	checkTagCountsMatchMappings( read );
 }
 
@@ -217,12 +274,16 @@ TEST_CASE_METHOD( MigratedSchema, "Queued count deltas cancel and respect savepo
 	insertMapping( tx, first, tag, domain );
 	removeMapping( tx, first, tag, domain );
 	flushTagCounts( tx );
-	CHECK( tx.query_value< int >( "SELECT COUNT(*) FROM tag_counts" ) == 0 );
+	CHECK( tx.query_value< int >( "SELECT\n"
+			   "    COUNT(*)\n"
+			   "FROM tag_counts" ) == 0 );
 
 	tx.exec( "SAVEPOINT discarded" );
 	insertMapping( tx, first, tag, domain );
 	tx.exec( "ROLLBACK TO discarded" );
-	CHECK( tx.query_value< int >( "SELECT COUNT(*) FROM tag_count_delta" ) == 0 );
+	CHECK( tx.query_value< int >( "SELECT\n"
+			   "    COUNT(*)\n"
+			   "FROM tag_count_delta" ) == 0 );
 	insertMapping( tx, second, tag, domain );
 	tx.exec( "SAVEPOINT kept" );
 	insertMapping( tx, first, tag, domain );
@@ -234,7 +295,9 @@ TEST_CASE_METHOD( MigratedSchema, "Queued count deltas cancel and respect savepo
 	CHECK( counts( tx, tag, domain ) == std::pair { 1, 1 } );
 	flushTagCounts( tx );
 	CHECK( counts( tx, tag, domain ) == std::pair { 2, 2 } );
-	CHECK( tx.query_value< int >( "SELECT COUNT(*) FROM tag_count_delta" ) == 0 );
+	CHECK( tx.query_value< int >( "SELECT\n"
+			   "    COUNT(*)\n"
+			   "FROM tag_count_delta" ) == 0 );
 	removeMapping( tx, second, tag, domain );
 	flushTagCounts( tx );
 	tx.commit();
@@ -259,11 +322,22 @@ TEST_CASE_METHOD(
 		record = insertRecord( setup, 1 );
 		insertAlias( setup, domain, source, target );
 		setup.exec(
-			"CREATE FUNCTION reject_display_count() RETURNS trigger LANGUAGE plpgsql AS $$ "
-			"BEGIN IF NEW.display_count <> 0 THEN RAISE EXCEPTION 'injected count failure'; END IF; "
-			"RETURN NEW; END $$; "
-			"CREATE TRIGGER reject_display_count BEFORE INSERT OR UPDATE ON tag_counts "
-			"FOR EACH ROW EXECUTE FUNCTION reject_display_count()" );
+			"CREATE FUNCTION reject_display_count ()\n"
+			"    RETURNS trigger\n"
+			"    LANGUAGE plpgsql\n"
+			"    AS $$\n"
+			"BEGIN\n"
+			"    IF NEW.display_count <> 0 THEN\n"
+			"        RAISE EXCEPTION 'injected count failure';\n"
+			"    END IF;\n"
+			"    RETURN NEW;\n"
+			"END\n"
+			"$$;\n"
+			"\n"
+			"CREATE TRIGGER reject_display_count\n"
+			"    BEFORE INSERT OR UPDATE ON tag_counts\n"
+			"    FOR EACH ROW\n"
+			"    EXECUTE FUNCTION reject_display_count ()" );
 		setup.commit();
 	}
 	{
@@ -277,10 +351,18 @@ TEST_CASE_METHOD(
 	}
 	{
 		pqxx::work retry { connection() };
-		CHECK( retry.query_value< int >( "SELECT COUNT(*) FROM tag_mappings" ) == 1 );
-		CHECK( retry.query_value< int >( "SELECT COUNT(*) FROM active_tag_mappings" ) == 1 );
-		CHECK( retry.query_value< int >( "SELECT COUNT(*) FROM tag_counts" ) == 0 );
-		CHECK( retry.query_value< int >( "SELECT COUNT(*) FROM tag_count_delta" ) == 2 );
+		CHECK( retry.query_value< int >( "SELECT\n"
+				   "    COUNT(*)\n"
+				   "FROM tag_mappings" ) == 1 );
+		CHECK( retry.query_value< int >( "SELECT\n"
+				   "    COUNT(*)\n"
+				   "FROM active_tag_mappings" ) == 1 );
+		CHECK( retry.query_value< int >( "SELECT\n"
+				   "    COUNT(*)\n"
+				   "FROM tag_counts" ) == 0 );
+		CHECK( retry.query_value< int >( "SELECT\n"
+				   "    COUNT(*)\n"
+				   "FROM tag_count_delta" ) == 2 );
 		retry.exec( "DROP TRIGGER reject_display_count ON tag_counts" );
 		flushTagCounts( retry );
 		retry.commit();
@@ -317,18 +399,28 @@ TEST_CASE_METHOD(
 	insertMapping( left, first, b, domain );
 	insertMapping( right, second, b, domain );
 	insertMapping( right, second, a, domain );
-	CHECK( left.query_value< int >( "SELECT COUNT(*) FROM tag_count_delta" ) == 2 );
-	CHECK( right.query_value< int >( "SELECT COUNT(*) FROM tag_count_delta" ) == 2 );
-	CHECK( right.query_value< int >( "SELECT COUNT(*) FROM tag_counts" ) == 0 );
+	CHECK( left.query_value< int >( "SELECT\n"
+			   "    COUNT(*)\n"
+			   "FROM tag_count_delta" ) == 2 );
+	CHECK( right.query_value< int >( "SELECT\n"
+			   "    COUNT(*)\n"
+			   "FROM tag_count_delta" ) == 2 );
+	CHECK( right.query_value< int >( "SELECT\n"
+			   "    COUNT(*)\n"
+			   "FROM tag_counts" ) == 0 );
 	auto committed { std::async( std::launch::async, commitTagCountTransaction, std::ref( left ) ) };
 	right.commit();
 	committed.get();
 	pqxx::nontransaction read { connection() };
-	CHECK( read.query_value< int >( "SELECT COUNT(*) FROM tag_count_delta" ) == 4 );
+	CHECK( read.query_value< int >( "SELECT\n"
+			   "    COUNT(*)\n"
+			   "FROM tag_count_delta" ) == 4 );
 	flushTagCounts( read );
 	CHECK( counts( read, a, domain ) == std::pair { 2, 2 } );
 	CHECK( counts( read, b, domain ) == std::pair { 2, 2 } );
-	CHECK( read.query_value< int >( "SELECT COUNT(*) FROM tag_count_delta" ) == 0 );
+	CHECK( read.query_value< int >( "SELECT\n"
+			   "    COUNT(*)\n"
+			   "FROM tag_count_delta" ) == 0 );
 	checkTagCountsMatchMappings( read );
 }
 
@@ -354,8 +446,10 @@ TEST_CASE_METHOD(
 	flushTagCounts( tx );
 	checkTagCountsMatchMappings( tx );
 	tx.exec(
-		"INSERT INTO tag_aliases (aliased_id, alias_id, tag_domain_id) "
-		"VALUES ($1, $3, $4), ($2, $3, $4)",
+		"INSERT INTO tag_aliases (aliased_id, alias_id, tag_domain_id)\n"
+		"VALUES\n"
+		"    ($1, $3, $4),\n"
+		"    ($2, $3, $4)",
 		pqxx::params { a, b, target, domain } );
 	CHECK( finalTags( tx, record, domain ) == sorted( { child, parent, target } ) );
 	flushTagCounts( tx );
@@ -376,8 +470,12 @@ TEST_CASE_METHOD(
 {
 	pqxx::work tx { connection() };
 	const bool existing_partition { GENERATE( false, true ) };
-	const auto domain { existing_partition ? tx.query_value< int >( "SELECT MIN(tag_domain_id) FROM tag_domains" ) :
-	                                         insertDomain( tx, "partitions" ) };
+	const auto domain{
+		existing_partition
+			? tx.query_value< int >( "SELECT\n"
+				"    MIN(tag_domain_id)\n"
+				"FROM tag_domains" )
+			: insertDomain( tx, "partitions" ) };
 	const auto record { insertRecord( tx, 1 ) };
 	const auto source { insertTag( tx, "", "source" ) };
 	const auto target { insertTag( tx, "", "target" ) };
@@ -408,14 +506,22 @@ TEST_CASE_METHOD(
 	insertMapping( tx, record, tag, first_domain );
 	insertMapping( tx, record, tag, second_domain );
 	flushTagCounts( tx );
-	tx.exec( "DELETE FROM tag_domains WHERE tag_domain_id = $1", pqxx::params { first_domain } );
+	tx.exec( "DELETE FROM tag_domains\n"
+			 "WHERE tag_domain_id = $1",
+			 pqxx::params{ first_domain } );
 	removeMapping( tx, record, tag, second_domain );
 	insertMapping( tx, record, tag, second_domain );
-	tx.exec( "DELETE FROM tag_domains WHERE tag_domain_id = $1", pqxx::params { second_domain } );
+	tx.exec( "DELETE FROM tag_domains\n"
+			 "WHERE tag_domain_id = $1",
+			 pqxx::params{ second_domain } );
 	tx.commit();
 	pqxx::nontransaction read { connection() };
-	CHECK( read.query_value< int >( "SELECT COUNT(*) FROM tag_counts" ) == 0 );
-	CHECK( read.query_value< int >( "SELECT COUNT(*) FROM tag_count_delta" ) == 0 );
+	CHECK( read.query_value< int >( "SELECT\n"
+			   "    COUNT(*)\n"
+			   "FROM tag_counts" ) == 0 );
+	CHECK( read.query_value< int >( "SELECT\n"
+			   "    COUNT(*)\n"
+			   "FROM tag_count_delta" ) == 0 );
 }
 
 } // namespace idhan::test

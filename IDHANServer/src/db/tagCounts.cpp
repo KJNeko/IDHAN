@@ -11,8 +11,14 @@ runtime::Task< TagCountBatch > accumulateTagCountDeltas( DBContext& db )
 	// bigint lock space is separate from duplicate relationships' two-integer lock.
 	// Errors and process termination release this transaction-scoped lock.
 	const auto locked {
-		co_await transaction.query( "SELECT pg_try_advisory_xact_lock('tag_count_delta'::regclass::oid::bigint)" )
-			.rows< bool >()
+		co_await transaction
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    pg_try_advisory_xact_lock('tag_count_delta'::regclass::oid::bigint)
+				)SQL" )
+				 .rows< bool >()
 	};
 	if ( !std::get< 0 >( locked.row( 0 ) ) )
 	{

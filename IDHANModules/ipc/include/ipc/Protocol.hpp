@@ -19,11 +19,9 @@
 // libvips defines IMAGE
 #undef IMAGE
 
-//! The wire protocol between the server and a module worker process.
 namespace idhan::ipc
 {
 
-//! Wire field names, in one place so both ends cannot drift.
 namespace field
 {
 inline constexpr auto TYPE { "type" };
@@ -78,23 +76,19 @@ inline constexpr auto SUPPORTS_TEXT { "supports_text" };
 inline constexpr auto FORMAT { "format" };
 } // namespace field
 
-//! Every message the protocol carries.
 enum class MessageType : std::uint8_t
 {
-	// host -> worker
 	CALL, //!< Run one module operation. Carries the input blob.
 	CALLBACK_RESULT, //!< The answer to a CALLBACK the worker sent.
 	RECLAIM, //!< Ask every module to drop caches (ModuleBase::restart).
 	SHUTDOWN, //!< Finish outstanding work and exit.
 
-	// worker -> host
 	MANIFEST, //!< Sent unsolicited at startup: what this library exports.
 	HEARTBEAT, //!< Periodic proof of life, plus RSS for the recycling decision.
 	RESULT, //!< A CALL finished. Carries the output blob, if any.
 	CALLBACK, //!< A module is asking the host to re-dispatch work.
 };
 
-//! The module operations a CALL can request.
 enum class CallOp : std::uint8_t
 {
 	METADATA, //!< MetadataModuleI::parseFile
@@ -106,7 +100,6 @@ enum class CallOp : std::uint8_t
 	MIME_PARSE, //!< MimeModuleI::parseMime
 };
 
-//! What a module is asking the host for when it sends a CALLBACK.
 enum class CallbackKind : std::uint8_t
 {
 	PROBE, //!< ModuleCallbacks::probe
@@ -114,7 +107,6 @@ enum class CallbackKind : std::uint8_t
 	GENERATE, //!< ModuleCallbacks::generate
 };
 
-//! Wire tag for which alternative of MetadataInfo::m_metadata is populated.
 enum class MetadataVariant : std::uint8_t
 {
 	NONE = 0,
@@ -126,8 +118,6 @@ enum class MetadataVariant : std::uint8_t
 	AUDIO = 6,
 };
 
-//! Whether \p value is one of the enumerators declared above.
-//!@{
 [[nodiscard]] constexpr bool isDeclared( const MessageType value ) noexcept
 {
 	switch ( value )
@@ -204,8 +194,6 @@ enum class MetadataVariant : std::uint8_t
 
 	return false;
 }
-
-//!@}
 
 //! Names for logs and error messages. Display only, never the wire encoding.
 //!@{
@@ -341,7 +329,6 @@ template < typename EnumT >
 	return 0;
 }
 
-//! One module, as a worker describes it in its MANIFEST.
 struct ManifestEntry
 {
 	//! Position in the vector the library's factory returns. This is the routing key: a CALL names

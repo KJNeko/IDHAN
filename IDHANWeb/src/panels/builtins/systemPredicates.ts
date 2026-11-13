@@ -120,7 +120,6 @@ export const systemCompletion = (predicate: SystemPredicate): string =>
     predicate.kind === 'flag' ? predicate.text : `${predicate.text} `;
 
 
-/** The two predicates whose values come from the mime table rather than being typed free-hand. */
 export type MimeField = 'mime' | 'mime_id';
 
 /** Where the caret sits inside a `system:mime = ...` term. */
@@ -166,7 +165,6 @@ export function mimeArgument(input: string): MimeArgument | null {
     };
 }
 
-/** A mime the value position could be completed to. */
 export interface MimeSuggestion {
     /** The finished term, ready to commit as a chip. */
     text: string;

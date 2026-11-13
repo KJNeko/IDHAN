@@ -9,7 +9,6 @@
 namespace idhan::test
 {
 
-//! An IDHANServer of our own: its own port, its own temp path, its own schema.
 class ServerProcess
 {
 	std::filesystem::path m_temp_path;

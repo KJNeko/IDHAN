@@ -7,7 +7,6 @@
 namespace idhan::test
 {
 
-//! Every id in a block sits between the block's base and the next block's base.
 static bool inBlock( const MimeID id, const MimeID block )
 {
 	return id >= block && id < block + 1000;

@@ -159,8 +159,18 @@ static ServiceInfo makeService( std::string key, std::string name, const std::si
 runtime::Task< std::vector< ServiceInfo > > listServices( db::DBContext& db )
 {
 	const auto tag_domains {
-		co_await db.query( "SELECT tag_domain_id, domain_name FROM tag_domains ORDER BY tag_domain_id" )
-			.rows< TagDomainID, std::string >()
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    tag_domain_id,
+					    domain_name
+					FROM tag_domains
+					ORDER BY
+					    tag_domain_id
+				)SQL" )
+				 .rows< TagDomainID, std::string >()
 	};
 
 	const auto clusters { filesystem::ClusterManager::getInstance().list() };

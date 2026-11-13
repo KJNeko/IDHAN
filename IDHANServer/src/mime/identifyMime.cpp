@@ -16,7 +16,7 @@
 namespace idhan::mime
 {
 
-// dup() would retain write access; reopen read-only before passing the file to the module.
+//! dup() would retain write access; reopen read-only before passing the file to the module.
 static runtime::Task< std::expected< std::shared_ptr< const modules::CallInput >, std::string > > readOnlyInput(
 	const int descriptor,
 	const std::size_t size )

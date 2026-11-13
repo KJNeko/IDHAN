@@ -341,7 +341,7 @@ void recordFailure(
 	co_return ScanResult {};
 }
 
-// These references belong to scanCluster's frame. Its scope joins every worker before they can expire.
+//! These references belong to scanCluster's frame. Its scope joins every worker before they can expire.
 runtime::Task< void > scanOne(
 	db::DBContext& db,
 	const ClusterID cluster_id,

@@ -17,9 +17,24 @@ namespace idhan::test
 static std::string resetSchema( pqxx::connection& connection, std::string schema )
 {
 	pqxx::nontransaction tx { connection };
-	tx.exec( "DROP SCHEMA IF EXISTS " + tx.quote_name( schema ) + " CASCADE" );
-	tx.exec( "CREATE SCHEMA " + tx.quote_name( schema ) );
-	tx.exec( "SET search_path = " + db::makeSearchPath( schema ) );
+	tx.exec( std::format(
+		//language=postgresql
+		R"SQL(
+			DROP SCHEMA IF EXISTS {} CASCADE
+		)SQL",
+		tx.quote_name( schema ) ) );
+	tx.exec(
+		//language=postgresql
+		R"SQL(
+			CREATE SCHEMA
+		)SQL"
+		+ tx.quote_name( schema ) );
+	tx.exec(
+		//language=postgresql
+		R"SQL(
+			SET search_path =
+		)SQL"
+		+ db::makeSearchPath( schema ) );
 
 	return schema;
 }
@@ -47,7 +62,12 @@ TestServer::~TestServer()
 	try
 	{
 		pqxx::nontransaction tx { m_connection };
-		tx.exec( "DROP SCHEMA IF EXISTS " + tx.quote_name( m_schema ) + " CASCADE" );
+		tx.exec( std::format(
+			//language=postgresql
+			R"SQL(
+				DROP SCHEMA IF EXISTS {} CASCADE
+			)SQL",
+			tx.quote_name( m_schema ) ) );
 	}
 	catch ( const std::exception& e )
 	{
@@ -59,9 +79,28 @@ void TestServer::wipe()
 {
 	pqxx::nontransaction tx { m_connection };
 	tx.exec(
-		"TRUNCATE subscription_groups, downloader_parser_hosts, download_sessions, tags, tag_namespaces, tag_domains, records, file_info, urls, url_domains "
-		"RESTART IDENTITY CASCADE" );
-	tx.exec( "INSERT INTO tag_domains (domain_name) VALUES ('default')" );
+		//language=postgresql
+		R"SQL(
+			TRUNCATE
+			    subscription_groups,
+			    downloader_parser_hosts,
+			    download_sessions,
+			    tags,
+			    tag_namespaces,
+			    tag_domains,
+			    records,
+			    file_info,
+			    urls,
+			    url_domains
+			RESTART IDENTITY
+			CASCADE
+		)SQL" );
+	tx.exec(
+		//language=postgresql
+		R"SQL(
+			INSERT INTO tag_domains (domain_name)
+			    VALUES ('default')
+		)SQL" );
 }
 
 TestServer& testServer()
@@ -92,8 +131,18 @@ bool partitionExists( pqxx::connection& connection, const std::string_view prefi
 	pqxx::nontransaction tx { connection };
 
 	return tx.query_value< bool >(
-		"SELECT EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
-		"WHERE n.nspname = current_schema() AND c.relname = $1)",
+		//language=postgresql
+		R"SQL(
+			SELECT
+			    EXISTS (
+			        SELECT
+			            1
+			        FROM pg_class c
+			            JOIN pg_namespace n ON n.oid = c.relnamespace
+			        WHERE n.nspname = current_schema()
+			            AND c.relname = $1
+			    )
+		)SQL",
 		pqxx::params { std::string( prefix ) + std::to_string( tag_domain_id ) } );
 }
 

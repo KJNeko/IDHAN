@@ -34,9 +34,22 @@ std::expected< std::string, std::string > normalizeParserHost( const std::string
 
 runtime::Task< std::vector< ParserHost > > DatabaseParserHosts::list( db::DBContext& db )
 {
-	const auto rows { co_await db.query(
-		"SELECT host, parser, auto_discovered FROM downloader_parser_hosts ORDER BY parser, host" )
-		.rows< std::string, std::string, bool >() };
+	const auto rows{
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    host,
+					    parser,
+					    auto_discovered
+					FROM downloader_parser_hosts
+					ORDER BY
+					    parser,
+					    host
+				)SQL" )
+				 .rows< std::string, std::string, bool >()
+	};
 	std::vector< ParserHost > hosts;
 	for ( const auto& [ host, parser, discovered ] : rows ) hosts.push_back( { host, parser, discovered } );
 
@@ -49,12 +62,28 @@ runtime::Task< ParserHost > DatabaseParserHosts::upsert( db::DBContext& db, Pars
 	bindings.bind( entry.host );
 	bindings.bind( entry.parser );
 	bindings.bind( entry.auto_discovered );
-	const auto rows { co_await db.query(
-		"INSERT INTO downloader_parser_hosts AS stored (host, parser, auto_discovered) VALUES ($1, $2, $3) "
-		"ON CONFLICT (host) DO UPDATE SET "
-		"parser = CASE WHEN EXCLUDED.auto_discovered THEN stored.parser ELSE EXCLUDED.parser END, "
-		"auto_discovered = stored.auto_discovered AND EXCLUDED.auto_discovered "
-		"RETURNING host, parser, auto_discovered", std::move( bindings ) ).rows< std::string, std::string, bool >() };
+	const auto rows{
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					INSERT INTO downloader_parser_hosts AS stored (host, parser, auto_discovered)
+					    VALUES ($1, $2, $3)
+					ON CONFLICT (host)
+					    DO UPDATE SET
+					        parser = CASE WHEN EXCLUDED.auto_discovered THEN stored.parser
+					        ELSE
+					            EXCLUDED.parser
+					        END,
+					        auto_discovered = stored.auto_discovered
+					        AND EXCLUDED.auto_discovered
+					    RETURNING host,
+					        parser,
+					        auto_discovered
+				)SQL",
+					 std::move( bindings ) )
+				 .rows< std::string, std::string, bool >()
+	};
 	const auto& [ host, parser, discovered ] { rows.row( 0 ) };
 	co_return ParserHost { host, parser, discovered };
 }
@@ -63,9 +92,18 @@ runtime::Task< bool > DatabaseParserHosts::erase( db::DBContext& db, std::string
 {
 	db::DBBindings bindings;
 	bindings.bind( std::move( host ) );
-	const auto rows { co_await db.query(
-		"DELETE FROM downloader_parser_hosts WHERE host = $1 RETURNING host", std::move( bindings ) )
-		.rows< std::string >() };
+	const auto rows{
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					DELETE FROM downloader_parser_hosts
+					WHERE host = $1
+					RETURNING host
+				)SQL",
+					 std::move( bindings ) )
+				 .rows< std::string >()
+	};
 	co_return !rows.empty();
 }
 

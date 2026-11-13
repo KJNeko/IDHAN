@@ -20,7 +20,6 @@ namespace idhan
 namespace log = spdlog;
 }
 
-//! State backing a custom FFmpeg AVIO context: the file being demuxed and a read/seek cursor.
 struct OpaqueInfo
 {
 	const idhan::ModuleFile* m_file { nullptr }; //!< The file being read (not owned).
@@ -100,7 +99,6 @@ inline std::int64_t seekFunction( void* opaque, std::int64_t offset, int whence 
 	return state.m_cursor;
 }
 
-//! The mime ids the FFmpeg thumbnailer/metadata modules advertise support for.
 inline static std::vector< idhan::MimeID > ffmpeg_handleable_mimes {
 	idhan::mime_ids::VIDEO_MP4,
 	idhan::mime_ids::VIDEO_WEBM,

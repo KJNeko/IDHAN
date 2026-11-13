@@ -48,4 +48,4 @@ struct [[nodiscard]] OpAwaiter
 
 } // namespace idhan
 
-#endif // __linux__
+#endif

@@ -35,8 +35,8 @@ class ScriptContext
 		std::chrono::milliseconds burst_timeout { 5000 };
 	};
 
-	// Excludes synchronous host callbacks from the JavaScript budget and run timing.
-	// Nested callbacks share the outer pause; callbacks on other threads have no active burst.
+	//! Excludes synchronous host callbacks from the JavaScript budget and run timing.
+	//! Nested callbacks share the outer pause; callbacks on other threads have no active burst.
 	class HostCall
 	{
 		ScriptContext* m_context {};
@@ -49,8 +49,8 @@ class ScriptContext
 		~HostCall();
 	};
 
-	// Nesting shares the outer timer and watchdog. A scope inside a host callback
-	// temporarily resumes script accounting so getters cannot hide in host wait time.
+	//! Nesting shares the outer timer and watchdog. A scope inside a host callback
+	//! temporarily resumes script accounting so getters cannot hide in host wait time.
 	class ExecutionScope
 	{
 		ScriptContext* m_context {};
@@ -90,7 +90,7 @@ class ScriptContext
 	std::shared_ptr< ScriptActivity > m_activity {};
 	std::map< std::string, std::chrono::nanoseconds > m_timings {};
 	std::size_t m_gc_releases {};
-	// Keep the watchdog budget across scheduler yields until the microtask queue drains.
+	//! Keep the watchdog budget across scheduler yields until the microtask queue drains.
 	std::chrono::nanoseconds m_job_run {};
 	static thread_local ScriptContext* s_active;
 
@@ -122,7 +122,8 @@ class ScriptContext
 
 	[[nodiscard]] std::expected< JSContext*, std::string > createRealm( ScriptExecution& execution );
 	void freeRealm( JSContext* context );
-	// Retain each registry/secrets configuration independently while its invocations finish.
+
+	//! Retain each registry/secrets configuration independently while its invocations finish.
 	[[nodiscard]] JSValue parserState(
 		ScriptExecution& execution,
 		std::string parser,
@@ -136,7 +137,7 @@ class ScriptContext
 	void enterBurst( JSContext* context = nullptr );
 	void leaveBurst();
 
-	// A scheduler yields between jobs; a synchronous job retains the burst watchdog.
+	//! A scheduler yields between jobs; a synchronous job retains the burst watchdog.
 	bool runReadyMicrotasks(
 		std::string& error,
 		std::size_t max_jobs = std::numeric_limits< std::size_t >::max(),

@@ -55,7 +55,6 @@ struct CallOutcome
 	Json::Value body {};
 	ipc::Blob blob {};
 
-	//! True when the call failed because the worker died rather than because the module said no.
 	bool worker_died { false };
 };
 
@@ -123,7 +122,6 @@ class WorkerProcess : public std::enable_shared_from_this< WorkerProcess >
 	void failAll( const std::string& reason, bool died );
 	void checkLiveness();
 
-	//! Wakes everything parked on the manifest, whether it arrived or the worker died first.
 	void settleManifestWaiters();
 
 	//! \return false when the manifest has already settled, in which case \p waiter was not stored.
@@ -132,6 +130,10 @@ class WorkerProcess : public std::enable_shared_from_this< WorkerProcess >
   public:
 
 	WorkerProcess( WorkerSettings settings, CallbackHandler on_callback );
+
+	//! \warning Must not run on the worker's own IO thread: joining it would be a self-join, and
+	//!          EDEADLK out of a destructor aborts the process. Nothing that could hold the last
+	//!          reference is ever resumed on the IO thread; see resumeContinuation().
 	~WorkerProcess();
 
 	WorkerProcess( const WorkerProcess& ) = delete;
@@ -149,8 +151,6 @@ class WorkerProcess : public std::enable_shared_from_this< WorkerProcess >
 	[[nodiscard]] std::size_t rssKb() const { return m_rss_kb.load(); }
 
 	[[nodiscard]] std::size_t activeCalls() const { return m_active_calls.load(); }
-
-	//! The last heartbeat's counters, in manifest order; absent before the first report.
 
 	[[nodiscard]] std::chrono::steady_clock::time_point lastActivity();
 

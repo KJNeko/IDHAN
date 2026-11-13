@@ -11,7 +11,7 @@
 
 namespace idhan::db
 {
-// Explicit source order lets tests exercise both endian paths on any host.
+//! Explicit source order lets tests exercise both endian paths on any host.
 template < std::endian Source, typename T >
 constexpr T networkOrder( T value )
 {

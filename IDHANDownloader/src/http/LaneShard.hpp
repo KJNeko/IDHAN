@@ -49,7 +49,7 @@ class LaneShard final : public IoSource, public std::enable_shared_from_this< La
 	std::weak_ptr< Lane > m_lane;
 	IoThread& m_thread;
 	CurlMultiPtr m_multi {};
-	// Includes transfers posted to the IO thread but not started yet.
+	//! Includes transfers posted to the IO thread but not started yet.
 	std::atomic_size_t m_assigned {};
 	std::unordered_map< CURL*, std::unique_ptr< Active > > m_active {};
 

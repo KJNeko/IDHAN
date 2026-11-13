@@ -18,8 +18,16 @@ static runtime::Task< std::optional< TagDomainID > > findTagDomainId(
 	lookup_bindings.bind( name );
 	const auto existing {
 		co_await transaction
-			.query( "SELECT tag_domain_id FROM tag_domains WHERE domain_name = $1", std::move( lookup_bindings ) )
-			.rows< TagDomainID >()
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    tag_domain_id
+					FROM tag_domains
+					WHERE domain_name = $1
+				)SQL",
+					 std::move( lookup_bindings ) )
+				 .rows< TagDomainID >()
 	};
 	if ( existing.empty() ) co_return std::nullopt;
 
@@ -33,7 +41,13 @@ runtime::Task< TagDomainID > getOrCreateTagDomain( DBTransaction& transaction, s
 
 	// A BEFORE INSERT trigger creates partitions, even for an insert that later conflicts.
 	// Lock and recheck in a fresh statement so concurrent imports cannot leave orphan partitions.
-	co_await transaction.query( "LOCK TABLE tag_domains IN SHARE ROW EXCLUSIVE MODE" ).result();
+	co_await transaction
+			 .query(
+				 //language=postgresql
+				 R"SQL(
+				LOCK TABLE tag_domains IN SHARE ROW EXCLUSIVE MODE
+			)SQL" )
+			 .result();
 	const auto concurrent { co_await findTagDomainId( transaction, name ) };
 	if ( concurrent.has_value() ) co_return concurrent.value();
 
@@ -42,7 +56,12 @@ runtime::Task< TagDomainID > getOrCreateTagDomain( DBTransaction& transaction, s
 	const auto created {
 		co_await transaction
 			.query(
-				"INSERT INTO tag_domains (domain_name) VALUES ($1) RETURNING tag_domain_id",
+				//language=postgresql
+				R"SQL(
+					INSERT INTO tag_domains (domain_name)
+					    VALUES ($1)
+					RETURNING tag_domain_id
+				)SQL",
 				std::move( create_bindings ) )
 			.rows< TagDomainID >()
 	};

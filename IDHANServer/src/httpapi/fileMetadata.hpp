@@ -53,7 +53,7 @@ struct RecordInfoResponse
 	http::possiblyMissing< std::int64_t > file_ctime {};
 	http::possiblyMissing< bool > parsed {};
 	http::possiblyMissing< std::string > simple_type {};
-	// Parser modules define the fields inside this metadata object.
+	//! Parser modules define the fields inside this metadata object.
 	http::possiblyMissing< http::JsonDocument > extra {};
 	http::possiblyMissing< std::uint32_t > width {};
 	http::possiblyMissing< std::uint32_t > height {};

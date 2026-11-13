@@ -158,7 +158,6 @@ void setupTempPath()
 		config::getSilentDefault< std::string >( "server", "temp_path", "/tmp/idhan" )
 	};
 
-	// The marker names the PID of the instance that owns tmp_path.
 	constexpr std::string_view marker_file { "idhan.active" };
 	const auto marker_path { tmp_path / marker_file };
 
@@ -169,7 +168,6 @@ void setupTempPath()
 			__pid_t pid;
 			ifs >> pid;
 
-			// kill(pid, 0) succeeds only while that process still exists.
 			if ( 0 == kill( pid, 0 ) )
 			{
 				log::critical(
@@ -264,7 +262,6 @@ void ServerContext::startReplacementStack()
 	db_config.extension_schema = args.extension_schema;
 	db_config.validate();
 
-	// IDHANDb gets one dedicated thread of its own, isolated from everything else.
 	m_db_executor = std::make_shared< folly::CPUThreadPoolExecutor >(
 		1, std::make_shared< folly::NamedThreadFactory >( "idhan-db" ) );
 
@@ -272,8 +269,7 @@ void ServerContext::startReplacementStack()
 
 	const auto db_executor { folly::getKeepAliveToken( m_db_executor.get() ) };
 
-	// Runs on IDHANDb's own thread rather than being driven inline on this one (which blockingWait
-	// would do); this thread only blocks waiting on the future's result.
+	// Run on IDHANDb's executor; blockingWait would drive it inline on this thread.
 	folly::coro::co_withExecutor( db_executor, m_db_context->start() ).start().get();
 
 	log::info( "Replacement DB stack connected to {}:{}", db_config.host, db_config.port );
@@ -378,7 +374,6 @@ void ServerContext::run()
 {
 	log::info( "Starting runtime" );
 
-	// The HTTP server runs independently; this keeps the main thread alive until asked to stop.
 	sigset_t signal_set {};
 	sigemptyset( &signal_set );
 	sigaddset( &signal_set, SIGINT );
@@ -400,8 +395,6 @@ ServerContext::~ServerContext()
 
 	if ( m_heartbeat != nullptr ) m_heartbeat->shutdown();
 	if ( m_http_server != nullptr ) m_http_server->stopAdmission();
-	// Idle SSE body reads hold HTTP executor keepalives until their hub wakes them.
-	// Close the streams before joining the HTTP threads that are waiting for them.
 	server::events().shutdown();
 	if ( m_http_server != nullptr ) m_http_server->stop();
 
@@ -414,8 +407,7 @@ ServerContext::~ServerContext()
 			.start()
 			.get();
 	m_bandwidth_maintenance.reset();
-	// The same key setupTempPath() created it under. Reading a different one deleted /tmp/idhan and
-	// left the configured directory behind, marker file and all, which aborts the next boot.
+	// Must match the key setupTempPath() created the directory under.
 	const auto upload_path { config::getSilentDefault< std::string >( "server", "temp_path", "/tmp/idhan" ) };
 	std::filesystem::remove_all( upload_path );
 }

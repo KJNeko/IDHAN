@@ -27,9 +27,11 @@ class DatabaseSecrets final : public SecretProvider
   public:
 
 	std::expected< Json::Value, std::string > secrets( std::string_view domain ) override;
-	// Refreshes one complete snapshot, retaining the previous values on failure.
+
+	//! Refreshes one complete snapshot, retaining the previous values on failure.
 	[[nodiscard]] runtime::Task< std::expected< void, std::string > > reload();
-	// Map values are serialized JSON objects, as returned by PostgreSQL jsonb::text.
+
+	//! Map values are serialized JSON objects, as returned by PostgreSQL jsonb::text.
 	[[nodiscard]] runtime::Task< std::expected< std::unordered_map< std::string, std::string >, std::string > > values()
 		const;
 	[[nodiscard]] runtime::Task< std::expected< void, std::string > > set(

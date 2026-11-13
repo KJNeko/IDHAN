@@ -1,15 +1,4 @@
 import {SearchFilterInput} from './SearchFilterInput';
-/**
- * Search: the panel that drives everything downstream. The user builds a query out of tag chips (text
- * tags, `-negation`, and `system:` predicates), picks a sort, and runs it. The ordered
- * id set the server returns is published to `host.results`, which the grid and viewer page against.
- *
- * Only debounce and per-keystroke abort live here. Caching and prefix-extension reuse live in the
- * host (autocompleteCache), which also enforces a 2-char minimum. `system:` predicates never reach
- * the server: they are a fixed catalogue matched locally (systemPredicates) and listed above the
- * tag matches. The one exception is the value of a `system:mime` term, which comes from the mime
- * table (host/mimeCatalogue) and is fetched once per session.
- */
 
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import type { PanelProps } from '../../host/types';
@@ -74,10 +63,8 @@ function readConfig(raw: Partial<Config>): Config {
   };
 }
 
-/** One term, as the breakdown table shows it: what its query cost against what it actually did. */
 type TermRow = {
     term: string;
-    /** Rows the term's own query returned. */
     fetched: number;
     /** Rows this term took out of the running result. Null for the term that established it. */
     removed: number | null;
@@ -136,7 +123,6 @@ function queryToken(input: string): string | null {
   return trimmed.startsWith('-') ? trimmed.slice(1) : trimmed;
 }
 
-/** One row of the dropdown: a matched tag, a `system:` predicate name, or a mime for its value. */
 type Suggestion =
     | { kind: 'tag'; tag: AutocompleteResult }
     | { kind: 'system'; predicate: SystemPredicate }
@@ -285,7 +271,6 @@ function SearchPanel({ host }: PanelProps) {
     persist({ tags: next });
   }
 
-    /** Commits the input: a new chip, or the rewrite of the one being edited. */
   function addTag(tag: string) {
         const target = editing;
 
@@ -296,7 +281,6 @@ function SearchPanel({ host }: PanelProps) {
         commitTags(target === null ? addTerm(tags, tag) : replaceTerm(tags, target, tag));
     }
 
-    /** Loads a chip back into the input; committing rewrites it in place. */
     function startEdit(tag: string) {
         setEditing(tag);
         setInput(tag);
@@ -304,7 +288,6 @@ function SearchPanel({ host }: PanelProps) {
         inputRef.current?.focus();
     }
 
-    /** Leaves the chip as it was. */
     function cancelEdit() {
         setEditing(null);
     setInput('');

@@ -134,7 +134,15 @@ constexpr std::size_t max_compare_records { 8 };
 			co_await db
 				.query(
 					std::format(
-						"SELECT record_id, embedding::text AS embedding FROM {} WHERE record_id = ANY($1)", table ),
+						//language=postgresql
+						R"SQL(
+							SELECT
+							    record_id,
+							    embedding::text AS embedding
+							FROM {}
+							WHERE record_id = ANY ($1)
+						)SQL",
+						table ),
 					std::move( bindings ) )
 				.rows< RecordID, std::string >()
 		};
@@ -186,8 +194,19 @@ http::HTTPTask< http::JsonResult< std::vector< EmbeddingModelResponse > > > list
 	[[maybe_unused]] http::RequestContext context )
 {
 	const auto rows {
-		co_await db.query( "SELECT model_id, model_name, model_dimensions FROM embedding_models ORDER BY model_id" )
-			.rows< std::int32_t, std::string, std::int32_t >()
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    model_id,
+					    model_name,
+					    model_dimensions
+					FROM embedding_models
+					ORDER BY
+					    model_id
+				)SQL" )
+				 .rows< std::int32_t, std::string, std::int32_t >()
 	};
 
 	std::vector< EmbeddingModelResponse > response;
@@ -202,8 +221,17 @@ http::HTTPTask< http::JsonResult< std::vector< EmbeddingModelResponse > > > list
 		db::DBBindings bindings {};
 		bindings.bind( std::format( "embeddings_{}", model_id ) );
 		const auto stats {
-			co_await db.query( "SELECT reltuples FROM pg_class WHERE oid = to_regclass($1)", std::move( bindings ) )
-				.rows< std::optional< float > >()
+			co_await db
+					 .query(
+						 //language=postgresql
+						 R"SQL(
+						SELECT
+						    reltuples
+						FROM pg_class
+						WHERE oid = to_regclass($1)
+					)SQL",
+						 std::move( bindings ) )
+					 .rows< std::optional< float > >()
 		};
 
 		if ( !stats.empty() )
@@ -232,8 +260,17 @@ http::HTTPTask< http::JsonResult< DeletedEmbeddingModelResponse > > deleteModel(
 	db::DBBindings find_bindings {};
 	find_bindings.bind( model_id );
 	const auto rows {
-		co_await db.query( "SELECT model_name FROM embedding_models WHERE model_id = $1", std::move( find_bindings ) )
-			.rows< std::string >()
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    model_name
+					FROM embedding_models
+					WHERE model_id = $1
+				)SQL",
+					 std::move( find_bindings ) )
+				 .rows< std::string >()
 	};
 
 	if ( rows.empty() )
@@ -251,7 +288,15 @@ http::HTTPTask< http::JsonResult< DeletedEmbeddingModelResponse > > deleteModel(
 	{
 		db::DBBindings delete_bindings {};
 		delete_bindings.bind( model_id );
-		co_await db.query( "DELETE FROM embedding_models WHERE model_id = $1", std::move( delete_bindings ) ).result();
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					DELETE FROM embedding_models
+					WHERE model_id = $1
+				)SQL",
+					 std::move( delete_bindings ) )
+				 .result();
 	}
 	catch ( const std::exception& e )
 	{
@@ -407,8 +452,21 @@ http::HTTPTask< http::JsonResult< SearchEmbeddingsResponse > > searchEmbeddings(
 
 	auto transaction { co_await db.transaction() };
 
-	co_await transaction.query( std::format( "SET LOCAL hnsw.ef_search = {}", ef_search ) ).result();
-	co_await transaction.query( "SET LOCAL enable_indexscan = off" ).result();
+	co_await transaction
+			 .query( std::format(
+				 //language=postgresql
+				 R"SQL(
+				SET LOCAL hnsw.ef_search = {}
+			)SQL",
+				 ef_search ) )
+			 .result();
+	co_await transaction
+			 .query(
+				 //language=postgresql
+				 R"SQL(
+				SET LOCAL enable_indexscan = off
+			)SQL" )
+			 .result();
 
 	const auto literal { embeddings::toHalfvecLiteral( *query_vector ) };
 	const auto table { std::format( "embeddings_{}", model_id ) };
@@ -419,7 +477,16 @@ http::HTTPTask< http::JsonResult< SearchEmbeddingsResponse > > searchEmbeddings(
 		co_await transaction
 			.query(
 				std::format(
-					"SELECT record_id, embedding <=> $1::halfvec AS distance FROM {} ORDER BY distance LIMIT {}",
+					//language=postgresql
+					R"SQL(
+						SELECT
+						    record_id,
+						    embedding <=> $1::halfvec AS distance
+						FROM {}
+						ORDER BY
+						    distance
+						LIMIT {}
+					)SQL",
 					table,
 					limit ),
 				std::move( bindings ) )
@@ -554,7 +621,15 @@ http::HTTPTask< http::JsonResult< CompareEmbeddingsResponse > > compareEmbedding
 	const auto present_rows {
 		co_await db
 			.query(
-				std::format( "SELECT record_id FROM {} WHERE record_id = ANY($1)", table ),
+				std::format(
+					//language=postgresql
+					R"SQL(
+						SELECT
+						    record_id
+						FROM {}
+						WHERE record_id = ANY ($1)
+					)SQL",
+					table ),
 				std::move( present_bindings ) )
 			.rows< RecordID >()
 	};
@@ -604,8 +679,17 @@ http::HTTPTask< http::JsonResult< CompareEmbeddingsResponse > > compareEmbedding
 			co_await db
 				.query(
 					std::format(
-						"SELECT t.idx, e.record_id, e.embedding <=> t.vec::halfvec AS distance FROM {} e "
-						"CROSS JOIN UNNEST($2::text[]) WITH ORDINALITY AS t(vec, idx) WHERE e.record_id = ANY($1)",
+						//language=postgresql
+						R"SQL(
+							SELECT
+							    t.idx,
+							    e.record_id,
+							    e.embedding <=> t.vec::halfvec AS distance
+							FROM {} e
+							    CROSS JOIN UNNEST($2::text[])
+							    WITH ORDINALITY AS t (vec, idx)
+							WHERE e.record_id = ANY ($1)
+						)SQL",
 						table ),
 					std::move( compare_bindings ) )
 				.rows< std::int64_t, RecordID, double >()
@@ -631,8 +715,15 @@ http::HTTPTask< http::JsonResult< CompareEmbeddingsResponse > > compareEmbedding
 			co_await db
 				.query(
 					std::format(
-						"SELECT a.embedding <=> b.embedding AS distance FROM {} a, {} b "
-						"WHERE a.record_id = $1 AND b.record_id = $2",
+						//language=postgresql
+						R"SQL(
+							SELECT
+							    a.embedding <=> b.embedding AS distance
+							FROM {} a,
+							    {} b
+							WHERE a.record_id = $1
+							    AND b.record_id = $2
+						)SQL",
 						table,
 						table ),
 					std::move( pair_bindings ) )

@@ -6,8 +6,8 @@
 namespace idhan::http
 {
 
-// Uses std::optional's value API, but an empty object member is omitted from JSON.
-// Nest std::optional<T> as the value type when explicit JSON null is also valid.
+//! Uses std::optional's value API, but an empty object member is omitted from JSON.
+//! Nest std::optional<T> as the value type when explicit JSON null is also valid.
 template < typename T >
 struct possiblyMissing : std::optional< T >
 {

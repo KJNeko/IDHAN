@@ -7,7 +7,6 @@ export interface ImportHandle {
 	readonly importFinished: Promise<ImportOutcome>;
 }
 
-/** Implemented by the host. Importing these types adds no runtime dependency. */
 export interface RequestOptions {
 	url: string;
 	responseType: "text";
@@ -87,7 +86,6 @@ export interface DomainContext {
 
 	setCookie(name: string, value: string): Promise<void>;
 
-	/** Installs HTTP Basic authentication for this session's origin. */
 	setBasicAuth(username: string, password: string): Promise<void>;
 
 }

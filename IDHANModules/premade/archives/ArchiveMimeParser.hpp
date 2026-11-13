@@ -1,7 +1,6 @@
 #pragma once
 #include "MimeModule.hpp"
 
-//! Specializes a zip container into a specific archive mime id.
 class ArchiveMimeParser : public idhan::MimeModuleI
 {
   public:
@@ -14,7 +13,7 @@ class ArchiveMimeParser : public idhan::MimeModuleI
 
 	[[nodiscard]] idhan::ModuleVersion version() override;
 
-	// each call opens its own libarchive handle, no shared state: safe to run concurrently
+	//! Each call opens its own libarchive handle, no shared state: safe to run concurrently
 	[[nodiscard]] bool threadSafe() override { return true; }
 
 	[[nodiscard]] std::vector< idhan::MimeID > handleableMimes() override;

@@ -75,7 +75,6 @@ enum class FailureStage : std::uint8_t
 	DOWNLOAD,
 	PARSER,
 	IMPORT,
-	//! The session closed before the work could run.
 	CLOSED,
 };
 
@@ -87,7 +86,7 @@ struct WorkFailure
 
 struct ImportInfo
 {
-	// Matches onImportQueued; it is the import identity, not the parser identity.
+	//! Matches onImportQueued; it is the import identity, not the parser identity.
 	WorkID work {};
 	std::string url {};
 	RecordID record_id {};
@@ -102,16 +101,16 @@ struct ImportInfo
 	std::optional< std::int64_t > posted_at {};
 };
 
-// Callbacks run on host/import executors. Database-backed callbacks suspend. Lifecycle callbacks are
-// ordered per work, and a work's imports follow its start; callbacks for different works, and import
-// preparation/completion, can run concurrently.
+//! Callbacks run on host/import executors. Database-backed callbacks suspend. Lifecycle callbacks are
+//! ordered per work, and a work's imports follow its start; callbacks for different works, and import
+//! preparation/completion, can run concurrently.
 class SessionObserver
 {
   public:
 
 	virtual ~SessionObserver() = default;
 
-	// Hooks own arguments across suspension. Implementations await persistence directly.
+	//! Hooks own arguments across suspension. Implementations await persistence directly.
 	virtual folly::coro::Task< void > onStarted( WorkInfo ) { co_return; }
 
 	virtual folly::coro::Task< void > onCompleted( WorkInfo ) { co_return; }
@@ -128,7 +127,7 @@ class SessionObserver
 		co_await onImportFailed( std::move( info ), std::move( url ), std::move( failure.message ) );
 	}
 
-	// Network-thread accounting only; implementations must not perform I/O or wait.
+	//! Network-thread accounting only; implementations must not perform I/O or wait.
 	virtual void onTransfer( WorkID, TransferEvent, bool /* import */ ) {}
 
 	virtual folly::coro::Task< void > onRequest( RequestInfo ) { co_return; }
@@ -141,10 +140,10 @@ class SessionObserver
 
 	virtual folly::coro::Task< void > onFollowed( WorkInfo, FollowStatus ) { co_return; }
 
-	// Fires on every transition to idle.
+	//! Fires on every transition to idle.
 	virtual folly::coro::Task< void > onFinished() { co_return; }
 
-	// An error prevents the import from opening a sink or dispatching HTTP.
+	//! An error prevents the import from opening a sink or dispatching HTTP.
 	virtual folly::coro::Task< std::expected< void, std::string > > onImportQueued( WorkInfo )
 	{
 		co_return std::expected< void, std::string > {};

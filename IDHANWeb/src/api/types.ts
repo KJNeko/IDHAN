@@ -1,8 +1,3 @@
-/**
- * Wire types for the IDHAN REST API. These mirror the JSON the server emits (see
- * IDHANServer/src/api) and cover only the fields the WebUI reads, not every column.
- */
-
 export interface SemVer {
   major: number;
   minor: number;
@@ -12,7 +7,6 @@ export interface SemVer {
 
 export interface VersionInfo {
   idhan_server_version: SemVer;
-  /** An object, unlike hydrus_api_version, which really is a bare number. */
   idhan_api_version: SemVer;
   hydrus_api_version: number;
   hydrus_version: number;
@@ -21,7 +15,6 @@ export interface VersionInfo {
   build: string;
 }
 
-/** Response of GET /auth/verify. Reaching it at all means the API key was accepted. */
 export interface KeyCheck {
   authenticated: boolean;
 }
@@ -80,7 +73,6 @@ export interface MetadataRequest {
  * one adds `parsed: false`; everything past `simple_type` depends on which category the file is.
  */
 export interface RecordTag {
-    /** Tag domain the mapping belongs to. */
     domain: string;
     /** Full `namespace:subtag` text. */
     text: string;
@@ -107,7 +99,6 @@ export interface RecordMetadata {
     /** False when no module has produced metadata for this record yet. */
     parsed?: boolean;
     simple_type?: SimpleType;
-    /** Free-form extra fields the parsing module chose to surface. */
     extra?: Record<string, unknown> | null;
 
     /** image, video, animation, image_project. */
@@ -177,11 +168,8 @@ export interface FileRelationships {
     alternatives: number[];
 }
 
-/** What POST /relationships/clear actually removed between two records. */
 export interface ClearedRelationship {
-    /** A direct better/worse pair existed in either direction and was deleted. */
     duplicate_removed: boolean;
-    /** The two were paired as alternatives, and that pair was deleted. */
     alternative_removed: boolean;
 }
 
@@ -193,7 +181,6 @@ export interface UndecidedPair {
     distance: number;
 }
 
-/** The next pair awaiting a duplicate decision, or none left within the distance. */
 export interface UndecidedDuplicate {
     /** The maximum distance that was searched, echoed back. */
     distance: number;
@@ -212,7 +199,6 @@ export interface SimilarRecord {
     unrelated: boolean;
 }
 
-/** Perceptual-hash neighbourhood of one record (GET /relationships/{record_id}/similar). */
 export interface SimilarRecords {
     record_id: number;
     /** The distance that was searched, echoed back. */
@@ -247,7 +233,6 @@ export interface AutocompleteResult {
   similarity?: number;
 }
 
-/** A panel a plugin advertises in its manifest (for display before the bundle is loaded). */
 export interface PluginPanelInfo {
   type: string;
   title?: string;
@@ -326,7 +311,6 @@ export type DownloadSessionUrlState =
     | 'failed'
     | 'cancelled';
 
-/** Where a failed URL gave up. */
 export type DownloadFailureStage = 'route' | 'download' | 'parser' | 'import' | 'closed';
 
 export interface DownloadSessionUrlJob {
@@ -425,7 +409,6 @@ export interface RateLimitMessage {
     limit: RateLimitLane;
 }
 
-/** A tag service domain (GET /tags/domain/list). */
 export interface TagDomain {
   tag_domain_id: number;
   domain_name: string;
@@ -450,7 +433,6 @@ export interface TagDomainCounts {
     display_count: number;
 }
 
-/** A single tag's namespace/subtag decomposition (GET /tags/{id}/info). */
 export interface TagInfo {
   tag_id: number;
   namespace: { id: number; text: string };
@@ -485,7 +467,6 @@ export type MimeMap = Record<string, string>;
 export interface MimeCount {
   mime: string | null;
   count: number;
-  /** Total on-disk bytes (file_info.size) across records with this mime. */
   bytes: number;
 }
 
@@ -503,7 +484,6 @@ export interface DatabaseStats {
   clusters: number;
 }
 
-/** A node in the GET /db/stats/sunburst storage tree: a table (with index children) or an index. */
 export interface StorageNode {
   name: string;
   value: number;
@@ -671,6 +651,9 @@ export interface SubscriptionsSnapshot {
 
 export type SubscriptionsEvent =
 	| ({ type: 'snapshot' } & SubscriptionsSnapshot)
+	| ({ type: 'snapshot_chunk' } & SubscriptionsSnapshot)
+	| { type: 'snapshot_start' }
+	| { type: 'snapshot_complete' }
 	| {
 	type: 'patch'; groups?: (Partial<SubscriptionGroup> & { id: number })[];
 	items?: (Partial<Subscription> & { id: number })[]

@@ -56,7 +56,7 @@ class ScriptSession
 		promise.resolveOrReject( false, JS_NewString( promise.context, "This host does not support direct imports" ) );
 	}
 
-	// Database-backed operations suspend their promise instead of blocking the script worker.
+	//! Database-backed operations suspend their promise instead of blocking the script worker.
 	virtual void startFollow(
 		ScriptExecution&,
 		std::string,
@@ -80,7 +80,7 @@ class ScriptSession
 			false, JS_NewString( promise.context, "This host cannot learn hosts asynchronously" ) );
 	}
 
-	// Called only when the script explicitly asks to wait for its queued import.
+	//! Called only when the script explicitly asks to wait for its queued import.
 	virtual void awaitImport( ScriptExecution&, std::shared_ptr< ImportStatus >, PendingPromise promise )
 	{
 		promise.resolveOrReject( false, JS_NewString( promise.context, "This host does not support awaited imports" ) );

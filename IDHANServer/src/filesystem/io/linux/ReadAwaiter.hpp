@@ -53,4 +53,4 @@ struct [[nodiscard]] ReadAwaiter
 
 } // namespace idhan
 
-#endif // __linux__
+#endif

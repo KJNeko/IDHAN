@@ -12,10 +12,10 @@
 namespace idhan::downloader
 {
 
-// Leaves room to add a window to a time point without overflowing.
+//! Leaves room to add a window to a time point without overflowing.
 static constexpr LanePolicy::SteadyClock::duration longest_window { (LanePolicy::SteadyClock::duration::max)() / 4 };
 
-// Even Retry-After: 0 waits one second to avoid retrying in a tight loop.
+//! Even Retry-After: 0 waits one second to avoid retrying in a tight loop.
 static constexpr LanePolicy::SteadyClock::duration minimum_limit_pause { std::chrono::seconds { 1 } };
 
 static LanePolicy::SteadyClock::duration windowFor( const RequestRate rate )
@@ -69,7 +69,6 @@ void LanePolicy::configure( LaneSettings settings )
 	configureLocked( std::move( settings ) );
 }
 
-// Called with m_mutex held.
 void LanePolicy::configureLocked( LaneSettings settings )
 {
 	if ( m_burst_ceiling.has_value() )
@@ -83,7 +82,6 @@ void LanePolicy::configureLocked( LaneSettings settings )
 	const auto capacity { settings.rate.has_value() ? capacityFor( *settings.rate ) : std::size_t { 1 } };
 	if ( capacity != m_capacity && !m_starts.empty() )
 	{
-		// Preserve the newest claims in chronological order when resizing the ring.
 		const auto count { std::min( m_starts.size(), capacity ) };
 		const auto oldest { m_starts.size() == m_capacity ? m_oldest : std::size_t {} };
 		std::vector< SteadyClock::time_point > starts;
@@ -148,7 +146,6 @@ void LanePolicy::succeeded( const SteadyClock::time_point now )
 	configureLocked( m_configured_settings );
 }
 
-// Called with m_mutex held.
 LanePolicy::SteadyClock::time_point LanePolicy::readyAt() const
 {
 	if ( m_disabled ) return SteadyClock::time_point::max();
@@ -207,7 +204,6 @@ std::optional< LanePolicy::SteadyClock::duration > LanePolicy::claim( const Stea
 	return std::nullopt;
 }
 
-// Called with m_mutex held.
 void LanePolicy::pause( const SteadyClock::duration cooldown, const SteadyClock::time_point now )
 {
 	m_backoff_until = std::max( m_backoff_until, now + std::min( cooldown, SteadyClock::time_point::max() - now ) );

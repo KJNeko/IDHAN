@@ -39,7 +39,6 @@ describe('buildCompareRows', () => {
         expect(rows[2].label).toBe('record 55');
     });
 
-    // delta is A minus B, so a negative delta means A is the closer image.
     it('signs the delta toward A when A is closer', () => {
         const rows = buildCompareRows(TERMS, DISTANCES);
         expect(rows[0].delta).toBeLessThan(0);
@@ -93,7 +92,6 @@ describe('orderTerms', () => {
     const order = (mode: CompareSortMode, terms: readonly CompareTerm[] = TERMS) =>
         orderTerms(terms, index, mode).map(compareTermLabel);
 
-    // deltas: blonde hair -0.066 (leans A), night +0.012 (leans B), record 55 -0.002 (near neutral)
     it('keeps the typed order under "entered"', () => {
         expect(order('entered')).toEqual(['blonde hair', 'night', 'record 55']);
     });

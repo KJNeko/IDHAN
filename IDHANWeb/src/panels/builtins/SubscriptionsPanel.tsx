@@ -51,6 +51,18 @@ function itemLabel(item: Subscription): string {
 	return item.tags || Object.values(item.parameters).join(' · ');
 }
 
+const subscriptionOrder = new Intl.Collator(undefined, {sensitivity: 'base'});
+
+function compareSubscriptions(left: Subscription, right: Subscription): number {
+	return Number(right.active_session_id !== null) - Number(left.active_session_id !== null)
+		|| subscriptionOrder.compare(itemLabel(left), itemLabel(right)) || left.id - right.id;
+}
+
+function compareSubscriptionGroups(left: SubscriptionGroup, right: SubscriptionGroup): number {
+	return Number(right.running_count > 0) - Number(left.running_count > 0)
+		|| subscriptionOrder.compare(left.name, right.name) || left.id - right.id;
+}
+
 function AddSubscription({group, choice, busy, act}: {
 	group: SubscriptionGroup;
 	choice?: GeneratorChoice;
@@ -236,41 +248,54 @@ function SubscriptionGroupView({group, items, choices, busy, act}: {
 											setSettings(false);
 										});
 									}}/>}
-		<ul className="subscription-items">
-			{items.map(item => <li key={item.id}>
-				<div className="subscription-item-main"><span>{itemLabel(item)}</span>
-					<span className="subscription-next-run muted" aria-label={`Next run for ${itemLabel(item)}`}>
-						<span
-							title={`${item.total_size_bytes.toLocaleString()} bytes (${formatBytes(item.total_size_bytes)})`}>{item.record_count} files</span>
-						{' '}({item.imported_count ?? 0} added){' '}<SubscriptionRunStatus item={item}
-						                                                                   groupEnabled={group.enabled}/>
-					</span>
-					<span className="muted" aria-label={`Total size for ${itemLabel(item)}`}
-						  title={`${item.total_size_bytes.toLocaleString()} bytes`}> · {formatBytes(item.total_size_bytes)}</span>
-					<div className="subscription-actions">
-						<button className="toolbar-button"
-								disabled={busy || !group.enabled || !item.enabled || item.active_session_id !== null}
-								aria-label={`Run ${itemLabel(item)}`}
-								onClick={() => void act(() => api.subscriptions.run(item.id))}>Run
-						</button>
-						<button className="toolbar-button" disabled={busy}
-								aria-label={`${item.enabled ? 'Pause' : 'Resume'} ${itemLabel(item)}`}
-								onClick={() => void act(() => api.subscriptions.update(item.id, {
-									parameters: item.parameters,
-									enabled: !item.enabled
-								}))}>
-							{item.enabled ? 'Pause' : 'Resume'}</button>
-						<button className="toolbar-button" disabled={busy || item.active_session_id !== null}
-								aria-label={`Remove ${itemLabel(item)}`}
-								onClick={() => void act(() => api.subscriptions.remove(item.id))}>×
-						</button>
-					</div>
-				</div>
-				{item.last_error && <small className="error">{item.last_error}</small>}
-			</li>)}
-		</ul>
 		<AddSubscription key={group.generator} group={group}
 						 choice={choices.find(choice => choice.id === group.generator)} busy={busy} act={act}/>
+		<div className="subscription-table-scroll">
+			<table className="subscription-items" aria-label={`Subscriptions in ${group.name}`}>
+				<thead>
+				<tr>
+					<th scope="col">Subscription</th>
+					<th scope="col" className="subscription-number">Files</th>
+					<th scope="col" className="subscription-number">Added last run</th>
+					<th scope="col" className="subscription-number">Size</th>
+					<th scope="col">Status / next run</th>
+					<th scope="col">Actions</th>
+				</tr>
+				</thead>
+				<tbody>{[...items].sort(compareSubscriptions).map(item => <tr key={item.id}>
+					<th scope="row" className="subscription-label">{itemLabel(item)}
+						{item.last_error && <small className="error">{item.last_error}</small>}
+					</th>
+					<td className="subscription-number">{item.record_count.toLocaleString()}</td>
+					<td className="subscription-number">{(item.imported_count ?? 0).toLocaleString()}</td>
+					<td className="subscription-number" aria-label={`Total size for ${itemLabel(item)}`}
+						title={`${item.total_size_bytes.toLocaleString()} bytes`}>{formatBytes(item.total_size_bytes)}</td>
+					<td><span className="subscription-next-run" aria-label={`Next run for ${itemLabel(item)}`}>
+						<SubscriptionRunStatus item={item} groupEnabled={group.enabled}/>
+					</span></td>
+					<td>
+						<div className="subscription-actions">
+							<button className="toolbar-button"
+									disabled={busy || !group.enabled || !item.enabled || item.active_session_id !== null}
+									aria-label={`Run ${itemLabel(item)}`}
+									onClick={() => void act(() => api.subscriptions.run(item.id))}>Run
+							</button>
+							<button className="toolbar-button" disabled={busy}
+									aria-label={`${item.enabled ? 'Pause' : 'Resume'} ${itemLabel(item)}`}
+									onClick={() => void act(() => api.subscriptions.update(item.id, {
+										parameters: item.parameters,
+										enabled: !item.enabled
+									}))}>
+								{item.enabled ? 'Pause' : 'Resume'}</button>
+							<button className="toolbar-button" disabled={busy || item.active_session_id !== null}
+									aria-label={`Remove ${itemLabel(item)}`}
+									onClick={() => void act(() => api.subscriptions.remove(item.id))}>×
+							</button>
+						</div>
+					</td>
+				</tr>)}</tbody>
+			</table>
+		</div>
 	</section>;
 }
 
@@ -328,7 +353,7 @@ function SubscriptionsPanel() {
 				maxLength={200} value={name} readOnly={busy} onChange={event => setName(event.target.value)}/></form>
 		</header>
 		{error && <p role="alert" className="error">{error}</p>}
-		{groups.map(group => <SubscriptionGroupView key={group.id} group={group}
+		{[...groups].sort(compareSubscriptionGroups).map(group => <SubscriptionGroupView key={group.id} group={group}
 													items={items.filter(item => item.group_id === group.id)}
 													choices={choices} busy={busy} act={act}/>)}
 	</div>;

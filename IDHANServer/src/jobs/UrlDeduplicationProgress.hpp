@@ -63,7 +63,7 @@ class UrlDeduplicationProgress final : public JobProgress
 		changed();
 	}
 
-	// Finish after all batches succeed; batchCommitted publishes partial committed work.
+	//! Finish after all batches succeed; batchCommitted publishes partial committed work.
 	void committed( const std::uint64_t merges )
 	{
 		std::lock_guard lock { m_mutex };

@@ -27,8 +27,8 @@ struct Harness
 	MapSecrets secrets {};
 	std::unique_ptr< downloader::DownloaderContext > context {};
 
-	// Low-level host tests use JS modules behind the current class/run entry contract.
-	// These adapters belong to the test harness, not the production parser loader.
+	//! Low-level host tests use JS modules behind the current class/run entry contract.
+	//! These adapters belong to the test harness, not the production parser loader.
 	void prepareEntries()
 	{
 		for ( const auto& entry : std::filesystem::directory_iterator( parsers.root() ) )

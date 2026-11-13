@@ -132,8 +132,17 @@ http::HTTPTask< std::expected< void, http::Response > > parseAndStoreRecordMetad
 	db::DBBindings mime_bindings {};
 	mime_bindings.bind( record_id );
 	const auto mime_rows {
-		co_await db.query( "SELECT mime_id FROM file_info WHERE record_id = $1", std::move( mime_bindings ) )
-			.rows< std::optional< MimeID > >()
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    mime_id
+					FROM file_info
+					WHERE record_id = $1
+				)SQL",
+					 std::move( mime_bindings ) )
+				 .rows< std::optional< MimeID > >()
 	};
 
 	if ( mime_rows.empty() )

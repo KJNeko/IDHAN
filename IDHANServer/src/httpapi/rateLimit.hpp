@@ -74,7 +74,7 @@ struct BandwidthResponse
 
 struct BandwidthRequest
 {
-	// Unix seconds, inclusive start and exclusive end; absent bounds include all history.
+	//! Unix seconds, inclusive start and exclusive end; absent bounds include all history.
 	http::possiblyMissing< std::int64_t > start;
 	http::possiblyMissing< std::int64_t > end;
 };

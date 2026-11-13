@@ -18,8 +18,19 @@ DbResult< std::vector< SavedUrl > > savedUrls( const DownloadSessionID session_i
 		const auto rows {
 			co_await db
 				.query(
-					"SELECT download_session_url_id, COALESCE(parent_url_id, 0), url, state, record_id "
-					"FROM download_session_urls WHERE download_session_id = $1 ORDER BY download_session_url_id",
+					//language=postgresql
+					R"SQL(
+						SELECT
+						    download_session_url_id,
+						    COALESCE(parent_url_id, 0),
+						    url,
+						    state,
+						    record_id
+						FROM download_session_urls
+						WHERE download_session_id = $1
+						ORDER BY
+						    download_session_url_id
+					)SQL",
 					std::move( bindings ) )
 				.rows<
 					DownloadSessionUrlID,
@@ -54,8 +65,14 @@ DbResult< std::optional< std::string > > url(
 		const auto rows {
 			co_await db
 				.query(
-					"SELECT url FROM download_session_urls "
-					"WHERE download_session_id = $1 AND download_session_url_id = $2",
+					//language=postgresql
+					R"SQL(
+						SELECT
+						    url
+						FROM download_session_urls
+						WHERE download_session_id = $1
+						    AND download_session_url_id = $2
+					)SQL",
 					std::move( bindings ) )
 				.rows< std::string >()
 		};
@@ -88,12 +105,15 @@ DbResult< InsertedUrl > insert(
 		const auto rows {
 			co_await db
 				.query(
-					"INSERT INTO download_session_urls "
-					"(download_session_id, download_session_url_id, parent_url_id, url, state, finished_at) VALUES "
-					"($1, $5, NULLIF($2, 0), $3, $4::text, "
-					"CASE WHEN $4::text IN ('pending', 'processing') THEN NULL ELSE now() END) "
-					"RETURNING download_session_url_id, extract(epoch FROM created_at)::bigint, "
-					"extract(epoch FROM finished_at)::bigint",
+					//language=postgresql
+					R"SQL(
+						INSERT INTO download_session_urls (download_session_id, download_session_url_id, parent_url_id, url, state, finished_at)
+						    VALUES ($1, $5, NULLIF ($2, 0), $3, $4::text, CASE WHEN $4::text IN ('pending', 'processing') THEN NULL
+						        ELSE
+						            now()
+						        END)
+						RETURNING download_session_url_id, extract(epoch FROM created_at)::bigint, extract(epoch FROM finished_at)::bigint
+					)SQL",
 					std::move( bindings ) )
 				.rows< DownloadSessionUrlID, std::int64_t, std::optional< std::int64_t > >()
 		};
@@ -127,11 +147,25 @@ DbResult< std::optional< CompletedImport > > completeImport(
 		const auto rows {
 			co_await db
 				.query(
-					"UPDATE download_session_urls "
-					"SET record_id = $3::integer, state = $4::text, finished_at = now(), posted_at=to_timestamp($5::double precision), post_dates_complete=($5 IS NOT NULL) "
-					"WHERE download_session_id = $1 AND download_session_url_id = $2 "
-					"RETURNING extract(epoch FROM finished_at)::bigint, "
-					"(SELECT size FROM file_info WHERE file_info.record_id = $3::integer)",
+					//language=postgresql
+					R"SQL(
+						UPDATE
+						    download_session_urls
+						SET record_id = $3::integer,
+						    state = $4::text,
+						    finished_at = now(),
+						    posted_at = to_timestamp($5::double precision),
+						    post_dates_complete = ($5 IS NOT NULL)
+						WHERE download_session_id = $1
+						    AND download_session_url_id = $2
+						RETURNING extract(epoch FROM finished_at)::bigint,
+						    (
+						        SELECT
+						            size
+						        FROM file_info
+						        WHERE file_info.record_id = $3::integer
+						    )
+					)SQL",
 					std::move( bindings ) )
 				.rows< std::int64_t, std::optional< std::int64_t > >()
 		};
@@ -163,10 +197,19 @@ DbResult< std::optional< std::int64_t > > mark(
 		const auto rows {
 			co_await db
 				.query(
-					"UPDATE download_session_urls SET state = $3::text, "
-					"finished_at = CASE WHEN $3::text IN ('pending', 'processing') THEN NULL ELSE now() END "
-					"WHERE download_session_id = $1 AND download_session_url_id = $2 "
-					"RETURNING extract(epoch FROM finished_at)::bigint",
+					//language=postgresql
+					R"SQL(
+						UPDATE
+						    download_session_urls
+						SET state = $3::text,
+						    finished_at = CASE WHEN $3::text IN ('pending', 'processing') THEN NULL
+						    ELSE
+						        now()
+						    END
+						WHERE download_session_id = $1
+						    AND download_session_url_id = $2
+						RETURNING extract(epoch FROM finished_at)::bigint
+					)SQL",
 					std::move( bindings ) )
 				.rows< std::optional< std::int64_t > >()
 		};
@@ -198,16 +241,36 @@ DbResult< std::int64_t > fail(
 		const auto rows {
 			co_await db
 				.query(
-					"WITH failed AS (UPDATE download_session_urls SET state = 'failed', finished_at = now() "
-					"WHERE download_session_id = $1 AND download_session_url_id = $2 "
-					"RETURNING download_session_id, download_session_url_id, finished_at), "
-					"recorded AS (INSERT INTO download_session_url_failures "
-					"(download_session_id, download_session_url_id, stage, message) "
-					"SELECT download_session_id, download_session_url_id, $3, "
-					"COALESCE(NULLIF($4, ''), 'The download failed without a reason') FROM failed "
-					"ON CONFLICT (download_session_id, download_session_url_id) "
-					"DO UPDATE SET stage = EXCLUDED.stage, message = EXCLUDED.message) "
-					"SELECT extract(epoch FROM finished_at)::bigint FROM failed",
+					//language=postgresql
+					R"SQL(
+						WITH failed AS (
+						    UPDATE
+						        download_session_urls
+						    SET state = 'failed',
+						        finished_at = now()
+						    WHERE download_session_id = $1
+						        AND download_session_url_id = $2
+						    RETURNING download_session_id,
+						        download_session_url_id,
+						        finished_at
+						),
+						recorded AS (
+						    INSERT INTO download_session_url_failures (download_session_id, download_session_url_id, stage, message)
+						    SELECT
+						        download_session_id,
+						        download_session_url_id,
+						        $3,
+						        COALESCE(NULLIF ($4, ''), 'The download failed without a reason')
+						    FROM failed
+						    ON CONFLICT (download_session_id,
+						        download_session_url_id)
+						        DO UPDATE SET
+						            stage = EXCLUDED.stage, message = EXCLUDED.message
+						)
+						SELECT
+						    extract(epoch FROM finished_at)::bigint
+						FROM failed
+					)SQL",
 					std::move( bindings ) )
 				.rows< std::int64_t >()
 		};
@@ -234,15 +297,29 @@ DbResult< void > flagErrorsForRetry(
 		bindings.bind( id );
 
 		co_await db.query(
-			"WITH RECURSIVE retried AS ("
-			"SELECT $2::integer AS url_id "
-			"UNION ALL "
-			"SELECT urls.download_session_url_id FROM download_session_urls urls "
-			"JOIN retried ON urls.download_session_id = $1 AND urls.parent_url_id = retried.url_id"
-			") "
-			"UPDATE download_session_errors SET download_session_url_id = $2, retry_pending = true "
-			"WHERE download_session_id = $1 "
-			"AND download_session_url_id IN (SELECT url_id FROM retried)",
+			//language=postgresql
+			R"SQL(
+				WITH RECURSIVE retried AS (
+				    SELECT
+				        $2::integer AS url_id
+				    UNION ALL
+				    SELECT
+				        urls.download_session_url_id
+				    FROM download_session_urls urls
+				        JOIN retried ON urls.download_session_id = $1
+				            AND urls.parent_url_id = retried.url_id
+				)
+				UPDATE
+				    download_session_errors
+				SET download_session_url_id = $2,
+				    retry_pending = true
+				WHERE download_session_id = $1
+				    AND download_session_url_id IN (
+				        SELECT
+				            url_id
+				        FROM retried
+				    )
+			)SQL",
 			std::move( bindings ) );
 		co_return std::expected< void, std::string > {};
 	}
@@ -266,9 +343,14 @@ DbResult< std::vector< std::int64_t > > clearRetriedErrors(
 		const auto removed {
 			co_await db
 				.query(
-					"DELETE FROM download_session_errors "
-					"WHERE download_session_id = $1 AND download_session_url_id = $2 AND retry_pending "
-					"RETURNING download_session_error_id",
+					//language=postgresql
+					R"SQL(
+						DELETE FROM download_session_errors
+						WHERE download_session_id = $1
+						    AND download_session_url_id = $2
+						    AND retry_pending
+						RETURNING download_session_error_id
+					)SQL",
 					std::move( bindings ) )
 				.rows< std::int64_t >()
 		};
@@ -298,8 +380,13 @@ DbResult< std::vector< DownloadSessionUrlID > > removeChildren(
 		const auto removed {
 			co_await db
 				.query(
-					"DELETE FROM download_session_urls WHERE download_session_id = $1 AND parent_url_id = $2 "
-					"RETURNING download_session_url_id",
+					//language=postgresql
+					R"SQL(
+						DELETE FROM download_session_urls
+						WHERE download_session_id = $1
+						    AND parent_url_id = $2
+						RETURNING download_session_url_id
+					)SQL",
 					std::move( bindings ) )
 				.rows< DownloadSessionUrlID >()
 		};
@@ -338,10 +425,12 @@ DbResult< LoggedError > addError(
 		const auto rows {
 			co_await db
 				.query(
-					"INSERT INTO download_session_errors "
-					"(download_session_id, download_session_url_id, url, lane, status, message) VALUES "
-					"($1, NULLIF($2, 0), $3, $4, $5, NULLIF($6, '')) "
-					"RETURNING download_session_error_id, extract(epoch FROM occurred_at)::bigint",
+					//language=postgresql
+					R"SQL(
+						INSERT INTO download_session_errors (download_session_id, download_session_url_id, url, lane, status, message)
+						    VALUES ($1, NULLIF ($2, 0), $3, $4, $5, NULLIF ($6, ''))
+						RETURNING download_session_error_id, extract(epoch FROM occurred_at)::bigint
+					)SQL",
 					std::move( bindings ) )
 				.rows< std::int64_t, std::int64_t >()
 		};

@@ -26,7 +26,6 @@ const TERMINAL = new Set<DownloadSessionUrlState>([
     'skipped_already_imported', 'failed', 'cancelled',
 ]);
 
-/** The states the server lets a URL be retried from. */
 const RETRYABLE = new Set<DownloadSessionUrlState>(['completed', 'imported', 'imported_previously', 'failed']);
 
 const ACTIVE = new Set<DownloadSessionUrlState>(['downloading', 'processing', 'importing']);
@@ -222,7 +221,6 @@ function DownloadSessionSummary({nodes}: { nodes: DownloadSessionUrlNode[] | und
     );
 }
 
-/** A request that never got a response has no status to show. */
 export function statusLabel(status: number | null): string {
     if (status === null) return 'no response';
 

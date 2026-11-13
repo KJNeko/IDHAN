@@ -44,7 +44,15 @@ TEST_CASE( "Lazy row decoding retains query context after a move", "[db][decode]
 {
 	auto raw { distanceResult() };
 	REQUIRE( PQsetvalue( raw.get(), 0, 0, nullptr, -1 ) == 1 );
-	DBRows< std::int16_t > original { std::move( raw ), "SELECT distance FROM hamming_distance" };
+	DBRows< std::int16_t > original {
+		std::move( raw ),
+		//language=postgresql
+		R"SQL(
+			SELECT
+			    distance
+			FROM hamming_distance
+		)SQL"
+	};
 	auto rows { std::move( original ) };
 	try
 	{

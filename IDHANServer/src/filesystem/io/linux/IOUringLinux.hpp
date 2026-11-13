@@ -51,9 +51,9 @@ struct IOUringUserData
 
 class IOUringLinux final : public IOUring
 {
-	// setupUring() uses m_params when initializing uring_fd.
+	//! setupUring() uses m_params when initializing uring_fd.
 	io_uring_params m_params;
-	// Keep signed so a negative setup error triggers the synchronous fallback.
+	//! Keep signed so a negative setup error triggers the synchronous fallback.
 	int uring_fd;
 	std::shared_ptr< std::atomic< bool > > io_run;
 
@@ -158,4 +158,4 @@ class IOUringLinux final : public IOUring
 
 } // namespace idhan
 
-#endif // __linux__
+#endif

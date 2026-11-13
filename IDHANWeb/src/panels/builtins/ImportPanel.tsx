@@ -22,12 +22,9 @@ interface Item {
   name: string;
   size: number;
   state: ItemState;
-  /** Short text on the status line, e.g. "#412" or "already present". */
   detail?: string;
-  /** Full server message for a failure or skip, wrapped on its own line under the name. */
   reason?: string;
   recordId?: RecordId;
-    /** Metadata fetched after a successful import, shown inline. */
   info?: RecordInfo;
 }
 

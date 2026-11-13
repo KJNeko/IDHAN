@@ -1,8 +1,3 @@
-/**
- * Registers the built-in panel catalog. Import this once at startup for its side effects.
- * Registration is the same path third-party plugins use.
- */
-
 import { registerPanel } from '../registry';
 import {bandwidthPanel} from './BandwidthPanel';
 import { serverStatusPanel } from './ServerStatusPanel';

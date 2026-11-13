@@ -32,7 +32,7 @@ struct ScriptWork
 	std::optional< WorkID > parent {};
 	std::string url {};
 	Json::Value tags { Json::objectValue };
-	// Keep the routing decision made by submit()/follow(), including the checked parser snapshot.
+	//! Keep the routing decision made by submit()/follow(), including the checked parser snapshot.
 	ScriptRoute route {};
 };
 
@@ -63,8 +63,8 @@ class ScriptRunner
 
 	using RuntimeEvent = std::variant< ScriptWork, ScriptCompletion, WakeReason >;
 
-	// Queues, load and notifications belong to m_mutex. The dedicated thread owns
-	// scripts/resident for their entire lifetime, including teardown.
+	//! Queues, load and notifications belong to m_mutex. The dedicated thread owns
+	//! scripts/resident for their entire lifetime, including teardown.
 	struct Runtime
 	{
 		struct Resident
@@ -95,7 +95,8 @@ class ScriptRunner
 	std::atomic_bool m_running { true };
 
 	void run( Runtime& runtime );
-	// Caller holds m_mutex; one permit is released for every queued event.
+
+	//! Caller holds m_mutex; one permit is released for every queued event.
 	void enqueueEvent( Runtime& runtime, RuntimeEvent event );
 	[[nodiscard]] bool processEvent( Runtime& runtime, RuntimeEvent event );
 	[[nodiscard]] bool advance( Runtime& runtime );

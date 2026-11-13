@@ -7,7 +7,7 @@
 namespace idhan::downloader
 {
 
-// Diagnostics threads read these counters without accessing QuickJS.
+//! Diagnostics threads read these counters without accessing QuickJS.
 class ScriptActivity
 {
   public:

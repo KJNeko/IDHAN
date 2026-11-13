@@ -30,7 +30,6 @@ export interface LayoutMeta {
   name: string;
 }
 
-/** Where to place a new panel relative to an existing one; mirrors dockview's position option. */
 export interface PanelPosition {
   referencePanel?: string;
   direction?: 'left' | 'right' | 'above' | 'below' | 'within';
@@ -50,7 +49,6 @@ function loadWorking(): LayoutDocument {
     const migrated = migrateLayout(safeParse(localStorage.getItem(WORKING_KEY)));
     if (migrated) return migrated;
   } catch {
-    // fall through to a fresh default
   }
   return createEmptyLayout('Default');
 }
@@ -85,7 +83,6 @@ function persistSaved(saved: Record<string, LayoutDocument>): void {
   try {
     localStorage.setItem(SAVED_KEY, JSON.stringify(saved));
   } catch {
-    // ignore
   }
 }
 
@@ -95,7 +92,6 @@ function metaList(saved: Record<string, LayoutDocument>): LayoutMeta[] {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-/** Instance ids still present in a serialized dockview tree. */
 function liveInstanceIds(tree: SerializedDockview | null): Set<string> {
   const panels = (tree as { panels?: Record<string, unknown> } | null)?.panels;
   return new Set(panels ? Object.keys(panels) : []);
@@ -110,14 +106,11 @@ interface LayoutStore {
   /** Increments when the panel catalog changes (e.g. plugins finish loading), to refresh the picker. */
   catalogVersion: number;
   savedLayouts: LayoutMeta[];
-  /** Metadata for layouts stored on the server; refreshed on demand, empty until first fetch. */
   serverLayouts: ServerLayoutMeta[];
-  /** True while a push/pull/refresh is in flight, so the UI can disable server actions. */
   serverBusy: boolean;
 
   setApi: (api: DockviewApi | null) => void;
   toggleEditMode: () => void;
-  /** Signal that the registered panel catalog changed (plugins loaded), so views re-read the registry. */
   bumpCatalog: () => void;
 
   /** Persist the serialized engine tree and prune config for panels the user closed. */
@@ -143,13 +136,9 @@ interface LayoutStore {
    */
   importLayout: (raw: unknown) => boolean;
 
-  /** Fetch the server layout list into `serverLayouts`. Rejects (with ApiError) on failure. */
   refreshServerLayouts: () => Promise<void>;
-  /** Push the working document to the server (upsert), then refresh the list. */
   pushLayoutToServer: () => Promise<void>;
-  /** Replace the working document with a server-stored one (migrated on the way in). */
   pullLayoutFromServer: (id: string) => Promise<void>;
-  /** Delete a server-stored layout, then refresh the list. */
   deleteServerLayout: (id: string) => Promise<void>;
 }
 

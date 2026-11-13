@@ -53,7 +53,7 @@ namespace idhan::httpapi
 	return Json::writeString( builder, value );
 }
 
-// JobTaskStatus owns the canonical snapshot so completion fields remain consistent.
+//! JobTaskStatus owns the canonical snapshot so completion fields remain consistent.
 template < typename T >
 T jobSnapshotField( const Json::Value& field )
 {
@@ -143,7 +143,16 @@ static JobTask rescanMetadataJob( std::vector< RecordID > record_ids, db::DBCont
 	if ( record_ids.empty() )
 	{
 		const auto rows { co_await folly::coro::co_withExecutor(
-			executor, db.query( "SELECT record_id FROM file_info" ).rows< RecordID >() ) };
+				executor,
+				db.query(
+					  //language=postgresql
+					  R"SQL(
+					  SELECT
+					      record_id
+					  FROM file_info
+				  )SQL" )
+				  .rows< RecordID >() )
+		};
 		record_ids.reserve( rows.size() );
 		for ( const auto& [ record_id ] : rows ) record_ids.push_back( record_id );
 	}
@@ -231,8 +240,8 @@ struct UrlSurvivorPreparation
 	std::optional< UrlID > collision {};
 };
 
-// Reserve the lowest ID's preferred type before removing any members. This preserves
-// the global type preference even if a later batch fails and the job is rerun.
+//! Reserve the lowest ID's preferred type before removing any members. This preserves
+//! the global type preference even if a later batch fails and the job is rerun.
 static runtime::Task< UrlSurvivorPreparation > prepareUrlSurvivor(
 	db::DBContext& db,
 	const UrlID survivor,
@@ -241,14 +250,31 @@ static runtime::Task< UrlSurvivorPreparation > prepareUrlSurvivor(
 	std::string preferred_type )
 {
 	auto transaction { co_await db.transaction() };
-	co_await transaction.query( "LOCK TABLE urls IN SHARE ROW EXCLUSIVE MODE" ).result();
+	co_await transaction
+			 .query(
+				 //language=postgresql
+				 R"SQL(
+				LOCK TABLE urls IN SHARE ROW EXCLUSIVE MODE
+			)SQL" )
+			 .result();
 	db::DBBindings bindings {};
 	bindings.bind( survivor );
 	bindings.bind( url );
 	const auto rows {
 		co_await transaction
 			.query(
-				"SELECT url_id, url_type::text FROM urls WHERE url_id = $1 OR url = $2 ORDER BY url_id FOR UPDATE",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    url_id,
+					    url_type::text
+					FROM urls
+					WHERE url_id = $1
+					    OR url = $2
+					ORDER BY
+					    url_id
+					FOR UPDATE
+				)SQL",
 				std::move( bindings ) )
 			.rows< UrlID, std::string >()
 	};
@@ -276,15 +302,22 @@ static runtime::Task< UrlSurvivorPreparation > prepareUrlSurvivor(
 	type_bindings.bind( preferred_type );
 	co_await transaction
 		.query(
-			"UPDATE urls SET url_type = $2::UrlType WHERE url_id = $1 AND url_type <> $2::UrlType",
+			//language=postgresql
+			R"SQL(
+				UPDATE
+				    urls
+				SET url_type = $2::UrlType
+				WHERE url_id = $1
+				    AND url_type <> $2::UrlType
+			)SQL",
 			std::move( type_bindings ) )
 		.result();
 	co_await transaction.commit();
 	co_return UrlSurvivorPreparation { winner, collision };
 }
 
-// Each transaction moves at most 1000 mappings. Parent row locks prevent new
-// references to the loser while its last mappings and URL row are removed.
+//! Each transaction moves at most 1000 mappings. Parent row locks prevent new
+//! references to the loser while its last mappings and URL row are removed.
 static runtime::Task<> mergeUrlInChunks(
 	db::DBContext& db,
 	const UrlID survivor,
@@ -299,7 +332,16 @@ static runtime::Task<> mergeUrlInChunks(
 		const auto held {
 			co_await transaction
 				.query(
-					"SELECT url_id FROM urls WHERE url_id = ANY($1::integer[]) ORDER BY url_id FOR UPDATE",
+					//language=postgresql
+					R"SQL(
+						SELECT
+						    url_id
+						FROM urls
+						WHERE url_id = ANY ($1::integer[])
+						ORDER BY
+						    url_id
+						FOR UPDATE
+					)SQL",
 					std::move( locks ) )
 				.rows< UrlID >()
 		};
@@ -311,18 +353,35 @@ static runtime::Task<> mergeUrlInChunks(
 		const auto moved {
 			co_await transaction
 				.query(
+					//language=postgresql
 					R"SQL(
-			WITH batch AS (
-			    SELECT record_id FROM url_mappings WHERE url_id = $2 ORDER BY record_id LIMIT 1000
-			), removed AS (
-			    DELETE FROM url_mappings m USING batch b
-			    WHERE m.url_id = $2 AND m.record_id = b.record_id RETURNING m.record_id
-			), inserted AS (
-			    INSERT INTO url_mappings (record_id, url_id)
-			    SELECT record_id, $1 FROM removed ON CONFLICT DO NOTHING
-			)
-			SELECT count(*) FROM removed
-		)SQL",
+						WITH batch AS (
+						    SELECT
+						        record_id
+						    FROM url_mappings
+						    WHERE url_id = $2
+						    ORDER BY
+						        record_id
+						    LIMIT 1000
+						),
+						removed AS (
+						    DELETE FROM url_mappings m USING batch b
+						WHERE m.url_id = $2
+						    AND m.record_id = b.record_id
+						RETURNING m.record_id
+						), inserted AS (
+						    INSERT INTO url_mappings (record_id, url_id)
+						    SELECT
+						        record_id,
+						        $1
+						    FROM removed
+						    ON CONFLICT
+						        DO NOTHING
+						)
+						    SELECT
+						        count(*)
+						    FROM removed
+					)SQL",
 					std::move( bindings ) )
 				.rows< std::int64_t >()
 		};
@@ -337,14 +396,23 @@ static runtime::Task<> mergeUrlInChunks(
 			log_bindings.bind( loser );
 			co_await transaction
 				.query(
+					//language=postgresql
 					R"SQL(
-				INSERT INTO url_log (url_id, log_time, last_code)
-				SELECT $1, log_time, last_code FROM url_log WHERE url_id = $2
-				ON CONFLICT (url_id) DO UPDATE
-				SET log_time = EXCLUDED.log_time, last_code = EXCLUDED.last_code
-				WHERE EXCLUDED.log_time > url_log.log_time
-				   OR (url_log.log_time IS NULL AND EXCLUDED.log_time IS NOT NULL)
-			)SQL",
+						INSERT INTO url_log (url_id, log_time, last_code)
+						SELECT
+						    $1,
+						    log_time,
+						    last_code
+						FROM url_log
+						WHERE url_id = $2
+						ON CONFLICT (url_id)
+						    DO UPDATE SET
+						        log_time = EXCLUDED.log_time,
+						        last_code = EXCLUDED.last_code
+						    WHERE EXCLUDED.log_time > url_log.log_time
+						        OR (url_log.log_time IS NULL
+						            AND EXCLUDED.log_time IS NOT NULL)
+					)SQL",
 					std::move( log_bindings ) )
 				.result();
 			db::DBBindings type_bindings {};
@@ -352,18 +420,41 @@ static runtime::Task<> mergeUrlInChunks(
 			type_bindings.bind( loser );
 			co_await transaction
 				.query(
+					//language=postgresql
 					R"SQL(
-				UPDATE urls s SET url_type = l.url_type FROM urls l
-				WHERE s.url_id = $1 AND l.url_id = $2 AND s.url_type = 'unknown' AND l.url_type <> 'unknown'
-			)SQL",
+						UPDATE
+						    urls s
+						SET url_type = l.url_type
+						FROM urls l
+						WHERE s.url_id = $1
+						    AND l.url_id = $2
+						    AND s.url_type = 'unknown'
+						    AND l.url_type <> 'unknown'
+					)SQL",
 					std::move( type_bindings ) )
 				.result();
 			db::DBBindings delete_log {};
 			delete_log.bind( loser );
-			co_await transaction.query( "DELETE FROM url_log WHERE url_id = $1", std::move( delete_log ) ).result();
+			co_await transaction
+					 .query(
+						 //language=postgresql
+						 R"SQL(
+						DELETE FROM url_log
+						WHERE url_id = $1
+					)SQL",
+						 std::move( delete_log ) )
+					 .result();
 			db::DBBindings delete_url {};
 			delete_url.bind( loser );
-			co_await transaction.query( "DELETE FROM urls WHERE url_id = $1", std::move( delete_url ) ).result();
+			co_await transaction
+					 .query(
+						 //language=postgresql
+						 R"SQL(
+						DELETE FROM urls
+						WHERE url_id = $1
+					)SQL",
+						 std::move( delete_url ) )
+					 .result();
 		}
 
 		co_await transaction.commit();
@@ -372,18 +463,34 @@ static runtime::Task<> mergeUrlInChunks(
 	}
 }
 
-// A concurrent importer may create the canonical spelling between batches. Check
-// under a short write lock, merging that row too before claiming the sorted URL.
+//! A concurrent importer may create the canonical spelling between batches. Check
+//! under a short write lock, merging that row too before claiming the sorted URL.
 static runtime::Task< std::optional< UrlID > > saveSortedUrl( db::DBContext& db, const UrlID survivor, std::string url )
 {
 	auto transaction { co_await db.transaction() };
-	co_await transaction.query( "LOCK TABLE urls IN SHARE ROW EXCLUSIVE MODE" ).result();
+	co_await transaction
+			 .query(
+				 //language=postgresql
+				 R"SQL(
+				LOCK TABLE urls IN SHARE ROW EXCLUSIVE MODE
+			)SQL" )
+			 .result();
 	db::DBBindings lookup {};
 	lookup.bind( url );
 	lookup.bind( survivor );
 	const auto collision {
-		co_await transaction.query( "SELECT url_id FROM urls WHERE url = $1 AND url_id <> $2", std::move( lookup ) )
-			.rows< UrlID >()
+		co_await transaction
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    url_id
+					FROM urls
+					WHERE url = $1
+					    AND url_id <> $2
+				)SQL",
+					 std::move( lookup ) )
+				 .rows< UrlID >()
 	};
 	if ( !collision.empty() )
 	{
@@ -395,8 +502,18 @@ static runtime::Task< std::optional< UrlID > > saveSortedUrl( db::DBContext& db,
 	db::DBBindings update {};
 	update.bind( survivor );
 	update.bind( url );
-	co_await transaction.query( "UPDATE urls SET url = $2 WHERE url_id = $1 AND url <> $2", std::move( update ) )
-		.result();
+	co_await transaction
+			 .query(
+				 //language=postgresql
+				 R"SQL(
+				UPDATE
+				    urls
+				SET url = $2
+				WHERE url_id = $1
+				    AND url <> $2
+			)SQL",
+				 std::move( update ) )
+			 .result();
 	co_await transaction.commit();
 	co_return std::nullopt;
 }
@@ -415,9 +532,21 @@ static runtime::Task< Json::Value > deduplicateUrls(
 	const auto initialized_e { co_await downloader.normalizeUrls( {} ) };
 	if ( !initialized_e.has_value() ) throw std::runtime_error( initialized_e.error() );
 
-	// Bound the scan to IDs present at startup; new unsorted imports can be handled
-	// by a later run. Keyset pages avoid a full-table count or an OFFSET scan.
-	const auto last { co_await db.query( "SELECT url_id FROM urls ORDER BY url_id DESC LIMIT 1" ).rows< UrlID >() };
+	// Bound the scan to IDs present at startup; later imports are handled by a later run.
+	const auto last{
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    url_id
+					FROM urls
+					ORDER BY
+					    url_id DESC
+					LIMIT 1
+				)SQL" )
+				 .rows< UrlID >()
+	};
 	const UrlID upper { last.empty() ? 0 : std::get< 0 >( last.row( 0 ) ) };
 	UrlID cursor {};
 	std::map< std::string, UrlDeduplicationGroup > groups {};
@@ -436,7 +565,19 @@ static runtime::Task< Json::Value > deduplicateUrls(
 		const auto rows {
 			co_await db
 				.query(
-					"SELECT url_id, url, url_type::text FROM urls WHERE url_id > $1 AND url_id <= $2 ORDER BY url_id LIMIT $3",
+					//language=postgresql
+					R"SQL(
+						SELECT
+						    url_id,
+						    url,
+						    url_type::text
+						FROM urls
+						WHERE url_id > $1
+						    AND url_id <= $2
+						ORDER BY
+						    url_id
+						LIMIT $3
+					)SQL",
 					std::move( bindings ) )
 				.rows< UrlID, std::string, std::string >()
 		};

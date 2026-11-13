@@ -12,7 +12,7 @@ inline constexpr unsigned int required_sdk_major { 1 };
 inline constexpr unsigned int required_sdk_minor { 0 };
 inline constexpr unsigned int required_sdk_patch { 0 };
 
-// Accept releases of the same major version at or above the minimum required release.
+//! Accept releases of the same major version at or above the minimum required release.
 inline bool compatibleParserSDKVersion( const std::string_view version )
 {
 	std::array< unsigned int, 3 > parts {};

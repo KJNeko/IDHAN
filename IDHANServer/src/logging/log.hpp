@@ -22,12 +22,8 @@ inline constexpr std::string_view ready_marker { "==== IDHAN READY: accepting re
 //! a message are indented to sit under the first, so any message containing '\n' stays aligned.
 [[nodiscard]] std::unique_ptr< spdlog::formatter > makeServerFormatter();
 
-//! The logger IDHAN created and the ring buffer sink attached to it, as direct typed pointers set
-//! once at startup by ServerContext::createLogger(). Endpoints reaching into these (/log) must use
-//! these accessors rather than spdlog::get(), spdlog::default_logger() or dynamic_pointer_cast.
-//! Modules are dlopen'd with RTLD_GLOBAL and link spdlog themselves, which on some builds duplicates
-//! the RTTI for ringbuffer_sink_mt: the cast then returns null and the registry lookup returns a null
-//! or unrelated logger.
+//! The server logger and its ring buffer sink, set once by ServerContext::createLogger(). Use these, not
+//! spdlog::get() or dynamic_pointer_cast: modules loaded RTLD_GLOBAL can duplicate spdlog's RTTI.
 [[nodiscard]] std::shared_ptr< spdlog::logger > getServerLogger();
 [[nodiscard]] std::shared_ptr< spdlog::sinks::ringbuffer_sink_mt > getServerRingBufferSink();
 void setServerLogger(

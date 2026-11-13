@@ -261,7 +261,13 @@ class SearchQuery
 	[[nodiscard]] static std::string wildcardToLikePattern( std::string_view wildcard );
 
 	static constexpr std::string_view wildcard_tag_query {
-		"SELECT tag_id FROM tags WHERE tag_text LIKE CASEFOLD(normalize($1, NFC))"
+		//language=postgresql
+		R"SQL(
+			SELECT
+			    tag_id
+			FROM tags
+			WHERE tag_text LIKE CASEFOLD (normalize ($1, NFC))
+		)SQL"
 	};
 
 	void addPositiveWildcard( std::vector< TagID > tag_ids, std::string pattern = {} );

@@ -8,8 +8,14 @@ TEST_CASE_METHOD( ServerFixture, "Parser hosts expose provenance and support rem
 {
 	{
 		pqxx::work tx { db() };
-		tx.exec( "INSERT INTO downloader_parser_hosts (host, parser, auto_discovered) VALUES "
-		         "('auto.example', 'hyshare', true), ('manual.example', 'hyshare', false)" );
+		tx.exec(
+			//language=postgresql
+			R"SQL(
+				INSERT INTO downloader_parser_hosts (host, parser, auto_discovered)
+				VALUES
+				    ('auto.example', 'hyshare', true),
+				    ('manual.example', 'hyshare', false)
+			)SQL" );
 		tx.commit();
 	}
 	const auto listed { api().get( "/downloader/hosts" ) };

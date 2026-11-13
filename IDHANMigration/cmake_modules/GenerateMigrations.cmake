@@ -1,7 +1,6 @@
 
 message("Processing migrations dir ${MIGRATION_DIR}")
 
-# Process each migration file
 file(GLOB_RECURSE MIGRATIONS "${MIGRATION_DIR}/*.sql")
 
 file(READ ${MIGRATION_DIR}/migration-template.cpp.unused TEMPLATE_CONTENT)

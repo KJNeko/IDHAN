@@ -32,7 +32,7 @@ struct ScriptRoute
 	std::string configured_domain {};
 	Json::Value parameters;
 	Json::Value discovery_scripts;
-	// Pins the checked modules for the lifetime of this invocation.
+	//! Pins the checked modules for the lifetime of this invocation.
 	std::shared_ptr< BytecodeCache > bytecode {};
 };
 
@@ -111,7 +111,7 @@ class ScriptRegistry
 		std::atomic_uint64_t generation {};
 	};
 
-	// Published registry snapshots share host discoveries across parser reloads.
+	//! Published registry snapshots share host discoveries across parser reloads.
 	std::shared_ptr< LearnedHosts > m_learned { std::make_shared< LearnedHosts >() };
 
 	struct PreparedParser
@@ -175,7 +175,7 @@ class ScriptRegistry
 		std::filesystem::path parser_directory,
 		LaneSettings defaults = {} );
 
-	// Preparation is synchronous; errors retain the last successfully published version.
+	//! Preparation is synchronous; errors retain the last successfully published version.
 	[[nodiscard]] std::expected< ParserUpdateReport, std::string > updateParsers();
 	[[nodiscard]] std::expected< ParserUpdateReport, std::string > updateParser( const std::filesystem::path& path );
 	[[nodiscard]] ParserUpdateReport parserStatus() const;
@@ -185,7 +185,7 @@ class ScriptRegistry
 		bool replace );
 	[[nodiscard]] std::expected< std::string, std::string > parserSource( std::string filename ) const;
 
-	// Followed URLs can skip discovery and download directly when no registered parser matches.
+	//! Followed URLs can skip discovery and download directly when no registered parser matches.
 	[[nodiscard]] std::expected< std::optional< ScriptRoute >, std::string > route(
 		std::string_view url,
 		bool allow_discovery = true ) const;
@@ -203,8 +203,8 @@ class ScriptRegistry
 
 	[[nodiscard]] LaneSettings laneSettings( std::string_view host ) const;
 
-	// Associates a discovered host with its class's routes and lane settings. Explicit host policies win.
-	// The host persistence adapter stores discovered associations before publishing them.
+	//! Associates a discovered host with its class's routes and lane settings. Explicit host policies win.
+	//! The host persistence adapter stores discovered associations before publishing them.
 	[[nodiscard]] folly::coro::Task< std::expected< void, std::string > > learnHost(
 		std::string host,
 		std::string url_class );

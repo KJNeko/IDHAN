@@ -1,4 +1,3 @@
-
 CREATE OR REPLACE FUNCTION repair_parents_on_alias()
     RETURNS TRIGGER
 AS

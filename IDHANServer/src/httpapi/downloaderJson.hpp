@@ -11,8 +11,8 @@
 namespace idhan::httpapi
 {
 
-// The downloader still exposes script metadata through JsonCpp. Decode it into
-// the HTTP contract here so serialization and documentation use the same type.
+//! The downloader still exposes script metadata through JsonCpp. Decode it into
+//! the HTTP contract here so serialization and documentation use the same type.
 template < typename T >
 [[nodiscard]] std::expected< T, std::string > decodeDownloaderJson( const Json::Value& value )
 {

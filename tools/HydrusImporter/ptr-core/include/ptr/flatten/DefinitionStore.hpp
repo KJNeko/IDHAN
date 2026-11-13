@@ -26,21 +26,11 @@ std::optional< std::array< std::byte, SHA256_BYTES > > decodeSha256Hex( std::str
 //!
 //! hashes.bin is a fixed 32-byte stride indexed by hash_id; an all-zero slot means absent.
 //! tags.idx is a fixed 8-byte stride of (u32 offset, u32 length) into tags.blob; a zero length
-//! means absent. Because the id is the offset, nothing is sorted and nothing is searched, and
-//! the files are sparse so unused id ranges cost no blocks.
+//! means absent.
 //!
-//! writeHash and writeTag are thread-safe. Both address their output by id rather than appending,
-//! so concurrent writers cannot interleave: the only shared state is the tags.blob allocation
-//! cursor, and that is held just long enough to reserve a range. The write itself happens outside
-//! the lock.
+//! writeHash and writeTag are thread-safe.
 //!
-//! \note If two update files define one tag_id with different text, whichever index write lands
-//!       last wins, which is not deterministic across runs. PTR ids are stable, so in practice the
-//!       text is identical.
-//!
-//! \warning Construction TRUNCATES all three files, so only one writer may exist per directory
-//!          per run. Constructing a second one discards everything the first wrote. A scan builds
-//!          exactly one and keeps it for the whole corpus.
+//! \warning Construction truncates all three files, so only one writer may exist per directory.
 class DefinitionWriter
 {
   public:
@@ -55,8 +45,7 @@ class DefinitionWriter
 
 	~DefinitionWriter();
 
-	//! \param sha256_hex Must be exactly 64 hex characters. Anything else is rejected here so it
-	//!        can never reach a chunk, generalising the length check the importer does today.
+	//! \param sha256_hex Must be exactly 64 hex characters.
 	//! \return true if written.
 	bool writeHash( std::uint32_t hash_id, std::string_view sha256_hex );
 
@@ -102,9 +91,7 @@ class DefinitionReader
 	//! One past the highest id tags.idx has a slot for. Sizes a TagUsageSet.
 	std::uint32_t tagIdCapacity() const noexcept;
 
-	//! How many tag ids the corpus actually defined. Counted once during construction by walking
-	//! tags.idx for non-zero lengths; the file is sparse, so the id ranges nothing ever defined are
-	//! holes that read as zeros without touching the disk.
+	//! How many tag ids the corpus actually defined, counted once at construction.
 	std::uint64_t definedTagCount() const noexcept { return m_defined_tags; }
 
   private:

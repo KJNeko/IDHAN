@@ -1,5 +1,6 @@
 #include "AssociateTags.hpp"
 
+#include <format>
 #include <utility>
 
 #include "db/tagDomains.hpp"
@@ -39,8 +40,15 @@ runtime::Task< std::expected< void, std::string > > associateTags(
 		create_bindings.bind( subtags );
 		const auto created {
 			co_await transaction
-				.query( "SELECT tag_id FROM createbatchtags($1::TEXT[], $2::TEXT[])", std::move( create_bindings ) )
-				.rows< TagID >()
+					 .query(
+						 //language=postgresql
+						 R"SQL(
+						SELECT
+						    tag_id
+						FROM createbatchtags ($1::TEXT[], $2::TEXT[])
+					)SQL",
+						 std::move( create_bindings ) )
+					 .rows< TagID >()
 		};
 
 		std::vector< TagID > tag_ids {};
@@ -53,8 +61,16 @@ runtime::Task< std::expected< void, std::string > > associateTags(
 		mapping_bindings.bind( domain_id );
 		co_await transaction
 			.query(
-				"INSERT INTO tag_mappings (record_id, tag_id, tag_domain_id) "
-				"SELECT $1, unnest($2::" TAG_PG_TYPE_NAME "[]), $3 ON CONFLICT DO NOTHING",
+				std::format(
+					//language=postgresql
+					R"SQL(
+						INSERT INTO tag_mappings (record_id, tag_id, tag_domain_id)
+						SELECT
+						    $1,
+						    unnest($2::{}[]), $3 ON CONFLICT
+						        DO NOTHING
+					)SQL",
+					TAG_PG_TYPE_NAME ),
 				std::move( mapping_bindings ) )
 			.result();
 		co_await transaction.commit();

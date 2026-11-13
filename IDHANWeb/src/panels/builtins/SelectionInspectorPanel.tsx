@@ -1,9 +1,3 @@
-/**
- * Selection Inspector: a small panel exercising the cross-panel selection bus and per-instance
- * settings. Reflects the shared record selection, lets you clear it, and remembers in its own
- * persisted config whether to list the ids.
- */
-
 import { useEffect, useState } from 'react';
 import type { PanelProps, RecordId } from '../../host/types';
 

@@ -29,7 +29,6 @@ class NetworkActivity
 	struct Request
 	{
 		std::atomic< Phase > phase { Phase::WAITING };
-		//! Body bytes received by the current hop.
 		std::atomic< std::uint64_t > received {};
 		//! Content-Length of the current hop, or 0 when the server did not send one.
 		std::atomic< std::uint64_t > expected {};

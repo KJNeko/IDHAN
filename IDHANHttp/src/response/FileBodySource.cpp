@@ -28,8 +28,7 @@ folly::coro::Task< ReadResult > readChunk(
 	const std::uint64_t offset )
 {
 	const auto bytes { folly::preadFull( fd, data, want, static_cast< off_t >( offset ) ) };
-	// errno must be captured on the same thread as the syscall: the awaiting coroutine may
-	// resume on a different thread pool worker once this task completes.
+	// Capture errno here; the awaiting coroutine may resume on another thread.
 	co_return ReadResult { bytes, errno };
 }
 } // namespace

@@ -12,7 +12,7 @@ namespace idhan::db
 {
 class DBContext;
 
-// Scheduled runs admitted per group; manually requested runs are not counted against it.
+//! Scheduled runs admitted per group; manually requested runs are not counted against it.
 constexpr Int max_running_per_group { 4 };
 
 struct Subscription
@@ -101,9 +101,9 @@ struct SubscriptionRun
 [[nodiscard]] runtime::Task< bool > updateSubscription( DBContext& db, Subscription subscription );
 [[nodiscard]] runtime::Task< bool > requestSubscriptionRun( DBContext& db, SubscriptionID id );
 [[nodiscard]] runtime::Task< bool > deleteSubscription( DBContext& db, SubscriptionID id );
-// Claim and persist a root atomically; startup download recovery can resume it after a crash.
+//! Claim and persist a root atomically; startup download recovery can resume it after a crash.
 [[nodiscard]] runtime::Task< std::optional< SubscriptionRun > > claimSubscription( DBContext& db );
-// Called before the scheduler starts; interrupted runs wait for admission like new runs.
+//! Called before the scheduler starts; interrupted runs wait for admission like new runs.
 [[nodiscard]] runtime::Task<> queueInterruptedSubscriptions( DBContext& db );
 [[nodiscard]] runtime::Task< std::vector< DownloadSessionID > > subscriptionSessionIds( DBContext& db );
 [[nodiscard]] runtime::Task< std::vector< SubscriptionGroupID > > subscriptionGroupsForSessions(

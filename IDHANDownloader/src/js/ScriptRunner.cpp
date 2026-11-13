@@ -46,8 +46,6 @@ void ScriptRunner::run( Runtime& runtime )
 		if ( ready )
 		{
 			const std::scoped_lock lock { m_mutex };
-			// An existing event guarantees another turn. Otherwise enqueue only
-			// actual ready microtasks or an immediately runnable stage transition.
 			if ( runtime.events.empty() ) enqueueEvent( runtime, WakeReason::READY_MICROTASKS );
 		}
 	}

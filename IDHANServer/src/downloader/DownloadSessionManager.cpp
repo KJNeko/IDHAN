@@ -383,7 +383,14 @@ runtime::Task< std::string > DownloadSessionManager::sessionSettings(
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT options::text FROM download_sessions WHERE download_session_id = $1", std::move( bindings ) )
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    options::text
+					FROM download_sessions
+					WHERE download_session_id = $1
+				)SQL",
+				std::move( bindings ) )
 			.rows< std::string >()
 	};
 	if ( rows.empty() ) co_return "{}";
@@ -456,22 +463,38 @@ runtime::Task< std::vector< DownloadSessionManager::ResumableRoot > > DownloadSe
 	const auto roots {
 		co_await db
 			.query(
-				"WITH RECURSIVE unfinished AS ("
-				"    SELECT download_session_id, download_session_url_id, parent_url_id FROM download_session_urls"
-				"     WHERE state IN ('pending', 'processing')"
-				"  UNION ALL"
-				"    SELECT parent.download_session_id, parent.download_session_url_id, parent.parent_url_id"
-				"      FROM download_session_urls parent"
-				"      JOIN unfinished child ON parent.download_session_id = child.download_session_id"
-				"       AND parent.download_session_url_id = child.parent_url_id"
-				") "
-				"SELECT DISTINCT root.download_session_url_id, root.download_session_id, root.url, sessions.options::text "
-				"FROM download_session_urls root "
-				"JOIN download_sessions sessions USING (download_session_id) "
-				"JOIN unfinished ON unfinished.download_session_id = root.download_session_id "
-				"AND unfinished.download_session_url_id = root.download_session_url_id "
-				"WHERE root.parent_url_id IS NULL AND NOT sessions.is_subscription "
-				"ORDER BY root.download_session_id, root.download_session_url_id" )
+				//language=postgresql
+				R"SQL(
+					WITH RECURSIVE unfinished AS (
+					    SELECT
+					        download_session_id,
+					        download_session_url_id,
+					        parent_url_id
+					    FROM download_session_urls
+					    WHERE state IN ('pending', 'processing')
+					    UNION ALL
+					    SELECT
+					        parent.download_session_id,
+					        parent.download_session_url_id,
+					        parent.parent_url_id
+					    FROM download_session_urls parent
+					        JOIN unfinished child ON parent.download_session_id = child.download_session_id
+					            AND parent.download_session_url_id = child.parent_url_id
+					) SELECT DISTINCT
+					    root.download_session_url_id,
+					    root.download_session_id,
+					    root.url,
+					    sessions.options::text
+					FROM download_session_urls root
+					JOIN download_sessions sessions USING (download_session_id)
+					JOIN unfinished ON unfinished.download_session_id = root.download_session_id
+					    AND unfinished.download_session_url_id = root.download_session_url_id
+					WHERE root.parent_url_id IS NULL
+					    AND NOT sessions.is_subscription
+					ORDER BY
+					    root.download_session_id,
+					    root.download_session_url_id
+				)SQL" )
 			.rows< DownloadSessionUrlID, DownloadSessionID, std::string, std::string >()
 	};
 

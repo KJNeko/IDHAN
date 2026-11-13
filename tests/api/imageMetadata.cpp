@@ -31,19 +31,34 @@ static void seedImageMetadata( pqxx::connection& connection, const RecordID reco
 {
 	pqxx::work tx { connection };
 	tx.exec(
-		"INSERT INTO file_info (record_id, size, mime_id, cluster_delete_time) VALUES ($1, 123, $2, now())",
+		//language=postgresql
+		R"SQL(
+			INSERT INTO file_info (record_id, size, mime_id, cluster_delete_time)
+			    VALUES ($1, 123, $2, now())
+		)SQL",
 		pqxx::params { record_id, mime_ids::IMAGE_PNG } );
 	tx.exec(
-		"INSERT INTO metadata (record_id, simple_mime_type) VALUES ($1, $2)",
+		//language=postgresql
+		R"SQL(
+			INSERT INTO metadata (record_id, simple_mime_type)
+			    VALUES ($1, $2)
+		)SQL",
 		pqxx::params { record_id, std::to_underlying( SimpleMimeType::IMAGE_TYPE ) } );
 	if ( with_phash )
 		tx.exec(
-			"INSERT INTO image_metadata (record_id, width, height, channels, phash) "
-			"VALUES ($1, 640, 480, 4, 'xb44dc7b24dcb381c')",
+			//language=postgresql
+			R"SQL(
+				INSERT INTO image_metadata (record_id, width, height, channels, phash)
+				    VALUES ($1, 640, 480, 4, 'xb44dc7b24dcb381c')
+			)SQL",
 			pqxx::params { record_id } );
 	else
 		tx.exec(
-			"INSERT INTO image_metadata (record_id, width, height, channels, phash) VALUES ($1, 640, 480, 4, NULL)",
+			//language=postgresql
+			R"SQL(
+				INSERT INTO image_metadata (record_id, width, height, channels, phash)
+				    VALUES ($1, 640, 480, 4, NULL)
+			)SQL",
 			pqxx::params { record_id } );
 	tx.commit();
 }
@@ -112,8 +127,17 @@ SCENARIO_METHOD( ServerFixture, "Record info reports only known embedded metadat
 	{
 		pqxx::work tx { db() };
 		tx.exec(
-			"UPDATE image_metadata SET has_exif = TRUE, has_gps = TRUE, has_xmp = FALSE, has_iptc = FALSE, "
-			"has_icc_profile = TRUE WHERE record_id = $1",
+			//language=postgresql
+			R"SQL(
+				UPDATE
+				    image_metadata
+				SET has_exif = TRUE,
+				    has_gps = TRUE,
+				    has_xmp = FALSE,
+				    has_iptc = FALSE,
+				    has_icc_profile = TRUE
+				WHERE record_id = $1
+			)SQL",
 			pqxx::params { scanned_id } );
 		tx.commit();
 	}

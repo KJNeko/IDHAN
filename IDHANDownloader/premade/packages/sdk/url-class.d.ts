@@ -35,7 +35,6 @@ export interface RequestRateDefinition {
 }
 
 export interface LaneDefinition {
-	/** Limits how many transfers the lane runs at once. */
 	readonly concurrency?: number;
 	/** HTTP error statuses that pause the lane. A 429 always backs off; repeated failures can disable the lane. */
 	readonly backoffStatuses?: readonly number[];
@@ -80,7 +79,6 @@ export interface URLClassPolicy {
 	readonly sortQueryParameters?: boolean;
 	/** Classes without a request rate are limited to one request every five seconds. */
 	readonly requestRate?: RequestRateDefinition | false;
-	/** Query parameters deleted from every URL of this class when it is normalized. */
 	readonly removeQuery?: readonly string[];
 	/**
 	 * Query parameters kept for requests but stripped from stored and compared URLs, such as signed

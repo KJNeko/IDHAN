@@ -13,9 +13,7 @@ namespace idhan::downloader
 struct UrlRules
 {
 	bool sort_query { true };
-	//! Query parameters deleted from the URL.
 	std::vector< std::string > remove_query {};
-	//! Query parameters moved out of the URL into NormalizedUrl::ephemeral_query.
 	std::vector< std::string > ephemeral_query {};
 };
 
@@ -29,7 +27,6 @@ struct NormalizedUrl
 //! Prefixes "https://" when the URL has no scheme, e.g. "example.com/post" or "//example.com/post".
 [[nodiscard]] std::string withDefaultScheme( std::string_view url );
 
-//! Parses the URL after withDefaultScheme.
 [[nodiscard]] std::expected< ada::url_aggregator, std::string > parseUrl( std::string_view url );
 
 //! Merges each run of '/' in the path into one, e.g. "https://img4.gelbooru.com//images/a.jpeg"

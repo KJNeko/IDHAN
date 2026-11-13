@@ -1,13 +1,3 @@
-/**
- * The right-click menu every panel that shows a record uses.
- *
- * A panel calls useRecordMenu(host, extras) and gets back a context-menu handler plus the menu node
- * to render, so an operation added to RECORD_ACTIONS below appears wherever a record is shown. Only
- * entries that are meaningless outside one panel (the grid's select-all, say) are passed as extras.
- *
- * Actions are async and report their own outcome by toast; the menu closes the moment one is picked.
- */
-
 import {useCallback, useEffect, useLayoutEffect, useRef, useState} from 'react';
 import type {MouseEvent as ReactMouseEvent, ReactNode} from 'react';
 import type {RecordMetadata} from '../../api/types';
@@ -64,7 +54,6 @@ async function metadataFor(ctx: RecordActionContext): Promise<RecordMetadata[]> 
     return ctx.ids.map((id) => byId.get(id)).filter((record): record is RecordMetadata => record !== undefined);
 }
 
-/** The fields worth pasting into a bug report or a message, one labelled line each. */
 export function describeRecord(record: RecordMetadata): string {
     const lines = [`record: #${record.record_id}`, `sha256: ${record.hashes.sha256}`];
     if (record.mime) lines.push(`mime: ${record.mime}`);
@@ -283,7 +272,6 @@ export function useRecordMenu(host: HostApi, extras: readonly RecordAction[] = [
 
     const closeRecordMenu = useCallback(() => setMenu(null), []);
 
-    // Close on any outside interaction, the same way a native menu does.
     useEffect(() => {
         if (!menu) return;
         const close = (event: Event) => {

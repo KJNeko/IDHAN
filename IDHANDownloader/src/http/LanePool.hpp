@@ -92,10 +92,10 @@ class LanePool
 
 	void send( TransferRequest request, TransferCallback callback );
 	void cancel( const std::shared_ptr< std::atomic_bool >& cancellation );
-	// Parser failures pause the shared lane without changing its request rate.
+
+	//! Parser failures pause the shared lane without changing its request rate.
 	void parserFailed( std::string_view url );
 
-	//! Re-reads a host's settings into its lane, for a host whose settings changed after its lane was created.
 	void reconfigure( std::string_view host );
 
 	void resetBackoff( std::string_view key );

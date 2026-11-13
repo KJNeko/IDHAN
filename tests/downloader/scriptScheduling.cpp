@@ -15,7 +15,7 @@
 namespace idhan::test
 {
 
-// Test-only gates hold parser threads so the global instance limit is observable.
+//! Test-only gates hold parser threads so the global instance limit is observable.
 class SchedulingSecrets final : public downloader::SecretProvider
 {
 	std::mutex m_mutex {};

@@ -110,6 +110,8 @@ it('adds a parameter-only search through the group input and keeps its name on t
 	const field = view.querySelector<HTMLInputElement>('input[aria-label="Tags"]')!;
 	field.focus();
 	expect(field.placeholder).toBe('Tags');
+	expect(field.compareDocumentPosition(view.querySelector('.subscription-items')!) & Node.DOCUMENT_POSITION_FOLLOWING)
+	.toBeTruthy();
 	await input(field, '  cat_ears   nude,blue  ');
 	await act(() => field.dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter', bubbles: true, cancelable: true})));
 	expect(api.subscriptions.create).toHaveBeenCalledWith(7, {tags: '  cat_ears   nude,blue  ', enabled: true});
@@ -141,7 +143,6 @@ it('offers every declared generator from every parser and uses its field names',
 	const select = view.querySelector<HTMLSelectElement>('select[aria-label="Generator"]')!;
 	expect([...select.options].map(option => option.value)).toEqual(['gelbooru:search', 'gelbooru:post', 'other:creator']);
 	vi.mocked(api.subscriptionGroups.list).mockResolvedValue([{...group, generator: 'other:creator'}]);
-	// A streamed group change selects the new generator's input.
 	vi.mocked(api.subscriptionGroups.create).mockResolvedValue(group);
 	const field = view.querySelector<HTMLInputElement>('input[aria-label="New group"]')!;
 	await input(field, 'Another');
@@ -214,8 +215,8 @@ it('shows each next run and the earliest enabled idle query on its group', async
 	.toBe(new Date(early * 1000).toISOString());
 	expect(view.querySelector('span[aria-label="Next run for later"] time')?.getAttribute('datetime'))
 	.toBe(new Date(later * 1000).toISOString());
-	expect(view.querySelector('span[aria-label="Next run for paused"]')?.textContent).toBe('12 files (0 added) Paused');
-	expect(view.querySelector('span[aria-label="Next run for active"]')?.textContent).toBe('12 files (0 added) Running');
+	expect(view.querySelector('span[aria-label="Next run for paused"]')?.textContent).toBe('Paused');
+	expect(view.querySelector('span[aria-label="Next run for active"]')?.textContent).toBe('Running');
 });
 
 it('shows queued subscriptions with their scheduled time even when it is in the past', async () => {
@@ -223,7 +224,7 @@ it('shows queued subscriptions with their scheduled time even when it is in the 
 	vi.mocked(api.subscriptions.list).mockResolvedValue([{...item, active_root_id: 8, next_run_at: past}]);
 	await render();
 	const status = view.querySelector('span[aria-label="Next run for old_artist"]')!;
-	expect(status.textContent).toBe(`12 files (0 added) Next: ${new Date(past * 1000).toLocaleString(undefined, {
+	expect(status.textContent).toBe(`Next: ${new Date(past * 1000).toLocaleString(undefined, {
 		dateStyle: 'medium',
 		timeStyle: 'short'
 	})}`);
@@ -240,7 +241,7 @@ it('shows past due times and suppresses scheduled times when their group is paus
 	await act(() => [...view.querySelectorAll('button')].find(button => button.textContent === 'Pause')!.click());
 	await act(() => emitSubscriptions());
 	expect(view.querySelector('span[aria-label="Next run for Artists"]')?.textContent).toContain('Next run: Paused');
-	expect(view.querySelector('span[aria-label="Next run for old_artist"]')?.textContent).toBe('12 files (0 added) Paused');
+	expect(view.querySelector('span[aria-label="Next run for old_artist"]')?.textContent).toBe('Paused');
 });
 
 
@@ -263,7 +264,7 @@ it('pastes newline-delimited searches as a batch, preserving spaces and commas w
 it('shows the previous run count as a stat without a files button', async () => {
 	vi.mocked(api.subscriptions.list).mockResolvedValue([{...item, session_id: 42, imported_count: 3}]);
 	await render();
-	expect(view.querySelector('.subscription-items')?.textContent).toContain('12 files (3 added) Next: ');
+	expect(view.querySelector('.subscription-items tbody tr')?.children[2].textContent).toBe('3');
 	expect(view.textContent).not.toContain('Files since last run');
 	expect(api.subscriptions.records).not.toHaveBeenCalled();
 });
@@ -294,17 +295,20 @@ it('keeps the previous run stat visible while another run is active', async () =
 		imported_count: 2
 	}]);
 	await render();
-	expect(view.querySelector('.subscription-items')?.textContent).toContain('12 files (2 added) Running');
+	expect(view.querySelector('.subscription-items tbody tr')?.children[2].textContent).toBe('2');
 	expect(view.querySelector('.subscription-items')?.textContent).toContain('Running');
 });
 
-it('shows total sizes alongside compact query statuses and keeps group totals', async () => {
+it('shows subscription stats in labeled columns and keeps group totals', async () => {
 	await render();
 	expect(view.querySelector('.subscription-group .subscription-group-header')?.textContent).toContain('12 files · 3 MiB');
-	expect(view.querySelector('.subscription-items')?.textContent).toContain('12 files (0 added) Next: ');
-	expect(view.querySelector('[aria-label="Total size for old_artist"]')?.textContent).toBe(' · 1 MiB');
+	expect([...view.querySelectorAll('.subscription-items thead th')].map(cell => cell.textContent))
+	.toEqual(['Subscription', 'Files', 'Added last run', 'Size', 'Status / next run', 'Actions']);
+	expect([...view.querySelectorAll('.subscription-items tbody tr > *')].slice(0, 4).map(cell => cell.textContent))
+	.toEqual(['old_artist', '12', '0', '1 MiB']);
+	expect(view.querySelector('[aria-label="Total size for old_artist"]')?.textContent).toBe('1 MiB');
 	expect(view.querySelector('.subscription-group-header [title="3,145,728 bytes"]')).not.toBeNull();
-	expect(view.querySelector('.subscription-items [title="1,048,576 bytes (1 MiB)"]')).not.toBeNull();
+	expect(view.querySelector('.subscription-items [title="1,048,576 bytes"]')).not.toBeNull();
 });
 
 
@@ -320,4 +324,43 @@ it('uses streamed updates without refetching lists or parsers after commands', a
 		});
 	});
 	expect(view.querySelector('span[aria-label="Next run for Artists"]')?.textContent).toContain('Paused');
+});
+
+
+it('puts running subscriptions first and sorts displayed labels A–Z as live status changes', async () => {
+	const items: Subscription[] = [
+		{...item, id: 1, tags: 'zebra', active_session_id: null},
+		{...item, id: 2, tags: 'Zorro', active_session_id: 22},
+		{...item, id: 3, tags: '', parameters: {creator: 'alpha'}, active_session_id: null},
+		{...item, id: 4, tags: 'beta', active_session_id: 44},
+	];
+	vi.mocked(api.subscriptions.list).mockResolvedValue(items);
+	await render();
+	const labels = () => [...view.querySelectorAll('.subscription-label')].map(cell => cell.textContent);
+	expect(labels()).toEqual(['beta', 'Zorro', 'alpha', 'zebra']);
+	const field = view.querySelector<HTMLInputElement>('input[aria-label="Tags"]')!;
+	await input(field, 'new artist');
+	await act(() => {
+		vi.mocked(watchSubscriptions).mock.lastCall![0].onChange({
+			groups: [group], items: items.map(row => ({...row, active_session_id: row.id === 1 ? 11 : null})),
+		});
+	});
+	expect(labels()).toEqual(['zebra', 'alpha', 'beta', 'Zorro']);
+	expect(field.value).toBe('new artist');
+	expect(view.querySelector('input[aria-label="Tags"]')).toBe(field);
+	expect(items.map(row => row.id)).toEqual([1, 2, 3, 4]);
+});
+
+it('puts groups with running subscriptions first and sorts group names A–Z', async () => {
+	const groups: SubscriptionGroup[] = [
+		{...group, id: 1, name: 'zebra', running_count: 0},
+		{...group, id: 2, name: 'Zorro', running_count: 1},
+		{...group, id: 3, name: 'alpha', running_count: 0},
+		{...group, id: 4, name: 'beta', running_count: 1},
+	];
+	vi.mocked(api.subscriptionGroups.list).mockResolvedValue(groups);
+	await render();
+	expect([...view.querySelectorAll('.subscription-group h3')].map(heading => heading.textContent))
+	.toEqual(['beta', 'Zorro', 'alpha', 'zebra']);
+	expect(groups.map(row => row.id)).toEqual([1, 2, 3, 4]);
 });

@@ -16,14 +16,11 @@
 namespace idhan::downloader
 {
 
-//! Persists one session's URL rows and publishes each change to the downloader stream.
 class SessionRowObserver final : public SessionObserver
 {
-	//! The state a URL is in right now, which can be finer than the stored one.
 	struct LiveUrl
 	{
 		std::string state { "pending" };
-		//! Parser requests of the URL that are transferring.
 		std::size_t downloads {};
 		//! Set once a final state is being stored; later transfer milestones are ignored.
 		bool terminal {};
@@ -56,17 +53,18 @@ class SessionRowObserver final : public SessionObserver
   public:
 
 	explicit SessionRowObserver( DownloadSessionID session_id );
-	// Called before starting the session's workers. Replays consume matching rows once,
-	// in original ID order, including repeated imports of the same URL.
+
+	//! Called before starting the session's workers. Replays consume matching rows once,
+	//! in original ID order, including repeated imports of the same URL.
 	void restore( std::vector< rows::SavedUrl > saved );
-	// Explicit retries replace their old subtree; startup recovery preserves it.
+
+	//! Explicit retries replace their old subtree; startup recovery preserves it.
 	void discardSaved( DownloadSessionUrlID root );
 
 	[[nodiscard]] DownloadSessionUrlID rowFor( WorkID work ) const;
 	//! States of unfinished URLs that differ from what is stored, such as downloading or importing.
 	[[nodiscard]] std::unordered_map< DownloadSessionUrlID, std::string > liveStates() const;
 
-	//! Binds work to a URL row and restarts the row's live state.
 	void adopt( WorkID work, DownloadSessionUrlID row );
 	void forget( WorkID work );
 
@@ -85,7 +83,6 @@ class SessionRowObserver final : public SessionObserver
 		std::vector< std::pair< std::string, std::string > > types ) override;
 };
 
-//! The code stored and published for a failure at this stage.
 [[nodiscard]] std::string failureStage( FailureStage stage );
 
 } // namespace idhan::downloader

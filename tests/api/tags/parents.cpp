@@ -28,7 +28,15 @@ SCENARIO_METHOD( ServerFixture, "Tag parents", "[api][tags][parents]" )
 
 				CHECK(
 					tx.query_value< int >(
-						"SELECT count(*) FROM tag_parents WHERE tag_domain_id = $1 AND parent_id = $2 AND child_id = $3",
+						//language=postgresql
+						R"SQL(
+							SELECT
+							    count(*)
+							FROM tag_parents
+							WHERE tag_domain_id = $1
+							    AND parent_id = $2
+							    AND child_id = $3
+						)SQL",
 						pqxx::params { domain, metroid, samus } )
 				    == 1 );
 			}
@@ -42,7 +50,15 @@ SCENARIO_METHOD( ServerFixture, "Tag parents", "[api][tags][parents]" )
 					CHECK( again.status == 200 );
 
 					pqxx::nontransaction tx { db() };
-					CHECK( tx.query_value< int >( "SELECT count(*) FROM tag_parents" ) == 1 );
+					CHECK(
+						tx.query_value< int >(
+							//language=postgresql
+							R"SQL(
+								SELECT
+								    count(*)
+								FROM tag_parents
+							)SQL" )
+						== 1 );
 				}
 			}
 
@@ -65,7 +81,15 @@ SCENARIO_METHOD( ServerFixture, "Tag parents", "[api][tags][parents]" )
 					CHECK( removed.status == 200 );
 
 					pqxx::nontransaction tx { db() };
-					CHECK( tx.query_value< int >( "SELECT count(*) FROM tag_parents" ) == 0 );
+					CHECK(
+						tx.query_value< int >(
+							//language=postgresql
+							R"SQL(
+								SELECT
+								    count(*)
+								FROM tag_parents
+							)SQL" )
+						== 0 );
 				}
 			}
 		}
@@ -176,8 +200,16 @@ TEST_CASE_METHOD(
 	CHECK( api().createParents( domain, { { a, b }, { b, c }, { c, a } } ).status == 409 );
 	pqxx::nontransaction read { db() };
 	CHECK(
-		read.query_value< int >( "SELECT COUNT(*) FROM tag_parents WHERE tag_domain_id = $1", pqxx::params { domain } )
-	    == 0 );
+		read.query_value< int >(
+			//language=postgresql
+			R"SQL(
+				SELECT
+				    COUNT(*)
+				FROM tag_parents
+				WHERE tag_domain_id = $1
+			)SQL",
+			pqxx::params{ domain } )
+		== 0 );
 	CHECK( api().createParents( domain, { { a, b }, { b, c } } ).status == 200 );
 }
 

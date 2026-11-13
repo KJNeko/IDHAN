@@ -15,7 +15,15 @@ runtime::Task< std::optional< TagDomainInfo > > findTagDomain( const TagDomainID
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT tag_domain_id, domain_name FROM tag_domains WHERE tag_domain_id = $1", std::move( bindings ) )
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    tag_domain_id,
+					    domain_name
+					FROM tag_domains
+					WHERE tag_domain_id = $1
+				)SQL",
+				std::move( bindings ) )
 			.rows< TagDomainID, std::string >()
 	};
 
@@ -32,8 +40,17 @@ runtime::Task< std::optional< TagDomainInfo > > findTagDomain( const std::string
 
 	const auto rows {
 		co_await db
-			.query( "SELECT tag_domain_id, domain_name FROM tag_domains WHERE domain_name = $1", std::move( bindings ) )
-			.rows< TagDomainID, std::string >()
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    tag_domain_id,
+					    domain_name
+					FROM tag_domains
+					WHERE domain_name = $1
+				)SQL",
+					 std::move( bindings ) )
+				 .rows< TagDomainID, std::string >()
 	};
 
 	if ( rows.empty() ) co_return std::nullopt;
@@ -44,8 +61,20 @@ runtime::Task< std::optional< TagDomainInfo > > findTagDomain( const std::string
 
 runtime::Task< std::vector< TagDomainInfo > > listTagDomains( db::DBContext& db )
 {
-	const auto rows { co_await db.query( "SELECT tag_domain_id, domain_name FROM tag_domains ORDER BY tag_domain_id" )
-	                      .rows< TagDomainID, std::string >() };
+	const auto rows{
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    tag_domain_id,
+					    domain_name
+					FROM tag_domains
+					ORDER BY
+					    tag_domain_id
+				)SQL" )
+				 .rows< TagDomainID, std::string >()
+	};
 
 	std::vector< TagDomainInfo > domains {};
 	domains.reserve( rows.size() );
@@ -80,7 +109,17 @@ runtime::Task< std::expected< void, http::Response > > validateRelationshipIds(
 	bindings.bind( tag_ids );
 
 	const auto rows {
-		co_await db.query( "SELECT tag_id FROM tags WHERE tag_id = ANY($1)", std::move( bindings ) ).rows< TagID >()
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    tag_id
+					FROM tags
+					WHERE tag_id = ANY ($1)
+				)SQL",
+					 std::move( bindings ) )
+				 .rows< TagID >()
 	};
 
 	if ( rows.size() == tag_ids.size() ) co_return {};
@@ -120,7 +159,16 @@ runtime::Task< std::expected< std::vector< TagID >, http::Response > > createTag
 	try
 	{
 		const auto rows {
-			co_await db.query( "SELECT tag_id FROM createBatchTags($1, $2)", std::move( bindings ) ).rows< TagID >()
+			co_await db
+					 .query(
+						 //language=postgresql
+						 R"SQL(
+						SELECT
+						    tag_id
+						FROM createBatchTags ($1, $2)
+					)SQL",
+						 std::move( bindings ) )
+					 .rows< TagID >()
 		};
 
 		std::vector< TagID > tag_ids {};
@@ -157,8 +205,17 @@ runtime::Task< std::optional< NamespaceID > > findNamespace( std::string name, d
 	bindings.bind( name );
 
 	const auto rows {
-		co_await db.query( "SELECT namespace_id FROM tag_namespaces WHERE namespace_text = $1", std::move( bindings ) )
-			.rows< NamespaceID >()
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    namespace_id
+					FROM tag_namespaces
+					WHERE namespace_text = $1
+				)SQL",
+					 std::move( bindings ) )
+				 .rows< NamespaceID >()
 	};
 
 	if ( rows.empty() ) co_return std::nullopt;
@@ -176,7 +233,12 @@ runtime::Task< std::expected< NamespaceID, http::Response > > createNamespace( s
 	const auto rows {
 		co_await db
 			.query(
-				"INSERT INTO tag_namespaces (namespace_text) VALUES ($1) RETURNING namespace_id",
+				//language=postgresql
+				R"SQL(
+					INSERT INTO tag_namespaces (namespace_text)
+					    VALUES ($1)
+					RETURNING namespace_id
+				)SQL",
 				std::move( bindings ) )
 			.rows< NamespaceID >()
 	};
@@ -199,8 +261,14 @@ runtime::Task< std::optional< TagID > > findTag(
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT tag_id FROM tags WHERE namespace_id = $1 "
-				"AND subtag_text = NORMALIZE(CASEFOLD(NORMALIZE($2, NFC)), NFC)",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    tag_id
+					FROM tags
+					WHERE namespace_id = $1
+					    AND subtag_text = NORMALIZE (CASEFOLD (NORMALIZE ($2, NFC)), NFC)
+				)SQL",
 				std::move( bindings ) )
 			.rows< TagID >()
 	};
@@ -224,9 +292,15 @@ runtime::Task< std::expected< TagID, http::Response > > createTag(
 	const auto rows {
 		co_await db
 			.query(
-				"INSERT INTO tags (namespace_id, subtag_text) VALUES ($1, $2) "
-				"ON CONFLICT (namespace_id, subtag_text) DO UPDATE SET subtag_text = EXCLUDED.subtag_text "
-				"RETURNING tag_id",
+				//language=postgresql
+				R"SQL(
+					INSERT INTO tags (namespace_id, subtag_text)
+					    VALUES ($1, $2)
+					ON CONFLICT (namespace_id, subtag_text)
+					    DO UPDATE SET
+					        subtag_text = EXCLUDED.subtag_text
+					    RETURNING tag_id
+				)SQL",
 				std::move( bindings ) )
 			.rows< TagID >()
 	};

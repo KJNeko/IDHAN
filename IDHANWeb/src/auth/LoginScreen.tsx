@@ -1,8 +1,3 @@
-/**
- * Single-field login: paste an IDHAN API key and go. The key is validated against the server and,
- * once accepted, used directly on every request.
- */
-
 import { useState, type FormEvent } from 'react';
 import { ApiError } from '../api/client';
 import { InvalidKeyError } from './session';

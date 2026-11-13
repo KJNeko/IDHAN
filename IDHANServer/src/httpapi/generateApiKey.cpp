@@ -10,8 +10,18 @@ namespace idhan::httpapi
 {
 
 static constexpr const char* insert_if_empty_sql {
-	"INSERT INTO auth_keys (key_hash) SELECT gen_random_bytes(32) "
-	"WHERE NOT EXISTS (SELECT 1 FROM auth_keys) RETURNING key_hash"
+	//language=postgresql
+	R"SQL(
+		INSERT INTO auth_keys (key_hash)
+		SELECT
+		    gen_random_bytes(32)
+		WHERE NOT EXISTS (
+		        SELECT
+		            1
+		        FROM auth_keys
+		)
+		RETURNING key_hash
+	)SQL"
 };
 
 http::HTTPTask< http::JsonResult< GeneratedApiKeyResponse > > generateApiKey(

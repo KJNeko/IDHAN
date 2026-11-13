@@ -5,8 +5,8 @@
 
 namespace idhan::downloader
 {
-// Samples a cumulative byte counter no more than once per second. Callers
-// synchronize access and use a steady clock, independent of wall-clock changes.
+//! Samples a cumulative byte counter no more than once per second. Callers
+//! synchronize access and use a steady clock, independent of wall-clock changes.
 class DownloadSpeed
 {
 	std::chrono::steady_clock::time_point m_at;

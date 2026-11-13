@@ -26,7 +26,6 @@ namespace idhan::downloader
 class SessionRowObserver;
 class DownloadImports;
 
-//! What one URL's in-flight requests have received so far.
 struct UrlTransfer
 {
 	DownloadSessionUrlID url_id {};
@@ -70,14 +69,14 @@ class DownloadSessionManager final
 	DownloadSessionManager& operator=( const DownloadSessionManager& ) = delete;
 	~DownloadSessionManager();
 
-	// Startup preparation awaits persisted state before accepting HTTP requests. No persisted job is created.
+	//! Startup preparation awaits persisted state before accepting HTTP requests. No persisted job is created.
 	[[nodiscard]] runtime::Task< std::expected< ParserUpdateReport, std::string > > prepareParsers();
 	[[nodiscard]] runtime::Task< std::expected< ParserUpdateReport, std::string > > updateParsers();
 	[[nodiscard]] runtime::Task< std::expected< ParserUpdateReport, std::string > > updateParser(
 		std::filesystem::path path );
 
-	// Row persistence in SessionRowObserver reaches the database through this rather than a
-	// threaded-through parameter, since the downloader's SessionObserver interface has no room for one.
+	//! Row persistence in SessionRowObserver reaches the database through this rather than a
+	//! threaded-through parameter, since the downloader's SessionObserver interface has no room for one.
 	[[nodiscard]] static db::DBContext& dbContext();
 
 	struct ResumableRoot
@@ -91,7 +90,6 @@ class DownloadSessionManager final
 	//! Finds unfinished roots without discarding their saved URL rows.
 	[[nodiscard]] runtime::Task< std::vector< ResumableRoot > > resumable( db::DBContext& db );
 
-	//! Records a root that could not be handed back to the downloader.
 	[[nodiscard]] runtime::Task< void > markUnresumable( ResumableRoot root, std::string error, db::DBContext& db );
 	//! last_used_at is announced with the session's activity when a user just submitted the URL.
 	[[nodiscard]] runtime::Task< std::expected< void, std::string > > submit(
@@ -122,7 +120,6 @@ class DownloadSessionManager final
 	[[nodiscard]] bool idle( DownloadSessionID session_id );
 	[[nodiscard]] SessionSnapshot networkSnapshot( DownloadSessionID session_id );
 	[[nodiscard]] std::vector< std::pair< DownloadSessionID, std::uint64_t > > downloadedBytes();
-	//! Groups the snapshot's in-flight requests by the URL row they belong to.
 	[[nodiscard]] std::vector< UrlTransfer > transfers( DownloadSessionID session_id, const SessionSnapshot& snapshot );
 	[[nodiscard]] std::unordered_map< DownloadSessionUrlID, std::string > liveStates( DownloadSessionID session_id );
 	runtime::Task< void > destroy( DownloadSessionID session_id );

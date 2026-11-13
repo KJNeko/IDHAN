@@ -1,4 +1,3 @@
-# Compile authored fixtures before the C++ tests; runtime tests only see JavaScript.
 file(REMOVE_RECURSE "${WORK}")
 file(MAKE_DIRECTORY "${WORK}/packages")
 file(COPY "${SOURCE}/IDHANDownloader/premade/" DESTINATION "${WORK}/premade"

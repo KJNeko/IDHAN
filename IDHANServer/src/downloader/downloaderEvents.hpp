@@ -23,7 +23,6 @@ struct UrlState
 	std::optional< RecordID > record_id {};
 	//! Byte size of the record's file, for imported and imported_previously.
 	std::optional< std::int64_t > size {};
-	//! Where a failed URL gave up: route, download, parser, import or closed.
 	std::optional< std::string > stage {};
 	std::optional< std::string > error {};
 	std::optional< std::int64_t > finished_at {};

@@ -19,8 +19,8 @@
 namespace idhan::metadata
 {
 
-// Confined to one sequential eight-record batch. Both successful access and failures
-// are reused; the next batch reloads cluster configuration and retries failed opens.
+//! Confined to one sequential eight-record batch. Both successful access and failures
+//! are reused; the next batch reloads cluster configuration and retries failed opens.
 using BackfillClusters = std::unordered_map< ClusterID, std::expected< filesystem::ClusterAccess, std::string > >;
 
 struct SweepFailure

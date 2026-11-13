@@ -64,7 +64,6 @@ class WorkerRunner
 		[[nodiscard]] std::span< const int > fds() const { return { &fd, ( fd < 0 ) ? 0u : 1u }; }
 	};
 
-	//! A callback a module issued, parked until the host answers it.
 	struct PendingCallback
 	{
 		std::mutex mutex {};

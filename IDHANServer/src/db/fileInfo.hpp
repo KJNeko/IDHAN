@@ -39,10 +39,10 @@ struct ClusterRecordFile
 	DBContext& db,
 	const SHA256& hash );
 
-// The normalized URL must be classified as 'file' and map to exactly one stored record.
+//! The normalized URL must be classified as 'file' and map to exactly one stored record.
 [[nodiscard]] runtime::Task< std::optional< RecordID > > findStoredDirectRecordByUrl( DBContext& db, std::string url );
 
-// Takes a normalized URL. Includes page and source URLs; excludes records whose files are no longer stored.
+//! Takes a normalized URL. Includes page and source URLs; excludes records whose files are no longer stored.
 [[nodiscard]] runtime::Task< std::vector< SHA256 > > storedRecordHashesForUrl( DBContext& db, std::string url );
 
 [[nodiscard]] runtime::Task< void > markDirectUrls( DBContext& db, std::vector< std::string > urls );
@@ -62,7 +62,7 @@ struct ClusterRecordFile
 	std::string extension,
 	filesystem::FileTimes times );
 
-// Keyset pagination bounds preflight memory without keeping a database connection leased during I/O.
+//! Keyset pagination bounds preflight memory without keeping a database connection leased during I/O.
 [[nodiscard]] runtime::Task< std::vector< ClusterRecordFile > > clusterRecordFiles(
 	DBContext& db,
 	ClusterID cluster_id,

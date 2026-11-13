@@ -1,4 +1,3 @@
-/** Incremental MEGA file decryption using the host's native WebCrypto AES. */
 export class MegaDecryption {
 	private readonly buffer = new Uint8Array(1024 * 1024);
 	private used = 0;

@@ -11,7 +11,7 @@ namespace idhan::downloader
 struct ParserUpdateResult
 {
 	std::filesystem::path path {};
-	// A failed update can leave the previous version active.
+	//! A failed update can leave the previous version active.
 	bool active {};
 	std::optional< std::string > error {};
 };

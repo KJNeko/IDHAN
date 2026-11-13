@@ -33,7 +33,7 @@ class SubscriptionUpdateQueue
 		m_readable.notify_one();
 	}
 
-	// The deadline belongs to the first event; ongoing activity never postpones a flush.
+	//! The deadline belongs to the first event; ongoing activity never postpones a flush.
 	[[nodiscard]] std::vector< DownloadSessionID > waitForBatch( const std::stop_token stop )
 	{
 		std::unique_lock lock { m_mutex };

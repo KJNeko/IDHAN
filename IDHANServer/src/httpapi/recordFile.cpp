@@ -47,11 +47,17 @@ http::HTTPTask< http::Response > recordFileResponse(
 	auto rows {
 		co_await db
 			.query(
-				"SELECT sha256, mime.name AS mime_name "
-				"FROM records "
-				"JOIN file_info ON records.record_id = file_info.record_id "
-				"LEFT JOIN mime ON file_info.mime_id = mime.mime_id "
-				"WHERE records.record_id = $1 AND file_info.cluster_id IS NOT NULL",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    sha256,
+					    mime.name AS mime_name
+					FROM records
+					    JOIN file_info ON records.record_id = file_info.record_id
+					    LEFT JOIN mime ON file_info.mime_id = mime.mime_id
+					WHERE records.record_id = $1
+					    AND file_info.cluster_id IS NOT NULL
+				)SQL",
 				std::move( bindings ) )
 			.rows< std::span< const std::byte >, std::optional< std::string > >()
 	};
@@ -63,8 +69,14 @@ http::HTTPTask< http::Response > recordFileResponse(
 		const auto state_rows {
 			co_await db
 				.query(
-					"SELECT cluster_delete_time IS NOT NULL, cluster_store_time IS NOT NULL "
-					"FROM file_info WHERE record_id = $1",
+					//language=postgresql
+					R"SQL(
+						SELECT
+						    cluster_delete_time IS NOT NULL,
+						    cluster_store_time IS NOT NULL
+						FROM file_info
+						WHERE record_id = $1
+					)SQL",
 					std::move( state_bindings ) )
 				.rows< bool, bool >()
 		};

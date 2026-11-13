@@ -17,8 +17,8 @@
 #include "spdlog/spdlog.h"
 #include "vips.hpp"
 
-// ArchiveMimeParser also specializes a manifest-less zip whose root is a numbered image sequence, so
-// this is the preferred source of frame order, not a guaranteed one.
+//! ArchiveMimeParser also specializes a manifest-less zip whose root is a numbered image sequence, so
+//! this is the preferred source of frame order, not a guaranteed one.
 static constexpr std::string_view MANIFEST_NAME { "animation.json" };
 
 //! Maps each member path in the archive metadata json to its SHA-256, which is how the generate
@@ -40,9 +40,9 @@ static std::unordered_map< std::string, std::string > memberHashesByPath( const 
 	return by_path;
 }
 
-// Frame order for a Ugoira with no manifest: its image members by name, which for the numbered
-// sequence ArchiveMimeParser matched is the playback order. Hydrus sorts the same way and shows each
-// frame for UGOIRA_DEFAULT_FRAME_DURATION_MS, having no delay to read either.
+//! Frame order for a Ugoira with no manifest: its image members by name, which for the numbered
+//! sequence ArchiveMimeParser matched is the playback order. Hydrus sorts the same way and shows each
+//! frame for UGOIRA_DEFAULT_FRAME_DURATION_MS, having no delay to read either.
 static std::vector< UgoiraFrame > framesFromMembers( const std::unordered_map< std::string, std::string >& by_path )
 {
 	std::vector< std::string > paths {};
@@ -201,8 +201,7 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > UgoiraThumbnailer::cre
 			scaled.reset( flat_raw );
 		}
 
-		// vips loaders are lazy and this frame's source dies at the end of the iteration, so the page
-		// has to be real before then.
+		// Materialize before the frame source dies; libvips loads pixels lazily.
 		VipsImage* materialised_raw { vips_image_copy_memory( scaled.get() ) };
 		if ( !materialised_raw )
 			return std::unexpected( idhan::ModuleError { "Failed to materialise a Ugoira frame" } );
@@ -227,7 +226,6 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > UgoiraThumbnailer::cre
 		return std::unexpected( idhan::ModuleError { "Failed to join Ugoira frames" } );
 	idhan::VipsImagePtr roll { roll_raw };
 
-	// vips reads an animation off a single tall image plus this metadata: one page per frame.
 	vips_image_set_int( roll.get(), "page-height", page_height );
 	vips_image_set_array_int( roll.get(), "delay", delays.data(), static_cast< int >( delays.size() ) );
 	vips_image_set_int( roll.get(), "loop", 0 );

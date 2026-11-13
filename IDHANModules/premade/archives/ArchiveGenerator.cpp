@@ -48,7 +48,7 @@ std::expected< void, idhan::ModuleError > ArchiveGenerator::generate(
 
 	while ( ret == ARCHIVE_OK )
 	{
-		if ( archive_entry_filetype( entry ) != AE_IFREG ) // skip any non-files
+		if ( archive_entry_filetype( entry ) != AE_IFREG )
 		{
 			ret = archive_read_next_header( a.get(), &entry );
 			continue;
@@ -76,7 +76,6 @@ std::expected< void, idhan::ModuleError > ArchiveGenerator::generate(
 				}
 			}
 
-			// streams the entry, handling short reads and entries with no stored size
 			return writeArchiveEntryData( a.get(), out );
 		}
 

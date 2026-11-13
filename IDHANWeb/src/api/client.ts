@@ -1,14 +1,5 @@
 import type {JobStatus, Subscription, SubscriptionInput, SubscriptionGroup, SubscriptionGroupInput} from './types';
 import type {DownloadBandwidth} from './types';
-/**
- * Typed IDHAN REST client.
- *
- * The permanent API key is presented on every authenticated call via the `X-API-Key` header; see
- * src/auth/session.ts for how the credential is obtained and stored.
- *
- * This is the raw client. The coalescing and caching host API (batched metadata, thumbnail LRU) is a
- * layer built on top of these methods, not baked in here.
- */
 
 import type { LayoutDocument } from '../layout/document';
 import type {
@@ -46,7 +37,6 @@ import type {
   VersionInfo,
 } from './types';
 
-/** Header the credential rides in. The server also honours Authorization/IDHAN-API-Key and the rest. */
 const KEY_HEADER = 'X-API-Key';
 
 /** Non-2xx responses throw this, carrying the status and decoded JSON or plain-text body. */
@@ -74,7 +64,6 @@ export function getKey(): string | null {
 
 interface RequestOptions {
   method?: string;
-  /** JSON-encoded into the body if present. */
   body?: unknown;
   signal?: AbortSignal;
   /**
@@ -173,7 +162,6 @@ export const api = {
   },
 
   auth: {
-      /** Confirm an API key is currently accepted. Throws ApiError(401) if not. */
       verifyKey(key: string, signal?: AbortSignal): Promise<KeyCheck> {
           return request<KeyCheck>('/auth/verify', {key, signal});
     },
@@ -404,13 +392,11 @@ export const api = {
     }));
   },
 
-    /** Every mime id the server knows, mapped to its name (GET /mime). */
     listMimes(signal?: AbortSignal): Promise<MimeMap> {
         return request<MimeMap>('/mime', {signal});
     },
 };
 
-/** Raw wire row from GET /tags/autocomplete, before normalisation to AutocompleteResult. */
 interface AutocompleteRow {
   tag_id: number;
   tag_text?: string;
@@ -431,7 +417,6 @@ export const tags = {
         return request<TagInfo>(`/tags/${tagId}/info${query ? `?${query}` : ''}`, {signal: options.signal});
   },
 
-  /** A tag's parent/child/alias/sibling relationships in one domain, as ids (GET .../relationships). */
   relationships(tagDomainId: number, tagId: number, signal?: AbortSignal): Promise<TagRelationships> {
     return request<TagRelationships>(`/tags/${tagDomainId}/${tagId}/relationships`, { signal });
   },
@@ -465,9 +450,7 @@ export const tags = {
   },
 };
 
-/** Database statistics for the Database Stats panel. */
 export const stats = {
-  /** Aggregate counts (records, tags, mappings estimate, clusters) and record-count-by-mime. */
   database(signal?: AbortSignal): Promise<DatabaseStats> {
     return request<DatabaseStats>('/db/stats', { signal });
   },
@@ -478,7 +461,6 @@ export const stats = {
   },
 };
 
-/** WebUI plugin discovery (M6). Returns the validated index; bundles are dynamic-imported client-side. */
 export const plugins = {
   list(signal?: AbortSignal): Promise<PluginManifest[]> {
     return request<PluginManifest[]>('/plugins', { signal });
@@ -491,7 +473,6 @@ export const plugins = {
  * upsert to that id.
  */
 export const layouts = {
-  /** Metadata for every server-stored layout (no documents). */
   list(signal?: AbortSignal): Promise<ServerLayoutMeta[]> {
     return request<ServerLayoutMeta[]>('/layouts', { signal });
   },
@@ -1196,7 +1177,6 @@ export function watchJobs(handlers: JobHandlers): () => void {
  * rides in the `idhan_key` query parameter, which the server accepts alongside the header.
  */
 export function thumbnailUrl(recordId: number, size = 256): string {
-  // The server generates a square thumbnail at any requested edge length; clamp to a positive integer.
   const edge = Math.max(1, Math.round(size));
   const params = new URLSearchParams({ size: String(edge) });
   if (currentKey) params.set('idhan_key', currentKey);

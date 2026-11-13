@@ -44,14 +44,14 @@ class BytecodeCache
 	BytecodeCache& operator=( const BytecodeCache& ) = delete;
 	~BytecodeCache();
 
-	// Combine already checked module graphs before publishing a new registry version.
-	// Conflicting shared dependencies require updating their parsers together.
+	//! Combine already checked module graphs before publishing a new registry version.
+	//! Conflicting shared dependencies require updating their parsers together.
 	[[nodiscard]] std::expected< void, std::string > merge( const BytecodeCache& prepared );
 
 	[[nodiscard]] std::expected< std::span< const std::uint8_t >, std::string > bytecode(
 		const std::filesystem::path& script );
 
-	// Runtime lookups never read files or compile modules. Preparation must populate the snapshot first.
+	//! Runtime lookups never read files or compile modules. Preparation must populate the snapshot first.
 	[[nodiscard]] std::expected< std::span< const std::uint8_t >, std::string > preparedBytecode(
 		const std::filesystem::path& script ) const;
 	[[nodiscard]] std::expected< std::filesystem::path, std::string > resolvePrepared(

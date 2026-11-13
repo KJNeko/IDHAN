@@ -148,7 +148,6 @@ static http::HTTPTask< LogResponse > fetchLogImpl( const FetchLogQuery& paramete
 
 	if ( format == "json" )
 	{
-		// Without an explicit limit every retained entry is returned.
 		const auto limit { parameters.limit.value_or( std::numeric_limits< std::size_t >::max() ) };
 		co_return renderLogJson( raw_entries, req_level, parameters.since, parameters.after, limit );
 	}

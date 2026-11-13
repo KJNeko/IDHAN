@@ -1,8 +1,3 @@
-/**
- * The panel catalog. Built-in panels register here at startup through the same call third-party
- * plugins use; there is no privileged built-in path.
- */
-
 import type { PanelDefinition } from '../host/types';
 
 const registry = new Map<string, PanelDefinition>();

@@ -1,8 +1,3 @@
-/**
- * Presentational record-info list, shared by the Record Info and Import panels. Takes an
- * already-fetched info object and renders it, with no host access and no fetching of its own.
- */
-
 import type { ReactNode } from 'react';
 import type {RecordMetadata} from '../../api/types';
 
@@ -61,9 +56,6 @@ const SIMPLE_TYPE_LABELS: Record<string, string> = {
     image_project: 'Image project',
 };
 
-/**
- * Fields rendered explicitly. Other scalar module fields follow the standard metadata rows.
- */
 const KNOWN = new Set([
     'record_id',
     'hashes',
@@ -103,7 +95,6 @@ const KNOWN = new Set([
     'file_count',
 ]);
 
-/** Embedded metadata blocks, in the order they are listed on the record. */
 export const EMBEDDED_BLOCKS = [
     {key: 'has_exif', label: 'EXIF'},
     {key: 'has_gps', label: 'GPS'},

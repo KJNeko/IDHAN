@@ -95,7 +95,6 @@ runtime::Task< RequestBody > UploadPipeline::finish()
 		co_return RequestBody { std::move( buffered ) };
 	}
 
-	// This file contains the complete raw body; an original filename is not inferred from headers.
 	co_return RequestBody { TemporaryUpload { std::move( m_file ), m_size, m_digest.finish(), {} } };
 }
 } // namespace idhan::http

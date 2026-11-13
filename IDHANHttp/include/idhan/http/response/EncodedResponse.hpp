@@ -10,9 +10,9 @@
 namespace idhan::http
 {
 
-// Owns an already encoded or streaming response without copying or re-encoding
-// its body. Schema, media type, and primary status describe its success contract;
-// file transports may additionally return range and conditional statuses.
+//! Owns an already encoded or streaming response without copying or re-encoding
+//! its body. Schema, media type, and primary status describe its success contract;
+//! file transports may additionally return range and conditional statuses.
 template < typename Schema, AnnotationText Media = "application/json", std::uint16_t Status = 200 >
 struct EncodedResponse
 {
@@ -28,7 +28,7 @@ struct EncodedResponse
 template < typename Schema, AnnotationText Media = "application/json", std::uint16_t Status = 200 >
 using EncodedResult = std::variant< EncodedResponse< Schema, Media, Status >, Response >;
 
-// Keep transport errors outside the declared success alternative.
+//! Keep transport errors outside the declared success alternative.
 template < typename Schema, AnnotationText Media = "application/json", std::uint16_t Status = 200 >
 [[nodiscard]] EncodedResult< Schema, Media, Status > encodedResponse( Response response )
 {

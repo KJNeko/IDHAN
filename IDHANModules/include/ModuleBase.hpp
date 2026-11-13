@@ -21,17 +21,16 @@ namespace idhan
 //! METADATA | THUMBNAILER); ModuleBase::type() returns the OR of the flags it supports.
 enum ModuleTypeFlags : std::uint16_t
 {
-	METADATA = 1 << 0, //!< Implements MetadataModuleI::parseFile.
-	THUMBNAILER = 1 << 1, //!< Implements ThumbnailerModuleI::createThumbnail.
-	GENERATOR = 1 << 2, //!< Implements GeneratorModuleI::generate.
-	EMBEDDING = 1 << 3, //!< Implements EmbeddingModuleI::embed.
-	MIME_PARSE = 1 << 4, //! Implements MimeModuleI::parseMime
+	METADATA    = 1 << 0,
+	THUMBNAILER = 1 << 1,
+	GENERATOR   = 1 << 2,
+	EMBEDDING   = 1 << 3,
+	MIME_PARSE  = 1 << 4,
 };
 
 //! Bitwise-OR of ModuleTypeFlags values; the concrete return type of ModuleBase::type().
 using ModuleType = std::uint16_t;
 
-//! How the host runs a module, as reported by ModuleBase::residency().
 enum class ModuleResidency : std::uint8_t
 {
 	//! A fresh process per call, killed the moment the call returns. The default: a module
@@ -43,7 +42,6 @@ enum class ModuleResidency : std::uint8_t
 	PERSISTENT,
 };
 
-//! Semantic version of a module, reported by ModuleBase::version().
 struct ModuleVersion
 {
 	std::size_t m_major { 1 };
@@ -56,19 +54,16 @@ using data_view = std::basic_string_view< std::uint8_t >;
 struct ModuleCallData
 {
 	const ModuleFile& file;
-	//! The file's type, one of the constants in MimeIDs.hpp. Mime strings never reach a module:
-	//! the pre-scan resolves one to an id before anything is dispatched.
 	MimeID mime_id { 0 };
 	Json::Value extra; //!< Optional caller-supplied parameters; contents are operation-specific.
 };
 
-//! What the module system can do with a given blob, as answered by ModuleCallbacks::probe.
 struct ModuleCapability
 {
-	MimeID mime_id { 0 }; //!< The mime id the host resolved the bytes to.
-	bool has_metadata { false }; //!< Some module can parse metadata from these bytes.
-	bool has_thumbnailer { false }; //!< Some module can thumbnail these bytes.
-	bool has_generator { false }; //!< Some module can generate derived files from these bytes.
+	MimeID mime_id{ 0 };
+	bool has_metadata{ false };
+	bool has_thumbnailer{ false };
+	bool has_generator{ false };
 };
 
 using ThumbnailFunc =
@@ -96,10 +91,8 @@ class FGL_EXPORT ModuleBase
 {
   public:
 
-	//! Host callbacks for re-dispatching work through the module system (see ModuleCallbacks).
 	ModuleCallbacks m_callbacks;
 
-	//! Short human-readable name of the module, used in logs.
 	[[nodiscard]] virtual std::string_view name() = 0;
 
 	ModuleBase() = delete;
@@ -110,20 +103,13 @@ class FGL_EXPORT ModuleBase
 
 	[[nodiscard]] virtual bool threadSafe() { return false; }
 
-	//! Whether one call to this module runs entirely on the thread that dispatched it.
-	/** True by default: a module that parallelises inside a call opts out of this, never into it.
-	 *  While it holds, there is nothing for a render budget to be spent on, so the host spends it on
-	 *  running more calls at once instead and the worker's thread count comes out the same. Only a
-	 *  library whose modules all agree is treated that way, since they share one process. */
+	//! True when a call uses only its dispatching thread; the host may run more calls concurrently.
 	[[nodiscard]] virtual bool singleThreaded() { return true; }
 
-	//! The interfaces this module implements, as an OR of ModuleTypeFlags.
 	[[nodiscard]] virtual ModuleType type() = 0;
 
-	//! The module's semantic version.
 	[[nodiscard]] virtual ModuleVersion version() = 0;
 
-	//! How the host should run this module (see ModuleResidency).
 	[[nodiscard]] virtual ModuleResidency residency() { return ModuleResidency::SINGLE_RUN; }
 
 	//! Resident size, in MiB, this module needs to hold steadily without being retired for it.
@@ -132,8 +118,9 @@ class FGL_EXPORT ModuleBase
 	//! Called once after the library's init(), before the first call reaches this module.
 	virtual void startup() {}
 
-	//! Used for reclaiming resources. Called when the host is under memory pressure; drop caches
-	//! but stay usable. This is not a teardown.
+	//! Drops caches without tearing down; the module must stay usable. Runs when the worker
+	//! receives RECLAIM.
+	//! TODO: the server never sends RECLAIM, so this is not called yet.
 	virtual void restart() {}
 
 	//! Called once before the worker process exits.

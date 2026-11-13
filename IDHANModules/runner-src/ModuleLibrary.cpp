@@ -13,7 +13,6 @@
 namespace idhan::runner
 {
 
-//! Signature of the factory that getModulesFunc returns a pointer to.
 using GetModulesFunc = std::vector< std::shared_ptr< IDHANModule > > ( * )( ModuleCallbacks );
 
 [[nodiscard]] std::string dlError()

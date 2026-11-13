@@ -5,7 +5,7 @@
 namespace idhan::hydrus
 {
 
-// Keep space for wrapped text once it has been displayed so processing updates do not move other services.
+//! Keep space for wrapped text once it has been displayed so processing updates do not move other services.
 class ImportServiceLabel final : public QLabel
 {
 	Q_OBJECT

@@ -24,11 +24,19 @@ SCENARIO_METHOD( ServerFixture, "Removing a cluster leaves its files on disk", "
 
 	pqxx::work setup { db() };
 	const auto cluster_id { setup.query_value< ClusterID >(
-		"INSERT INTO file_clusters (cluster_name, folder_path) VALUES ('removable', $1) RETURNING cluster_id",
+		//language=postgresql
+		R"SQL(
+			INSERT INTO file_clusters (cluster_name, folder_path)
+			    VALUES ('removable', $1)
+			RETURNING cluster_id
+		)SQL",
 		pqxx::params { cluster_path.string() } ) };
 	setup.exec(
-		"INSERT INTO file_info (record_id, size, extension, cluster_id, cluster_store_time) "
-		"VALUES ($1, 21, 'bin', $2, now())",
+		//language=postgresql
+		R"SQL(
+			INSERT INTO file_info (record_id, size, extension, cluster_id, cluster_store_time)
+			    VALUES ($1, 21, 'bin', $2, now())
+		)SQL",
 		pqxx::params { record_id, cluster_id } );
 	setup.commit();
 
@@ -39,9 +47,28 @@ SCENARIO_METHOD( ServerFixture, "Removing a cluster leaves its files on disk", "
 
 	pqxx::work verify { db() };
 	CHECK_FALSE( verify.query_value< bool >(
-		"SELECT EXISTS (SELECT 1 FROM file_clusters WHERE cluster_id = $1)", pqxx::params { cluster_id } ) );
+		//language=postgresql
+		R"SQL(
+			SELECT
+			    EXISTS (
+			        SELECT
+			            1
+			        FROM file_clusters
+			        WHERE cluster_id = $1
+			    )
+		)SQL",
+		pqxx::params{ cluster_id } ) );
 	const auto file_info { verify.exec(
-		"SELECT cluster_id, cluster_delete_time FROM file_info WHERE record_id = $1", pqxx::params { record_id } ) };
+			//language=postgresql
+			R"SQL(
+			SELECT
+			    cluster_id,
+			    cluster_delete_time
+			FROM file_info
+			WHERE record_id = $1
+		)SQL",
+			pqxx::params{ record_id } )
+	};
 	REQUIRE( file_info.size() == 1 );
 	CHECK( file_info[ 0 ][ "cluster_id" ].is_null() );
 	CHECK( file_info[ 0 ][ "cluster_delete_time" ].is_null() );

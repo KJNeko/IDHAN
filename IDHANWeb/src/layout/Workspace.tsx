@@ -1,9 +1,3 @@
-/**
- * The dockview surface. Restores the working document's tree on ready (or seeds a default panel for a
- * fresh layout), then persists the serialized tree back to the store on every layout change. Remounts
- * only when the whole layout is swapped (generation bump), never on an incremental edit.
- */
-
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { DockviewReact, themeAbyss, themeLight, type DockviewReadyEvent } from 'dockview-react';
 import 'dockview/dist/styles/dockview.css';
@@ -12,11 +6,6 @@ import { hasPanel } from '../panels/registry';
 import { buildComponents } from './panelComponents';
 import { useLayoutStore, type PanelPosition } from './store';
 
-/**
- * The workspace a fresh install boots into: Search on the left, the Grid filling the centre, and a
- * right column with the Media Viewer over a Record Info / Tag Editor tab pair. Only seeded when there
- * is no saved tree; users reshape it freely and it persists.
- */
 function seedDefaultLayout(add: (type: string, position?: PanelPosition) => string | null): void {
   const search = add('search');
   const grid = add('grid', search ? { referencePanel: search, direction: 'right' } : undefined);

@@ -175,7 +175,6 @@ std::expected< JSModuleDef*, std::string > BytecodeCache::compile( const std::fi
 		m_sources.emplace( name, source );
 	}
 
-	// Compilation recursively caches imported modules.
 	const JSValue compiled { JS_Eval(
 		m_context.get(),
 		source.c_str(),

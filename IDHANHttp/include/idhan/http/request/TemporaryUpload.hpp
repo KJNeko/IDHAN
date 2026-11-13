@@ -9,7 +9,7 @@
 namespace idhan::http
 {
 
-// Completed transport upload, before content processing or MIME detection.
+//! Completed transport upload, before content processing or MIME detection.
 class TemporaryUpload
 {
 	folly::File m_file;

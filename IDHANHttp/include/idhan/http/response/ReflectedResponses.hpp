@@ -19,8 +19,8 @@ template < typename T >
 		return true;
 }
 
-// JsonCodec<T>::encode(builder, value) can customize output independently of
-// decoding. It must return expected<void, ParseError> and append one JSON value.
+//! JsonCodec<T>::encode(builder, value) can customize output independently of
+//! decoding. It must return expected<void, ParseError> and append one JSON value.
 template < typename T >
 std::expected< void, ParseError > appendResponseJson( simdjson::builder::string_builder& builder, const T& value )
 {

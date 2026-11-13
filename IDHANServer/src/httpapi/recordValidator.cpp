@@ -27,8 +27,19 @@ http::RequestValidation recordExistsValidation( db::DBContext& db )
 		db::DBBindings bindings {};
 		bindings.bind( record_id );
 
-		const auto rows { co_await db.query( "SELECT 1 FROM records WHERE record_id = $1", std::move( bindings ) )
-			                  .rows< std::int32_t >() };
+		const auto rows{
+			co_await db
+					 .query(
+						 //language=postgresql
+						 R"SQL(
+						SELECT
+						    1
+						FROM records
+						WHERE record_id = $1
+					)SQL",
+						 std::move( bindings ) )
+					 .rows< std::int32_t >()
+		};
 
 		if ( rows.empty() )
 			co_return http::Response::error( 404, std::format( "Record {} does not exist", record_id ) );

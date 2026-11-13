@@ -18,30 +18,27 @@
 namespace idhan::downloader
 {
 
-// Downloader -> IDHAN
 struct ImportRequest
 {
 	WorkID work {};
-	// import() receives the direct file URL chosen by the parser.
+	//! import() receives the direct file URL chosen by the parser.
 	std::string url {};
 	Json::Value options {};
 	DownloadSessionID session_id {};
 	bool force_download {};
-	// When present, finish the import using this record without writing file bytes.
+	//! When present, finish the import using this record without writing file bytes.
 	std::optional< RecordID > stored_record {};
 };
 
-// Downloader -> IDHAN
 struct ImportMetadata
 {
 	std::uint64_t size {};
 	std::string content_type {};
 	std::string filename {};
-	// Final HTTP file URL; empty when importDirect() supplies the bytes.
+	//! Final HTTP file URL; empty when importDirect() supplies the bytes.
 	std::string effective_url {};
 };
 
-// IDHAN -> Downloader
 struct ImportResult
 {
 	RecordID record_id {};

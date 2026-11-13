@@ -7,8 +7,8 @@
 namespace idhan::downloader
 {
 
-// The context drains sessions and lane transfers before destroying its registry.
-// Resolve redirect destinations with their own URL class, rather than the request's policy.
+//! The context drains sessions and lane transfers before destroying its registry.
+//! Resolve redirect destinations with their own URL class, rather than the request's policy.
 class UrlStorageImportSink final : public ImportSink
 {
 	std::unique_ptr< ImportSink > m_sink;

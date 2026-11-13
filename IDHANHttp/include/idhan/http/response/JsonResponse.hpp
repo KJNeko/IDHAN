@@ -22,8 +22,8 @@ struct JsonResponse
 	proxygen::HTTPHeaders headers {};
 };
 
-// The typed alternative declares success; Response carries transport errors or
-// additional statuses documented by Output annotations.
+//! The typed alternative declares success; Response carries transport errors or
+//! additional statuses documented by Output annotations.
 template < typename T, std::uint16_t Status = 200 >
 using JsonResult = std::variant< JsonResponse< T, Status >, Response >;
 

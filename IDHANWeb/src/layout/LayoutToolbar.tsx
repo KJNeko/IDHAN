@@ -1,9 +1,3 @@
-/**
- * Top bar: layout name, add-panel picker, edit-mode toggle, the named-layout menu, and sign-out.
- * The menu covers both localStorage snapshots ("Saved") and server-stored layouts ("On server",
- * push/pull); localStorage remains the source of truth and the server copy is opt-in.
- */
-
 import {type ChangeEvent, type SyntheticEvent, useEffect, useMemo, useRef, useState} from 'react';
 import {api, ApiError} from '../api/client';
 import type {PanelDefinition} from '../host/types';
@@ -79,7 +73,6 @@ export function LayoutToolbar({ onSignOut }: { onSignOut: () => void }) {
 
   const store = useLayoutStore.getState();
 
-  // Re-read the registry when the catalog changes (a plugin registered new panel types).
   const panels = useMemo(() => listPanels(), [catalogVersion]);
     const openPanelTypes = useMemo(() => new Set(Object.values(placedPanels).map((panel) => panel.type)), [placedPanels]);
     const panelGroups = useMemo(() => {
@@ -110,7 +103,6 @@ export function LayoutToolbar({ onSignOut }: { onSignOut: () => void }) {
     if (chosen) store.newLayout(chosen.trim() || 'Untitled');
   }
 
-  // Download the working document as a JSON file so it can be moved without a server round-trip.
   function onExport() {
     const doc = useLayoutStore.getState().doc;
     const blob = new Blob([JSON.stringify(doc, null, 2)], { type: 'application/json' });

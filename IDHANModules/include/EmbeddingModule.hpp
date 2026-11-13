@@ -11,7 +11,6 @@
 namespace idhan
 {
 
-//! The pixels a model wants, in the terms the host's thumbnail callback understands.
 struct PreprocessSpec
 {
 	std::size_t m_width { 224 };
@@ -22,14 +21,12 @@ struct PreprocessSpec
 	std::array< float, 3 > m_std { { 0.5f, 0.5f, 0.5f } };
 };
 
-//! One embedding vector.
 struct EmbeddingInfo
 {
 	//! L2-normalised by the module; length is always EmbeddingModuleI::dimensions().
 	std::vector< float > m_vector {};
 };
 
-//! A module that turns a file into a vector.
 class FGL_EXPORT EmbeddingModuleI : public ModuleBase
 {
   public:
@@ -40,21 +37,17 @@ class FGL_EXPORT EmbeddingModuleI : public ModuleBase
 
 	~EmbeddingModuleI() override;
 
-	//! Stable identity of the model this instance wraps.
 	[[nodiscard]] virtual std::string_view modelName() = 0;
 
 	//! Output dimensionality. Fixed for the module's lifetime; the host builds halfvec(N) from it.
 	[[nodiscard]] virtual std::size_t dimensions() = 0;
 
-	//! The pixel size and normalisation this model requires.
 	[[nodiscard]] virtual PreprocessSpec preprocess() = 0;
 
 	//! Embeds one file.
-	//! \param data The source file and its MIME (see ModuleCallData).
 	//! \return An L2-normalised vector of dimensions() floats, or a ModuleError.
 	[[nodiscard]] virtual std::expected< EmbeddingInfo, ModuleError > embed( ModuleCallData& data ) = 0;
 
-	//! Whether this model has a text tower.
 	[[nodiscard]] virtual bool supportsText() { return false; }
 
 	//! Embeds a phrase into the same space as embed(). Must not be called unless supportsText().
@@ -65,7 +58,6 @@ class FGL_EXPORT EmbeddingModuleI : public ModuleBase
 		return std::unexpected( ModuleError { "this model has no text encoder" } );
 	}
 
-	//! \return ModuleTypeFlags::EMBEDDING.
 	ModuleType type() override;
 };
 

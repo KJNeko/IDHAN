@@ -25,7 +25,6 @@
 namespace idhan::modules
 {
 
-//! The descriptor the runner is told to use.
 constexpr int CHILD_CHANNEL_FD { 3 };
 
 void resumeContinuation( std::coroutine_handle<> continuation )
@@ -45,9 +44,6 @@ WorkerProcess::WorkerProcess( WorkerSettings settings, CallbackHandler on_callba
   m_on_callback( std::move( on_callback ) )
 {}
 
-//! \warning Must not run on the worker's own IO thread. The join below would be a self-join, and
-//!          EDEADLK out of a destructor aborts the process. Nothing that could hold the last
-//!          reference is ever resumed on the IO thread; see resumeContinuation().
 WorkerProcess::~WorkerProcess()
 {
 	terminate( "worker owner destroyed", Termination::EXPECTED );
@@ -551,7 +547,6 @@ IDHANTask< std::expected< std::vector< ipc::ManifestEntry >, std::string > > Wor
 {
 	using Manifest = std::expected< std::vector< ipc::ManifestEntry >, std::string >;
 
-	//! Parks on the IO thread's arrival notification plus a timer, whichever lands first.
 	struct Awaiter
 	{
 		std::shared_ptr< WorkerProcess > worker;
@@ -637,7 +632,6 @@ IDHANTask< std::shared_ptr< CallOutcome > > WorkerProcess::call(
 	Json::Value body,
 	std::shared_ptr< const CallInput > input )
 {
-	// Assigned here rather than by the caller: this is the map the id has to be unique in.
 	const std::uint64_t call_id { m_next_call_id.fetch_add( 1 ) };
 	body[ ipc::field::CALL_ID ] = Json::UInt64 { call_id };
 
@@ -658,7 +652,6 @@ IDHANTask< std::shared_ptr< CallOutcome > > WorkerProcess::call(
 		                    .mime_id = static_cast< MimeID >( body[ ipc::field::MIME_ID ].asInt() ) } );
 	}
 
-	//! Registers the call, posts it, and parks the coroutine until the result comes back.
 	struct Suspender
 	{
 		WorkerProcess* worker;
@@ -684,7 +677,6 @@ IDHANTask< std::shared_ptr< CallOutcome > > WorkerProcess::call(
 					outcome->ok = false;
 					outcome->error = "worker is not running";
 					outcome->worker_died = true;
-					// Not suspending: the coroutine carries on with the failure already recorded.
 					return false;
 				}
 

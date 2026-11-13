@@ -106,7 +106,14 @@ SCENARIO_METHOD( MigratedSchema, "Alias resolution of tag mappings", "[db][tags]
 			{
 				CHECK(
 					tx.query_value< int >(
-						"SELECT effective_tag_id FROM tag_aliases WHERE aliased_id = $1 AND tag_domain_id = $2",
+						//language=postgresql
+						R"SQL(
+							SELECT
+							    effective_tag_id
+							FROM tag_aliases
+							WHERE aliased_id = $1
+							    AND tag_domain_id = $2
+						)SQL",
 						pqxx::params { samus, domain } )
 					== samus_aran_metroid );
 			}

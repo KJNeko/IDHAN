@@ -57,7 +57,6 @@ class ServerContext
 	std::shared_ptr< folly::CPUThreadPoolExecutor > m_db_executor {};
 	std::unique_ptr< db::DBContext > m_db_context {};
 
-	// Keep module health checks alive while hash workers drain, including failed startup.
 	std::unique_ptr< maintenance::ModuleMaintenance > m_module_maintenance {};
 	std::unique_ptr< maintenance::HashMaintenance > m_hash_maintenance {};
 	std::unique_ptr< maintenance::TagCountMaintenance > m_tag_count_maintenance {};

@@ -12,7 +12,6 @@ namespace idhan::downloader::detail
 
 inline std::string normalizeHost( std::string host )
 {
-	// strip leading protocol
 	if ( auto protocol_end = host.find_first_of( "://" ); protocol_end != std::string::npos )
 	{
 		host = host.substr( protocol_end + 3 );

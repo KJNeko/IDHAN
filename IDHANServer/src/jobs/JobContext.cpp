@@ -45,7 +45,6 @@ void JobRuntime::runner()
 	{
 		if ( m_soft_stop.load( std::memory_order_acquire ) )
 		{
-			// enqueue() can mutate the queue concurrently.
 			std::lock_guard lock { m_queue_mtx };
 			if ( m_queue.empty() ) break;
 		}
@@ -135,7 +134,6 @@ JobRuntime::JobRuntime() : m_pool( nullptr ), m_queue_mtx(), m_cv(), m_queue(), 
 	auto job_thread_count { idhan::config::getSilentDefault< std::size_t >(
 		"server", "job_threads", std::max< std::size_t >( hardware / 4, 2 ) ) };
 
-	// Zero selects all hardware threads.
 	if ( job_thread_count == 0 ) job_thread_count = hardware;
 
 	job_thread_count = std::max< std::size_t >( job_thread_count, 2 );

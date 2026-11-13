@@ -77,7 +77,6 @@ function validateOption(value: unknown, definition: OptionDefinition, name: stri
 	}
 }
 
-/** The accessor type that an option declaration requires. */
 type OptionAccessorValue<Definition extends OptionDefinition> =
 	Definition extends { readonly type: 'boolean' } ?
 		boolean :

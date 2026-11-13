@@ -30,7 +30,6 @@ PTRFlattenWidget::PTRFlattenWidget( QWidget* parent ) : QWidget( parent ), ui( n
 	connect( ui->outputPath, &QLineEdit::textEdited, this, [ this ] { m_output_overridden = true; } );
 }
 
-//! The compacted output lives in a subdirectory of the corpus, so the two travel together.
 QString PTRFlattenWidget::defaultOutputFor( const QString& source )
 {
 	if ( source.isEmpty() ) return {};
@@ -63,14 +62,22 @@ void PTRFlattenWidget::onSourceEdited( const QString& path )
 void PTRFlattenWidget::onSelectSource()
 {
 	const QString dir = QFileDialog::getExistingDirectory(
-		this, "Select PTR files directory", ui->sourcePath->text(), QFileDialog::ShowDirsOnly );
+		this,
+		"Select\n"
+		"    PTR files directory",
+		ui->sourcePath->text(),
+		QFileDialog::ShowDirsOnly );
 	if ( !dir.isEmpty() ) setDirectory( dir );
 }
 
 void PTRFlattenWidget::onSelectOutput()
 {
 	const QString dir = QFileDialog::getExistingDirectory(
-		this, "Select output directory", ui->outputPath->text(), QFileDialog::ShowDirsOnly );
+		this,
+		"Select\n"
+		"    output directory",
+		ui->outputPath->text(),
+		QFileDialog::ShowDirsOnly );
 	if ( dir.isEmpty() ) return;
 
 	ui->outputPath->setText( dir );

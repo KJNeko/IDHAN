@@ -44,13 +44,10 @@ constexpr std::size_t MAX_CALLBACK_THUMBNAIL_SIZE { 8192 };
 	return std::min( static_cast< std::size_t >( requested ), MAX_CALLBACK_THUMBNAIL_SIZE );
 }
 
-//! Calls one worker runs at once when the operator has not named a number.
 constexpr std::size_t DEFAULT_POOL_THREADS { 4 };
 
-//! Share of the machine the module system takes when the operator has not named a number.
-/** The server itself is deliberately unrestricted; the modules are the part that has to be kept from
- *  taking the machine over, since libvips and the codec pools will each happily spin up one pool per
- *  core per call. */
+//! Share of the machine's threads the module workers may use. The server itself is unrestricted;
+//! libvips and the codec pools would otherwise spin up one pool per core per call.
 constexpr std::size_t MODULE_THREAD_PERCENT { 25 };
 
 //! Never zero, so it is safe to divide by.
@@ -60,7 +57,7 @@ constexpr std::size_t MODULE_THREAD_PERCENT { 25 };
 }
 
 //! Reads a worker setting, letting `[modules.<library>]` override the `[modules]` default.
-/** \param library The library's file stem, e.g. IDHANVips. */
+//! \p library is the library's file stem, e.g. IDHANVips.
 template < typename T >
 [[nodiscard]] std::optional< T > moduleSetting( const std::string& library, const std::string_view name )
 {
@@ -69,7 +66,6 @@ template < typename T >
 	return config::get< T >( "modules", name );
 }
 
-//! \copydoc moduleSetting
 template < typename T >
 [[nodiscard]] T moduleSetting( const std::string& library, const std::string_view name, const T fallback )
 {
@@ -77,7 +73,7 @@ template < typename T >
 }
 
 //! A configured thread count, in which zero asks for every thread the machine has.
-/** \return Nothing when the operator did not set it, leaving the caller to derive a default. */
+//! \return nullopt when the operator did not set it, leaving the caller to derive a default.
 [[nodiscard]] std::optional< std::size_t > threadSetting( const std::string& library, const std::string_view name )
 {
 	const auto configured { moduleSetting< std::size_t >( library, name ) };
@@ -234,10 +230,8 @@ bool ModuleLoader::registerLibrary( const std::filesystem::path& path )
 	auto settings { settingsFor( path ) };
 	settings.expected_signature = ipc::manifestSignature( entries );
 
-	// A worker's budget is pool_threads * render_threads either way. When nothing in the library can
-	// use a render thread inside a call, that budget buys concurrency instead of going unspent.
-	// all_of, not any_of: the modules share one process, so one that does parallelise would end up
-	// with both the multiplied pool and its own render threads.
+	// When no module can use render threads inside a call, spend that budget on concurrency instead.
+	// all_of, not any_of: the modules share one process.
 	const bool folds_render_threads {
 		std::ranges::all_of( entries, []( const auto& entry ) { return entry.single_threaded; } )
 	};
@@ -434,7 +428,6 @@ std::vector< std::shared_ptr< RemoteModule > > ModuleLoader::getMimeParserFor( c
 
 using ExpectedInput = std::expected< std::shared_ptr< const CallInput >, std::string >;
 
-//! Wraps a descriptor a module sent with its callback as an input for the nested call.
 [[nodiscard]] ExpectedInput makeCallbackInput( ipc::UniqueFd fd )
 {
 	auto blob { ipc::Blob::adoptSealed( std::move( fd ) ) };

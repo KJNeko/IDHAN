@@ -54,7 +54,7 @@ struct Headers
 	T value {};
 };
 
-// Schemas for context-based handlers keep their existing parsing semantics.
+//! Schemas for context-based handlers keep their existing parsing semantics.
 template < typename T >
 struct Parameters
 {
@@ -385,8 +385,8 @@ auto invokeDecoded(
 			std::get< Index >( arguments ), context, dependency )... );
 }
 
-// Decoding finishes before the context is moved. Owned arguments remain in this
-// coroutine's frame until the handler completes, including across suspension.
+//! Decoding finishes before the context is moved. Owned arguments remain in this
+//! coroutine's frame until the handler completes, including across suspension.
 template < auto Handler, typename Arguments, typename Dependency >
 HTTPTask< Response > invokeReflected( Dependency* dependency, RequestContext context )
 {
@@ -400,7 +400,7 @@ HTTPTask< Response > invokeReflected( Dependency* dependency, RequestContext con
 	co_return serializeResponse( std::move( response ) );
 }
 
-// Success contracts come from return types; Output declares additional error statuses.
+//! Success contracts come from return types; Output declares additional error statuses.
 template < std::meta::info Function >
 consteval bool hasValidOutputAnnotations()
 {
@@ -470,8 +470,8 @@ RouteDefinition reflectedRoute(
 	         { return invokeReflected< handler, Arguments >( dependency, std::move( context ) ); } };
 }
 
-// Members is a snapshot taken in the caller's translation unit. Never instantiate a
-// namespace-wide template keyed only by namespace identity: its members differ by TU.
+//! Members is a snapshot taken in the caller's translation unit. Never instantiate a
+//! namespace-wide template keyed only by namespace identity: its members differ by TU.
 template < std::meta::info Members, typename Dependency >
 std::vector< RouteDefinition > reflectedRoutes(
 	Dependency& dependency,
@@ -498,8 +498,8 @@ std::vector< RouteDefinition > reflectedRoutes(
 	return routes;
 }
 
-// Enumerate declared endpoints in the project API namespace and child namespaces.
-// Sorting makes snapshots independent of the order headers were first included.
+//! Enumerate declared endpoints in the project API namespace and child namespaces.
+//! Sorting makes snapshots independent of the order headers were first included.
 consteval std::vector< std::meta::info > reflectedRouteFunctions( std::meta::info scope )
 {
 	std::vector< std::pair< std::string_view, std::meta::info > > named;

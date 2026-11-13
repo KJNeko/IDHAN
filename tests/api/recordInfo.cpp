@@ -29,13 +29,21 @@ TEST_CASE_METHOD(
 	{
 		pqxx::work tx { db() };
 		tx.exec(
-			"INSERT INTO file_info (record_id, size, extension, file_mtime, file_ctime) "
-			"VALUES ($1, 4294967296, 'bin', TIMESTAMP '1970-01-01 00:00:01.234567', TIMESTAMP '1970-01-01 00:00:02.345678'), "
-			"($2, 0, 'bin', TIMESTAMP '1970-01-01 00:00:00', NULL), "
-			"($3, 17, 'bin', NULL, TIMESTAMP '1970-01-01 00:00:00')",
+			//language=postgresql
+			R"SQL(
+				INSERT INTO file_info (record_id, size, extension, file_mtime, file_ctime)
+				VALUES
+				    ($1, 4294967296, 'bin', TIMESTAMP '1970-01-01 00:00:01.234567', TIMESTAMP '1970-01-01 00:00:02.345678'),
+				    ($2, 0, 'bin', TIMESTAMP '1970-01-01 00:00:00', NULL),
+				    ($3, 17, 'bin', NULL, TIMESTAMP '1970-01-01 00:00:00')
+			)SQL",
 			pqxx::params { records[ 1 ], records[ 2 ], records[ 3 ] } );
 		tx.exec(
-			"INSERT INTO file_info (record_id, size, mime_id) VALUES ($1, 321, $2)",
+			//language=postgresql
+			R"SQL(
+				INSERT INTO file_info (record_id, size, mime_id)
+				    VALUES ($1, 321, $2)
+			)SQL",
 			pqxx::params { records[ 4 ], mime_ids::IMAGE_PNG } );
 		tx.commit();
 	}
@@ -95,26 +103,48 @@ TEST_CASE_METHOD(
 	{
 		pqxx::work tx { db() };
 		const auto audio_mime { tx.query_value< MimeID >(
-			"INSERT INTO mime (name, best_extension) VALUES ('audio/x-idhan-f19-test', 'audio') RETURNING mime_id" ) };
+				//language=postgresql
+				R"SQL(
+				INSERT INTO mime (name, best_extension)
+				    VALUES ('audio/x-idhan-f19-test', 'audio')
+				RETURNING mime_id
+			)SQL" )
+		};
 		tx.exec(
-			"INSERT INTO file_info (record_id, size, mime_id, file_mtime) "
-			"VALUES ($1, 123, $2, TIMESTAMP '1970-01-01 00:00:00'), "
-			"($3, 123, $4, TIMESTAMP '1970-01-01 00:00:00')",
+			//language=postgresql
+			R"SQL(
+				INSERT INTO file_info (record_id, size, mime_id, file_mtime)
+				VALUES
+				    ($1, 123, $2, TIMESTAMP '1970-01-01 00:00:00'),
+				    ($3, 123, $4, TIMESTAMP '1970-01-01 00:00:00')
+			)SQL",
 			pqxx::params { records[ 0 ], audio_mime, records[ 1 ], mime_ids::ANIMATION_GIF } );
 		tx.exec(
-			"INSERT INTO metadata (record_id, simple_mime_type) VALUES ($1, $2), ($3, $4)",
+			//language=postgresql
+			R"SQL(
+				INSERT INTO metadata (record_id, simple_mime_type)
+				VALUES
+				    ($1, $2),
+				    ($3, $4)
+			)SQL",
 			pqxx::params {
 				records[ 0 ],
 				std::to_underlying( SimpleMimeType::AUDIO ),
 				records[ 1 ],
 				std::to_underlying( SimpleMimeType::ANIMATION ) } );
 		tx.exec(
-			"INSERT INTO audio_metadata (record_id, duration, bitrate, channels, sample_rate) "
-			"VALUES ($1, 2.5, 192000, 2, 48000)",
+			//language=postgresql
+			R"SQL(
+				INSERT INTO audio_metadata (record_id, duration, bitrate, channels, sample_rate)
+				    VALUES ($1, 2.5, 192000, 2, 48000)
+			)SQL",
 			pqxx::params { records[ 0 ] } );
 		tx.exec(
-			"INSERT INTO animation_metadata (record_id, width, height, frame_count, duration, loops) "
-			"VALUES ($1, 640, 480, 60, 2.5, false)",
+			//language=postgresql
+			R"SQL(
+				INSERT INTO animation_metadata (record_id, width, height, frame_count, duration, loops)
+				    VALUES ($1, 640, 480, 60, 2.5, false)
+			)SQL",
 			pqxx::params { records[ 1 ] } );
 		tx.commit();
 	}

@@ -127,9 +127,7 @@ SSEEventHub::SSEEventHub() : m_mutex {}, m_subscribers {}, m_snapshots {}, m_seq
 SSEEventHub::~SSEEventHub()
 {
 	{
-		// Leave the registry before tearing down, so a concurrent heartbeatAll() cannot reach a
-		// half-destroyed hub. Taking the registry lock without holding m_mutex keeps the order
-		// registry-then-hub that heartbeatAll() relies on.
+		// Unregister under the registry lock alone so heartbeatAll() never reaches a half-destroyed hub.
 		const std::lock_guard lock { registryMutex() };
 		std::erase( registry(), this );
 	}
@@ -215,7 +213,6 @@ void SSEEventHub::enqueue( SSESubscriber& subscriber, SSEEvent event, const bool
 
 	if ( subscriber.pending_update_bytes > max_pending_update_bytes )
 	{
-		// The client reconnects and rebuilds its state from a fresh snapshot.
 		subscriber.pending.clear();
 		subscriber.pending_update_bytes = 0;
 		subscriber.closed = true;

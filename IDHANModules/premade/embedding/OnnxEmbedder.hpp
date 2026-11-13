@@ -13,7 +13,6 @@
 namespace premade
 {
 
-//! One SigLIP-family image encoder, hosted by ONNX Runtime on the CPU.
 class OnnxEmbedder final : public idhan::EmbeddingModuleI
 {
 	ModelConfig m_config;
@@ -29,7 +28,6 @@ class OnnxEmbedder final : public idhan::EmbeddingModuleI
 	std::unique_ptr< Ort::Session > m_text_session {};
 	BpeTokenizer m_tokenizer {};
 
-	//! Why text queries are being refused, when the model declares a text tower but cannot serve one.
 	std::string m_text_failure {};
 
 	//! Converts packed 8-bit RGB into the normalised CHW tensor the graph expects.
@@ -74,7 +72,6 @@ class OnnxEmbedder final : public idhan::EmbeddingModuleI
 	[[nodiscard]] std::expected< idhan::EmbeddingInfo, idhan::ModuleError > embed( idhan::ModuleCallData& data )
 		override;
 
-	//! Whether this model ships a text tower.
 	[[nodiscard]] bool supportsText() override
 	{
 		return !m_config.m_text_onnx_path.empty() && !m_config.m_tokenizer_path.empty();

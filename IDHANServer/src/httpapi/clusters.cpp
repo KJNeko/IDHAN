@@ -84,8 +84,16 @@ struct ClusterFields
 		bindings.bind( *fields.readonly );
 		bindings.bind( cluster_id );
 		co_await transaction
-			.query( "UPDATE file_clusters SET read_only = $1 WHERE cluster_id = $2", std::move( bindings ) )
-			.result();
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					UPDATE
+					    file_clusters
+					SET read_only = $1
+					WHERE cluster_id = $2
+				)SQL",
+					 std::move( bindings ) )
+				 .result();
 	}
 
 	if ( fields.name )
@@ -102,7 +110,14 @@ struct ClusterFields
 		{
 			co_await transaction
 				.query(
-					"UPDATE file_clusters SET cluster_name = $1 WHERE cluster_id = $2", std::move( update_bindings ) )
+					//language=postgresql
+					R"SQL(
+						UPDATE
+						    file_clusters
+						SET cluster_name = $1
+						WHERE cluster_id = $2
+					)SQL",
+					std::move( update_bindings ) )
 				.result();
 		}
 		catch ( const db::DBConstraintError& error )
@@ -121,8 +136,16 @@ struct ClusterFields
 		bindings.bind( *fields.ratio );
 		bindings.bind( cluster_id );
 		co_await transaction
-			.query( "UPDATE file_clusters SET ratio_number = $1 WHERE cluster_id = $2", std::move( bindings ) )
-			.result();
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					UPDATE
+					    file_clusters
+					SET ratio_number = $1
+					WHERE cluster_id = $2
+				)SQL",
+					 std::move( bindings ) )
+				 .result();
 	}
 
 	if ( fields.size_limit )
@@ -131,8 +154,16 @@ struct ClusterFields
 		bindings.bind( *fields.size_limit );
 		bindings.bind( cluster_id );
 		co_await transaction
-			.query( "UPDATE file_clusters SET size_limit = $1 WHERE cluster_id = $2", std::move( bindings ) )
-			.result();
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					UPDATE
+					    file_clusters
+					SET size_limit = $1
+					WHERE cluster_id = $2
+				)SQL",
+					 std::move( bindings ) )
+				 .result();
 	}
 
 	co_return std::nullopt;
@@ -149,7 +180,15 @@ static http::HTTPTask< std::optional< ClusterInfoResponse > > readClusterInfo(
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT size_used, file_count::bigint FROM file_clusters WHERE cluster_id = $1", std::move( bindings ) )
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    size_used,
+					    file_count::bigint
+					FROM file_clusters
+					WHERE cluster_id = $1
+				)SQL",
+				std::move( bindings ) )
 			.rows< std::int64_t, std::int64_t >()
 	};
 	if ( rows.empty() ) co_return std::nullopt;
@@ -165,9 +204,20 @@ static http::HTTPTask< std::optional< ClusterInfoResponse > > readClusterInfo(
 	const auto mime_rows {
 		co_await db
 			.query(
-				"SELECT m.name AS mime, COUNT(fi.record_id) AS cnt, COALESCE(SUM(fi.size), 0)::BIGINT AS bytes "
-				"FROM file_info fi LEFT JOIN mime m ON fi.mime_id = m.mime_id "
-				"WHERE fi.cluster_id = $1 GROUP BY m.name ORDER BY bytes DESC",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    m.name AS mime,
+					    COUNT(fi.record_id) AS cnt,
+					    COALESCE(SUM(fi.size), 0)::BIGINT AS bytes
+					FROM file_info fi
+					    LEFT JOIN mime m ON fi.mime_id = m.mime_id
+					WHERE fi.cluster_id = $1
+					GROUP BY
+					    m.name
+					ORDER BY
+					    bytes DESC
+				)SQL",
 				std::move( mime_bindings ) )
 			.rows< std::optional< std::string >, std::int64_t, std::int64_t >()
 	};
@@ -237,7 +287,15 @@ http::HTTPTask< http::JsonResult< ClusterInfoResponse, 201 > > addCluster(
 	}
 
 	const auto folder_search {
-		co_await transaction.query( "SELECT folder_path FROM file_clusters" ).rows< std::string >()
+		co_await transaction
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    folder_path
+					FROM file_clusters
+				)SQL" )
+				 .rows< std::string >()
 	};
 
 	for ( const auto& [ cluster_path ] : folder_search )
@@ -301,8 +359,14 @@ http::HTTPTask< http::JsonResult< ClusterInfoResponse, 201 > > addCluster(
 	const auto insert_result {
 		co_await transaction
 			.query(
-				"INSERT INTO file_clusters (cluster_name, folder_path, cluster_uuid) VALUES ($1, $2, $3::uuid) "
-				"ON CONFLICT DO NOTHING RETURNING cluster_id",
+				//language=postgresql
+				R"SQL(
+					INSERT INTO file_clusters (cluster_name, folder_path, cluster_uuid)
+					    VALUES ($1, $2, $3::uuid)
+					ON CONFLICT
+					    DO NOTHING
+					RETURNING cluster_id
+				)SQL",
 				std::move( insert_bindings ) )
 			.rows< ClusterID >()
 	};
@@ -355,8 +419,16 @@ http::HTTPTask< http::JsonResult< ClusterInfoResponse > > modifyCluster(
 	exists_bindings.bind( cluster_id );
 	const auto cluster_info {
 		co_await transaction
-			.query( "SELECT cluster_id FROM file_clusters WHERE cluster_id = $1", std::move( exists_bindings ) )
-			.rows< ClusterID >()
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    cluster_id
+					FROM file_clusters
+					WHERE cluster_id = $1
+				)SQL",
+					 std::move( exists_bindings ) )
+				 .rows< ClusterID >()
 	};
 
 	if ( cluster_info.empty() )
@@ -414,7 +486,15 @@ http::HTTPTask< http::JsonResult< DeletedClusterResponse > > deleteCluster(
 	const auto locked {
 		co_await transaction
 			.query(
-				"SELECT cluster_id FROM file_clusters WHERE cluster_id = $1 FOR UPDATE", std::move( lock_bindings ) )
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    cluster_id
+					FROM file_clusters
+					WHERE cluster_id = $1
+					FOR UPDATE
+				)SQL",
+				std::move( lock_bindings ) )
 			.rows< ClusterID >()
 	};
 
@@ -427,13 +507,28 @@ http::HTTPTask< http::JsonResult< DeletedClusterResponse > > deleteCluster(
 	db::DBBindings detach_bindings {};
 	detach_bindings.bind( cluster_id );
 	co_await transaction
-		.query( "UPDATE file_info SET cluster_id = NULL WHERE cluster_id = $1", std::move( detach_bindings ) )
-		.result();
+			 .query(
+				 //language=postgresql
+				 R"SQL(
+				UPDATE
+				    file_info
+				SET cluster_id = NULL
+				WHERE cluster_id = $1
+			)SQL",
+				 std::move( detach_bindings ) )
+			 .result();
 
 	db::DBBindings delete_bindings {};
 	delete_bindings.bind( cluster_id );
-	co_await transaction.query( "DELETE FROM file_clusters WHERE cluster_id = $1", std::move( delete_bindings ) )
-		.result();
+	co_await transaction
+			 .query(
+				 //language=postgresql
+				 R"SQL(
+				DELETE FROM file_clusters
+				WHERE cluster_id = $1
+			)SQL",
+				 std::move( delete_bindings ) )
+			 .result();
 
 	co_await mutation.commit();
 

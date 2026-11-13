@@ -14,7 +14,6 @@
 namespace idhan
 {
 
-//! Metadata blocks a file carries alongside its pixels.
 struct EmbeddedMetadata
 {
 	bool exif { false };
@@ -74,7 +73,6 @@ struct MetadataInfoAudio
 	int sample_rate { 0 };
 };
 
-//! PSD, XCF, and the like.
 struct MetadataInfoImageProject
 {
 	MetadataInfoImage image_info {}; //!< Dimensions of the flattened canvas.
@@ -113,7 +111,6 @@ using MetadataVariant = std::variant<
 	MetadataInfoArchive,
 	MetadataInfoAudio >;
 
-//! Result of MetadataModuleI::parseFile.
 struct MetadataInfo
 {
 	MetadataVariant m_metadata {};

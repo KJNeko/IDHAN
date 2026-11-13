@@ -1,8 +1,3 @@
-/**
- * Renders host.ui.toast() messages. Subscribes to the global toast stream and auto-dismisses each
- * after a positive timeout. Errors remain until dismissed. Mounted once near the app root.
- */
-
 import { useEffect, useState } from 'react';
 import { globalServices, type Toast } from './globalServices';
 

@@ -15,7 +15,7 @@ class url_search_params;
 namespace idhan::downloader
 {
 
-// Immutable route definition. Each calling thread owns its runtime and compiled regexes.
+//! Immutable route definition. Each calling thread owns its runtime and compiled regexes.
 class URLPatternMatcher
 {
 	class Impl;

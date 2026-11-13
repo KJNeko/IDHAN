@@ -12,8 +12,8 @@
 namespace idhan::http
 {
 
-// Runs with owned request headers/parameters alive across suspension, before body reads.
-// nullopt accepts; a Response rejects without invoking body parsing or the handler.
+//! Runs with owned request headers/parameters alive across suspension, before body reads.
+//! nullopt accepts; a Response rejects without invoking body parsing or the handler.
 using RequestValidation =
 	std::function< HTTPTask< std::optional< Response > >( const proxygen::HTTPMessage&, const RequestParameters& ) >;
 

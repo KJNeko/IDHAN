@@ -87,7 +87,6 @@ export function termsToRequest(terms: readonly Term[]): Array<Record<string, unk
     });
 }
 
-/** Human-readable tokens for the results header, in the same shorthand that produces them. */
 export function termsToTokens(terms: readonly Term[]): string[] {
   return terms
     .filter((term) => term.enabled)

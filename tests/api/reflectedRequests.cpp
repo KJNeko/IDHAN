@@ -38,7 +38,14 @@ TEST_CASE_METHOD(
 		pqxx::read_transaction tx { db() };
 		CHECK(
 			tx.query_value< int >(
-				"SELECT count(*) FROM tag_mappings WHERE record_id = $1 AND tag_domain_id = $2",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    count(*)
+					FROM tag_mappings
+					WHERE record_id = $1
+					    AND tag_domain_id = $2
+				)SQL",
 				pqxx::params { record, domain } )
 		    == 3 );
 	}

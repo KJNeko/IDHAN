@@ -40,11 +40,24 @@ static SearchResults toResults( const search::Set& set, const bool want_hashes )
 }
 
 constexpr std::string_view tag_name_query {
-	"SELECT tag_id AS id, tag_text AS name FROM tags"
-	" WHERE tag_id = ANY($1)"
+	//language=postgresql
+	R"SQL(
+		SELECT
+		    tag_id AS id,
+		    tag_text AS name
+		FROM tags
+		WHERE tag_id = ANY ($1)
+	)SQL"
 };
 constexpr std::string_view namespace_name_query {
-	"SELECT namespace_id AS id, namespace_text AS name FROM tag_namespaces WHERE namespace_id = ANY($1)"
+	//language=postgresql
+	R"SQL(
+		SELECT
+		    namespace_id AS id,
+		    namespace_text AS name
+		FROM tag_namespaces
+		WHERE namespace_id = ANY ($1)
+	)SQL"
 };
 
 using NameMap = std::unordered_map< TagID, std::string >;
@@ -337,8 +350,16 @@ std::string SearchQuery::renderMimeTerm( const MimeTerm& term )
 			names += format_ns::format( "\'{}\'", name );
 		}
 
-		rendered =
-			format_ns::format( "fi.mime_id IN (SELECT pmn.mime_id FROM mime pmn WHERE pmn.name IN ({}))", names );
+		rendered = format_ns::format(
+			//language=postgresql
+			R"SQL(
+				fi.mime_id IN (
+				    SELECT
+				        pmn.mime_id
+				    FROM mime pmn
+				    WHERE pmn.name IN ({}))
+			)SQL",
+			names );
 	}
 
 	if ( !term.ids.empty() )
@@ -439,10 +460,19 @@ SearchQuery::NearbyTerm SearchQuery::parseNearbySearch( const std::string_view a
 std::string SearchQuery::renderNearbyTerm( const NearbyTerm& term )
 {
 	return format_ns::format(
-		"EXISTS (SELECT 1 FROM image_metadata pnc, image_metadata pnp"
-		" WHERE pnc.record_id = fi.record_id AND pnp.record_id = {}"
-		" AND pnc.phash IS NOT NULL AND pnp.phash IS NOT NULL"
-		" AND (pnc.phash <~> pnp.phash) <= {})",
+		//language=postgresql
+		R"SQL(
+			EXISTS (
+			    SELECT
+			        1
+			    FROM image_metadata pnc,
+			        image_metadata pnp
+			    WHERE pnc.record_id = fi.record_id
+			        AND pnp.record_id = {}
+			        AND pnc.phash IS NOT NULL
+			        AND pnp.phash IS NOT NULL
+			        AND (pnc.phash <~> pnp.phash) <= {})
+		)SQL",
 		term.record_id,
 		term.distance );
 }
@@ -618,8 +648,13 @@ std::vector< searchfetch::PredicateSource > SearchQuery::buildPredicates() const
 	};
 
 	constexpr std::string_view predicate_resolution_joins {
-		" LEFT JOIN image_metadata pim USING (record_id)"
-		" LEFT JOIN video_metadata pvm USING (record_id)"
+		//language=postgresql
+		R"SQL(
+			LEFT JOIN image_metadata pim
+			    USING (record_id)
+			    LEFT JOIN video_metadata pvm
+			    USING (record_id)
+		)SQL"
 	};
 
 	if ( m_has_tags_search != TagCountSearchType::DontCare )
@@ -627,7 +662,15 @@ std::vector< searchfetch::PredicateSource > SearchQuery::buildPredicates() const
 		const auto exists { m_has_tags_search == TagCountSearchType::HasTags ? "EXISTS" : "NOT EXISTS" };
 		add( {},
 		     format_ns::format(
-				 "{} (SELECT 1 FROM {} ptm WHERE ptm.record_id = fi.record_id)",
+				 //language=postgresql
+				 R"SQL(
+					 {} (
+					     SELECT
+					         1
+					     FROM {} ptm
+					     WHERE ptm.record_id = fi.record_id
+					 )
+				 )SQL",
 				 exists,
 				 searchfetch::tagMappingTable( m_display_mode ) ),
 		     m_has_tags_search == TagCountSearchType::HasTags ? "system:has tags" : "system:no tags" );
@@ -636,7 +679,15 @@ std::vector< searchfetch::PredicateSource > SearchQuery::buildPredicates() const
 	if ( m_tag_count_search.m_active )
 	{
 		const auto count_expression { format_ns::format(
-			"(SELECT COUNT(DISTINCT ptm.tag_id) FROM {} ptm WHERE ptm.record_id = fi.record_id)",
+			//language=postgresql
+			R"SQL(
+				(
+				    SELECT
+				        COUNT(DISTINCT ptm.tag_id)
+				    FROM {} ptm
+				    WHERE ptm.record_id = fi.record_id
+				)
+			)SQL",
 			searchfetch::tagMappingTable( m_display_mode ) ) };
 		add( {},
 		     renderBounds( count_expression, m_tag_count_search ),
@@ -645,13 +696,29 @@ std::vector< searchfetch::PredicateSource > SearchQuery::buildPredicates() const
 
 	if ( m_duration_search == DurationSearchType::HasDuration )
 		add( {},
-		     "EXISTS (SELECT 1 FROM video_metadata pvmd WHERE pvmd.record_id = fi.record_id)",
-		     "system:has duration" );
+			 //language=postgresql
+			 R"SQL(
+				 EXISTS (
+				     SELECT
+				         1
+				     FROM video_metadata pvmd
+				     WHERE pvmd.record_id = fi.record_id
+				 )
+			 )SQL",
+			 "system:has duration" );
 
 	if ( m_duration_search == DurationSearchType::NoDuration )
 		add( {},
-		     "NOT EXISTS (SELECT 1 FROM video_metadata pvmd WHERE pvmd.record_id = fi.record_id)",
-		     "system:no duration" );
+			 //language=postgresql
+			 R"SQL(
+				 NOT EXISTS (
+				     SELECT
+				         1
+				     FROM video_metadata pvmd
+				     WHERE pvmd.record_id = fi.record_id
+				 )
+			 )SQL",
+			 "system:no duration" );
 
 	const auto addEmbedded =
 		[ &add ]( const EmbeddedSearchType search, const std::string_view condition, const std::string_view name )
@@ -665,8 +732,17 @@ std::vector< searchfetch::PredicateSource > SearchQuery::buildPredicates() const
 
 		add( {},
 		     format_ns::format(
-				 "EXISTS (SELECT 1 FROM image_metadata pimd WHERE pimd.record_id = fi.record_id AND {})", test ),
-		     format_ns::format( "system:{} {}", has ? "has" : "no", name ) );
+				 //language=postgresql
+				 R"SQL(
+					 EXISTS (
+					     SELECT
+					         1
+					     FROM image_metadata pimd
+					     WHERE pimd.record_id = fi.record_id
+					         AND {})
+				 )SQL",
+				 test ),
+			 format_ns::format( "system:{} {}", has ? "has" : "no", name ) );
 	};
 
 	addEmbedded( m_exif_search, "pimd.has_exif", "exif" );
@@ -674,27 +750,69 @@ std::vector< searchfetch::PredicateSource > SearchQuery::buildPredicates() const
 	addEmbedded( m_embedded_metadata_search, "pimd.has_exif OR pimd.has_xmp OR pimd.has_iptc", "embedded metadata" );
 
 	if ( m_in_archive_search == ArchiveSearchType::InArchive )
-		add( {}, "EXISTS (SELECT 1 FROM archive_map pam WHERE pam.record_id = fi.record_id)", "system:in archive" );
+		add( {},
+			 //language=postgresql
+			 R"SQL(
+				 EXISTS (
+				     SELECT
+				         1
+				     FROM archive_map pam
+				     WHERE pam.record_id = fi.record_id
+				 )
+			 )SQL",
+			 "system:in archive" );
 
 	if ( m_in_archive_search == ArchiveSearchType::NoArchive )
 		add( {},
-		     "NOT EXISTS (SELECT 1 FROM archive_map pam WHERE pam.record_id = fi.record_id)",
-		     "system:not in archive" );
+			 //language=postgresql
+			 R"SQL(
+				 NOT EXISTS (
+				     SELECT
+				         1
+				     FROM archive_map pam
+				     WHERE pam.record_id = fi.record_id
+				 )
+			 )SQL",
+			 "system:not in archive" );
 
 	if ( m_is_archive_search == IsArchiveSearchType::IsArchive )
 		add( {},
-		     "EXISTS (SELECT 1 FROM archive_metadata pamd WHERE pamd.record_id = fi.record_id)",
-		     "system:is archive" );
+			 //language=postgresql
+			 R"SQL(
+				 EXISTS (
+				     SELECT
+				         1
+				     FROM archive_metadata pamd
+				     WHERE pamd.record_id = fi.record_id
+				 )
+			 )SQL",
+			 "system:is archive" );
 
 	if ( m_is_archive_search == IsArchiveSearchType::NotArchive )
 		add( {},
-		     "NOT EXISTS (SELECT 1 FROM archive_metadata pamd WHERE pamd.record_id = fi.record_id)",
-		     "system:is not archive" );
+			 //language=postgresql
+			 R"SQL(
+				 NOT EXISTS (
+				     SELECT
+				         1
+				     FROM archive_metadata pamd
+				     WHERE pamd.record_id = fi.record_id
+				 )
+			 )SQL",
+			 "system:is not archive" );
 
 	if ( m_archive_search.m_active )
 		add( {},
 		     format_ns::format(
-				 "EXISTS (SELECT 1 FROM archive_map pam WHERE pam.record_id = fi.record_id AND {})",
+				 //language=postgresql
+				 R"SQL(
+					 EXISTS (
+					     SELECT
+					         1
+					     FROM archive_map pam
+					     WHERE pam.record_id = fi.record_id
+					         AND {})
+				 )SQL",
 				 renderBounds( "pam.archive_id", m_archive_search ) ),
 		     format_ns::format( "system:{}", renderBounds( "archive", m_archive_search ) ) );
 
@@ -716,7 +834,15 @@ std::vector< searchfetch::PredicateSource > SearchQuery::buildPredicates() const
 	if ( const auto* const hash { std::get_if< SHA256 >( &m_hash_search ) } )
 		add( {},
 		     format_ns::format(
-				 "fi.record_id IN (SELECT phr.record_id FROM records phr WHERE phr.sha256 = '\\x{}'::bytea)",
+				 //language=postgresql
+				 R"SQL(
+					 fi.record_id IN (
+					     SELECT
+					         phr.record_id
+					     FROM records phr
+					     WHERE phr.sha256 = '\x{}'::bytea
+					 )
+				 )SQL",
 				 hash->hex() ),
 		     format_ns::format( "system:sha256 = {}", hash->hex() ) );
 
@@ -755,10 +881,17 @@ runtime::Task< std::expected< std::unordered_map< std::string, TagID >, http::Re
 	}
 
 	constexpr std::string_view query {
-		"SELECT tags.tag_id AS tag_id, input.ord AS ord "
-		"FROM UNNEST($1::TEXT[], $2::TEXT[]) WITH ORDINALITY AS input(namespace_text, subtag_text, ord) "
-		"JOIN tag_namespaces ON tag_namespaces.namespace_text = input.namespace_text "
-		"JOIN tags ON tags.namespace_id = tag_namespaces.namespace_id AND tags.subtag_text = input.subtag_text"
+		//language=postgresql
+		R"SQL(
+			SELECT
+			    tags.tag_id AS tag_id,
+			    input.ord AS ord
+			FROM UNNEST($1::TEXT[], $2::TEXT[])
+			    WITH ORDINALITY AS input (namespace_text, subtag_text, ord)
+			    JOIN tag_namespaces ON tag_namespaces.namespace_text = input.namespace_text
+			    JOIN tags ON tags.namespace_id = tag_namespaces.namespace_id
+			        AND tags.subtag_text = input.subtag_text
+		)SQL"
 	};
 
 	db::DBBindings bindings {};
@@ -845,7 +978,14 @@ runtime::Task< std::optional< http::Response > > SearchQuery::setWildcardNamespa
 	const auto namespace_search {
 		co_await db
 			.query(
-				"SELECT namespace_id, namespace_text FROM tag_namespaces WHERE namespace_text = ANY($1)",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    namespace_id,
+					    namespace_text
+					FROM tag_namespaces
+					WHERE namespace_text = ANY ($1)
+				)SQL",
 				std::move( bindings ) )
 			.rows< NamespaceID, std::string >()
 	};

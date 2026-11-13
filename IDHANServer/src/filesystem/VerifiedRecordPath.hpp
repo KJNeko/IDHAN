@@ -27,7 +27,7 @@ class VerifiedRecordPath
 
 	[[nodiscard]] ClusterID clusterId() const { return m_cluster_id; }
 
-	// Borrowed access remains valid only while this verified path is alive and has not been moved.
+	//! Borrowed access remains valid only while this verified path is alive and has not been moved.
 	[[nodiscard]] const ClusterAccess& cluster() const { return m_cluster; }
 };
 } // namespace idhan::filesystem

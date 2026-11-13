@@ -95,7 +95,6 @@ export function compareQuality(first?: RecordMetadata, second?: RecordMetadata):
     if (first.channels !== undefined && second.channels !== undefined && first.channels !== second.channels)
         add('More channels', first.channels > second.channels ? POINTS.channels : -POINTS.channels);
 
-    // Weight nonempty COM text as an embedded metadata block.
     if (first.comment !== undefined && second.comment !== undefined) {
         const firstNames = first.comment.trim() !== '';
         const secondNames = second.comment.trim() !== '';

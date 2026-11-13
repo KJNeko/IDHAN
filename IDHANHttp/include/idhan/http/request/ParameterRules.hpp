@@ -22,8 +22,8 @@ enum class UnknownParameterPolicy
 
 struct JsonParameterObject
 {
-	// Empty selects the root object. A "*" segment traverses array elements;
-	// undeclared object paths (including free-form maps) are not inspected.
+	//! Empty selects the root object. A "*" segment traverses array elements;
+	//! undeclared object paths (including free-form maps) are not inspected.
 	std::vector< std::string > path;
 	std::vector< std::string > names;
 };
@@ -43,8 +43,8 @@ struct ParameterRules
 	simdjson::dom::element document,
 	std::span< const JsonParameterObject > declarations );
 
-// Returns a rejection message only in reject mode. Diagnostics contain names,
-// never submitted values, and are escaped so control characters stay on one line.
+//! Returns a rejection message only in reject mode. Diagnostics contain names,
+//! never submitted values, and are escaped so control characters stay on one line.
 [[nodiscard]] std::optional< std::string > handleUnknownParameters(
 	std::span< const std::string > names,
 	std::string_view location,

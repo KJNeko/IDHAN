@@ -17,7 +17,11 @@ class RestoreDownloaderSecretsTable
 		try
 		{
 			pqxx::nontransaction transaction { m_db };
-			transaction.exec( "ALTER TABLE downloader_domain_secrets_unavailable RENAME TO downloader_domain_secrets" );
+			transaction.exec(
+				//language=postgresql
+				R"SQL(
+					ALTER TABLE downloader_domain_secrets_unavailable RENAME TO downloader_domain_secrets
+				)SQL" );
 		}
 		catch ( const std::exception& error )
 		{
@@ -96,7 +100,11 @@ SCENARIO_METHOD(
 
 	{
 		pqxx::nontransaction transaction { db() };
-		transaction.exec( "ALTER TABLE downloader_domain_secrets RENAME TO downloader_domain_secrets_unavailable" );
+		transaction.exec(
+			//language=postgresql
+			R"SQL(
+				ALTER TABLE downloader_domain_secrets RENAME TO downloader_domain_secrets_unavailable
+			)SQL" );
 	}
 
 	RestoreDownloaderSecretsTable restore { db() };

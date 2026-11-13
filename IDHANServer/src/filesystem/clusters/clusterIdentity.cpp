@@ -29,8 +29,17 @@ runtime::Task< std::expected< std::optional< ClusterAccess >, std::string > > op
 	db::DBBindings bindings {};
 	bindings.bind( id );
 	const auto rows {
-		co_await db.query( "SELECT cluster_id FROM file_info WHERE record_id = $1", std::move( bindings ) )
-			.rows< std::optional< ClusterID > >()
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    cluster_id
+					FROM file_info
+					WHERE record_id = $1
+				)SQL",
+					 std::move( bindings ) )
+				 .rows< std::optional< ClusterID > >()
 	};
 	if ( rows.empty() ) co_return std::optional< ClusterAccess > {};
 

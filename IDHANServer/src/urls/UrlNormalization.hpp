@@ -14,7 +14,6 @@ enum class UrlNormalizationFailure
 {
 	//! The URL failed ada's parser or a URL class rule.
 	InvalidUrl,
-	//! The downloader's URL classes could not be loaded.
 	Unavailable,
 };
 

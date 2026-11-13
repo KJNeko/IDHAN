@@ -33,7 +33,7 @@ class Response
 	Response( const Response& ) = delete;
 	Response& operator=( const Response& ) = delete;
 
-	// Errors use application/json with an ErrorResponse body, including validation failures.
+	//! Errors use application/json with an ErrorResponse body, including validation failures.
 	[[nodiscard]] static Response error( std::uint16_t status, std::string message );
 	[[nodiscard]] static Response bytes(
 		std::uint16_t status,

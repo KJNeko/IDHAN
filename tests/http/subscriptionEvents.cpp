@@ -59,7 +59,9 @@ TEST_CASE(
 	CHECK( removal[ "type" ] == "remove" );
 	CHECK( removal[ "groups" ][ 0 ] == 7 );
 	CHECK( removal[ "items" ][ 0 ] == 42 );
-	const auto snapshot { document( state.snapshot() ) };
+	const auto snapshots { state.snapshots() };
+	REQUIRE( snapshots.size() == 3 );
+	const auto snapshot { document( snapshots[ 1 ] ) };
 	REQUIRE( snapshot[ "groups" ].size() == 1 );
 	CHECK( snapshot[ "groups" ][ 0 ][ "id" ] == 8 );
 	CHECK( snapshot[ "items" ][ 0 ][ "id" ] == 43 );
@@ -80,6 +82,79 @@ TEST_CASE( "New subscription entities contain the complete state", "[http][subsc
 	CHECK( patch[ "groups" ][ 0 ][ "name" ] == "Artists" );
 }
 
+TEST_CASE (
+"Subscription snapshots bound every chunk and preserve all rows"
+,
+"[http][subscription-events]"
+)
+{
+	SubscriptionEventState state;
+	std::vector< db::SubscriptionGroup > groups;
+	std::vector< db::Subscription > items;
+	for ( SubscriptionGroupID id { 1 }; id <= static_cast< SubscriptionGroupID >( snapshot_chunk_size ) + 1; ++id )
+		groups.push_back( { .id = id, .name = "Artists" } );
+	for ( SubscriptionID id { 1 }; id <= static_cast< SubscriptionID >( snapshot_chunk_size ) + 2; ++id )
+		items.push_back( { .id = id, .group_id = 1, .parameters = { { "tags", "artist" } } } );
+	(void)state.reconcile( std::move( groups ), std::move( items ) );
+	const auto snapshots { state.snapshots() };
+	REQUIRE( snapshots.size() == 5 );
+	CHECK( document( snapshots.front() )[ "type" ] == "snapshot_start" );
+	CHECK( document( snapshots.back() )[ "type" ] == "snapshot_complete" );
+	SubscriptionGroupID group_id {};
+	SubscriptionID item_id {};
+	for ( std::size_t index { 1 }; index + 1 < snapshots.size(); ++index )
+	{
+		const auto chunk { document( snapshots[ index ] ) };
+		CHECK( chunk[ "type" ] == "snapshot_chunk" );
+		const auto count { chunk[ "groups" ].size() + chunk[ "items" ].size() };
+		CHECK( count > 0 );
+		CHECK( count <= snapshot_chunk_size );
+		for ( const auto& group : chunk[ "groups" ] )
+		{
+			CHECK( group[ "id" ].asInt64() == ++group_id );
+			CHECK( group[ "name" ] == "Artists" );
+		}
+		for ( const auto& item : chunk[ "items" ] )
+		{
+			CHECK( item[ "id" ].asInt64() == ++item_id );
+			CHECK( item[ "parameters" ][ "tags" ] == "artist" );
+			CHECK( item.isMember( "active_session_id" ) );
+		}
+	}
+	CHECK( group_id == snapshot_chunk_size + 1 );
+	CHECK( item_id == snapshot_chunk_size + 2 );
+}
+
+TEST_CASE (
+"Exact subscription chunk boundaries do not emit an empty chunk"
+,
+"[http][subscription-events]"
+)
+{
+	SubscriptionEventState state;
+	std::vector< db::Subscription > items;
+	for ( SubscriptionID id { 1 }; id <= static_cast< SubscriptionID >( snapshot_chunk_size ); ++id )
+		items.push_back( { .id = id, .group_id = 7 } );
+	(void)state.reconcile( {}, std::move( items ) );
+	const auto snapshots { state.snapshots() };
+	REQUIRE( snapshots.size() == 3 );
+	CHECK( document( snapshots[ 1 ] )[ "items" ].size() == snapshot_chunk_size );
+	CHECK( document( snapshots.back() )[ "type" ] == "snapshot_complete" );
+}
+
+TEST_CASE (
+"Empty subscription snapshots still reset and complete"
+,
+"[http][subscription-events]"
+)
+{
+	SubscriptionEventState state;
+	const auto snapshots { state.snapshots() };
+	REQUIRE( snapshots.size() == 2 );
+	CHECK( document( snapshots.front() )[ "type" ] == "snapshot_start" );
+	CHECK( document( snapshots.back() )[ "type" ] == "snapshot_complete" );
+}
+
 TEST_CASE( "Subscription baselines discard only covered subscription updates", "[http][subscription-events]" )
 {
 	http::SSEEventHub hub;
@@ -90,11 +165,19 @@ TEST_CASE( "Subscription baselines discard only covered subscription updates", "
 		"downloader.session_state", "42", value, { .retain_snapshot = false, .coalesce = false, .session = "42" } );
 	const auto checkpoint { stream.checkpoint() };
 	hub.publish( "subscriptions.changed", "subscriptions", value, { .retain_snapshot = false, .coalesce = false } );
+	SubscriptionEventState state;
+	(void)state.reconcile( { db::SubscriptionGroup { .id = 7 } }, { db::Subscription { .id = 42, .group_id = 7 } } );
 	std::vector< http::SSEInitialEvent > initial;
-	initial.push_back( { "subscriptions.snapshot", "subscriptions", value } );
+	for ( auto& snapshot : state.snapshots() )
+		initial.push_back( { "subscriptions.snapshot", "subscriptions", std::move( snapshot ) } );
 	stream.prependSnapshots( std::move( initial ), checkpoint, "subscriptions" );
 	hub.shutdown();
-	for ( const auto* type : { "subscriptions.snapshot", "downloader.session_state", "subscriptions.changed" } )
+	for ( const auto* type :
+	      { "subscriptions.snapshot",
+	        "subscriptions.snapshot",
+	        "subscriptions.snapshot",
+	        "downloader.session_state",
+	        "subscriptions.changed" } )
 	{
 		const auto event { folly::coro::blockingWait( stream.next() ) };
 		REQUIRE( event.has_value() );

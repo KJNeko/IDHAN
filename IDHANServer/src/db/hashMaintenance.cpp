@@ -10,7 +10,15 @@ namespace idhan::db
 runtime::Task< std::optional< RecordID > > queuedHammingHighWater( DBContext& db )
 {
 	const auto rows {
-		co_await db.query( "SELECT MAX(record_id) FROM hamming_distance_queue" ).rows< std::optional< RecordID > >()
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    MAX(record_id)
+					FROM hamming_distance_queue
+				)SQL" )
+				 .rows< std::optional< RecordID > >()
 	};
 	co_return std::get< 0 >( rows.row( 0 ) );
 }
@@ -28,10 +36,24 @@ runtime::Task< std::vector< RecordID > > claimHammingBatch(
 	const auto rows {
 		co_await transaction
 			.query(
-				"DELETE FROM hamming_distance_queue WHERE record_id IN ("
-				"SELECT record_id FROM hamming_distance_queue "
-				"WHERE ($1::integer IS NULL OR record_id > $1) AND record_id <= $2 "
-				"ORDER BY record_id LIMIT $3 FOR UPDATE SKIP LOCKED) RETURNING record_id",
+				//language=postgresql
+				R"SQL(
+					DELETE FROM hamming_distance_queue
+					WHERE record_id IN (
+					        SELECT
+					            record_id
+					        FROM hamming_distance_queue
+					        WHERE ($1::integer IS NULL
+					            OR record_id > $1)
+					        AND record_id <= $2
+					    ORDER BY
+					        record_id
+					    LIMIT $3
+					    FOR UPDATE
+					        SKIP LOCKED
+					)
+					RETURNING record_id
+				)SQL",
 				std::move( bindings ) )
 			.rows< RecordID >()
 	};
@@ -44,8 +66,19 @@ runtime::Task< std::vector< RecordID > > claimHammingBatch(
 runtime::Task< hamming::PhashIndex > loadPhashIndex( DBContext& db )
 {
 	const auto rows {
-		co_await db.query( "SELECT record_id, phash FROM image_metadata WHERE phash IS NOT NULL ORDER BY record_id" )
-			.rows< RecordID, std::bitset< 64 > >()
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    record_id,
+					    phash
+					FROM image_metadata
+					WHERE phash IS NOT NULL
+					ORDER BY
+					    record_id
+				)SQL" )
+				 .rows< RecordID, std::bitset< 64 > >()
 	};
 	std::vector< RecordID > records;
 	std::vector< std::uint64_t > hashes;
@@ -68,8 +101,14 @@ runtime::Task< std::vector< RecordPhash > > currentPhashes(
 	const auto rows {
 		co_await transaction
 			.query(
-				"SELECT requested.record_id, i.phash FROM unnest($1::integer[]) AS requested(record_id) "
-				"LEFT JOIN image_metadata i USING (record_id)",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    requested.record_id,
+					    i.phash
+					FROM unnest($1::integer[]) AS requested (record_id)
+					    LEFT JOIN image_metadata i USING (record_id)
+				)SQL",
 				std::move( bindings ) )
 			.rows< RecordID, std::optional< std::bitset< 64 > > >()
 	};
@@ -94,7 +133,12 @@ runtime::Task< std::int64_t > replaceHammingPairs(
 	remove.bind( std::move( records ) );
 	co_await transaction
 		.query(
-			"DELETE FROM hamming_distance WHERE left_id = ANY($1::integer[]) OR right_id = ANY($1::integer[])",
+			//language=postgresql
+			R"SQL(
+				DELETE FROM hamming_distance
+				WHERE left_id = ANY ($1::integer[])
+				    OR right_id = ANY ($1::integer[])
+			)SQL",
 			std::move( remove ) )
 		.result();
 
@@ -119,21 +163,63 @@ runtime::Task< std::int64_t > replaceHammingPairs(
 	const auto rows {
 		co_await transaction
 			.query(
-				"WITH candidates AS (SELECT * FROM unnest($1::integer[], $2::integer[], $3::smallint[]) "
-				"AS computed(left_id, right_id, distance)), "
-				"resolved AS (SELECT candidates.*, COALESCE(l.king_id, left_id) AS left_root, "
-				"COALESCE(r.king_id, right_id) AS right_root FROM candidates "
-				"LEFT JOIN duplicate_members l ON l.record_id = left_id "
-				"LEFT JOIN duplicate_members r ON r.record_id = right_id), "
-				"pairs AS (SELECT left_id, right_id, distance FROM resolved WHERE left_root <> right_root "
-				"AND NOT EXISTS (SELECT 1 FROM alternative_records a "
-				"WHERE a.lesser_record_id = LEAST(left_root, right_root) AND a.greater_record_id = GREATEST(left_root, right_root)) "
-				"AND NOT EXISTS (SELECT 1 FROM unrelated_records u "
-				"WHERE u.lesser_record_id = LEAST(left_root, right_root) AND u.greater_record_id = GREATEST(left_root, right_root))), "
-				"stored AS (INSERT INTO hamming_distance (left_id, right_id, distance) "
-				"SELECT left_id, right_id, distance FROM pairs "
-				"ON CONFLICT (left_id, right_id) DO UPDATE SET distance = excluded.distance RETURNING 1) "
-				"SELECT count(*)::bigint FROM stored",
+				//language=postgresql
+				R"SQL(
+					WITH candidates AS (
+					    SELECT
+					        *
+					    FROM unnest($1::integer[], $2::integer[], $3::smallint[]) AS computed (left_id,
+					            right_id,
+					            distance)
+					),
+					resolved AS (
+					    SELECT
+					        candidates.*,
+					        COALESCE(l.king_id, left_id) AS left_root,
+					        COALESCE(r.king_id, right_id) AS right_root
+					    FROM candidates
+					        LEFT JOIN duplicate_members l ON l.record_id = left_id
+					        LEFT JOIN duplicate_members r ON r.record_id = right_id
+					),
+					pairs AS (
+					    SELECT
+					        left_id,
+					        right_id,
+					        distance
+					    FROM resolved
+					    WHERE left_root <> right_root
+					        AND NOT EXISTS (
+					            SELECT
+					                1
+					            FROM alternative_records a
+					            WHERE a.lesser_record_id = LEAST (left_root, right_root)
+					                AND a.greater_record_id = GREATEST (left_root, right_root)
+					        )
+					        AND NOT EXISTS (
+					            SELECT
+					                1
+					            FROM unrelated_records u
+					            WHERE u.lesser_record_id = LEAST (left_root, right_root)
+					                AND u.greater_record_id = GREATEST (left_root, right_root)
+					        )
+					),
+					stored AS (
+					    INSERT INTO hamming_distance (left_id, right_id, distance)
+					    SELECT
+					        left_id,
+					        right_id,
+					        distance
+					    FROM pairs
+					    ON CONFLICT (left_id,
+					        right_id)
+					        DO UPDATE SET
+					            distance = excluded.distance
+					        RETURNING 1
+					)
+					SELECT
+					    count(*)::bigint
+					FROM stored
+				)SQL",
 				std::move( bindings ) )
 			.rows< std::int64_t >()
 	};
@@ -147,9 +233,17 @@ runtime::Task< std::optional< RecordID > > missingPhashHighWater( DBContext& db,
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT MAX(i.record_id) FROM image_metadata i JOIN file_info f USING (record_id) "
-				"WHERE i.phash IS NULL AND f.cluster_id IS NOT NULL AND f.cluster_delete_time IS NULL "
-				"AND f.mime_id = ANY($1::integer[])",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    MAX(i.record_id)
+					FROM image_metadata i
+					    JOIN file_info f USING (record_id)
+					WHERE i.phash IS NULL
+					    AND f.cluster_id IS NOT NULL
+					    AND f.cluster_delete_time IS NULL
+					    AND f.mime_id = ANY ($1::integer[])
+				)SQL",
 				std::move( bindings ) )
 			.rows< std::optional< RecordID > >()
 	};
@@ -171,12 +265,29 @@ runtime::Task< std::vector< MissingPhashRecord > > missingPhashBatch(
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT i.record_id, f.cluster_id, f.mime_id, r.sha256, COALESCE(f.extension, m.best_extension, '') "
-				"FROM image_metadata i JOIN file_info f USING (record_id) JOIN records r USING (record_id) "
-				"LEFT JOIN mime m ON m.mime_id = f.mime_id "
-				"WHERE i.phash IS NULL AND f.cluster_id IS NOT NULL AND f.cluster_delete_time IS NULL "
-				"AND f.mime_id = ANY($4::integer[]) "
-				"AND ($1::integer IS NULL OR i.record_id > $1) AND i.record_id <= $2 ORDER BY i.record_id LIMIT $3",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    i.record_id,
+					    f.cluster_id,
+					    f.mime_id,
+					    r.sha256,
+					    COALESCE(f.extension, m.best_extension, '')
+					FROM image_metadata i
+					    JOIN file_info f USING (record_id)
+					    JOIN records r USING (record_id)
+					    LEFT JOIN mime m ON m.mime_id = f.mime_id
+					WHERE i.phash IS NULL
+					    AND f.cluster_id IS NOT NULL
+					    AND f.cluster_delete_time IS NULL
+					    AND f.mime_id = ANY ($4::integer[])
+					    AND ($1::integer IS NULL
+					        OR i.record_id > $1)
+					    AND i.record_id <= $2
+					ORDER BY
+					    i.record_id
+					LIMIT $3
+				)SQL",
 				std::move( bindings ) )
 			.rows< RecordID, ClusterID, std::optional< MimeID >, std::span< const std::byte >, std::string >()
 	};
@@ -200,10 +311,20 @@ runtime::Task< bool > updateMissingPhash( DBContext& db, const MissingPhashRecor
 	const auto rows {
 		co_await db
 			.query(
-				"UPDATE image_metadata i SET phash = $2::bit(64) FROM file_info f "
-				"WHERE i.record_id = $1 AND i.phash IS NULL AND f.record_id = i.record_id "
-				"AND f.cluster_id = $3 AND f.cluster_delete_time IS NULL AND f.mime_id IS NOT DISTINCT FROM $4::integer "
-				"RETURNING i.record_id",
+				//language=postgresql
+				R"SQL(
+					UPDATE
+					    image_metadata i
+					SET phash = $2::bit(64)
+					FROM file_info f
+					WHERE i.record_id = $1
+					    AND i.phash IS NULL
+					    AND f.record_id = i.record_id
+					    AND f.cluster_id = $3
+					    AND f.cluster_delete_time IS NULL
+					    AND f.mime_id IS NOT DISTINCT FROM $4::integer
+					RETURNING i.record_id
+				)SQL",
 				std::move( bindings ) )
 			.rows< RecordID >()
 	};

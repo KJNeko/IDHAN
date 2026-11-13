@@ -33,7 +33,6 @@ body {
     font-variant-numeric: tabular-nums;
 }
 
-/* ---- app shell: toolbar on top, workspace fills the rest ---- */
 .app {
   display: flex;
   flex-direction: column;
@@ -302,7 +301,6 @@ body {
   min-height: 0;
 }
 
-/* ---- panel content ---- */
 .panel-body {
     color: var(--fg);
     background: var(--bg);
@@ -341,7 +339,6 @@ body {
   gap: 0.25rem;
 }
 
-/* ---- toasts ---- */
 .toast-host {
     max-height: min(60vh, 32rem);
     overflow-y: auto;
@@ -511,7 +508,6 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* ---- Search panel ---- */
 .search-panel {
   display: flex;
   flex-direction: column;
@@ -760,7 +756,6 @@ body {
     border-bottom: 1px solid var(--border);
 }
 
-/* the term itself is the row's identity, so it leads and stays readable while the numbers align */
 .breakdown-table th[scope='row'],
 .breakdown-table thead th:first-child {
     width: 100%;
@@ -786,7 +781,6 @@ body {
     color: var(--muted);
 }
 
-/* ---- Thumbnail grid panel ---- */
 .grid-panel {
   display: flex;
   flex-direction: column;
@@ -860,7 +854,6 @@ body {
   outline-offset: 1px;
 }
 
-/* ---- shared context menu ---- */
 .context-menu {
   position: fixed;
   z-index: 200;
@@ -897,7 +890,6 @@ body {
     border-top: 1px solid var(--border);
 }
 
-/* ---- Media viewer panel ---- */
 .viewer-panel {
   display: flex;
   flex-direction: column;
@@ -989,7 +981,6 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* ---- File relationships panel ---- */
 .file-relationships-panel {
     display: grid;
     grid-template-columns: repeat(2, minmax(20rem, 1fr));
@@ -1056,7 +1047,6 @@ body {
     min-height: 0;
 }
 
-/* the info columns fold away first: the images are what the call is made on */
 @media (width <= 60rem) {
     .file-relationship-flip-stage {
         grid-template-columns: minmax(0, 1fr);
@@ -1159,7 +1149,6 @@ body {
     border-radius: 0 4px 4px 0;
 }
 
-/* one green for both: an exact match and an embedded block are each a point in a copy's favour */
 .file-relationship-side-match,
 .file-relationship-side-embedded {
     margin: 0 0 0.4rem;
@@ -1784,7 +1773,6 @@ body {
     text-align: center;
 }
 
-/* ---- Record info panel ---- */
 .info-list {
   display: grid;
   grid-template-columns: max-content 1fr;
@@ -1803,12 +1791,10 @@ body {
     overflow-wrap: anywhere;
 }
 
-/* A record can carry several source URLs, so each gets its own line rather than running together. */
 .info-source {
     display: block;
 }
 
-/* ---- Tag editor panel ---- */
 .tag-editor {
   display: flex;
   flex-direction: column;
@@ -1996,8 +1982,6 @@ body {
   cursor: default;
 }
 
-/* ---- P1 panels (M7): URLs, Notes, Import, Job Monitor ---- */
-
 /* Shared: a flex child that takes remaining space and may shrink below content width. */
 .grow {
   flex: 1 1 auto;
@@ -2063,7 +2047,6 @@ body {
     overflow-wrap: anywhere;
 }
 
-/* Import */
 .download-session-panel {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
@@ -2711,7 +2694,6 @@ body {
   color: var(--error);
 }
 
-/* Job Monitor */
 .job-item {
     padding: 0.5rem;
     border-bottom: 1px solid var(--border);
@@ -2836,9 +2818,6 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* ---- P2 panels (M8): Log Viewer, Cluster Manager, Database Stats, Tag Domains, Tag Relationships ---- */
-
-/* A destructive action button; still a .toolbar-button. */
 .toolbar-button.danger {
   border-color: #5a2e34;
   color: #ff9a9a;
@@ -2851,7 +2830,6 @@ body {
   cursor: default;
 }
 
-/* Embeddings */
 .embed-toolbar {
     display: flex;
     flex-wrap: wrap;
@@ -3095,7 +3073,6 @@ body {
     white-space: nowrap;
 }
 
-/* A record reference is an id, not a phrase; the monospace says so without a second badge. */
 .embed-term-label.is-record {
     font-family: ui-monospace, monospace;
     font-size: max(11px, 0.9em);
@@ -3167,7 +3144,6 @@ body {
     cursor: default;
 }
 
-/* Shared small checkbox/radio label used across the P2 panels. */
 .log-check {
   display: inline-flex;
   align-items: center;
@@ -3176,7 +3152,6 @@ body {
   white-space: nowrap;
 }
 
-/* Log Viewer */
 .log-viewer {
   display: flex;
   flex-direction: column;
@@ -3220,7 +3195,6 @@ body {
   word-break: break-word;
 }
 
-/* Tag Domain Manager */
 .domain-manager {
   display: flex;
   flex-direction: column;
@@ -3253,7 +3227,6 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Downloader Secrets */
 .downloader-secrets {
     display: flex;
     container-type: inline-size;
@@ -3375,7 +3348,6 @@ body {
     }
 }
 
-/* Cluster Manager */
 .cluster-manager {
   display: flex;
   flex-direction: column;
@@ -3496,7 +3468,6 @@ body {
   cursor: not-allowed;
 }
 
-/* Tag Relationships */
 .tag-relationships {
   display: flex;
   flex-direction: column;
@@ -3682,7 +3653,6 @@ body {
   cursor: default;
 }
 
-/* Tag picker (shared by Tag Relationships) */
 .tagpick {
   position: relative;
 }
@@ -3798,7 +3768,6 @@ body {
   font-weight: 400;
 }
 
-/* Donut charts (Storage by table, Clusters): hand-rolled SVG, no charting library. */
 .dbstat-donut-panel {
   display: flex;
   align-items: flex-start;
@@ -3922,7 +3891,6 @@ body {
   letter-spacing: 0.05em;
 }
 
-/* ---- embedding compare: two slots, and one diverging bar per term ---- */
 .cmp-panel {
   display: flex;
   flex-direction: column;
@@ -4407,7 +4375,6 @@ body {
     margin-top: 0.375rem;
 }
 
-/* Record essentials stay above the metadata rows in narrow docked panels. */
 .record-info-view {
     min-width: 0;
 }
@@ -4691,7 +4658,6 @@ body {
     gap: 0.3rem;
 }
 
-/* ---- bandwidth ---- */
 .bandwidth-panel {
     color: var(--fg);
     background: var(--bg);
@@ -4791,7 +4757,6 @@ body {
     outline-offset: 2px;
 }
 
-/* Explicit inputs and actions in place of instructional copy. */
 .embed-add-row {
     flex-wrap: wrap;
     align-items: end;
@@ -4910,7 +4875,7 @@ body {
     border-radius: 6px;
 }
 
-.subscription-group-header, .subscription-item-main {
+.subscription-group-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -4928,21 +4893,53 @@ body {
     gap: 6px;
 }
 
-.subscription-items {
-    list-style: none;
-    padding: 0;
+.subscription-table-scroll {
+    overflow-x: auto;
     margin: 12px 0;
 }
 
-.subscription-items li {
-    padding: 6px 0;
-    border-bottom: 1px solid var(--border);
+.subscription-items {
+    width: 100%;
+    min-width: 760px;
+    border-collapse: collapse;
 }
 
-.subscription-item-main > span:first-child {
-    flex: 1;
-    min-width: 120px;
+.subscription-items th,
+.subscription-items td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    vertical-align: middle;
+}
+
+.subscription-items thead th {
+    color: var(--muted);
+    font-size: 0.85em;
+    white-space: nowrap;
+}
+
+.subscription-items .subscription-label {
+    width: 100%;
+    min-width: 180px;
+    max-width: 360px;
     overflow-wrap: anywhere;
+    font-weight: normal;
+}
+
+.subscription-label .error {
+    display: block;
+    margin-top: 4px;
+}
+
+.subscription-items .subscription-number {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.subscription-items .subscription-next-run {
+    display: block;
+    min-width: 180px;
 }
 
 .subscription-group > form > input {

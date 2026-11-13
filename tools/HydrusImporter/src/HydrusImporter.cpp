@@ -20,14 +20,12 @@ HydrusImporter::HydrusImporter( const std::filesystem::path& path ) : m_path( pa
 	const auto client_path { path / "client.db" };
 	const auto mappings_path { path / "client.mappings.db" };
 
-	//Check that the dbs we want exists
 	if ( !std::filesystem::exists( master_path ) ) throw std::runtime_error( "Failed to find client.master.db" );
 
 	if ( !std::filesystem::exists( client_path ) ) throw std::runtime_error( "Failed to find client.db" );
 
 	if ( !std::filesystem::exists( mappings_path ) ) throw std::runtime_error( "Failed to find client.mappings.db" );
 
-	// We should write a more sophisticated test here.
 	if ( std::filesystem::exists( path / LOCK_FILE_NAME ) )
 		throw std::runtime_error( "Client detected as running. Aborting" );
 
@@ -70,7 +68,6 @@ std::unordered_map< HashID, RecordID > HydrusImporter::mapHydrusRecords( std::ve
 	std::unordered_map< std::uint32_t, std::string > hashes_map {};
 	hashes_map.reserve( hash_ids.size() );
 
-	// Build batched IN clause query instead of N+1 individual queries
 	{
 		std::string sql = "SELECT hash_id, hex(hash) FROM hashes WHERE hash_id IN (";
 		for ( size_t i = 0; i < hash_ids.size(); ++i )

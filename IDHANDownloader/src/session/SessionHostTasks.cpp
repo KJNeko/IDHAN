@@ -211,7 +211,7 @@ void SessionContext::Impl::startLearnHost(
 		execution, promise, learnHostOnHost( execution.parser_url, std::move( origin ), std::move( url_class ) ) );
 }
 
-// Shared timer ownership also supports embedding hosts that do not initialize Folly's singleton vault.
+//! Shared timer ownership also supports embedding hosts that do not initialize Folly's singleton vault.
 folly::ThreadWheelTimekeeper& downloaderTimekeeper()
 {
 	static folly::ThreadWheelTimekeeper timekeeper;

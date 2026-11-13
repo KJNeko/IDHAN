@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Mock the REST client so we can count network calls and assert coalescing.
 const recordsMetadata = vi.fn(async ({ record_ids }: { record_ids: number[] }) => ({
   records: record_ids.map((id) => ({ record_id: id })),
   missing: [] as number[],

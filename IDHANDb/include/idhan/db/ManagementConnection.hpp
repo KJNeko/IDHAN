@@ -46,7 +46,9 @@ class ManagementConnection
 		Lease& operator=( const Lease& ) = delete;
 		~Lease();
 		[[nodiscard]] DBTask query( std::string, DBBindings = {}, QueryOptions = {} );
-		// Trusted scripts only; drain every simple-protocol result.
+
+		//! Runs a trusted multi-statement script and drains every simple-protocol result.
+		//! TODO: declared but not implemented; ManagementConnection has no definitions yet.
 		[[nodiscard]] runtime::Task< std::vector< CommandSummary > > executeScript( std::string );
 		[[nodiscard]] runtime::Task<> begin();
 		[[nodiscard]] runtime::Task<> commit();

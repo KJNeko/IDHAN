@@ -15,7 +15,6 @@ namespace idhan::downloader
 
 struct DownloaderConfig
 {
-	// Bypass reuse of a known direct URL and transfer the file again.
 	bool force_download {};
 	std::filesystem::path parser_directory {};
 	bool watch_scripts { true };
@@ -26,7 +25,6 @@ struct DownloaderConfig
 
 	//! 0 takes max( 2, hardware_concurrency() / 2 ).
 	std::size_t io_threads {};
-	//! Idle time before a lane closes its connections.
 	std::chrono::seconds lane_keep_alive { 30 };
 	//! Pause for parser errors and statuses in lane.backoffStatuses; 429 uses exponential backoff.
 	std::chrono::seconds lane_error_backoff { 30 };
@@ -38,7 +36,6 @@ struct DownloaderConfig
 	//! Global runtime instances per parser, created lazily. Each owns a dedicated thread.
 	std::size_t parser_instances { 1 };
 	std::size_t import_threads { 4 };
-	//! Memory limit per parser runtime.
 	std::size_t worker_memory_limit { 256 * 1024 * 1024 };
 	std::size_t worker_stack_limit { 1024 * 1024 };
 	//! Limit for one uninterrupted JavaScript run, excluding synchronous host callbacks.
@@ -51,7 +48,7 @@ struct DownloaderConfig
 	HttpVersion http_version { HttpVersion::HTTP_3 };
 	//! Empty takes the built-in IDHAN user agent.
 	std::string user_agent {};
-	// Per-parser option overrides, keyed by parser ID.
+	//! Per-parser option overrides, keyed by parser ID.
 	Json::Value options { Json::objectValue };
 };
 

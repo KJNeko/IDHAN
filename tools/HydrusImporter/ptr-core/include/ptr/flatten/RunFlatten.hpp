@@ -14,22 +14,13 @@
 namespace idhan::hydrus::ptr
 {
 
-//! Scratch subdirectory of the output directory. Holds the buckets and the definition store, and
-//! is removed once the chunks are written. Chunks carry their own strings, so nothing in here
-//! is needed at import time.
+//! Scratch subdirectory of the output directory, removed once the chunks are written.
 inline constexpr const char* WORK_SUBDIRECTORY { "work" };
 
-//! Where chunks and the relations file are built, inside the work directory. They are moved into
-//! the output directory only once the run has succeeded, so a cancelled or failed run leaves the
-//! output directory untouched instead of stranding chunks that no manifest describes.
+//! Staging area inside the work directory, moved into the output directory once the run succeeds.
 inline constexpr const char* OUTPUT_STAGING_SUBDIRECTORY { "output" };
 
-//! Conventional output location: a subdirectory of the PTR files directory, so a corpus and its
-//! compacted form travel together.
-//!
-//! Nesting the output inside the source is safe: the scan resolves update files by exact name from
-//! the metadata rather than globbing, and the Import tab keys on compact_manifest.json, which exists
-//! only in the subdirectory.
+//! Default output location: a subdirectory of the PTR files directory.
 inline constexpr const char* COMPACT_SUBDIRECTORY { "compact" };
 
 //! Free space required before a flatten will start. The full corpus spills roughly 38 GB of
@@ -63,8 +54,7 @@ struct FlattenOutcome
 //! \throws std::runtime_error if neither is present or usable.
 MetadataUpdate loadCorpusMetadata( const std::filesystem::path& dir );
 
-//! How a flatten run should behave. Defaults are production's, so a caller overrides only what it
-//! actually cares about, which for everything but discard_terminal_deletes means the tests.
+//! How a flatten run should behave. Defaults are production's.
 struct FlattenOptions
 {
 	std::size_t max_records_per_chunk { MAX_RECORDS_PER_CHUNK };
@@ -72,16 +62,12 @@ struct FlattenOptions
 	unsigned scan_thread_count { 0 }; //!< 0 picks defaultScanThreadCount()
 	unsigned collapse_thread_count { 0 }; //!< 0 picks defaultCollapseThreadCount()
 
-	//! See CollapseOptions::discard_terminal_deletes. Recorded in the manifest, so an import can
-	//! explain why a corpus applies no tag removals.
+	//! See CollapseOptions::discard_terminal_deletes. Recorded in the manifest.
 	bool discard_terminal_deletes { false };
 };
 
-//! Scans, collapses, writes relations, and finally writes the manifest.
-//!
-//! Every file the run produces is built inside the work directory and moved into \p out_dir at the
-//! end, with the manifest written last of all: its presence is what marks a directory as compacted.
-//! A cancelled or failed run therefore leaves \p out_dir exactly as it found it.
+//! Scans, collapses, writes relations, and finally writes the manifest. Output is staged and moved
+//! into \p out_dir at the end, so a cancelled or failed run leaves it untouched.
 FlattenOutcome runFlatten( const std::filesystem::path& ptr_dir,
                            const std::filesystem::path& out_dir,
                            const FlattenCallbacks& callbacks,

@@ -45,7 +45,7 @@ struct SessionEnvironment
 	DownloaderConfig config {};
 };
 
-// Session bookkeeping is shared by independently scheduled parser runtimes.
+//! Session bookkeeping is shared by independently scheduled parser runtimes.
 class SessionContext::Impl final : public ScriptSession
 {
 	struct WorkRecord
@@ -94,7 +94,7 @@ class SessionContext::Impl final : public ScriptSession
 		std::optional< std::int64_t > posted_at {};
 	};
 
-	// Only the producer's host lane touches its streams; m_mutex guards the map shared by all lanes.
+	//! Only the producer's host lane touches its streams; m_mutex guards the map shared by all lanes.
 	std::map< std::pair< WorkID, std::uint64_t >, DirectImport > m_direct_imports {};
 	folly::coro::Task< std::expected< void, std::string > > importDirectOnHost(
 		WorkID owner,
@@ -160,13 +160,13 @@ class SessionContext::Impl final : public ScriptSession
 		ScriptRoute route,
 		Json::Value tags = Json::Value { Json::objectValue } );
 	void retire( WorkID id );
-	//! Reports only the transition to idle.
 	void reportDrainedIfIdle();
 	[[nodiscard]] bool isIdleLocked() const;
 	[[nodiscard]] bool isDrainedLocked() const;
 	HostTask notifyFinished();
 	[[nodiscard]] std::expected< void, std::string > postHostTask( WorkID owner, HostTask task );
-	// Requires m_mutex. Scheduling never waits for the callback to execute.
+
+	//! Requires m_mutex. Scheduling never waits for the callback to execute.
 	[[nodiscard]] std::expected< void, std::string > postHostTaskLocked( WorkID owner, HostTask task );
 	//! Runs host work that needs no ordering outside every lane.
 	[[nodiscard]] std::expected< void, std::string > spawnHostTask( HostTask task );
@@ -211,7 +211,6 @@ class SessionContext::Impl final : public ScriptSession
 	static HostTask prepareImport( std::shared_ptr< SessionContext > handle, ImportPreparation preparation );
 	static HostTask completeDetachedImport( std::shared_ptr< SessionContext > handle, std::uint64_t id );
 	void finishImportTask( bool preparation = true );
-	//! Routes a result to the realm's worker.
 	void deliver( std::uint64_t id, TransferResult result );
 	[[nodiscard]] std::uint64_t track( ScriptExecution& execution, Pending pending );
 
@@ -260,7 +259,8 @@ class SessionContext::Impl final : public ScriptSession
 	folly::coro::Task< void > drain();
 	void notifyWaiters();
 	void close();
-	// Preserve unfinished host rows while shutdown drains native callbacks.
+
+	//! Preserve unfinished host rows while shutdown drains native callbacks.
 	void shutdown();
 	[[nodiscard]] bool idle() const;
 	[[nodiscard]] std::size_t outstanding() const;

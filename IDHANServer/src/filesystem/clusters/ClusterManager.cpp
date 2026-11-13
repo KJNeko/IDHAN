@@ -21,7 +21,18 @@ template < typename Database >
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT cluster_id, folder_path, cluster_uuid::text, read_only, cluster_name, ratio_number, size_limit FROM file_clusters" )
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    cluster_id,
+					    folder_path,
+					    cluster_uuid::text,
+					    read_only,
+					    cluster_name,
+					    ratio_number,
+					    size_limit
+					FROM file_clusters
+				)SQL" )
 			.template rows<
 				ClusterID,
 				std::string,

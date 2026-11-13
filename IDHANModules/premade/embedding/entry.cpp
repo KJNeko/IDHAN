@@ -10,7 +10,6 @@
 
 using namespace idhan;
 
-//! Where this library looks for models.
 [[nodiscard]] std::filesystem::path modelsRoot()
 {
 	if ( const char* const override_path { std::getenv( "IDHAN_EMBEDDING_MODELS" ) }; override_path != nullptr )
@@ -24,7 +23,6 @@ using namespace idhan;
 	return self.parent_path() / "models";
 }
 
-//! The module instances this library exports.
 std::vector< std::shared_ptr< IDHANModule > > getModules( ModuleCallbacks callbacks )
 {
 	const auto root { modelsRoot() };

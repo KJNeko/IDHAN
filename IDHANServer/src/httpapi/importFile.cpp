@@ -45,10 +45,16 @@ namespace idhan::httpapi
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT cluster_store_time::text, cluster_delete_time::text, "
-				"extract(epoch FROM cluster_store_time)::bigint, "
-				"extract(epoch FROM cluster_delete_time)::bigint "
-				"FROM file_info WHERE record_id = $1",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    cluster_store_time::text,
+					    cluster_delete_time::text,
+					    extract(epoch FROM cluster_store_time)::bigint,
+					    extract(epoch FROM cluster_delete_time)::bigint
+					FROM file_info
+					WHERE record_id = $1
+				)SQL",
 				std::move( bindings ) )
 			.rows<
 				std::optional< std::string >,

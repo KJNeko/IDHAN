@@ -2,8 +2,6 @@ AddFGLExecutable(IDHANDownloaderTests ${CMAKE_CURRENT_SOURCE_DIR})
 target_sources(IDHANDownloaderTests PRIVATE ${CMAKE_SOURCE_DIR}/IDHANServer/src/downloader/DownloadBuffer.cpp)
 target_include_directories(IDHANDownloaderTests PRIVATE ${CMAKE_SOURCE_DIR}/IDHANServer/src)
 target_link_libraries(IDHANDownloaderTests PRIVATE Catch2::Catch2WithMain IDHANDownloader IDHAN IDHANRuntime Folly::folly_file Folly::folly_coro_blocking_wait)
-# The rewrite keeps everything but the host seams inside src/, so the tests reach the lane, cookie
-# and registry internals the same way IDHANDBTests reaches into IDHANServer/src.
 target_include_directories(
 		IDHANDownloaderTests
 		PRIVATE ${CMAKE_SOURCE_DIR}/IDHANDownloader/src ${CMAKE_CURRENT_SOURCE_DIR}/harness)

@@ -39,7 +39,6 @@ struct RowGenerator
 
 		RowGenerator get_return_object() { return { handle_type::from_promise( *this ) }; }
 
-		// Initial should never suspend so we can setup the sqlite3 stuff
 		static std::suspend_never initial_suspend() noexcept { return {}; }
 
 		static std::suspend_always final_suspend() noexcept { return {}; }
@@ -81,7 +80,6 @@ struct RowGenerator
 	~RowGenerator() { m_h.destroy(); }
 };
 
-//! unique_ptr deleter that finalizes a sqlite3_stmt.
 struct StmtDeleter
 {
 	void operator()( sqlite3_stmt* stmt ) const
@@ -101,7 +99,6 @@ template < typename... TArgs >
 RowGenerator< TArgs... >
 	buildQuery( TransactionBaseCoro tr, std::unique_ptr< sqlite3_stmt, StmtDeleter >& stmt_holder, auto... sql_args )
 {
-	// Need to ensure that the stmt is owned outside the coroutine because sqlite3_finalize will break the final co_return because it will go out of scope here.
 	auto stmt { stmt_holder.get() };
 
 	constexpr auto sql_args_count { sizeof...( sql_args ) };
@@ -179,13 +176,10 @@ class Query
 		TupleStore operator*() const { return *query.m_generator; }
 	};
 
-	// used when expecting only 1 row
 	TupleStore operator*() const { return *m_generator; }
 
-	// Begin operator (Returns TupleStore)
 	It begin() { return It { *this }; }
 
-	// End operator (Returns an non-existant end)
 	std::unreachable_sentinel_t end() const { return {}; }
 
 	Query() = default;

@@ -866,7 +866,6 @@ std::expected< void, std::string > WorkerRunner::run()
 
 		if ( m_reader.atEof() )
 		{
-			// The server is gone. Nothing outstanding can ever be answered.
 			exit_reason = "host closed the channel";
 			break;
 		}

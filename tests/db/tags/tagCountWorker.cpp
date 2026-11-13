@@ -105,18 +105,27 @@ TEST_CASE_METHOD(
 	}
 	{
 		pqxx::work competing { sql() };
-		competing.exec( "SELECT pg_advisory_xact_lock('tag_count_delta'::regclass::oid::bigint)" );
+		competing.exec( "SELECT\n"
+			"    pg_advisory_xact_lock('tag_count_delta'::regclass::oid::bigint)" );
 		CHECK( run( db::accumulateTagCountDeltas( context() ) ).deltas == 0 );
-		CHECK( competing.query_value< int >( "SELECT COUNT(*) FROM tag_count_delta" ) == 1 );
-		CHECK( competing.query_value< int >( "SELECT COUNT(*) FROM tag_counts" ) == 0 );
+		CHECK( competing.query_value< int >( "SELECT\n"
+				   "    COUNT(*)\n"
+				   "FROM tag_count_delta" ) == 1 );
+		CHECK( competing.query_value< int >( "SELECT\n"
+				   "    COUNT(*)\n"
+				   "FROM tag_counts" ) == 0 );
 	}
 	const auto batch { run( db::accumulateTagCountDeltas( context() ) ) };
 	CHECK( batch.deltas == 1 );
 	CHECK( batch.counters == 1 );
 	CHECK( run( db::accumulateTagCountDeltas( context() ) ).deltas == 0 );
 	pqxx::nontransaction read { sql() };
-	CHECK( read.query_value< int >( "SELECT storage_count FROM tag_counts" ) == 1 );
-	CHECK( read.query_value< int >( "SELECT display_count FROM tag_counts" ) == 1 );
+	CHECK( read.query_value< int >( "SELECT\n"
+			   "    storage_count\n"
+			   "FROM tag_counts" ) == 1 );
+	CHECK( read.query_value< int >( "SELECT\n"
+			   "    display_count\n"
+			   "FROM tag_counts" ) == 1 );
 }
 
 TEST_CASE_METHOD(
@@ -133,27 +142,48 @@ TEST_CASE_METHOD(
 		insertAlias( setup, domain, source, target );
 		insertMapping( setup, record, source, domain );
 		setup.exec(
-			"CREATE FUNCTION reject_count() RETURNS trigger LANGUAGE plpgsql AS $$ "
-			"BEGIN IF NEW.display_count <> 0 THEN RAISE EXCEPTION 'injected count failure'; END IF; "
-			"RETURN NEW; END $$; "
-			"CREATE TRIGGER reject_count BEFORE INSERT ON tag_counts "
-			"FOR EACH ROW EXECUTE FUNCTION reject_count()" );
+			"CREATE FUNCTION reject_count ()\n"
+			"    RETURNS trigger\n"
+			"    LANGUAGE plpgsql\n"
+			"    AS $$\n"
+			"BEGIN\n"
+			"    IF NEW.display_count <> 0 THEN\n"
+			"        RAISE EXCEPTION 'injected count failure';\n"
+			"    END IF;\n"
+			"    RETURN NEW;\n"
+			"END\n"
+			"$$;\n"
+			"\n"
+			"CREATE TRIGGER reject_count\n"
+			"    BEFORE INSERT ON tag_counts\n"
+			"    FOR EACH ROW\n"
+			"    EXECUTE FUNCTION reject_count ()" );
 		setup.commit();
 	}
 	CHECK_THROWS( run( db::accumulateTagCountDeltas( context() ) ) );
 	rollbackBarrier();
 	{
 		pqxx::nontransaction read { sql() };
-		CHECK( read.query_value< int >( "SELECT COUNT(*) FROM tag_count_delta" ) == 2 );
-		CHECK( read.query_value< int >( "SELECT COUNT(*) FROM tag_counts" ) == 0 );
-		CHECK( read.query_value< int >( "SELECT COUNT(*) FROM active_tag_mappings" ) == 1 );
+		CHECK( read.query_value< int >( "SELECT\n"
+				   "    COUNT(*)\n"
+				   "FROM tag_count_delta" ) == 2 );
+		CHECK( read.query_value< int >( "SELECT\n"
+				   "    COUNT(*)\n"
+				   "FROM tag_counts" ) == 0 );
+		CHECK( read.query_value< int >( "SELECT\n"
+				   "    COUNT(*)\n"
+				   "FROM active_tag_mappings" ) == 1 );
 		read.exec( "DROP TRIGGER reject_count ON tag_counts" );
 	}
 	CHECK( run( db::accumulateTagCountDeltas( context() ) ).deltas == 2 );
 	CHECK( run( db::accumulateTagCountDeltas( context() ) ).deltas == 0 );
 	pqxx::nontransaction read { sql() };
-	CHECK( read.query_value< int >( "SELECT SUM(storage_count) FROM tag_counts" ) == 1 );
-	CHECK( read.query_value< int >( "SELECT SUM(display_count) FROM tag_counts" ) == 1 );
+	CHECK( read.query_value< int >( "SELECT\n"
+			   "    SUM(storage_count)\n"
+			   "FROM tag_counts" ) == 1 );
+	CHECK( read.query_value< int >( "SELECT\n"
+			   "    SUM(display_count)\n"
+			   "FROM tag_counts" ) == 1 );
 }
 
 TEST_CASE_METHOD(
@@ -181,8 +211,14 @@ TEST_CASE_METHOD(
 	}
 	auto other { otherConnection() };
 	pqxx::work held { sql() };
-	held.exec( "SELECT tag_id FROM tag_counts FOR UPDATE" );
-	const auto blocker_pid { held.query_value< int >( "SELECT pg_backend_pid()" ) };
+	held.exec( "SELECT\n"
+		"    tag_id\n"
+		"FROM tag_counts\n"
+		"FOR UPDATE" );
+	const auto blocker_pid{
+		held.query_value< int >( "SELECT\n"
+			"    pg_backend_pid()" )
+	};
 	auto in_flight { start( db::accumulateTagCountDeltas( context() ) ) };
 	bool waiting {};
 	const auto deadline { std::chrono::steady_clock::now() + std::chrono::seconds { 3 } };
@@ -190,9 +226,16 @@ TEST_CASE_METHOD(
 	{
 		pqxx::nontransaction inspect { *other };
 		waiting = inspect.query_value< bool >(
-			"SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE datname = current_database() "
-			"AND wait_event_type = 'Lock' AND query LIKE '%WITH pending AS%' "
-			"AND $1 = ANY(pg_blocking_pids(pid)))",
+			"SELECT\n"
+			"    EXISTS (\n"
+			"        SELECT\n"
+			"            1\n"
+			"        FROM pg_stat_activity\n"
+			"        WHERE datname = current_database()\n"
+			"            AND wait_event_type = 'Lock'\n"
+			"            AND query LIKE '%WITH pending AS%'\n"
+			"            AND $1 = ANY (pg_blocking_pids (pid))\n"
+			"    )",
 			pqxx::params { blocker_pid } );
 		if ( !waiting ) std::this_thread::sleep_for( std::chrono::milliseconds { 10 } );
 	}
@@ -208,11 +251,17 @@ TEST_CASE_METHOD(
 	CHECK( batch.deltas == 1 );
 	{
 		pqxx::nontransaction read { sql() };
-		CHECK( read.query_value< int >( "SELECT COUNT(*) FROM tag_count_delta" ) == 1 );
-		CHECK( read.query_value< int >( "SELECT display_count FROM tag_counts" ) == 2 );
+		CHECK( read.query_value< int >( "SELECT\n"
+				   "    COUNT(*)\n"
+				   "FROM tag_count_delta" ) == 1 );
+		CHECK( read.query_value< int >( "SELECT\n"
+				   "    display_count\n"
+				   "FROM tag_counts" ) == 2 );
 	}
 	CHECK( run( db::accumulateTagCountDeltas( context() ) ).deltas == 1 );
 	pqxx::nontransaction read { sql() };
-	CHECK( read.query_value< int >( "SELECT display_count FROM tag_counts" ) == 3 );
+	CHECK( read.query_value< int >( "SELECT\n"
+			   "    display_count\n"
+			   "FROM tag_counts" ) == 3 );
 }
 } // namespace idhan::test

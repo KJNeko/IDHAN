@@ -45,15 +45,21 @@ http::HTTPTask< http::JsonResult< SunburstResponse > > sunburst(
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT t.table_name::text AS table_name, "
-				"       pg_relation_size(quote_ident(t.table_name)::text) AS table_size, "
-				"       i.indexname::text AS index_name, "
-				"       pg_relation_size(i.indexname::regclass) AS index_size "
-				"FROM information_schema.tables t "
-				"LEFT JOIN pg_indexes i "
-				"       ON i.tablename = t.table_name AND i.schemaname = current_schema() "
-				"WHERE t.table_schema = current_schema() AND t.table_type = 'BASE TABLE' "
-				"ORDER BY t.table_name" )
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    t.table_name::text AS table_name,
+					    pg_relation_size(quote_ident(t.table_name)::text) AS table_size,
+					    i.indexname::text AS index_name,
+					    pg_relation_size(i.indexname::regclass) AS index_size
+					FROM information_schema.tables t
+					    LEFT JOIN pg_indexes i ON i.tablename = t.table_name
+					        AND i.schemaname = current_schema()
+					WHERE t.table_schema = current_schema()
+					    AND t.table_type = 'BASE TABLE'
+					ORDER BY
+					    t.table_name
+				)SQL" )
 			.rows< std::string, std::int64_t, std::optional< std::string >, std::optional< std::int64_t > >()
 	};
 
@@ -77,13 +83,27 @@ http::HTTPTask< http::JsonResult< DatabaseStatsResponse > > databaseStats(
 	const auto counts {
 		co_await db
 			.query(
-				"SELECT (SELECT COUNT(*) FROM records)       AS records, "
-				"       (SELECT COUNT(*) FROM tags)          AS tags, "
-
-				"       (SELECT COALESCE(SUM(GREATEST(c.reltuples, 0)), 0)::bigint "
-				"          FROM pg_inherits i "
-				"          JOIN pg_class c ON c.oid = i.inhrelid "
-				"         WHERE i.inhparent = to_regclass(current_schema() || '.tag_mappings')) AS mappings_est" )
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    (
+					        SELECT
+					            COUNT(*)
+					        FROM records
+					    ) AS records,
+					    (
+					        SELECT
+					            COUNT(*)
+					        FROM tags
+					    ) AS tags,
+					    (
+					        SELECT
+					            COALESCE(SUM(GREATEST (c.reltuples, 0)), 0)::bigint
+					        FROM pg_inherits i
+					            JOIN pg_class c ON c.oid = i.inhrelid
+					        WHERE i.inhparent = to_regclass(current_schema() || '.tag_mappings')
+					    ) AS mappings_est
+				)SQL" )
 			.rows< std::int64_t, std::int64_t, std::int64_t >()
 	};
 
@@ -94,7 +114,17 @@ http::HTTPTask< http::JsonResult< DatabaseStatsResponse > > databaseStats(
 	bool mappings_estimated { true };
 	if ( mappings == 0 )
 	{
-		const auto exact { co_await db.query( "SELECT COUNT(*) AS n FROM tag_mappings" ).rows< std::int64_t >() };
+		const auto exact{
+			co_await db
+					 .query(
+						 //language=postgresql
+						 R"SQL(
+						SELECT
+						    COUNT(*) AS n
+						FROM tag_mappings
+					)SQL" )
+					 .rows< std::int64_t >()
+		};
 		mappings = std::get< 0 >( exact.row( 0 ) );
 		mappings_estimated = false;
 	}
@@ -154,7 +184,18 @@ http::HTTPTask< http::JsonResult< MimeListResponse > > listMimes(
 	[[maybe_unused]] http::RequestContext context )
 {
 	const auto rows {
-		co_await db.query( "SELECT mime_id, name FROM mime ORDER BY mime_id" ).rows< MimeID, std::string >()
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    mime_id,
+					    name
+					FROM mime
+					ORDER BY
+					    mime_id
+				)SQL" )
+				 .rows< MimeID, std::string >()
 	};
 
 	MimeListResponse response;

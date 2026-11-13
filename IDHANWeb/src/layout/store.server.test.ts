@@ -1,8 +1,3 @@
-/**
- * Server push/pull actions on the layout store. The REST client is mocked, so these cover the store's
- * orchestration (push then refresh, pull-and-migrate, busy-flag lifecycle), not the wire.
- */
-
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LayoutDocument } from './document';
 import type { ServerLayoutMeta } from '../api/types';
@@ -77,7 +72,6 @@ describe('layout store: server sync', () => {
 
     await expect(useLayoutStore.getState().pullLayoutFromServer('a')).rejects.toThrow();
 
-    // The working document is untouched and the store is no longer busy.
     expect(useLayoutStore.getState().doc).toBe(before);
     expect(useLayoutStore.getState().serverBusy).toBe(false);
   });

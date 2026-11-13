@@ -30,10 +30,24 @@ SCENARIO_METHOD( ServerFixture, "Tag creation", "[api][tags][create]" )
 			{
 				pqxx::nontransaction tx { db() };
 
-				CHECK( tx.query_value< int >( "SELECT count(*) FROM tags" ) == 3 );
+				CHECK(
+					tx.query_value< int >(
+						//language=postgresql
+						R"SQL(
+							SELECT
+							    count(*)
+							FROM tags
+						)SQL" )
+					== 3 );
 				CHECK(
 					tx.query_value< std::string >(
-						"SELECT tag_text FROM tags WHERE tag_id = $1",
+						//language=postgresql
+						R"SQL(
+							SELECT
+							    tag_text
+							FROM tags
+							WHERE tag_id = $1
+						)SQL",
 						pqxx::params { created.json[ 0 ][ "tag_id" ].asInt() } )
 					== "character:samus aran" );
 			}
@@ -50,7 +64,15 @@ SCENARIO_METHOD( ServerFixture, "Tag creation", "[api][tags][create]" )
 					CHECK( again.json == created.json );
 
 					pqxx::nontransaction tx { db() };
-					CHECK( tx.query_value< int >( "SELECT count(*) FROM tags" ) == 3 );
+					CHECK(
+						tx.query_value< int >(
+							//language=postgresql
+							R"SQL(
+								SELECT
+								    count(*)
+								FROM tags
+							)SQL" )
+						== 3 );
 				}
 			}
 		}
@@ -137,7 +159,15 @@ SCENARIO_METHOD( ServerFixture, "Tag creation", "[api][tags][create]" )
 				CHECK( created.json[ 0 ][ "tag_id" ].asInt() == existing );
 
 				pqxx::nontransaction tx { db() };
-				CHECK( tx.query_value< int >( "SELECT count(*) FROM tags" ) == 1 );
+				CHECK(
+					tx.query_value< int >(
+						//language=postgresql
+						R"SQL(
+							SELECT
+							    count(*)
+							FROM tags
+						)SQL" )
+					== 1 );
 			}
 		}
 	}

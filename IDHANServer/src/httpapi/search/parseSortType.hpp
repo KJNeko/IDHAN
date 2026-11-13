@@ -8,7 +8,7 @@
 namespace idhan::httpapi
 {
 
-// Omitted sort keys are handled by callers; an unrecognized supplied name has no default.
+//! Omitted sort keys are handled by callers; an unrecognized supplied name has no default.
 [[nodiscard]] inline std::optional< SortType > parseSortType( const std::string_view by )
 {
 	if ( by == "filesize" || by == "size" ) return SortType::FILESIZE;

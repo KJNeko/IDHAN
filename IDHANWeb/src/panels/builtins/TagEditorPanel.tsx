@@ -1,14 +1,4 @@
 import {PanelShortcut} from '../PanelShortcut';
-/**
- * Tag Editor: views the focused record's active tags with provenance (explicit, aliased-in, or
- * inherited from a parent, via /records/{id}/tags/active/verbose) and edits tags across the whole
- * selection. The header makes that edit scope explicit.
- *
- * The verbose endpoint returns ids only, so text comes from the shared tag-info cache
- * (host.tags.resolve). Removal targets originally applied tag ids, including alias origins.
- * Implied tags form an expanded hierarchy beneath their source tags; each alias origin is
- * removable beside the effective tag.
- */
 
 import {useEffect, useMemo, useRef, useState} from 'react';
 import type { PanelProps, RecordId } from '../../host/types';
@@ -330,7 +320,6 @@ function DomainTagEditor({host, domain, selection, tags, tagSort, onChanged}: Do
     const [autocompleteError, setAutocompleteError] = useState<string | null>(null);
     const [highlight, setHighlight] = useState(-1);
 
-  // Debounced, abortable autocomplete for the add box (cache/prefix-reuse live host-side).
   useEffect(() => {
       setSuggestions([]);
       setAutocompleteError(null);

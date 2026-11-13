@@ -13,8 +13,8 @@
 namespace idhan::httpapi
 {
 
-// Owns the byte view used across MIME detection and storage coroutine suspensions.
-// Spilled uploads are mapped read-only instead of copied back into heap memory.
+//! Owns the byte view used across MIME detection and storage coroutine suspensions.
+//! Spilled uploads are mapped read-only instead of copied back into heap memory.
 class ImportBody
 {
 	struct Unmap
@@ -36,7 +36,8 @@ class ImportBody
 	ImportBody& operator=( ImportBody&& ) noexcept = default;
 
 	[[nodiscard]] static std::expected< ImportBody, std::string > create( http::RequestBody body );
-	// Borrowed until this ImportBody is destroyed or assigned to.
+
+	//! Borrowed until this ImportBody is destroyed or assigned to.
 	[[nodiscard]] std::span< const std::byte > bytes() const noexcept;
 	[[nodiscard]] SHA256 hash() const;
 

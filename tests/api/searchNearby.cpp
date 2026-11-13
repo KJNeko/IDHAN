@@ -13,15 +13,25 @@ static void seedHashedImage( pqxx::connection& connection, const RecordID record
 {
 	pqxx::work tx { connection };
 	tx.exec(
-		"INSERT INTO file_info (record_id, size, mime_id, cluster_store_time, cluster_delete_time) "
-		"VALUES ($1, 123, $2, now(), now())",
+		//language=postgresql
+		R"SQL(
+			INSERT INTO file_info (record_id, size, mime_id, cluster_store_time, cluster_delete_time)
+			    VALUES ($1, 123, $2, now(), now())
+		)SQL",
 		pqxx::params { record_id, mime_ids::IMAGE_PNG } );
 	tx.exec(
-		"INSERT INTO metadata (record_id, simple_mime_type) VALUES ($1, $2)",
+		//language=postgresql
+		R"SQL(
+			INSERT INTO metadata (record_id, simple_mime_type)
+			    VALUES ($1, $2)
+		)SQL",
 		pqxx::params { record_id, std::to_underlying( SimpleMimeType::IMAGE_TYPE ) } );
 	tx.exec(
-		"INSERT INTO image_metadata (record_id, width, height, channels, phash) "
-		"VALUES ($1, 640, 480, 4, $2::bit(64))",
+		//language=postgresql
+		R"SQL(
+			INSERT INTO image_metadata (record_id, width, height, channels, phash)
+			    VALUES ($1, 640, 480, 4, $2::bit(64))
+		)SQL",
 		pqxx::params { record_id, hex.empty() ? std::optional< std::string > {} : std::optional { "x" + hex } } );
 	tx.commit();
 }

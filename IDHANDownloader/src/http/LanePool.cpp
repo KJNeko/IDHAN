@@ -383,7 +383,6 @@ void LanePool::dispatchCompletion(
 	TransferResult result )
 {
 	// Apply the shared pause before LaneShard releases its slot and pumps more work.
-	// Cookie persistence and completion workers may suspend or be busy independently.
 	if ( result.has_value() )
 		applyResponseBackoff( *exchange, key, result.value() );
 	else

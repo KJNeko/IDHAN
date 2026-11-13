@@ -15,7 +15,7 @@
 namespace idhan::downloader
 {
 
-// JSON strings keep cached values independent of QuickJS realms and runtime threads.
+//! JSON strings keep cached values independent of QuickJS realms and runtime threads.
 class ParserKeyValueStore
 {
   public:

@@ -20,16 +20,9 @@ std::filesystem::path bucketPath( const std::filesystem::path& dir, std::size_t 
 std::vector< MappingEvent > readBucket( const std::filesystem::path& path );
 
 //! Fans MappingEvents out to BUCKET_COUNT append-only files, buffering each separately.
+//! Memory cost is BUCKET_COUNT * buffer_events * sizeof(MappingEvent).
 //!
-//! The buffers are the dominant memory cost of the scan stage: BUCKET_COUNT * buffer_events *
-//! sizeof(MappingEvent). The default of 5461 events per bucket is roughly 64 KB each, about
-//! 256 MB in total. Lower it if that is too much.
-//!
-//! write() is thread-safe. Each bucket carries its own lock, so two writers only ever contend when
-//! their events land in the same one of BUCKET_COUNT buckets, and the mid-stream file write a
-//! full buffer triggers blocks only the other writers to that same bucket. flush(), written() and
-//! the destructor are safe to call concurrently with each other but not with write(): call them
-//! once the writers are done.
+//! write() is thread-safe. flush(), written() and the destructor must not run concurrently with write().
 class BucketWriter
 {
   public:
@@ -69,8 +62,7 @@ class BucketWriter
 	std::filesystem::path m_dir;
 	std::size_t m_buffer_events;
 
-	//! One per bucket, guarding that bucket's file, buffer and counter and nothing else.
-	//! Mutable so written() can take them on a const writer.
+	//! One per bucket, guarding that bucket's file, buffer and counter.
 	mutable std::vector< std::mutex > m_mutexes;
 
 	std::vector< FilePtr > m_files {};

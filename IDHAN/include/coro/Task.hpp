@@ -113,9 +113,6 @@ class TaskBase
 
 } // namespace detail
 
-//! Lazy, move-only coroutine return type without an executor dependency.
-//! \warning A stored capturing coroutine lambda can outlive its closure, leaving dangling captures.
-//!          Pass state as parameters to a captureless lambda or free function instead.
 template < typename T >
 class [[nodiscard]] Task : public detail::TaskBase< detail::TaskPromise< T > >
 {

@@ -22,28 +22,69 @@ TEST_CASE_METHOD( ServerFixture, "URL merges cross scan pages and commit bounded
 {
 	{
 		pqxx::work transaction { db() };
-		transaction.exec( R"SQL(
-			INSERT INTO records (record_id, sha256)
-			SELECT n, decode(lpad(to_hex(n), 64, '0'), 'hex') FROM generate_series(1, 2506) n;
-			INSERT INTO url_domains (url_domain_id, url_domain) VALUES (1, '127.0.0.1'), (2, 'unconfigured.example');
-			INSERT INTO urls (url_id, url, url_domain_id, url_type) VALUES
-			(1, 'http://127.0.0.1/post?b=2&a=1', 1, 'unknown'),
-			(2, 'http://127.0.0.1/post?a=1&b=2', 1, 'unknown'),
-			(1004, 'http://127.0.0.1/post?b=2&&a=1', 1, 'file'),
-			(1006, 'http://127.0.0.1/post?b=2&a=1&', 1, 'post'),
-			(1007, 'http://127.0.0.1/post?a=8&b=9', 1, 'unknown'),
-			(1008, 'http://127.0.0.1/post?b=9&a=8', 1, 'post'),
-			(1009, 'http://127.0.0.1/post?z=2&x=1', 1, 'file');
-			INSERT INTO urls (url_id, url, url_domain_id)
-			SELECT n, 'https://unconfigured.example/file/' || n || '?b=2&a=1', 2 FROM generate_series(3,1003) n;
-			INSERT INTO url_mappings SELECT n, 1004 FROM generate_series(1,2505) n;
-			INSERT INTO url_mappings SELECT n, 1 FROM generate_series(1,100) n;
-			INSERT INTO url_mappings SELECT n, 2 FROM generate_series(1,10) n;
-			INSERT INTO url_mappings VALUES (2506,1006), (1,1008);
-			INSERT INTO url_log VALUES
-			(1, '2020-01-01', 500), (2, '2021-01-01', 404), (1004, '2021-01-01', 200),
-			(1006, '2022-01-01', 201), (1007, '2021-01-01', 204), (1008, '2021-01-01', 404);
-		)SQL" );
+		transaction.exec(
+			//language=postgresql
+			R"SQL(
+				INSERT INTO records (record_id, sha256)
+				SELECT
+				    n,
+				    decode(lpad(to_hex(n), 64, '0'), 'hex')
+				FROM generate_series(1, 2506) n;
+
+				INSERT INTO url_domains (url_domain_id, url_domain)
+				VALUES
+				    (1, '127.0.0.1'),
+				    (2, 'unconfigured.example');
+
+				INSERT INTO urls (url_id, url, url_domain_id, url_type)
+				VALUES
+				    (1, 'http://127.0.0.1/post?b=2&a=1', 1, 'unknown'),
+				    (2, 'http://127.0.0.1/post?a=1&b=2', 1, 'unknown'),
+				    (1004, 'http://127.0.0.1/post?b=2&&a=1', 1, 'file'),
+				    (1006, 'http://127.0.0.1/post?b=2&a=1&', 1, 'post'),
+				    (1007, 'http://127.0.0.1/post?a=8&b=9', 1, 'unknown'),
+				    (1008, 'http://127.0.0.1/post?b=9&a=8', 1, 'post'),
+				    (1009, 'http://127.0.0.1/post?z=2&x=1', 1, 'file');
+
+				INSERT INTO urls (url_id, url, url_domain_id)
+				SELECT
+				    n,
+				    'https://unconfigured.example/file/' || n || '?b=2&a=1',
+				    2
+				FROM generate_series(3, 1003) n;
+
+				INSERT INTO url_mappings
+				SELECT
+				    n,
+				    1004
+				FROM generate_series(1, 2505) n;
+
+				INSERT INTO url_mappings
+				SELECT
+				    n,
+				    1
+				FROM generate_series(1, 100) n;
+
+				INSERT INTO url_mappings
+				SELECT
+				    n,
+				    2
+				FROM generate_series(1, 10) n;
+
+				INSERT INTO url_mappings
+				VALUES
+				    (2506, 1006),
+				    (1, 1008);
+
+				INSERT INTO url_log
+				VALUES
+				    (1, '2020-01-01', 500),
+				    (2, '2021-01-01', 404),
+				    (1004, '2021-01-01', 200),
+				    (1006, '2022-01-01', 201),
+				    (1007, '2021-01-01', 204),
+				    (1008, '2021-01-01', 404);
+			)SQL" );
 		transaction.commit();
 	}
 
@@ -64,17 +105,75 @@ TEST_CASE_METHOD( ServerFixture, "URL merges cross scan pages and commit bounded
 	{
 		pqxx::nontransaction transaction { db() };
 		CHECK(
-			transaction.query_value< std::string >( "SELECT url FROM urls WHERE url_id = 1" )
-		    == "http://127.0.0.1/post?a=1&b=2" );
-		CHECK( transaction.query_value< std::string >( "SELECT url_type::text FROM urls WHERE url_id = 1" ) == "file" );
+			transaction.query_value< std::string >(
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    url
+					FROM urls
+					WHERE url_id = 1
+				)SQL" )
+			== "http://127.0.0.1/post?a=1&b=2" );
 		CHECK(
-			transaction.query_value< std::string >( "SELECT url_type::text FROM urls WHERE url_id = 1007" ) == "post" );
-		CHECK( transaction.query_value< int >( "SELECT last_code FROM url_log WHERE url_id = 1" ) == 201 );
-		CHECK( transaction.query_value< int >( "SELECT last_code FROM url_log WHERE url_id = 1007" ) == 204 );
-		CHECK( transaction.query_value< int >( "SELECT count(*) FROM url_mappings WHERE url_id = 1" ) == 2506 );
+			transaction.query_value< std::string >(
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    url_type::text
+					FROM urls
+					WHERE url_id = 1
+				)SQL" )
+			== "file" );
 		CHECK(
-			transaction.query_value< std::string >( "SELECT url FROM urls WHERE url_id = 3" )
-		    == "https://unconfigured.example/file/3?a=1&b=2" );
+			transaction.query_value< std::string >(
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    url_type::text
+					FROM urls
+					WHERE url_id = 1007
+				)SQL" )
+			== "post" );
+		CHECK(
+			transaction.query_value< int >(
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    last_code
+					FROM url_log
+					WHERE url_id = 1
+				)SQL" )
+			== 201 );
+		CHECK(
+			transaction.query_value< int >(
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    last_code
+					FROM url_log
+					WHERE url_id = 1007
+				)SQL" )
+			== 204 );
+		CHECK(
+			transaction.query_value< int >(
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    count(*)
+					FROM url_mappings
+					WHERE url_id = 1
+				)SQL" )
+			== 2506 );
+		CHECK(
+			transaction.query_value< std::string >(
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    url
+					FROM urls
+					WHERE url_id = 3
+				)SQL" )
+			== "https://unconfigured.example/file/3?a=1&b=2" );
 	}
 
 	const auto rerun { api().post( "/jobs/urls/deduplicate", Json::Value {} ) };

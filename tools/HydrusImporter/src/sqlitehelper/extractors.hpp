@@ -66,7 +66,6 @@ T extract( sqlite3_stmt* stmt ) noexcept
 		if ( column_type == SQLITE_NULL ) throw std::runtime_error( "Column is null without an optional" );
 	}
 
-	// If it's an optional we want to extract the T type, Not the optional
 	using ExtractT = decltype( decomposeOptionalType< T >() );
 
 	if constexpr ( std::same_as< ExtractT, std::string_view > )
@@ -80,9 +79,9 @@ T extract( sqlite3_stmt* stmt ) noexcept
 	}
 	else if constexpr ( std::is_integral_v< ExtractT > )
 	{
-		if constexpr ( sizeof( ExtractT ) < ( 32 / 8 ) ) // if 32bit then use the 32bit extract
+		if constexpr ( sizeof( ExtractT ) < ( 32 / 8 ) )
 			return extractInt32< ExtractT, index >( stmt );
-		else // otherwise use the 64bit extract
+		else
 			return extractInt64< ExtractT, index >( stmt );
 	}
 	else

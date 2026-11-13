@@ -33,8 +33,8 @@ struct SchemaName
 	AnnotationText schema_name;
 };
 
-// Declares an additional error response. Non-error schemas, statuses, and media
-// types are inferred from JsonResponse, EmptyResponse, and EncodedResponse returns.
+//! Declares an additional error response. Non-error schemas, statuses, and media
+//! types are inferred from JsonResponse, EmptyResponse, and EncodedResponse returns.
 template < typename T = JsonDocument >
 struct Output
 {

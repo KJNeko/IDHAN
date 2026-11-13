@@ -120,9 +120,15 @@ TEST_CASE_METHOD(
 	run( db::storeBandwidth( context(), later_logs ) );
 	{
 		pqxx::read_transaction read { sql() };
-		CHECK( read.query_value< int >( "SELECT count(*) FROM bandwidth_hosts" ) == 2 );
-		CHECK( read.query_value< int >( "SELECT count(DISTINCT host_id) FROM bandwidth_logs" ) == 2 );
-		CHECK( read.query_value< int >( "SELECT count(*) FROM bandwidth_logs" ) == 6 );
+		CHECK( read.query_value< int >( "SELECT\n"
+				   "    count(*)\n"
+				   "FROM bandwidth_hosts" ) == 2 );
+		CHECK( read.query_value< int >( "SELECT\n"
+				   "    count(DISTINCT host_id)\n"
+				   "FROM bandwidth_logs" ) == 2 );
+		CHECK( read.query_value< int >( "SELECT\n"
+				   "    count(*)\n"
+				   "FROM bandwidth_logs" ) == 6 );
 	}
 	const auto totals { run( db::bandwidthTotals( context(), 100, 200 ) ) };
 	REQUIRE( totals.size() == 2 );
@@ -152,8 +158,11 @@ TEST_CASE( "Bandwidth host migrations preserve existing logs", "[db][bandwidth][
 		'\0'
 	};
 	transaction.exec( create_logs );
-	transaction.exec( "INSERT INTO bandwidth_logs (host, timestamp, bytes_received) VALUES "
-		"('gelbooru.com', 100, 10), ('gelbooru.com', 100, 20), ('img4.gelbooru.com', 101, 40)" );
+	transaction.exec( "INSERT INTO bandwidth_logs (host, timestamp, bytes_received)\n"
+		"VALUES\n"
+		"    ('gelbooru.com', 100, 10),\n"
+		"    ('gelbooru.com', 100, 20),\n"
+		"    ('img4.gelbooru.com', 101, 40)" );
 	transaction.exec( create_hosts );
 	static constexpr char compact_logs[] {
 #embed "../../IDHANMigration/src/table_bandwidth_logs/448-compact-seconds.sql" suffix(,)
@@ -161,14 +170,27 @@ TEST_CASE( "Bandwidth host migrations preserve existing logs", "[db][bandwidth][
 	};
 	transaction.exec( convert_logs );
 	transaction.exec( compact_logs );
-	CHECK( transaction.query_value< int >( "SELECT count(*) FROM bandwidth_hosts" ) == 2 );
-	CHECK( transaction.query_value< int >( "SELECT count(*) FROM bandwidth_logs" ) == 2 );
-	CHECK( transaction.query_value< int >( "SELECT sum(bytes_received) FROM bandwidth_logs "
-		"JOIN bandwidth_hosts USING (host_id) WHERE host = 'gelbooru.com'" ) == 30 );
-	CHECK( transaction.query_value< int >( "SELECT sum(bytes_received) FROM bandwidth_logs "
-		"JOIN bandwidth_hosts USING (host_id) WHERE host = 'img4.gelbooru.com'" ) == 40 );
-	CHECK( transaction.query_value< int >( "SELECT count(*) FROM information_schema.columns "
-		"WHERE table_schema = 'bandwidth_host_migration_test' AND table_name = 'bandwidth_logs'" ) == 3 );
+	CHECK( transaction.query_value< int >( "SELECT\n"
+		"    count(*)\n"
+		"FROM bandwidth_hosts" ) == 2 );
+	CHECK( transaction.query_value< int >( "SELECT\n"
+		"    count(*)\n"
+		"FROM bandwidth_logs" ) == 2 );
+	CHECK( transaction.query_value< int >( "SELECT\n"
+		"    sum(bytes_received)\n"
+		"FROM bandwidth_logs\n"
+		"    JOIN bandwidth_hosts USING (host_id)\n"
+		"WHERE host = 'gelbooru.com'" ) == 30 );
+	CHECK( transaction.query_value< int >( "SELECT\n"
+		"    sum(bytes_received)\n"
+		"FROM bandwidth_logs\n"
+		"    JOIN bandwidth_hosts USING (host_id)\n"
+		"WHERE host = 'img4.gelbooru.com'" ) == 40 );
+	CHECK( transaction.query_value< int >( "SELECT\n"
+		"    count(*)\n"
+		"FROM information_schema.columns\n"
+		"WHERE table_schema = 'bandwidth_host_migration_test'\n"
+		"    AND table_name = 'bandwidth_logs'" ) == 3 );
 }
 
 } // namespace idhan::test

@@ -36,7 +36,8 @@ class ExtensionDocument
 
 	[[nodiscard]] static std::expected< ExtensionDocument, ProtocolError > validate( std::vector< std::byte > );
 	[[nodiscard]] std::span< const std::byte > bytes() const noexcept;
-	// Nodes borrow this document's storage.
+
+	//! Nodes borrow this document's storage.
 	[[nodiscard]] ExtensionNode root() const;
 	[[nodiscard]] std::vector< ExtensionNode > elements( ExtensionNode ) const;
 	[[nodiscard]] std::vector< std::pair< std::string_view, ExtensionNode > > members( ExtensionNode ) const;

@@ -16,8 +16,8 @@ struct JobTaskStatus;
 
 namespace idhan::jobs
 {
-// Producers only mark IDs dirty. A single publisher snapshots outside the notification lock
-// and coalesces changes over 100 ms, keeping serialization off file-processing threads.
+//! Producers only mark IDs dirty. A single publisher snapshots outside the notification lock
+//! and coalesces changes over 100 ms, keeping serialization off file-processing threads.
 class JobEventHub : public std::enable_shared_from_this< JobEventHub >
 {
 	std::mutex m_mutex {};
@@ -36,7 +36,6 @@ class JobEventHub : public std::enable_shared_from_this< JobEventHub >
 	~JobEventHub();
 	void add( const std::shared_ptr< JobTaskStatus >& status );
 	void remove( JobID id );
-	//! Every tracked job as one `snapshot` event, for a subscriber that has just connected.
 	[[nodiscard]] http::SSEInitialEvent snapshotEvent();
 };
 } // namespace idhan::jobs

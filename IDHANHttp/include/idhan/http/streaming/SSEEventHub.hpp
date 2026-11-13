@@ -137,9 +137,8 @@ class SSEEventHub
 	void remove( std::string type, std::string entity, std::optional< ValidatedJson > removal = {} );
 	[[nodiscard]] bool interested( std::string_view type, std::optional< std::string_view > session = {} );
 	void heartbeat();
-	//! Keeps every hub's streams alive, not just the one the caller happens to hold. An SSE stream
-	//! that sends nothing is closed by the session's idle timeout, and the client then has to
-	//! reconnect to resync.
+
+	//! Keeps every hub's streams alive so idle SSE connections survive the session's idle timeout.
 	static void heartbeatAll();
 	void shutdown();
 };

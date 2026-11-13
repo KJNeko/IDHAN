@@ -88,7 +88,8 @@ runtime::Task<> SubscriptionEventHub::initializeSubscription( db::DBContext& db,
 	const auto lock { co_await m_mutex.co_scoped_lock() };
 	co_await refreshLocked( db, std::nullopt );
 	std::vector< http::SSEInitialEvent > initial;
-	initial.push_back( { "subscriptions.snapshot", "subscriptions", m_state.snapshot() } );
+	for ( auto& snapshot : m_state.snapshots() )
+		initial.push_back( { "subscriptions.snapshot", "subscriptions", std::move( snapshot ) } );
 	subscription.prependSnapshots( std::move( initial ), subscription.checkpoint(), "subscriptions" );
 }
 } // namespace idhan::subscriptions

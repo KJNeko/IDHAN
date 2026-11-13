@@ -52,8 +52,15 @@ runtime::Task< std::expected< void, std::string > > DatabaseSecrets::reload()
 		auto lock { co_await m_update_mutex.co_scoped_lock() };
 		const auto rows {
 			co_await DownloadSessionManager::dbContext()
-				.query( "SELECT domain, secrets::text FROM downloader_domain_secrets" )
-				.rows< std::string, std::string >()
+					 .query(
+						 //language=postgresql
+						 R"SQL(
+						SELECT
+						    domain,
+						    secrets::text
+						FROM downloader_domain_secrets
+					)SQL" )
+					 .rows< std::string, std::string >()
 		};
 		auto next { std::make_shared< Snapshot >() };
 		for ( const auto& [ domain, json ] : rows )
@@ -127,9 +134,18 @@ runtime::Task< std::expected< void, std::string > > DatabaseSecrets::set(
 		bindings.bind( names );
 		bindings.bind( db::secret( std::move( secrets ) ) );
 		co_await DownloadSessionManager::dbContext().query(
-			"INSERT INTO downloader_domain_secrets (domain, secrets) "
-			"SELECT domain, document::jsonb FROM UNNEST($1::text[], $2::text[]) AS input(domain, document) "
-			"ON CONFLICT (domain) DO UPDATE SET secrets = EXCLUDED.secrets",
+			//language=postgresql
+			R"SQL(
+				INSERT INTO downloader_domain_secrets (domain, secrets)
+				SELECT
+				    domain,
+				    document::jsonb
+				FROM UNNEST($1::text[], $2::text[]) AS input (domain,
+				        document)
+				ON CONFLICT (domain)
+				    DO UPDATE SET
+				        secrets = EXCLUDED.secrets
+			)SQL",
 			std::move( bindings ) );
 		// The DB statement is atomic. Publish only after it succeeds, without a second read.
 		m_cache.store( std::move( next ) );

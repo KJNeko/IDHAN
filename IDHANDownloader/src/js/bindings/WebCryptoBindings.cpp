@@ -56,8 +56,8 @@ static Bytes digest( const std::string& name, const std::span< const unsigned ch
 	return output;
 }
 
-// OpenSSL's CTR mode increments all 128 bits. WebCrypto increments only the low
-// `length` bits, so split at that field's wrap boundary and reset that field.
+//! OpenSSL's CTR mode increments all 128 bits. WebCrypto increments only the low
+//! `length` bits, so split at that field's wrap boundary and reset that field.
 static Bytes ctr(
 	const EVP_CIPHER* cipher,
 	const std::span< const unsigned char > key,

@@ -143,7 +143,6 @@ bool UgoiraFrameTest::passes()
 
 	std::ranges::sort( m_numbers );
 
-	// counting up from zero with nothing skipped puts the nth smallest number at n
 	for ( std::size_t i = 0; i < m_numbers.size(); ++i )
 		if ( m_numbers[ i ] != static_cast< std::uint64_t >( i ) ) return false;
 

@@ -28,7 +28,7 @@ consteval std::string compileNativeOpenAPI()
 	return http::compileOpenAPIDocument( nativeOpenAPIFragments, "IDHAN API", version, nativeOpenAPIAuthentication );
 }
 
-// Materialize once: sizing the final section must not encode the document again.
+//! Materialize once: sizing the final section must not encode the document again.
 static constexpr auto nativeOpenAPIBytes { std::define_static_array( compileNativeOpenAPI() ) };
 
 [[gnu::used, gnu::section( ".idhan.openapi.document" ), gnu::aligned( 1 )]]

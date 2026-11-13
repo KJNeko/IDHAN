@@ -8,10 +8,6 @@ import { loadPlugins } from '../plugins/loader';
 import { ToastHost } from '../host/ToastHost';
 import { StaleBuildNotice } from './StaleBuildNotice';
 
-/**
- * Authenticated shell: the customizable panel workspace. The old /version status page now lives as
- * the Server Status panel, seeded into the default layout.
- */
 function AppShell() {
   const { logout } = useAuth();
 

@@ -112,7 +112,6 @@ struct SessionEvent
 	SessionEventKind kind {};
 	WorkID work {};
 	std::string url {};
-	//! Meaning depends on kind.
 	std::string detail {};
 	//! Unset for every kind that carries no response.
 	std::optional< std::int32_t > status {};
@@ -145,8 +144,8 @@ struct SessionSnapshot
 	//! Most recently used parser instance/thread. A session may use several parsers.
 	std::size_t script_worker {};
 	bool script_executing {};
-	// Activity of parser instances used by this session, shared with other sessions.
-	// Occupancy includes synchronous host callbacks; awaiting operations is excluded.
+	//! Activity of parser instances used by this session, shared with other sessions.
+	//! Occupancy includes synchronous host callbacks; awaiting operations is excluded.
 	std::uint64_t script_busy_ns {};
 	std::uint64_t script_bursts {};
 	std::size_t imports_queued {};

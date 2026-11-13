@@ -46,7 +46,13 @@ class TemporaryCluster
 		try
 		{
 			pqxx::work tx { m_connection };
-			tx.exec( "DELETE FROM file_info WHERE cluster_id = $1", pqxx::params { m_cluster_id } );
+			tx.exec(
+				//language=postgresql
+				R"SQL(
+					DELETE FROM file_info
+					WHERE cluster_id = $1
+				)SQL",
+				pqxx::params{ m_cluster_id } );
 			tx.commit();
 			if ( m_api ) CHECK( m_api->del( std::format( "/clusters/{}/remove", m_cluster_id ) ).status == 200 );
 		}
@@ -77,7 +83,14 @@ static std::string hashOf( pqxx::connection& connection, const RecordID record_i
 {
 	pqxx::work tx { connection };
 	return tx.query_value< std::string >(
-		"SELECT encode(sha256, 'hex') FROM records WHERE record_id = $1", pqxx::params { record_id } );
+		//language=postgresql
+		R"SQL(
+			SELECT
+			    encode(sha256, 'hex')
+			FROM records
+			WHERE record_id = $1
+		)SQL",
+		pqxx::params{ record_id } );
 }
 
 //! Writes \p contents where the server expects the record's file to be, and registers the cluster
@@ -102,8 +115,11 @@ static void storeFile(
 	const auto cluster_id { cluster.registerWith( api ) };
 	pqxx::work tx { connection };
 	tx.exec(
-		"INSERT INTO file_info (record_id, size, mime_id, extension, cluster_id, cluster_store_time) "
-		"VALUES ($1, $2, $3, $4, $5, now())",
+		//language=postgresql
+		R"SQL(
+			INSERT INTO file_info (record_id, size, mime_id, extension, cluster_id, cluster_store_time)
+			    VALUES ($1, $2, $3, $4, $5, now())
+		)SQL",
 		pqxx::params { record_id, contents.size(), mime_ids::IMAGE_PNG, extension, cluster_id } );
 	tx.commit();
 }
@@ -184,7 +200,14 @@ SCENARIO_METHOD( ServerFixture, "Cluster scan usage follows registered files", "
 	{
 		pqxx::work tx { db() };
 		cluster_id = tx.query_value< ClusterID >(
-			"SELECT cluster_id FROM file_info WHERE record_id = $1", pqxx::params { record_id } );
+			//language=postgresql
+			R"SQL(
+				SELECT
+				    cluster_id
+				FROM file_info
+				WHERE record_id = $1
+			)SQL",
+			pqxx::params{ record_id } );
 	}
 
 	std::uint64_t expected_count { 1 };
@@ -209,14 +232,28 @@ SCENARIO_METHOD( ServerFixture, "Cluster scan usage follows registered files", "
 	SECTION( "Registering a discovered file increments usage once" )
 	{
 		pqxx::work tx { db() };
-		tx.exec( "DELETE FROM file_info WHERE record_id = $1", pqxx::params { record_id } );
+		tx.exec(
+			//language=postgresql
+			R"SQL(
+				DELETE FROM file_info
+				WHERE record_id = $1
+			)SQL",
+			pqxx::params{ record_id } );
 		tx.commit();
 	}
 
 	SECTION( "Updating a registered size uses the trigger delta" )
 	{
 		pqxx::work tx { db() };
-		tx.exec( "UPDATE file_info SET size = 1 WHERE record_id = $1", pqxx::params { record_id } );
+		tx.exec(
+			//language=postgresql
+			R"SQL(
+				UPDATE
+				    file_info
+				SET size = 1
+				WHERE record_id = $1
+			)SQL",
+			pqxx::params{ record_id } );
 		tx.commit();
 	}
 
@@ -240,7 +277,16 @@ SCENARIO_METHOD( ServerFixture, "Cluster scan usage follows registered files", "
 	waitForClusterScan( api(), cluster_id, query );
 	pqxx::work tx { db() };
 	const auto usage {
-		tx.exec( "SELECT file_count, size_used FROM file_clusters WHERE cluster_id = $1", pqxx::params { cluster_id } )
+		tx.exec(
+			//language=postgresql
+			R"SQL(
+				SELECT
+				    file_count,
+				    size_used
+				FROM file_clusters
+				WHERE cluster_id = $1
+			)SQL",
+			pqxx::params{ cluster_id } )
 	};
 	REQUIRE( usage.size() == 1 );
 	CHECK( usage[ 0 ][ "file_count" ].as< std::uint64_t >() == expected_count );
@@ -274,17 +320,55 @@ SCENARIO_METHOD(
 	{
 		pqxx::work tx { db() };
 		tx.exec(
-			"UPDATE file_info SET mime_id = $2 WHERE record_id = $1",
+			//language=postgresql
+			R"SQL(
+				UPDATE
+				    file_info
+				SET mime_id = $2
+				WHERE record_id = $1
+			)SQL",
 			pqxx::params { record_id, mime_ids::APPLICATION_ZIP } );
-		initial_records = tx.query_value< std::int64_t >( "SELECT count(*) FROM records" );
-		initial_archives = tx.query_value< std::int64_t >( "SELECT count(*) FROM archives" );
-		initial_mappings = tx.query_value< std::int64_t >( "SELECT count(*) FROM archive_map" );
+		initial_records = tx.query_value< std::int64_t >(
+			//language=postgresql
+			R"SQL(
+				SELECT
+				    count(*)
+				FROM records
+			)SQL" );
+		initial_archives = tx.query_value< std::int64_t >(
+			//language=postgresql
+			R"SQL(
+				SELECT
+				    count(*)
+				FROM archives
+			)SQL" );
+		initial_mappings = tx.query_value< std::int64_t >(
+			//language=postgresql
+			R"SQL(
+				SELECT
+				    count(*)
+				FROM archive_map
+			)SQL" );
 		tx.exec(
-			"CREATE FUNCTION reject_test_archive_metadata() RETURNS trigger LANGUAGE plpgsql AS $$ "
-			"BEGIN RAISE EXCEPTION 'injected archive metadata failure'; END $$" );
+			//language=postgresql
+			R"SQL(
+				CREATE FUNCTION reject_test_archive_metadata ()
+				    RETURNS trigger
+				    LANGUAGE plpgsql
+				    AS $$
+				BEGIN
+				    RAISE EXCEPTION 'injected archive metadata failure';
+				END
+				$$
+			)SQL" );
 		tx.exec(
-			"CREATE TRIGGER reject_test_archive_metadata BEFORE INSERT ON archive_metadata "
-			"FOR EACH ROW EXECUTE FUNCTION reject_test_archive_metadata()" );
+			//language=postgresql
+			R"SQL(
+				CREATE TRIGGER reject_test_archive_metadata
+				    BEFORE INSERT ON archive_metadata
+				    FOR EACH ROW
+				    EXECUTE FUNCTION reject_test_archive_metadata ()
+			)SQL" );
 		tx.commit();
 	}
 
@@ -293,14 +377,63 @@ SCENARIO_METHOD(
 	{
 		pqxx::work tx { db() };
 		CHECK_FALSE( tx.query_value< bool >(
-			"SELECT EXISTS (SELECT 1 FROM metadata WHERE record_id = $1)", pqxx::params { record_id } ) );
-		CHECK( tx.query_value< std::int64_t >( "SELECT count(*) FROM records" ) == initial_records );
-		CHECK( tx.query_value< std::int64_t >( "SELECT count(*) FROM archives" ) == initial_archives );
-		CHECK( tx.query_value< std::int64_t >( "SELECT count(*) FROM archive_map" ) == initial_mappings );
+			//language=postgresql
+			R"SQL(
+				SELECT
+				    EXISTS (
+				        SELECT
+				            1
+				        FROM metadata
+				        WHERE record_id = $1
+				    )
+			)SQL",
+			pqxx::params{ record_id } ) );
+		CHECK(
+			tx.query_value< std::int64_t >(
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    count(*)
+					FROM records
+				)SQL" )
+			== initial_records );
+		CHECK(
+			tx.query_value< std::int64_t >(
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    count(*)
+					FROM archives
+				)SQL" )
+			== initial_archives );
+		CHECK(
+			tx.query_value< std::int64_t >(
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    count(*)
+					FROM archive_map
+				)SQL" )
+			== initial_mappings );
 		CHECK( tx.query_value< bool >(
-			"SELECT file_mtime IS NULL FROM file_info WHERE record_id = $1", pqxx::params { record_id } ) );
-		tx.exec( "DROP TRIGGER reject_test_archive_metadata ON archive_metadata" );
-		tx.exec( "DROP FUNCTION reject_test_archive_metadata()" );
+			//language=postgresql
+			R"SQL(
+				SELECT
+				    file_mtime IS NULL
+				FROM file_info
+				WHERE record_id = $1
+			)SQL",
+			pqxx::params{ record_id } ) );
+		tx.exec(
+			//language=postgresql
+			R"SQL(
+				DROP TRIGGER reject_test_archive_metadata ON archive_metadata
+			)SQL" );
+		tx.exec(
+			//language=postgresql
+			R"SQL(
+				DROP FUNCTION reject_test_archive_metadata ()
+			)SQL" );
 		tx.commit();
 	}
 
@@ -308,17 +441,57 @@ SCENARIO_METHOD(
 	REQUIRE( retried.status == 200 );
 	pqxx::work tx { db() };
 	CHECK( tx.query_value< bool >(
-		"SELECT EXISTS (SELECT 1 FROM metadata WHERE record_id = $1)", pqxx::params { record_id } ) );
-	CHECK( tx.query_value< std::int64_t >( "SELECT count(*) FROM records" ) == initial_records + 1 );
-	CHECK( tx.query_value< std::int64_t >( "SELECT count(*) FROM archives" ) == initial_archives + 1 );
+		//language=postgresql
+		R"SQL(
+			SELECT
+			    EXISTS (
+			        SELECT
+			            1
+			        FROM metadata
+			        WHERE record_id = $1
+			    )
+		)SQL",
+		pqxx::params{ record_id } ) );
 	CHECK(
 		tx.query_value< std::int64_t >(
-			"SELECT count(*) FROM archive_map JOIN archive_metadata USING (archive_id) "
-			"WHERE archive_metadata.record_id = $1 AND path = 'member.txt'",
+			//language=postgresql
+			R"SQL(
+				SELECT
+				    count(*)
+				FROM records
+			)SQL" )
+		== initial_records + 1 );
+	CHECK(
+		tx.query_value< std::int64_t >(
+			//language=postgresql
+			R"SQL(
+				SELECT
+				    count(*)
+				FROM archives
+			)SQL" )
+		== initial_archives + 1 );
+	CHECK(
+		tx.query_value< std::int64_t >(
+			//language=postgresql
+			R"SQL(
+				SELECT
+				    count(*)
+				FROM archive_map
+				    JOIN archive_metadata USING (archive_id)
+				WHERE archive_metadata.record_id = $1
+				    AND path = 'member.txt'
+			)SQL",
 			pqxx::params { record_id } )
 		== 1 );
 	CHECK( tx.query_value< bool >(
-		"SELECT file_mtime IS NOT NULL FROM file_info WHERE record_id = $1", pqxx::params { record_id } ) );
+		//language=postgresql
+		R"SQL(
+			SELECT
+			    file_mtime IS NOT NULL
+			FROM file_info
+			WHERE record_id = $1
+		)SQL",
+		pqxx::params{ record_id } ) );
 }
 
 SCENARIO_METHOD( ServerFixture, "A fetched file is named after its hash", "[api][file]" )
@@ -337,7 +510,15 @@ SCENARIO_METHOD( ServerFixture, "A fetched file is named after its hash", "[api]
 	SECTION( "Extension with a leading dot" )
 	{
 		pqxx::work tx { db() };
-		tx.exec( "UPDATE file_info SET extension = '.png' WHERE record_id = $1", pqxx::params { record_id } );
+		tx.exec(
+			//language=postgresql
+			R"SQL(
+				UPDATE
+				    file_info
+				SET extension = '.png'
+				WHERE record_id = $1
+			)SQL",
+			pqxx::params{ record_id } );
 		tx.commit();
 	}
 
@@ -370,15 +551,31 @@ SCENARIO_METHOD( ServerFixture, "A cluster scan records first detection time", "
 	{
 		pqxx::work tx { db() };
 		tx.exec(
-			"INSERT INTO file_info (record_id, size, mime_id, cluster_id, cluster_store_time) "
-			"VALUES ($1, $2, $3, $4, NULL)",
+			//language=postgresql
+			R"SQL(
+				INSERT INTO file_info (record_id, size, mime_id, cluster_id, cluster_store_time)
+				    VALUES ($1, $2, $3, $4, NULL)
+			)SQL",
 			pqxx::params { record_id, contents.size(), mime_ids::IMAGE_PNG, cluster_id } );
 
-		const auto initial_time {
-			tx.exec( "SELECT cluster_store_time FROM file_info WHERE record_id = $1", pqxx::params { record_id } )
+		const auto initial_time{
+			tx.exec(
+				//language=postgresql
+				R"SQL(
+				SELECT
+				    cluster_store_time
+				FROM file_info
+				WHERE record_id = $1
+			)SQL",
+				pqxx::params{ record_id } )
 		};
 		REQUIRE( initial_time[ 0 ][ 0 ].is_null() );
-		before_scan = tx.query_value< std::string >( "SELECT clock_timestamp()::timestamp::text" );
+		before_scan = tx.query_value< std::string >(
+			//language=postgresql
+			R"SQL(
+				SELECT
+				    clock_timestamp()::timestamp::text
+			)SQL" );
 		tx.commit();
 	}
 
@@ -388,8 +585,14 @@ SCENARIO_METHOD( ServerFixture, "A cluster scan records first detection time", "
 	{
 		pqxx::work tx { db() };
 		const auto stored_time { tx.exec(
-			"SELECT cluster_store_time::text, cluster_store_time >= $2::timestamp "
-			"FROM file_info WHERE record_id = $1",
+			//language=postgresql
+			R"SQL(
+				SELECT
+				    cluster_store_time::text,
+				    cluster_store_time >= $2::timestamp
+				FROM file_info
+				WHERE record_id = $1
+			)SQL",
 			pqxx::params { record_id, before_scan } ) };
 		REQUIRE_FALSE( stored_time[ 0 ][ 0 ].is_null() );
 		CHECK( stored_time[ 0 ][ 1 ].as< bool >() );
@@ -400,7 +603,15 @@ SCENARIO_METHOD( ServerFixture, "A cluster scan records first detection time", "
 
 	pqxx::work tx { db() };
 	const auto second_detection_time { tx.query_value< std::string >(
-		"SELECT cluster_store_time::text FROM file_info WHERE record_id = $1", pqxx::params { record_id } ) };
+			//language=postgresql
+			R"SQL(
+			SELECT
+			    cluster_store_time::text
+			FROM file_info
+			WHERE record_id = $1
+		)SQL",
+			pqxx::params{ record_id } )
+	};
 	CHECK( second_detection_time == first_detection_time );
 }
 

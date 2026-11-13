@@ -22,8 +22,15 @@ runtime::Task< void > SessionUrlIds::load( db::DBContext& db )
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT download_session_id, max(download_session_url_id) FROM download_session_urls "
-				"GROUP BY download_session_id" )
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    download_session_id,
+					    max(download_session_url_id)
+					FROM download_session_urls
+					GROUP BY
+					    download_session_id
+				)SQL" )
 			.rows< DownloadSessionID, DownloadSessionUrlID >()
 	};
 

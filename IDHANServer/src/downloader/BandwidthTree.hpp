@@ -11,8 +11,8 @@
 
 namespace idhan::downloader
 {
-// Group DNS names by suffix, stopping before the top-level label. This is a
-// display hierarchy, not a public-suffix/registrable-domain classification.
+//! Group DNS names by suffix, stopping before the top-level label. This is a
+//! display hierarchy, not a public-suffix/registrable-domain classification.
 inline std::vector< std::string > bandwidthHostPath( const std::string& host )
 {
 	in_addr ipv4 {};

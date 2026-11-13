@@ -18,7 +18,6 @@ struct GraphTensorInfo
 	std::vector< std::int64_t > m_shape {};
 };
 
-//! Every declared input and output of an ONNX graph, in declaration order.
 struct GraphInterface
 {
 	std::vector< GraphTensorInfo > m_inputs {};
@@ -36,9 +35,7 @@ struct GraphInterface
 	}
 };
 
-//! Reads a graph's declared input and output without loading it.
-/**
- *  \return the graph's first input and output, or a description of what made the file unreadable. */
+//! \return The graph's first input and output, or a description of what made the file unreadable.
 [[nodiscard]] std::expected< GraphInterface, std::string > readGraphInterface( const std::filesystem::path& onnx_path );
 
 } // namespace premade

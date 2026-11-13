@@ -10,8 +10,8 @@ namespace idhan::downloader
 {
 class SessionContext;
 
-// Shared by the queued operation and its optional JavaScript handle. Contains no
-// JavaScript values; the owning session's mutex guards completion and pending_id.
+//! Shared by the queued operation and its optional JavaScript handle. Contains no
+//! JavaScript values; the owning session's mutex guards completion and pending_id.
 struct ImportStatus
 {
 	std::weak_ptr< SessionContext > session;

@@ -1,4 +1,3 @@
-/** Shared selection and activation behavior for both thumbnail layouts. */
 import {useCallback, useEffect, useRef, useState} from 'react';
 import type {PanelProps, RecordId} from '../../host/types';
 import {RECORD_ACTIVATE_TOPIC, useRecordMenu, type RecordAction} from './recordActions';
@@ -13,13 +12,11 @@ export function useGridSelection(host: PanelProps['host'], ids: Int32Array) {
 
     const applySelection = useCallback(
         (next: Set<RecordId>) => {
-            // Push to the host; the subscription above mirrors it back into local state.
             host.selection.set([...next]);
         },
         [host],
     );
 
-    /** Entries that only mean anything in a grid; everything record-scoped lives in RECORD_ACTIONS. */
     const gridActions: RecordAction[] = [
         {
             key: 'select-all',

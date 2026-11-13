@@ -18,19 +18,14 @@
 namespace idhan::hydrus::ptr
 {
 
-//! Downloads PTR (public tag repository) update files from a Hydrus PTR server into an output
-//! directory, resuming from previously cached metadata and rate-limiting requests. Drive it with
-//! startSync(); progress and completion are reported via the signals below. Writes its progress
-//! and state incrementally to ptr_metadata.json (index-by-index, plus a periodic heartbeat) so a
-//! PTRImportWorker pointed at the same directory can import concurrently instead of waiting for
-//! the whole sync to finish.
+//! Resumes PTR downloads into a directory shared with PTRImportWorker.
+//! Publishes progress as files become available so imports can run concurrently.
 class PTRDownloader : public QObject
 {
 	Q_OBJECT
 
   public:
 
-	//! Current stage of the download.
 	enum class State
 	{
 		Idle,
@@ -104,12 +99,10 @@ class PTRDownloader : public QObject
 	QString m_persist_state { "running" };
 	QTimer m_heartbeat_timer;
 
-	// Metadata tracking
 	MetadataUpdate m_metadata;
 	int m_last_update_index { -1 };
 	std::set< std::string > m_downloaded_hashes;
 
-	// Download queue
 	std::vector< std::string > m_pending_downloads;
 	int m_current_download_index { 0 };
 	int m_total_downloads { 0 };
@@ -118,7 +111,6 @@ class PTRDownloader : public QObject
 	std::unordered_map< std::string, int > m_hash_to_index;
 	std::unordered_map< int, int > m_remaining_for_index;
 
-	// Rate limiting: 5s fixed delay between downloads
 };
 
 } // namespace idhan::hydrus::ptr

@@ -25,7 +25,7 @@ JSClassID allocateClassID()
 	return JS_NewClassID( &value );
 }
 
-// Allocate before worker threads create realms; installClass only reads this ID.
+//! Allocate before worker threads create realms; installClass only reads this ID.
 JSClassID class_id { allocateClassID() };
 
 struct Field
@@ -34,8 +34,8 @@ struct Field
 	std::optional< std::string > ada::url_pattern_init::* member;
 };
 
-// Web IDL reads dictionary members in lexicographic order, including inherited
-// properties. Convert each member once, preserving exceptions from getters.
+//! Web IDL reads dictionary members in lexicographic order, including inherited
+//! properties. Convert each member once, preserving exceptions from getters.
 constexpr std::array fields {
 	Field { "baseURL", &ada::url_pattern_init::base_url },  Field { "hash", &ada::url_pattern_init::hash },
 	Field { "hostname", &ada::url_pattern_init::hostname }, Field { "password", &ada::url_pattern_init::password },
@@ -61,7 +61,7 @@ struct Arguments
 	}
 };
 
-// Conversion failures leave the original JavaScript exception pending.
+//! Conversion failures leave the original JavaScript exception pending.
 std::optional< Input > readInput( JSContext* context, const JSValueConst value )
 {
 	if ( JS_IsUndefined( value ) || JS_IsNull( value ) )

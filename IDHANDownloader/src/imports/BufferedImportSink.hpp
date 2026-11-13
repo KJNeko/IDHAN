@@ -12,7 +12,7 @@
 
 namespace idhan::downloader
 {
-// Owns queued chunks until a writer consumes them. Curl pauses when the buffer is full.
+//! Owns queued chunks until a writer consumes them. Curl pauses when the buffer is full.
 class BufferedImportSink final
 {
 	struct State

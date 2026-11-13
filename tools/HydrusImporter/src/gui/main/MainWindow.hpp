@@ -45,7 +45,6 @@ class MainWindow final : public QMainWindow
 	void showSettings();
 	void openSettings();
 	void checkHeartbeat();
-	// Import Widgets
 	void on_actionImport_Hydrus_triggered();
 	void on_actionImport_PTR_triggered();
 
@@ -65,4 +64,4 @@ class MainWindow final : public QMainWindow
 	int m_recordTagTabIndex { -1 };
 };
 
-#endif //MAINWINDOW_HPP
+#endif

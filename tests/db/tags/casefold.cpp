@@ -6,10 +6,8 @@
 namespace idhan::test
 {
 
-// Spelled out as UTF-8 byte escapes rather than as characters. The precomposed and decomposed forms are
-// indistinguishable on screen, so anything that normalizes this file on save would turn one into the other
-// and leave every test below passing without testing anything.
-// "Unicode spellings" pins the byte layout so that cannot happen quietly.
+// Spelled as UTF-8 byte escapes so an editor that normalizes on save cannot merge the two forms.
+// "Unicode spellings" pins the byte layout.
 
 //! "Amelie" carrying a precomposed U+00E9: U+0041 U+006D U+00E9 U+006C U+0069 U+0065
 constexpr std::string_view AMELIE_PRECOMPOSED {
@@ -80,8 +78,12 @@ SCENARIO_METHOD( MigratedSchema, "Subtag casefolding", "[db][tags][casefold]" )
 			THEN( "both spellings fold onto one tag" )
 			{
 				CHECK( precomposed_id == decomposed_id );
-				CHECK( tx.query_value< int >( "SELECT count(*) FROM tags" ) == 1 );
-				CHECK( tx.query_value< std::string >( "SELECT subtag_text FROM tags" ) == AMELIE_FOLDED );
+				CHECK( tx.query_value< int >( "SELECT\n"
+						   "    count(*)\n"
+						   "FROM tags" ) == 1 );
+				CHECK( tx.query_value< std::string >( "SELECT\n"
+						   "    subtag_text\n"
+						   "FROM tags" ) == AMELIE_FOLDED );
 			}
 		}
 
@@ -93,8 +95,12 @@ SCENARIO_METHOD( MigratedSchema, "Subtag casefolding", "[db][tags][casefold]" )
 			THEN( "both spellings fold onto one tag" )
 			{
 				CHECK( decomposed_id == precomposed_id );
-				CHECK( tx.query_value< int >( "SELECT count(*) FROM tags" ) == 1 );
-				CHECK( tx.query_value< std::string >( "SELECT subtag_text FROM tags" ) == AMELIE_FOLDED );
+				CHECK( tx.query_value< int >( "SELECT\n"
+						   "    count(*)\n"
+						   "FROM tags" ) == 1 );
+				CHECK( tx.query_value< std::string >( "SELECT\n"
+						   "    subtag_text\n"
+						   "FROM tags" ) == AMELIE_FOLDED );
 			}
 		}
 	}
@@ -109,8 +115,12 @@ SCENARIO_METHOD( MigratedSchema, "Subtag casefolding", "[db][tags][casefold]" )
 			THEN( "they fold onto one tag holding a plain i" )
 			{
 				CHECK( precomposed_id == decomposed_id );
-				CHECK( tx.query_value< int >( "SELECT count(*) FROM tags" ) == 1 );
-				CHECK( tx.query_value< std::string >( "SELECT subtag_text FROM tags" ) == DOTTED_I_FOLDED );
+				CHECK( tx.query_value< int >( "SELECT\n"
+						   "    count(*)\n"
+						   "FROM tags" ) == 1 );
+				CHECK( tx.query_value< std::string >( "SELECT\n"
+						   "    subtag_text\n"
+						   "FROM tags" ) == DOTTED_I_FOLDED );
 			}
 		}
 	}
@@ -124,7 +134,9 @@ SCENARIO_METHOD( MigratedSchema, "Subtag casefolding", "[db][tags][casefold]" )
 			THEN( "its tag text stays folded" )
 			{
 				CHECK(
-					tx.query_value< std::string >( "SELECT tag_text FROM tags" )
+					tx.query_value< std::string >( "SELECT\n"
+						"    tag_text\n"
+						"FROM tags" )
 					== "character:" + std::string( AMELIE_FOLDED ) );
 			}
 		}
@@ -145,8 +157,12 @@ SCENARIO_METHOD( MigratedSchema, "Namespace casefolding", "[db][tags][casefold]"
 			THEN( "they fold onto one namespace" )
 			{
 				CHECK( precomposed_id == decomposed_id );
-				CHECK( tx.query_value< int >( "SELECT count(*) FROM tag_namespaces" ) == 1 );
-				CHECK( tx.query_value< std::string >( "SELECT namespace_text FROM tag_namespaces" ) == AMELIE_FOLDED );
+				CHECK( tx.query_value< int >( "SELECT\n"
+						   "    count(*)\n"
+						   "FROM tag_namespaces" ) == 1 );
+				CHECK( tx.query_value< std::string >( "SELECT\n"
+						   "    namespace_text\n"
+						   "FROM tag_namespaces" ) == AMELIE_FOLDED );
 			}
 		}
 	}

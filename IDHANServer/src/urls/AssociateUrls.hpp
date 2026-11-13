@@ -21,7 +21,7 @@ namespace idhan::helpers
 	std::vector< std::pair< std::string, std::string > > types,
 	db::DBContext& db );
 
-// Creates the URL and domain if necessary, then records its PostgreSQL UrlType value.
+//! Creates the URL and domain if necessary, then records its PostgreSQL UrlType value.
 [[nodiscard]] runtime::Task< std::expected< void, std::string > > setUrlType(
 	std::string url,
 	std::string type,

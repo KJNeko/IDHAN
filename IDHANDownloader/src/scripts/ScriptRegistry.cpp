@@ -1040,7 +1040,7 @@ static std::string joinNames( const std::vector< std::string >& names )
 	return joined;
 }
 
-// Ephemeral values such as signed tokens are redacted from the logged input.
+//! Ephemeral values such as signed tokens are redacted from the logged input.
 static void logNormalization( const std::string_view url, const NormalizedUrl& normalized, const UrlRules& rules )
 {
 	const auto input { detail::redactUrlQuery( url, rules.ephemeral_query ) };
@@ -1277,7 +1277,7 @@ std::optional< LaneSettings > ScriptRegistry::configuredLaneSettings( const std:
 		{
 			if ( !held.include_subdomains || !detail::isSubdomainOf( normalized, held.host ) ) continue;
 
-			//! Longest configured suffix wins, so a nested family beats the one above it.
+			// Longest configured suffix wins, so a nested family beats the one above it.
 			if ( family == nullptr || held.host.size() > family->host.size() ) family = &held;
 		}
 	}

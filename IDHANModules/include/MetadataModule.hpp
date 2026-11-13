@@ -22,22 +22,17 @@ class FGL_EXPORT MetadataModuleI : public ModuleBase
 
 	~MetadataModuleI() override;
 
-	//! The mime ids this parser can extract metadata from.
 	[[nodiscard]] virtual std::vector< MimeID > handleableMimes() = 0;
 
-	// Opt in only for MIME types whose image metadata can contain a pHash.
-	// An empty result keeps metadata-only parsers out of hash backfills.
+	//! Opt in only for MIME types whose image metadata can contain a pHash.
+	//! An empty result keeps metadata-only parsers out of hash backfills.
 	[[nodiscard]] virtual std::vector< MimeID > phashMimes() { return {}; }
 
 	//! Extracts metadata (dimensions, duration, contained files, etc.) from a file.
-	//! \param data The source file and its MIME (see ModuleCallData).
-	//! \return A populated MetadataInfo, or a ModuleError if the file could not be parsed.
 	[[nodiscard]] virtual std::expected< MetadataInfo, ModuleError > parseFile( ModuleCallData& data ) = 0;
 
-	//! \return true if \p mime_id is one of handleableMimes().
 	[[nodiscard]] bool canHandle( MimeID mime_id );
 
-	//! \return ModuleTypeFlags::METADATA.
 	ModuleType type() override;
 };
 } // namespace idhan

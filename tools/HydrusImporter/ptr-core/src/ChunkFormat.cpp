@@ -93,7 +93,6 @@ ChunkStats ChunkWriter::finish( const TagLookup& lookup, TagUsageSet* const usag
 	ChunkStats stats {};
 	stats.records = m_records.size();
 
-	// Collect every distinct referenced id, then resolve once per id rather than once per use.
 	std::vector< std::uint32_t > distinct;
 	for ( const auto& record : m_records )
 	{

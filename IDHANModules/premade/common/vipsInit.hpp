@@ -10,11 +10,9 @@
 
 #include "renderThreads.hpp"
 
-//! Shared libvips bring-up for the premade module libraries.
 namespace idhan::premade
 {
 
-//! Routes libvips' GLib log domain into spdlog so module output lands in the server's log.
 inline void vipsLogHandler(
 	[[maybe_unused]] const char* log_domain,
 	const GLogLevelFlags log_level,
@@ -50,12 +48,10 @@ inline void vipsLogHandler(
 	}
 }
 
-//! Takes over the vips logger and initialises libvips for this process.
-/** \param name The vips "program name", used in vips' own diagnostics. Pass the library name so a
- *              crash report names the worker that produced it.
- *
- *  The vips operation cache is disabled outright: a worker's job is one file at a time, so the
- *  cache only grows RSS, which is the metric the host uses to decide when to retire the worker. */
+//! Initializes vips with the operation cache disabled: calls rarely repeat an operation, so the
+//! cache would only grow RSS, which the host uses to decide when to retire the worker.
+//! \param name The vips "program name" used in its diagnostics. Pass the library name so a crash
+//!        report names the worker that produced it.
 inline void vipsInit( const char* const name )
 {
 	constexpr auto VIPS_LOG_DOMAIN { "VIPS" };
@@ -79,7 +75,6 @@ inline void vipsInit( const char* const name )
 	spdlog::debug( "VIPS: {} threads per operation", vips_concurrency_get() );
 }
 
-//! Tears libvips down. Called from a library's deinit().
 inline void vipsShutdown()
 {
 	vips_shutdown();

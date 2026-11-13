@@ -34,8 +34,16 @@ http::HTTPTask< http::JsonResult< RecordRelationshipsResponse > > getRelationshi
 	const auto inferior {
 		co_await db
 			.query(
-				"SELECT record_id FROM duplicate_members WHERE king_id = $1 AND record_id <> king_id "
-				"ORDER BY record_id",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    record_id
+					FROM duplicate_members
+					WHERE king_id = $1
+					    AND record_id <> king_id
+					ORDER BY
+					    record_id
+				)SQL",
 				std::move( a ) )
 			.rows< RecordID >()
 	};
@@ -45,7 +53,15 @@ http::HTTPTask< http::JsonResult< RecordRelationshipsResponse > > getRelationshi
 	const auto superior {
 		co_await db
 			.query(
-				"SELECT king_id FROM duplicate_members WHERE record_id = $1 AND record_id <> king_id", std::move( b ) )
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    king_id
+					FROM duplicate_members
+					WHERE record_id = $1
+					    AND record_id <> king_id
+				)SQL",
+				std::move( b ) )
 			.rows< RecordID >()
 	};
 
@@ -54,11 +70,20 @@ http::HTTPTask< http::JsonResult< RecordRelationshipsResponse > > getRelationshi
 	const auto alternatives {
 		co_await db
 			.query(
-				"SELECT greater_record_id AS record_id FROM alternative_records"
-				"  WHERE lesser_record_id = duplicate_king($1)"
-				"  UNION"
-				"  SELECT lesser_record_id FROM alternative_records WHERE greater_record_id = duplicate_king($1)"
-				" ORDER BY record_id",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    greater_record_id AS record_id
+					FROM alternative_records
+					WHERE lesser_record_id = duplicate_king ($1)
+					UNION
+					SELECT
+					    lesser_record_id
+					FROM alternative_records
+					WHERE greater_record_id = duplicate_king ($1)
+					ORDER BY
+					    record_id
+				)SQL",
 				std::move( c ) )
 			.rows< RecordID >()
 	};
@@ -95,7 +120,14 @@ http::HTTPTask< http::JsonResult< SimilarRecordsResponse > > findSimilar(
 	const auto probe_rows {
 		co_await db
 			.query(
-				"SELECT phash FROM image_metadata WHERE record_id = $1 AND phash IS NOT NULL",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    phash
+					FROM image_metadata
+					WHERE record_id = $1
+					    AND phash IS NOT NULL
+				)SQL",
 				std::move( probe_bindings ) )
 			.rows< std::bitset< 64 > >()
 	};
@@ -117,29 +149,65 @@ http::HTTPTask< http::JsonResult< SimilarRecordsResponse > > findSimilar(
 	const auto matches {
 		co_await db
 			.query(
-				"WITH probe_root AS (SELECT duplicate_king($2) AS root_id), related(record_id) AS ("
-				"  SELECT duplicate_group_members(root_id) FROM probe_root"
-				"  UNION SELECT member.record_id FROM probe_root"
-				"  JOIN alternative_records alternative"
-				"    ON alternative.lesser_record_id = root_id OR alternative.greater_record_id = root_id"
-				"  CROSS JOIN LATERAL duplicate_group_members("
-				"    CASE WHEN alternative.lesser_record_id = root_id THEN alternative.greater_record_id"
-				"         ELSE alternative.lesser_record_id END) AS member(record_id)"
-				") "
-				"SELECT record_id, (phash <~> $1)::integer AS distance, "
-				"EXISTS ("
-				"  SELECT 1 FROM unrelated_records marked "
-				"  WHERE marked.lesser_record_id = LEAST(duplicate_king($2), duplicate_king(image_metadata.record_id)) "
-				"    AND marked.greater_record_id = GREATEST(duplicate_king($2), duplicate_king(image_metadata.record_id))) AS unrelated "
-				"FROM image_metadata "
-				"WHERE phash IS NOT NULL AND record_id != $2 AND (phash <~> $1)::integer <= $3::integer "
-				"AND ($5::boolean OR NOT EXISTS ("
-				"  SELECT 1 FROM unrelated_records unrelated "
-				"  WHERE unrelated.lesser_record_id = LEAST(duplicate_king($2), duplicate_king(image_metadata.record_id)) "
-				"    AND unrelated.greater_record_id = GREATEST(duplicate_king($2), duplicate_king(image_metadata.record_id)))) "
-				"AND ($6::boolean OR NOT EXISTS ("
-				"  SELECT 1 FROM related WHERE related.record_id = image_metadata.record_id)) "
-				"ORDER BY distance, record_id LIMIT $4::integer",
+				//language=postgresql
+				R"SQL(
+					WITH probe_root AS (
+					    SELECT
+					        duplicate_king ($2) AS root_id
+					),
+					related (
+					    record_id
+					) AS (
+					    SELECT
+					        duplicate_group_members (root_id)
+					    FROM probe_root
+					    UNION
+					    SELECT
+					        member.record_id
+					    FROM probe_root
+					        JOIN alternative_records alternative ON alternative.lesser_record_id = root_id
+					            OR alternative.greater_record_id = root_id
+					        CROSS JOIN LATERAL duplicate_group_members (
+					            CASE WHEN alternative.lesser_record_id = root_id THEN alternative.greater_record_id
+					            ELSE
+					                alternative.lesser_record_id
+					            END
+					        ) AS member (record_id)
+					)
+					SELECT
+					    record_id,
+					    (phash <~> $1)::integer AS distance,
+					    EXISTS (
+					        SELECT
+					            1
+					        FROM unrelated_records marked
+					        WHERE marked.lesser_record_id = LEAST (duplicate_king ($2), duplicate_king (image_metadata.record_id))
+					            AND marked.greater_record_id = GREATEST (duplicate_king ($2), duplicate_king (image_metadata.record_id))
+					    ) AS unrelated
+					FROM image_metadata
+					WHERE phash IS NOT NULL
+					    AND record_id != $2
+					    AND (phash <~> $1)::integer <= $3::integer
+					    AND ($5::boolean
+					        OR NOT EXISTS (
+					            SELECT
+					                1
+					            FROM unrelated_records unrelated
+					            WHERE unrelated.lesser_record_id = LEAST (duplicate_king ($2), duplicate_king (image_metadata.record_id))
+					                AND unrelated.greater_record_id = GREATEST (duplicate_king ($2), duplicate_king (image_metadata.record_id))
+					        ))
+					    AND ($6::boolean
+					        OR NOT EXISTS (
+					            SELECT
+					                1
+					            FROM related
+					            WHERE related.record_id = image_metadata.record_id
+					        ))
+					ORDER BY
+					    distance,
+					    record_id
+					LIMIT $4::integer
+				)SQL",
 				std::move( bindings ) )
 			.rows< RecordID, std::int32_t, bool >()
 	};
@@ -174,9 +242,20 @@ http::HTTPTask< http::JsonResult< UndecidedDuplicatesResponse > > nextUndecided(
 	const auto found {
 		co_await db
 			.query(
-				"SELECT left_id, right_id, distance FROM hamming_distance "
-				"WHERE distance <= $1::integer "
-				"ORDER BY left_id, distance, right_id LIMIT $2::integer",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    left_id,
+					    right_id,
+					    distance
+					FROM hamming_distance
+					WHERE distance <= $1::integer
+					ORDER BY
+					    left_id,
+					    distance,
+					    right_id
+					LIMIT $2::integer
+				)SQL",
 				std::move( bindings ) )
 			.rows< RecordID, RecordID, SmallInt >()
 	};
@@ -296,8 +375,15 @@ http::HTTPTask< http::JsonResult< RelationshipUpdatedResponse > > setBetterDupli
 		db::DBBindings bindings {};
 		bindings.bind( std::move( worse_ids ) );
 		bindings.bind( std::move( better_ids ) );
-		co_await db.query( "SELECT insert_duplicate_pair($1::INTEGER[], $2::INTEGER[])", std::move( bindings ) )
-			.result();
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    insert_duplicate_pair ($1::INTEGER[], $2::INTEGER[])
+				)SQL",
+					 std::move( bindings ) )
+				 .result();
 	}
 	catch ( const std::exception& e )
 	{
@@ -361,9 +447,15 @@ http::HTTPTask< http::JsonResult< RelationshipUpdatedResponse > > addAlternative
 
 	co_await db
 		.query(
-			"INSERT INTO alternative_records (lesser_record_id, greater_record_id) "
-			"SELECT * FROM UNNEST($1, $2) "
-			"ON CONFLICT DO NOTHING",
+			//language=postgresql
+			R"SQL(
+				INSERT INTO alternative_records (lesser_record_id, greater_record_id)
+				SELECT
+				    *
+				FROM UNNEST($1, $2)
+				ON CONFLICT
+				    DO NOTHING
+			)SQL",
 			std::move( bindings ) )
 		.result();
 
@@ -397,14 +489,28 @@ http::HTTPTask< http::JsonResult< ClearedRelationshipResponse > > clearRelations
 	if ( !validation ) co_return std::move( validation.error() );
 
 	auto transaction { co_await db.transaction() };
-	co_await transaction.query( "SELECT pg_advisory_xact_lock(16609, 1)" ).result();
+	co_await transaction
+			 .query(
+				 //language=postgresql
+				 R"SQL(
+				SELECT
+				    pg_advisory_xact_lock(16609, 1)
+			)SQL" )
+			 .result();
 
 	db::DBBindings duplicate_bindings {};
 	duplicate_bindings.bind( record_id_a );
 	duplicate_bindings.bind( record_id_b );
 	const auto removed_rows {
-		co_await transaction.query( "SELECT remove_duplicate_pair($1, $2) AS removed", std::move( duplicate_bindings ) )
-			.rows< bool >()
+		co_await transaction
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    remove_duplicate_pair ($1, $2) AS removed
+				)SQL",
+					 std::move( duplicate_bindings ) )
+				 .rows< bool >()
 	};
 	const bool duplicate_removed { !removed_rows.empty() && std::get< 0 >( removed_rows.row( 0 ) ) };
 
@@ -414,9 +520,12 @@ http::HTTPTask< http::JsonResult< ClearedRelationshipResponse > > clearRelations
 	const auto unrelated_result {
 		co_await transaction
 			.query(
-				"DELETE FROM unrelated_records "
-				"WHERE lesser_record_id = LEAST(duplicate_king($1), duplicate_king($2)) "
-				"AND greater_record_id = GREATEST(duplicate_king($1), duplicate_king($2))",
+				//language=postgresql
+				R"SQL(
+					DELETE FROM unrelated_records
+					WHERE lesser_record_id = LEAST (duplicate_king ($1), duplicate_king ($2))
+					    AND greater_record_id = GREATEST (duplicate_king ($1), duplicate_king ($2))
+				)SQL",
 				std::move( unrelated_bindings ) )
 			.result()
 	};
@@ -427,9 +536,12 @@ http::HTTPTask< http::JsonResult< ClearedRelationshipResponse > > clearRelations
 	const auto alternative_result {
 		co_await transaction
 			.query(
-				"DELETE FROM alternative_records "
-				"WHERE lesser_record_id = LEAST(duplicate_king($1), duplicate_king($2)) "
-				"AND greater_record_id = GREATEST(duplicate_king($1), duplicate_king($2))",
+				//language=postgresql
+				R"SQL(
+					DELETE FROM alternative_records
+					WHERE lesser_record_id = LEAST (duplicate_king ($1), duplicate_king ($2))
+					    AND greater_record_id = GREATEST (duplicate_king ($1), duplicate_king ($2))
+				)SQL",
 				std::move( alternative_bindings ) )
 			.result()
 	};
@@ -476,8 +588,13 @@ http::HTTPTask< http::JsonResult< RelationshipUpdatedResponse > > setUnrelated(
 
 	co_await db
 		.query(
-			"INSERT INTO unrelated_records (lesser_record_id, greater_record_id) VALUES ($1, $2) "
-			"ON CONFLICT DO NOTHING",
+			//language=postgresql
+			R"SQL(
+				INSERT INTO unrelated_records (lesser_record_id, greater_record_id)
+				    VALUES ($1, $2)
+				ON CONFLICT
+				    DO NOTHING
+			)SQL",
 			std::move( bindings ) )
 		.result();
 

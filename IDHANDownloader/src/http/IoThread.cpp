@@ -114,9 +114,7 @@ int IoThread::socketCallback( CURL*, const curl_socket_t socket, const int what,
 		return 0;
 	}
 
-	//! PERSIST is required: without it, folly::EventHandler unregisters itself after the first
-	//! handlerReady() fire, but curl's multi-socket API expects epoll-style level-triggered
-	//! monitoring that keeps reporting readiness across loop iterations until curl re-polls it.
+	// curl's multi-socket API expects level-triggered readiness; without PERSIST the handler fires once.
 	int events { folly::EventHandler::PERSIST };
 
 	if ( what == CURL_POLL_IN || what == CURL_POLL_INOUT ) events |= folly::EventHandler::READ;

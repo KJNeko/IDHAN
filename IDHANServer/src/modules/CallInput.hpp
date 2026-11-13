@@ -46,7 +46,6 @@ class CallInput
 
 	[[nodiscard]] static std::expected< CallInput, std::string > forBlob( ipc::Blob blob );
 
-	//! Stages \p bytes into anonymous memory and wraps the result.
 	[[nodiscard]] static std::expected< CallInput, std::string > forBytes( std::span< const std::byte > bytes );
 
 	[[nodiscard]] static std::expected< std::shared_ptr< const CallInput >, std::string > sharedForBytes(

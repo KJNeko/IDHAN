@@ -20,14 +20,13 @@ class DownloaderContext;
 struct SessionOptions
 {
 	bool force_download {};
-	// Session overrides, keyed by parser ID.
 	Json::Value parser_options { Json::objectValue };
 	std::optional< bool > force_import {};
 	std::string root_url {};
 	SessionObserver* observer {};
 	std::size_t inflight_requests {};
 	DownloadSessionID session_id {};
-	// An explicit generator bypasses URL discovery while retaining normal parser execution.
+	//! An explicit generator bypasses URL discovery while retaining normal parser execution.
 	Json::Value generator { Json::nullValue };
 };
 
@@ -62,7 +61,6 @@ class SessionContext
 
 	//! Cancels queued and active work without blocking.
 	void cancel();
-	//! Blocks until the session is idle.
 	folly::coro::Task< void > wait();
 	//! Rejects submissions and lets current work drain.
 	void close();

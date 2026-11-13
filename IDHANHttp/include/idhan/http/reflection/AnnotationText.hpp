@@ -7,8 +7,8 @@
 namespace idhan::http
 {
 
-// Annotation values must be structural. Promote text to static storage so the
-// public pointer is valid in annotation constants and views outlive extraction.
+//! Annotation values must be structural. Promote text to static storage so the
+//! public pointer is valid in annotation constants and views outlive extraction.
 struct AnnotationText
 {
 	const char* characters;

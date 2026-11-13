@@ -17,7 +17,6 @@ function format(info: TagInfo): string {
   return ns.length > 0 ? `${ns}:${info.subtag.text}` : info.subtag.text;
 }
 
-/** Synchronously read an already-resolved tag, or undefined. */
 export function peekTag(tagId: number): string | undefined {
   return cache.get(tagId);
 }

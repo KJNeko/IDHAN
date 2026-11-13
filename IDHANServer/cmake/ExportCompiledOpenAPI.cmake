@@ -1,4 +1,3 @@
-# Copy compiler-emitted bytes without running the binary or generating schemas.
 foreach (REQUIRED IN ITEMS IDHAN_OBJCOPY IDHAN_BINARY IDHAN_OPENAPI_OUTPUT)
 	if (NOT DEFINED ${REQUIRED})
 		message(FATAL_ERROR "Set ${REQUIRED}")

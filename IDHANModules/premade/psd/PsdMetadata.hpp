@@ -2,7 +2,6 @@
 #include "MetadataModule.hpp"
 #include "ThumbnailerModule.hpp"
 
-//! Metadata parser for Photoshop PSD files (canvas dimensions, layer count).
 class PsdMetadata final : public idhan::MetadataModuleI
 {
   public:
@@ -17,10 +16,10 @@ class PsdMetadata final : public idhan::MetadataModuleI
 
 	[[nodiscard]] idhan::ModuleVersion version() override;
 
-	// pure parsing of the input buffer, no shared mutable state: safe to run concurrently
+	//! Pure parsing of the input buffer, no shared mutable state: safe to run concurrently
 	[[nodiscard]] bool threadSafe() override { return true; }
 
-	// shares a worker with PsdThumbnailer, which composites through vips
+	//! Shares a worker with PsdThumbnailer, which composites through vips
 	[[nodiscard]] idhan::ModuleResidency residency() override { return idhan::ModuleResidency::PERSISTENT; }
 
 	[[nodiscard]] std::expected< idhan::MetadataInfo, idhan::ModuleError > parseFile( idhan::ModuleCallData& data )

@@ -27,8 +27,18 @@ folly::coro::Task< std::vector< PersistedCookie > > DatabaseCookies::loadAll()
 	auto rows {
 		co_await DownloadSessionManager::dbContext()
 			.query(
-				"SELECT name, domain, path, value, secure, host_only, "
-				"EXTRACT(EPOCH FROM expires)::BIGINT AS expires FROM downloader_cookies" )
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    name,
+					    domain,
+					    path,
+					    value,
+					    secure,
+					    host_only,
+					    EXTRACT(EPOCH FROM expires)::BIGINT AS expires
+					FROM downloader_cookies
+				)SQL" )
 			.rows< std::string, std::string, std::string, std::string, bool, bool, std::int64_t >()
 	};
 
@@ -60,10 +70,17 @@ folly::coro::Task< void > DatabaseCookies::upsert( PersistedCookie cookie )
 
 	co_await DownloadSessionManager::dbContext()
 		.query(
-			"INSERT INTO downloader_cookies (name, domain, path, value, secure, host_only, expires) "
-			"VALUES ($1, $2, $3, $4, $5, $6, to_timestamp($7)) "
-			"ON CONFLICT (name, domain, path) DO UPDATE SET value = EXCLUDED.value, "
-			"secure = EXCLUDED.secure, host_only = EXCLUDED.host_only, expires = EXCLUDED.expires",
+			//language=postgresql
+			R"SQL(
+				INSERT INTO downloader_cookies (name, domain, path, value, secure, host_only, expires)
+				    VALUES ($1, $2, $3, $4, $5, $6, to_timestamp($7))
+				ON CONFLICT (name, domain, path)
+				    DO UPDATE SET
+				        value = EXCLUDED.value,
+				        secure = EXCLUDED.secure,
+				        host_only = EXCLUDED.host_only,
+				        expires = EXCLUDED.expires
+			)SQL",
 			std::move( bindings ) )
 		.result();
 }
@@ -76,15 +93,28 @@ folly::coro::Task< void > DatabaseCookies::erase( std::string name, std::string 
 	bindings.bind( std::string { path } );
 
 	co_await DownloadSessionManager::dbContext()
-		.query( "DELETE FROM downloader_cookies WHERE name = $1 AND domain = $2 AND path = $3", std::move( bindings ) )
-		.result();
+			 .query(
+				 //language=postgresql
+				 R"SQL(
+				DELETE FROM downloader_cookies
+				WHERE name = $1
+				    AND domain = $2
+				    AND path = $3
+			)SQL",
+				 std::move( bindings ) )
+			 .result();
 }
 
 folly::coro::Task< void > DatabaseCookies::pruneExpired()
 {
 	co_await DownloadSessionManager::dbContext()
-		.query( "DELETE FROM downloader_cookies WHERE expires <= now()" )
-		.result();
+			 .query(
+				 //language=postgresql
+				 R"SQL(
+				DELETE FROM downloader_cookies
+				WHERE expires <= now()
+			)SQL" )
+			 .result();
 }
 
 } // namespace idhan::downloader

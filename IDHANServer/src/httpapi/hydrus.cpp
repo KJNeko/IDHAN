@@ -589,7 +589,17 @@ static http::HTTPTask< http::Response > searchFiles(
 	db::DBBindings find_bindings {};
 	find_bindings.bind( url );
 	const auto existing {
-		co_await db.query( "SELECT url_id FROM urls WHERE url = $1", std::move( find_bindings ) ).rows< UrlID >()
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    url_id
+					FROM urls
+					WHERE url = $1
+				)SQL",
+					 std::move( find_bindings ) )
+				 .rows< UrlID >()
 	};
 	if ( !existing.empty() ) co_return std::get< 0 >( existing.row( 0 ) );
 
@@ -599,7 +609,13 @@ static http::HTTPTask< http::Response > searchFiles(
 	domain_bindings.bind( domain );
 	co_await db
 		.query(
-			"INSERT INTO url_domains (url_domain) VALUES ($1) ON CONFLICT (url_domain) DO NOTHING",
+			//language=postgresql
+			R"SQL(
+				INSERT INTO url_domains (url_domain)
+				    VALUES ($1)
+				ON CONFLICT (url_domain)
+				    DO NOTHING
+			)SQL",
 			std::move( domain_bindings ) )
 		.result();
 
@@ -607,8 +623,16 @@ static http::HTTPTask< http::Response > searchFiles(
 	domain_lookup_bindings.bind( domain );
 	const auto domain_rows {
 		co_await db
-			.query( "SELECT url_domain_id FROM url_domains WHERE url_domain = $1", std::move( domain_lookup_bindings ) )
-			.rows< UrlDomainID >()
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    url_domain_id
+					FROM url_domains
+					WHERE url_domain = $1
+				)SQL",
+					 std::move( domain_lookup_bindings ) )
+				 .rows< UrlDomainID >()
 	};
 	if ( domain_rows.empty() )
 		co_return std::unexpected(
@@ -622,7 +646,14 @@ static http::HTTPTask< http::Response > searchFiles(
 	const auto inserted {
 		co_await db
 			.query(
-				"INSERT INTO urls (url, url_domain_id) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING url_id",
+				//language=postgresql
+				R"SQL(
+					INSERT INTO urls (url, url_domain_id)
+					    VALUES ($1, $2)
+					ON CONFLICT
+					    DO NOTHING
+					RETURNING url_id
+				)SQL",
 				std::move( insert_bindings ) )
 			.rows< UrlID >()
 	};
@@ -631,7 +662,17 @@ static http::HTTPTask< http::Response > searchFiles(
 	db::DBBindings retry_bindings {};
 	retry_bindings.bind( url );
 	const auto retry {
-		co_await db.query( "SELECT url_id FROM urls WHERE url = $1", std::move( retry_bindings ) ).rows< UrlID >()
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    url_id
+					FROM urls
+					WHERE url = $1
+				)SQL",
+					 std::move( retry_bindings ) )
+				 .rows< UrlID >()
 	};
 	if ( !retry.empty() ) co_return std::get< 0 >( retry.row( 0 ) );
 
@@ -722,7 +763,13 @@ static http::HTTPTask< http::Response > associateUrl( db::DBContext& db, http::R
 			bindings.bind( *url_id_e );
 			co_await db
 				.query(
-					"INSERT INTO url_mappings (record_id, url_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+					//language=postgresql
+					R"SQL(
+						INSERT INTO url_mappings (record_id, url_id)
+						    VALUES ($1, $2)
+						ON CONFLICT
+						    DO NOTHING
+					)SQL",
 					std::move( bindings ) )
 				.result();
 		}
@@ -736,8 +783,13 @@ static http::HTTPTask< http::Response > associateUrl( db::DBContext& db, http::R
 		bindings.bind( records );
 		co_await db
 			.query(
-				"DELETE FROM url_mappings m USING urls u "
-				"WHERE u.url = ANY($1::text[]) AND m.url_id = u.url_id AND m.record_id = ANY($2::integer[])",
+				//language=postgresql
+				R"SQL(
+					DELETE FROM url_mappings m USING urls u
+					WHERE u.url = ANY ($1::text[])
+					    AND m.url_id = u.url_id
+					    AND m.record_id = ANY ($2::integer[])
+				)SQL",
 				std::move( bindings ) )
 			.result();
 	}

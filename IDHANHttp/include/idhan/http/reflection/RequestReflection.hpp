@@ -34,7 +34,7 @@ struct Maximum
 	std::int64_t value;
 };
 
-// Owns an arbitrary JSON subtree; no parser-backed views escape request decoding.
+//! Owns an arbitrary JSON subtree; no parser-backed views escape request decoding.
 struct JsonDocument
 {
 	std::string text;
@@ -43,8 +43,8 @@ struct JsonDocument
 struct NoParameters
 {};
 
-// Specialize for application-specific wire formats. The decoder must return owned values.
-// A codec may also provide rules(path) when its JSON shape differs from its C++ members.
+//! Specialize for application-specific wire formats. The decoder must return owned values.
+//! A codec may also provide rules(path) when its JSON shape differs from its C++ members.
 template < typename T >
 struct JsonCodec;
 
@@ -96,7 +96,7 @@ struct MapTraits< std::map< std::string, V, C, A > > : std::true_type
 	using Value = V;
 };
 
-// Numeric constraints apply to present optional values and every array element.
+//! Numeric constraints apply to present optional values and every array element.
 template < typename T >
 [[nodiscard]] bool requestValueAtLeast( const T& value, const std::int64_t minimum )
 {

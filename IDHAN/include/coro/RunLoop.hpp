@@ -22,8 +22,6 @@ class RunLoop
 	std::deque< std::coroutine_handle<> > m_queue {};
 	bool m_stopping { false };
 
-	//TODO: Fix lock contention (semaphore required)
-
   public:
 
 	RunLoop() = default;
@@ -32,7 +30,6 @@ class RunLoop
 	FGL_DELETE_COPY( RunLoop );
 	FGL_DELETE_MOVE( RunLoop );
 
-	//! Thread-safe. Queues `handle` to be resumed on the thread inside run().
 	void post( std::coroutine_handle<> handle );
 
 	void run();
@@ -40,7 +37,6 @@ class RunLoop
 	void stop();
 };
 
-//! Resumer that hands continuations to a RunLoop. Safe to call from the io watcher thread.
 class RunLoopResumer final : public Resumer
 {
 	RunLoop* m_loop;
@@ -58,7 +54,6 @@ class RunLoopResumer final : public Resumer
 namespace detail
 {
 
-//! Eagerly-started, self-destroying coroutine used only to drive a Task from non-coroutine code.
 struct DetachedTask
 {
 	struct promise_type
@@ -120,7 +115,6 @@ T runOnLoop( RunLoop& loop, Task< T > task )
 	return std::move( *out );
 }
 
-//! void overload of runOnLoop.
 inline void runOnLoop( RunLoop& loop, Task< void > task )
 {
 	std::exception_ptr error {};

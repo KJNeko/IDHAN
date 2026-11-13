@@ -1,9 +1,3 @@
-/**
- * Tag Domain Manager: list, create, and delete tag service domains (GET/POST/DELETE /tags/domain/*).
- * Domains are the top-level partition tags live in; the Tag Editor and Relationships panels pick one.
- * Deleting a domain removes its mappings, so it confirms first.
- */
-
 import { useCallback, useEffect, useState } from 'react';
 import type { PanelProps } from '../../host/types';
 import type { TagDomain } from '../../api/types';

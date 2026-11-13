@@ -33,10 +33,16 @@ static http::HTTPTask< http::JsonResult< TagInfoResponse > > getTagInfo(
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT t.namespace_id, tn.namespace_text, t.subtag_text "
-				"FROM tags t "
-				"JOIN tag_namespaces tn ON tn.namespace_id = t.namespace_id "
-				"WHERE t.tag_id = $1",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    t.namespace_id,
+					    tn.namespace_text,
+					    t.subtag_text
+					FROM tags t
+					    JOIN tag_namespaces tn ON tn.namespace_id = t.namespace_id
+					WHERE t.tag_id = $1
+				)SQL",
 				std::move( bindings ) )
 			.rows< NamespaceID, std::string, std::string >()
 	};
@@ -127,17 +133,83 @@ http::HTTPTask< http::JsonResult< TagRelationshipsResponse > > getTagRelationshi
 	const auto tag_domain_id { *domain_id_e };
 
 	auto parents { co_await relationshipQuery(
-		db, "SELECT parent_id FROM tag_parents WHERE child_id = $1 AND tag_domain_id = $2", tag_id, tag_domain_id ) };
+			db,
+			//language=postgresql
+			R"SQL(
+			SELECT
+			    parent_id
+			FROM tag_parents
+			WHERE child_id = $1
+			    AND tag_domain_id = $2
+		)SQL",
+			tag_id,
+			tag_domain_id )
+	};
 	auto children { co_await relationshipQuery(
-		db, "SELECT child_id FROM tag_parents WHERE parent_id = $1 AND tag_domain_id = $2", tag_id, tag_domain_id ) };
+			db,
+			//language=postgresql
+			R"SQL(
+			SELECT
+			    child_id
+			FROM tag_parents
+			WHERE parent_id = $1
+			    AND tag_domain_id = $2
+		)SQL",
+			tag_id,
+			tag_domain_id )
+	};
 	auto older_siblings { co_await relationshipQuery(
-		db, "SELECT older_id FROM tag_siblings WHERE younger_id = $1 AND tag_domain_id = $2", tag_id, tag_domain_id ) };
+			db,
+			//language=postgresql
+			R"SQL(
+			SELECT
+			    older_id
+			FROM tag_siblings
+			WHERE younger_id = $1
+			    AND tag_domain_id = $2
+		)SQL",
+			tag_id,
+			tag_domain_id )
+	};
 	auto younger_siblings { co_await relationshipQuery(
-		db, "SELECT younger_id FROM tag_siblings WHERE older_id = $1 AND tag_domain_id = $2", tag_id, tag_domain_id ) };
+			db,
+			//language=postgresql
+			R"SQL(
+			SELECT
+			    younger_id
+			FROM tag_siblings
+			WHERE older_id = $1
+			    AND tag_domain_id = $2
+		)SQL",
+			tag_id,
+			tag_domain_id )
+	};
 	auto aliases { co_await relationshipQuery(
-		db, "SELECT alias_id FROM tag_aliases WHERE aliased_id = $1 AND tag_domain_id = $2", tag_id, tag_domain_id ) };
+			db,
+			//language=postgresql
+			R"SQL(
+			SELECT
+			    alias_id
+			FROM tag_aliases
+			WHERE aliased_id = $1
+			    AND tag_domain_id = $2
+		)SQL",
+			tag_id,
+			tag_domain_id )
+	};
 	auto aliased { co_await relationshipQuery(
-		db, "SELECT aliased_id FROM tag_aliases WHERE alias_id = $1 AND tag_domain_id = $2", tag_id, tag_domain_id ) };
+			db,
+			//language=postgresql
+			R"SQL(
+			SELECT
+			    aliased_id
+			FROM tag_aliases
+			WHERE alias_id = $1
+			    AND tag_domain_id = $2
+		)SQL",
+			tag_id,
+			tag_domain_id )
+	};
 
 	co_return http::JsonResponse< TagRelationshipsResponse > {
 		{ std::move( parents ),
@@ -158,8 +230,16 @@ http::HTTPTask< http::JsonResult< TagSearchResponse > > searchNativeTags(
 
 	const auto rows {
 		co_await db
-			.query( "SELECT tag_id FROM tags WHERE tag_text = CASEFOLD(normalize($1, NFC))", std::move( bindings ) )
-			.rows< TagID >()
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    tag_id
+					FROM tags
+					WHERE tag_text = CASEFOLD (normalize ($1, NFC))
+				)SQL",
+					 std::move( bindings ) )
+				 .rows< TagID >()
 	};
 
 	if ( !rows.empty() ) co_return http::JsonResponse< TagSearchResponse > { { std::get< 0 >( rows.row( 0 ) ), true } };
@@ -181,26 +261,43 @@ http::HTTPTask< std::vector< SimilarTag > > getSimilarTags(
 	const std::string real_search_value { is_negative ? search_value.substr( 1 ) : search_value };
 	const auto wrapped_search_value { format_ns::format( "%{}%", real_search_value ) };
 
-	constexpr std::string_view query { R"(
-		WITH matches AS (
-			SELECT tags.tag_text, tags.tag_id,
-				COALESCE(MAX(CASE WHEN $5 THEN tc.storage_count ELSE tc.display_count END), 0)::BIGINT AS use_count
-			FROM tags
-			LEFT JOIN tag_counts tc ON tc.tag_id = tags.tag_id
-				AND (cardinality($4::SMALLINT[]) = 0 OR tc.tag_domain_id = ANY($4::SMALLINT[]))
-			WHERE tag_text LIKE CASEFOLD(normalize($1, NFC))
-			GROUP BY tags.tag_id
-		)
-		SELECT tag_text, tag_id,
-			similarity(tag_text, CASEFOLD(normalize($2, NFC)))::FLOAT8 AS similarity,
-			use_count
-		FROM matches
-		WHERE $6 OR use_count > 0
-		ORDER BY (tag_text = CASEFOLD(normalize($2, NFC))) DESC,
-			(similarity(tag_text, CASEFOLD(normalize($2, NFC))) * use_count) DESC,
-			similarity DESC, tag_id ASC
-		LIMIT $3
-	)" };
+	constexpr std::string_view query{
+		//language=postgresql
+		R"SQL(
+			WITH matches AS (
+			    SELECT
+			        tags.tag_text,
+			        tags.tag_id,
+			        COALESCE(MAX(
+			                CASE WHEN $5 THEN tc.storage_count
+			                ELSE
+			                    tc.display_count
+			                END
+			        ), 0)::BIGINT AS use_count
+			    FROM tags
+			        LEFT JOIN tag_counts tc ON tc.tag_id = tags.tag_id
+			            AND (cardinality($4::SMALLINT[]) = 0
+			                OR tc.tag_domain_id = ANY ($4::SMALLINT[]))
+			    WHERE tag_text LIKE CASEFOLD (normalize ($1, NFC))
+			    GROUP BY
+			        tags.tag_id
+			)
+			SELECT
+			    tag_text,
+			    tag_id,
+			    similarity (tag_text, CASEFOLD (normalize ($2, NFC)))::FLOAT8 AS similarity,
+			    use_count
+			FROM matches
+			WHERE $6
+			    OR use_count > 0
+			ORDER BY
+			    (tag_text = CASEFOLD (normalize ($2, NFC))) DESC,
+			    (similarity (tag_text, CASEFOLD (normalize ($2, NFC))) * use_count) DESC,
+			    similarity DESC,
+			    tag_id ASC
+			LIMIT $3
+		)SQL"
+	};
 
 	db::DBBindings bindings {};
 	bindings.bind( wrapped_search_value );
@@ -341,8 +438,15 @@ http::HTTPTask< http::JsonResult< TagDomainInfo > > createTagDomain( db::DBConte
 
 	const auto rows {
 		co_await db
-			.query( "INSERT INTO tag_domains (domain_name) VALUES ($1) RETURNING tag_domain_id", std::move( bindings ) )
-			.rows< TagDomainID >()
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					INSERT INTO tag_domains (domain_name)
+					    VALUES ($1)
+					RETURNING tag_domain_id
+				)SQL",
+					 std::move( bindings ) )
+				 .rows< TagDomainID >()
 	};
 
 	if ( rows.empty() )
@@ -391,8 +495,15 @@ http::HTTPTask< http::JsonResult< DeletedTagDomainResponse > > deleteTagDomain(
 
 	const auto rows {
 		co_await db
-			.query( "DELETE FROM tag_domains WHERE tag_domain_id = $1 RETURNING tag_domain_id", std::move( bindings ) )
-			.rows< TagDomainID >()
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					DELETE FROM tag_domains
+					WHERE tag_domain_id = $1
+					RETURNING tag_domain_id
+				)SQL",
+					 std::move( bindings ) )
+				 .rows< TagDomainID >()
 	};
 
 	if ( rows.empty() )
@@ -556,8 +667,13 @@ http::HTTPTask< http::JsonResult< TagUpdateResponse > > createTagParents(
 		query.value.tag_domain_id,
 		"parent_id",
 		"child_id",
-		"INSERT INTO tag_parents (tag_domain_id, parent_id, child_id) VALUES ($1, $2, $3) "
-		"ON CONFLICT(tag_domain_id, parent_id, child_id) DO NOTHING",
+		//language=postgresql
+		R"SQL(
+			INSERT INTO tag_parents (tag_domain_id, parent_id, child_id)
+			    VALUES ($1, $2, $3)
+			ON CONFLICT (tag_domain_id, parent_id, child_id)
+			    DO NOTHING
+		)SQL",
 		"parent" );
 }
 
@@ -572,8 +688,13 @@ http::HTTPTask< http::JsonResult< TagUpdateResponse > > createTagAliases(
 		query.value.tag_domain_id,
 		"aliased_id",
 		"alias_id",
-		"INSERT INTO tag_aliases (tag_domain_id, aliased_id, alias_id) VALUES ($1, $2, $3) "
-		"ON CONFLICT(tag_domain_id, aliased_id) DO NOTHING",
+		//language=postgresql
+		R"SQL(
+			INSERT INTO tag_aliases (tag_domain_id, aliased_id, alias_id)
+			    VALUES ($1, $2, $3)
+			ON CONFLICT (tag_domain_id, aliased_id)
+			    DO NOTHING
+		)SQL",
 		"alias" );
 }
 
@@ -595,7 +716,13 @@ http::HTTPTask< http::JsonResult< TagUpdateResponse > > removeTagParents(
 		query.value.tag_domain_id,
 		"parent_id",
 		"child_id",
-		"DELETE FROM tag_parents WHERE tag_domain_id = $1 AND parent_id = $2 AND child_id = $3" );
+		//language=postgresql
+		R"SQL(
+			DELETE FROM tag_parents
+			WHERE tag_domain_id = $1
+			    AND parent_id = $2
+			    AND child_id = $3
+		)SQL" );
 }
 
 http::HTTPTask< http::Response > removeTagSiblings(
@@ -616,7 +743,13 @@ http::HTTPTask< http::JsonResult< TagUpdateResponse > > removeTagAliases(
 		query.value.tag_domain_id,
 		"aliased_id",
 		"alias_id",
-		"DELETE FROM tag_aliases WHERE tag_domain_id = $1 AND aliased_id = $2 AND alias_id = $3" );
+		//language=postgresql
+		R"SQL(
+			DELETE FROM tag_aliases
+			WHERE tag_domain_id = $1
+			    AND aliased_id = $2
+			    AND alias_id = $3
+		)SQL" );
 }
 
 } // namespace idhan::httpapi

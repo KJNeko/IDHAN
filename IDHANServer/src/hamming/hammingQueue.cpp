@@ -16,7 +16,14 @@ runtime::Task< std::optional< QueueBatchResult > > processQueueBatch(
 {
 	auto transaction { co_await db.transaction() };
 	// Must precede queue/pair row locks, matching all relationship mutation paths.
-	co_await transaction.query( "SELECT pg_advisory_xact_lock(16609, 1)" ).result();
+	co_await transaction
+			 .query(
+				 //language=postgresql
+				 R"SQL(
+				SELECT
+				    pg_advisory_xact_lock(16609, 1)
+			)SQL" )
+			 .result();
 	const auto claimed { co_await db::claimHammingBatch( transaction, after, through, queueBatchSize ) };
 	if ( claimed.empty() )
 	{

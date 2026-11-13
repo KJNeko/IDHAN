@@ -70,7 +70,6 @@ export async function loadMimes(signal?: AbortSignal): Promise<MimeCatalogue> {
 /** What has been loaded so far, without triggering a fetch. Empty until loadMimes() resolves. */
 export const peekMimes = (): MimeCatalogue => cached ?? EMPTY;
 
-/** Test/maintenance hook: drop the catalogue so the next loadMimes() refetches. */
 export function reloadMimes(): void {
     cached = null;
 }

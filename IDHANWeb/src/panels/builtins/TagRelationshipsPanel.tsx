@@ -1,13 +1,4 @@
 import {PanelShortcut} from '../PanelShortcut';
-/**
- * Tag Relationships: edit one tag's relationships.
- *
- * Search a subject tag, then edit its aliases, parents, and children within the selected domain. The
- * relationship endpoints return ids (GET /tags/{domain}/{tag}/relationships); ids are resolved to
- * text only for display. Every domain is fetched at once: the editor works on the selected domain,
- * and the bottom section lists every relationship across all domains (read-only). Siblings are not
- * exposed for now.
- */
 
 import { useCallback, useEffect, useState } from 'react';
 import type { PanelProps } from '../../host/types';
@@ -23,7 +14,6 @@ const EMPTY_RELS: TagRelationships = {
   aliased: [],
 };
 
-/** Lists longer than this collapse by default in the all-domains view. */
 const COLLAPSE_THRESHOLD = 25;
 
 function TrashIcon() {
@@ -37,7 +27,6 @@ function TrashIcon() {
   );
 }
 
-/** A titled add/remove box for one relationship direction. */
 function RelationBox({
   host,
   domainId,

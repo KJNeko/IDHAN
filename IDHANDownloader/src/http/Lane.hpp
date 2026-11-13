@@ -57,7 +57,7 @@ class Lane : public std::enable_shared_from_this< Lane >
 
 	mutable std::mutex m_mutex {};
 	std::deque< Pending > m_queue {};
-	// File imports drain first; both queues preserve submission order within their priority.
+	//! File imports drain first; both queues preserve submission order within their priority.
 	std::deque< Pending > m_import_queue {};
 	std::shared_ptr< LaneShard > m_shard {};
 	std::size_t m_in_flight {};

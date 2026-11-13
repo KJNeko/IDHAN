@@ -32,14 +32,12 @@ export type PanelInstanceId = string;
 
 export type Unsubscribe = () => void;
 
-/** Cross-panel record selection, shared through the host so e.g. the grid and the viewer agree. */
 export interface SelectionApi {
   get(): readonly RecordId[];
   set(ids: readonly RecordId[]): void;
   subscribe(listener: (ids: readonly RecordId[]) => void): Unsubscribe;
 }
 
-/** Minimal typed pub/sub for cross-panel messages that are not the selection. */
 export interface BusApi {
   emit(topic: string, payload: unknown): void;
   on(topic: string, listener: (payload: unknown) => void): Unsubscribe;
@@ -52,9 +50,7 @@ export interface BusApi {
  */
 export interface SearchResultSet {
   readonly ids: Int32Array;
-  /** Server-reported query time in ms, for display. */
   readonly queryMs: number;
-  /** Human-readable tokens describing the query that produced this set. */
   readonly query: readonly string[];
 }
 
@@ -107,7 +103,6 @@ export interface RecordsApi {
     /** Permanently removes a stored file and marks its record as deliberately deleted. */
     deleteFile(id: RecordId, signal?: AbortSignal): Promise<{ deleted: boolean }>;
 
-    /** Better/worse duplicates and alternatives directly related to one record. */
     relationships(id: RecordId, signal?: AbortSignal): Promise<FileRelationships>;
 
     /**
@@ -161,14 +156,12 @@ export interface TagsApi {
     opts?: AutocompleteOptions,
     signal?: AbortSignal,
   ): Promise<AutocompleteResult[]>;
-  /** List the tag service domains a record's tags can live in. */
   listDomains(signal?: AbortSignal): Promise<TagDomain[]>;
 
     /** Active tags on a record with provenance. Carries ids only; pair with resolve() for text. */
   activeVerbose(recordId: RecordId, signal?: AbortSignal): Promise<VerboseTag[]>;
   /** Resolve tag ids to "namespace:subtag" text, cached and coalesced across panels. */
   resolve(tagIds: readonly number[]): Promise<Map<number, string>>;
-  /** A tag's parent/child/alias/sibling relationships in one domain, as ids (pair with resolve() for text). */
   relationships(tagDomainId: number, tagId: number, signal?: AbortSignal): Promise<TagRelationships>;
   /** Add tags (text "namespace:subtag" or an existing tag id) to every record, in one domain. */
   addToRecords(
@@ -177,7 +170,6 @@ export interface TagsApi {
     tagDomainId: number,
     signal?: AbortSignal,
   ): Promise<void>;
-  /** Remove tag ids from every record, in one domain. */
   removeFromRecords(
     recordIds: readonly RecordId[],
     tagIds: readonly number[],
@@ -186,9 +178,7 @@ export interface TagsApi {
   ): Promise<void>;
 }
 
-/** Read-only database statistics, for the Database Stats panel. */
 export interface StatsApi {
-  /** Aggregate counts (records, tags, mappings estimate, clusters) and record-count-by-mime. */
   database(signal?: AbortSignal): Promise<DatabaseStats>;
   /** Per-table PostgreSQL storage as a tree (table → indexes), sized in bytes. */
   storage(signal?: AbortSignal): Promise<StorageNode>;
@@ -206,7 +196,6 @@ export interface JobsApi {
   watch(jobId: number, onUpdate: (status: unknown) => void): JobHandle;
 }
 
-/** The full host handed to a panel instance. */
 export interface HostApi {
   readonly version: string;
   readonly instanceId: PanelInstanceId;
@@ -230,7 +219,6 @@ export interface PanelProps {
   host: HostApi;
 }
 
-/** A panel type in the catalog. */
 export interface PanelDefinition<TConfig = Record<string, unknown>> {
   type: string;
   title: string;

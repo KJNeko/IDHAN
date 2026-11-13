@@ -1,6 +1,3 @@
-//
-// Created by kj16609 on 11/7/24.
-//
 #pragma once
 
 #pragma GCC diagnostic push
@@ -15,7 +12,6 @@
 namespace idhan::db
 {
 [[nodiscard]] std::size_t doMigration( pqxx::nontransaction& tx, std::size_t migration_id );
-//! The highest migration number compiled into this build.
 [[nodiscard]] std::size_t latestMigrationId();
 void updateMigrations( pqxx::nontransaction& tx, std::string_view schema );
 

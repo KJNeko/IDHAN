@@ -14,8 +14,8 @@
 namespace idhan::ipc::binary
 {
 
-// A result keeps descriptor ownership adjacent to the decoded wire result.
-// Input::fd_index refers to the corresponding descriptor in this vector.
+//! A result keeps descriptor ownership adjacent to the decoded wire result.
+//! Input::fd_index refers to the corresponding descriptor in this vector.
 struct OwnedResult
 {
 	Result result;

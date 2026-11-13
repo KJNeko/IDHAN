@@ -93,3 +93,63 @@ it('accepts new entities and id-only deletion, ignoring malformed events', () =>
 		close();
 	}
 });
+
+
+it('assembles snapshot chunks once, then applies queued live updates', () => {
+	const onChange = vi.fn();
+	const close = watchSubscriptions({onChange});
+	try {
+		send({type: 'snapshot_start'});
+		send({type: 'snapshot_chunk', groups: initial.groups, items: []});
+		send({type: 'snapshot_chunk', groups: [], items: initial.items});
+		expect(onChange).not.toHaveBeenCalled();
+		send({type: 'snapshot_complete'});
+		expect(onChange).toHaveBeenCalledExactlyOnceWith({groups: initial.groups, items: initial.items});
+		send({type: 'patch', items: [{id: 42, imported_count: 99}]});
+		expect(onChange.mock.lastCall![0].items[0].imported_count).toBe(99);
+	} finally {
+		close();
+	}
+});
+
+it('discards partial snapshots on reconnect and accepts an empty baseline', () => {
+	const onChange = vi.fn();
+	const close = watchSubscriptions({onChange});
+	try {
+		send(initial);
+		send({type: 'snapshot_start'});
+		send({type: 'snapshot_chunk', groups: initial.groups, items: initial.items});
+		vi.mocked(watchEvents).mock.lastCall![0].onOpen?.();
+		onChange.mockClear();
+		send({type: 'snapshot_complete'});
+		send({type: 'snapshot_chunk', groups: initial.groups, items: initial.items});
+		expect(onChange).not.toHaveBeenCalled();
+		send({type: 'snapshot_start'});
+		send({type: 'snapshot_chunk', groups: [], items: null});
+		send({type: 'snapshot_complete'});
+		expect(onChange).toHaveBeenCalledExactlyOnceWith({groups: [], items: []});
+	} finally {
+		close();
+	}
+});
+
+it('holds late listeners until the chunked baseline is complete', async () => {
+	const first = vi.fn();
+	const second = vi.fn();
+	const closeFirst = watchSubscriptions({onChange: first});
+	let closeSecond: () => void = () => undefined;
+	try {
+		send({type: 'snapshot_start'});
+		send({type: 'snapshot_chunk', groups: initial.groups, items: []});
+		closeSecond = watchSubscriptions({onChange: second});
+		await Promise.resolve();
+		expect(second).not.toHaveBeenCalled();
+		send({type: 'snapshot_chunk', groups: [], items: initial.items});
+		send({type: 'snapshot_complete'});
+		expect(first).toHaveBeenCalledExactlyOnceWith({groups: initial.groups, items: initial.items});
+		expect(second).toHaveBeenCalledExactlyOnceWith({groups: initial.groups, items: initial.items});
+	} finally {
+		closeFirst();
+		closeSecond();
+	}
+});

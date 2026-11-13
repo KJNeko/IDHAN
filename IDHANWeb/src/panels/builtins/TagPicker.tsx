@@ -1,9 +1,3 @@
-/**
- * A single-tag autocomplete picker that resolves to a concrete tag id rather than text, yielding the
- * picked AutocompleteResult. Used by the Tag Relationships panel, whose endpoints need existing ids.
- * The Tag Editor keeps its own inline box because it adds text and lets the server create tags.
- */
-
 import { useEffect, useState } from 'react';
 import type { HostApi } from '../../host/types';
 import type { AutocompleteResult } from '../../api/types';

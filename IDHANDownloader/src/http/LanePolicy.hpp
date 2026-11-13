@@ -49,15 +49,18 @@ class LanePolicy
 	std::uint64_t m_parser_error_hits {};
 	bool m_parser_limited {};
 
+	//! Called with m_mutex held.
 	[[nodiscard]] SteadyClock::time_point readyAt() const;
 	void configureLocked( LaneSettings settings );
+
+	//! Called with m_mutex held.
 	void pause( SteadyClock::duration cooldown, SteadyClock::time_point now );
 
   public:
 
 	LanePolicy( std::string key, LaneSettings settings );
 
-	// Host refreshes must not refill the global budget or cancel a server-imposed pause.
+	//! Host refreshes must not refill the global budget or cancel a server-imposed pause.
 	void configure( LaneSettings settings );
 
 	[[nodiscard]] LaneSettings settings() const;
@@ -69,27 +72,27 @@ class LanePolicy
 
 	[[nodiscard]] SteadyClock::time_point nextSlot() const;
 	[[nodiscard]] bool disabled() const;
-	// Ten consecutive successful responses recover one request per configured window.
+
+	//! Ten consecutive successful responses recover one request per configured window.
 	void succeeded( SteadyClock::time_point now = SteadyClock::now() );
 	void unsuccessful();
 
 	[[nodiscard]] std::size_t concurrency( std::size_t default_concurrency ) const;
 
-	// Claims a slot or returns its delay; duration::max() means disabled and must not arm a timer.
-	// Any window holds at most the configured number of claims.
+	//! Claims a slot or returns its delay; duration::max() means disabled and must not arm a timer.
+	//! Any window holds at most the configured number of claims.
 	[[nodiscard]] std::optional< SteadyClock::duration > claim( SteadyClock::time_point now = SteadyClock::now() );
 
-	// Each 429 lowers the allowance by one, to a floor of one request per window.
-	// Without Retry-After, retry delays double from 1s to 60s. A further failed retry
-	// after that maximum pause disables the lane until reset(). Concurrent failures
-	// during an open pause do not advance the exponential delay.
-	// Parser errors retain their configured cooldown and do not change rate limits.
+	//! Each 429 lowers the allowance by one, to a floor of one request per window.
+	//! Without Retry-After, retry delays double from 1s to 60s. A further failed retry
+	//! after that maximum pause disables the lane until reset(). Concurrent failures
+	//! during an open pause do not advance the exponential delay.
+	//! Parser errors retain their configured cooldown and do not change rate limits.
 	SteadyClock::duration limited(
 		std::optional< std::string_view > retry_after = std::nullopt,
 		SteadyClock::time_point now = SteadyClock::now(),
 		SystemClock::time_point wall_time = SystemClock::now(),
 		bool parser_error = false );
-	//! Stops the lane for the configured backoff.
 	void failed( SteadyClock::time_point now = SteadyClock::now() );
 
 	void advertised( std::string headers );

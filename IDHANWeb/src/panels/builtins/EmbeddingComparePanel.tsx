@@ -1,11 +1,4 @@
 import {EmbeddingTermInput, type EmbeddingInput} from './EmbeddingTermInput';
-/**
- * Embedding Compare: two images side by side, and how far a phrase sits from each.
- *
- * Search ranks a collection against one query, so it cannot answer whether a phrase describes A or B
- * better. Terms here carry no weight and no sign: each is scored on its own, and cosine distance is
- * scale-invariant in the query vector, so a weight could not move a number on this screen.
- */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { PanelProps, RecordId } from '../../host/types';
@@ -74,7 +67,6 @@ function migrateConfig(config: unknown, fromVersion: number): Config {
     return readConfig(raw);
 }
 
-/** What a set of visible numbers was computed for, so a config edited since the run can be spotted. */
 function signatureOf(config: Config): string {
   return JSON.stringify([config.modelName, config.slotA, config.slotB, config.terms.filter((t) => t.enabled)]);
 }
@@ -86,7 +78,6 @@ interface Results {
   signature: string;
 }
 
-/** One image slot: what is in it, and the two ways to put something there. */
 function SlotCard({
   side,
   recordId,

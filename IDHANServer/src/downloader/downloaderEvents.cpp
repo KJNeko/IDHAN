@@ -13,7 +13,6 @@
 namespace idhan::downloader::events
 {
 
-//! Writes one JSON object, placing the commas between whichever fields are present.
 class JsonObject
 {
 	simdjson::builder::string_builder& m_builder;

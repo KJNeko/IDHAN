@@ -9,8 +9,8 @@ namespace idhan::db
 {
 class DBContext;
 
-// The parser's source-post timestamp is Unix seconds, independent of import time.
-// Returns whether this record was first added to the session.
+//! The parser's source-post timestamp is Unix seconds, independent of import time.
+//! Returns whether this record was first added to the session.
 [[nodiscard]] runtime::Task< bool > recordDownloadSessionImport(
 	DBContext& db,
 	DownloadSessionID session_id,

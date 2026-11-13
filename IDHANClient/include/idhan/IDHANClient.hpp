@@ -49,13 +49,11 @@ struct VersionInfo
 	QString commit;
 };
 
-//! Registers server host, port, API key, and TLS command-line options.
 IDHAN_CLIENT_EXPORT void addIDHANOptions( QCommandLineParser& parser );
 
 using IDHANResponseHandler = std::function< void( QNetworkReply* ) >;
 using IDHANErrorHandler = std::function< void( QNetworkReply*, QNetworkReply::NetworkError, std::string server_msg ) >;
 
-//! REST client whose request futures resolve to parsed results or report errors.
 class IDHAN_CLIENT_EXPORT IDHANClient
 {
 	std::shared_ptr< spdlog::logger > m_logger { nullptr };
@@ -84,8 +82,9 @@ class IDHAN_CLIENT_EXPORT IDHANClient
 
 	IDHANClient() = delete;
 
-	//! Queries server version info on construction; requires QGuiApplication or QApplication first.
-	//! client_name identifies this client in server logs.
+	//! Requires a QCoreApplication instance first; only one client may exist at a time.
+	//! client_name names the client's local spdlog logger.
+	//! \throws std::runtime_error if a client already exists, no Qt application exists, or hostname is empty.
 	IDHANClient(
 		const QString& client_name,
 		const QString& hostname,
@@ -110,14 +109,13 @@ class IDHAN_CLIENT_EXPORT IDHANClient
 	//! Accepts a hex SHA-256; returns nullopt if no record matches.
 	QFuture< std::optional< RecordID > > getRecordID( const std::string& sha256 );
 
-	//! Selects only records with active mappings.
+	//! Selects a random record whose file has a resolved MIME type.
 	QFuture< RecordID > getRandomActiveRecord();
 
 	QFuture< VersionInfo > queryVersion();
 
 	//! Creates missing tags and returns IDs in input order.
 	QFuture< std::vector< TagID > > createTags( const std::vector< std::string >& tags );
-	//! \copydoc createTags(const std::vector<std::string>&)
 	QFuture< std::vector< TagID > > createTags( const std::vector< std::pair< std::string, std::string > >& tags );
 
 	QFuture< TagID > createTag( const std::string& namespace_text, const std::string& subtag_text );
@@ -132,11 +130,11 @@ class IDHAN_CLIENT_EXPORT IDHANClient
 	//! Returns "namespace:subtag" text in input order.
 	QFuture< std::vector< std::string > > getTagText( const std::vector< TagID >& tag_ids );
 
-	//! \copydoc getTagText(const std::vector<TagID>&)
 	QFuture< std::string > getTagText( TagID tag_id );
 
 	QFuture< std::vector< std::pair< TagID, std::string > > > autocompleteTag( const QString& text );
-	// An empty domain set selects all domains. Counts are estimated maxima in the selected mode.
+
+	//! Returns at most 8 matches. An empty domain set selects all domains.
 	QFuture< std::vector< std::pair< TagID, std::string > > > autocompleteTag(
 		const QString& text,
 		const std::vector< TagDomainID >& domains,
@@ -177,10 +175,7 @@ class IDHAN_CLIENT_EXPORT IDHANClient
 		TagDomainID tag_domian_id,
 		const std::vector< std::pair< TagID, TagID > >& pairs );
 
-	/**
-	 * @throws AliasLoopException if a loop is detected.
-	 * @throws InvalidTagID
-	 */
+	//! The future fails with std::runtime_error carrying the server's error message.
 	QFuture< void > createAliasRelationship( TagDomainID tag_domain_id, TagID aliased_id, TagID alias_id );
 
 	QFuture< void > createAliasRelationship(
@@ -208,14 +203,10 @@ class IDHAN_CLIENT_EXPORT IDHANClient
 		TagDomainID tag_domain_id,
 		const std::vector< std::pair< TagID, TagID > >& pairs );
 
-	/**
-	 * @throws DomainExists
-	 */
+	//! The future fails with std::runtime_error on any server error, including an existing domain.
 	QFuture< TagDomainID > createTagDomain( const std::string& name );
 
-	/**
-	 * @throws DomainDoesNotExist
-	 */
+	//! Resolves to nullopt if no domain has this name.
 	QFuture< std::optional< TagDomainID > > getTagDomain( std::string_view name );
 
 	struct TagRelationshipInfo

@@ -20,15 +20,25 @@ static void seedFlaggedImage(
 {
 	pqxx::work tx { connection };
 	tx.exec(
-		"INSERT INTO file_info (record_id, size, mime_id, cluster_store_time, cluster_delete_time) "
-		"VALUES ($1, 123, $2, now(), now())",
+		//language=postgresql
+		R"SQL(
+			INSERT INTO file_info (record_id, size, mime_id, cluster_store_time, cluster_delete_time)
+			    VALUES ($1, 123, $2, now(), now())
+		)SQL",
 		pqxx::params { record_id, mime_ids::IMAGE_PNG } );
 	tx.exec(
-		"INSERT INTO metadata (record_id, simple_mime_type) VALUES ($1, $2)",
+		//language=postgresql
+		R"SQL(
+			INSERT INTO metadata (record_id, simple_mime_type)
+			    VALUES ($1, $2)
+		)SQL",
 		pqxx::params { record_id, std::to_underlying( SimpleMimeType::IMAGE_TYPE ) } );
 	tx.exec(
-		"INSERT INTO image_metadata (record_id, width, height, channels, has_exif, has_xmp, has_icc_profile) "
-		"VALUES ($1, 640, 480, 4, $2, $3, $4)",
+		//language=postgresql
+		R"SQL(
+			INSERT INTO image_metadata (record_id, width, height, channels, has_exif, has_xmp, has_icc_profile)
+			    VALUES ($1, 640, 480, 4, $2, $3, $4)
+		)SQL",
 		pqxx::params { record_id, exif, xmp, icc_profile } );
 	tx.commit();
 }

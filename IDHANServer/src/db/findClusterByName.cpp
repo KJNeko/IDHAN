@@ -14,8 +14,16 @@ runtime::Task< std::optional< ClusterID > > findClusterByName(
 	bindings.bind( name );
 	const auto rows {
 		co_await transaction
-			.query( "SELECT cluster_id FROM file_clusters WHERE cluster_name = $1", std::move( bindings ) )
-			.rows< ClusterID >()
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    cluster_id
+					FROM file_clusters
+					WHERE cluster_name = $1
+				)SQL",
+					 std::move( bindings ) )
+				 .rows< ClusterID >()
 	};
 	if ( rows.empty() ) co_return std::nullopt;
 

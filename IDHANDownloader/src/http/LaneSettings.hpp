@@ -32,9 +32,9 @@ struct LaneSettings
 	std::size_t concurrency {};
 	std::optional< HttpVersion > http_version {};
 	std::optional< std::string > group {};
-	// Additional attempts per HTTP status, inherited from the URL class unless a host overrides them.
+	//! Additional attempts per HTTP status, inherited from the URL class unless a host overrides them.
 	std::unordered_map< std::int32_t, StatusRetry > status_retries {};
-	// Selected statuses pause the lane. A 429 always does, selected or not.
+	//! Selected statuses pause the lane. A 429 always does, selected or not.
 	std::unordered_set< std::int32_t > backoff_statuses {};
 };
 

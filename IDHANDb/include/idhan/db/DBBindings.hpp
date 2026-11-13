@@ -49,9 +49,10 @@ class DBBindings
 	void bind( T&& value );
 	void append( DBParameter );
 	[[nodiscard]] std::span< const DBParameter > values() const noexcept;
-	// Returned pointers borrow this binding set. Do not move or mutate it while
-	// those pointers are in use (including appending another parameter).
 	[[nodiscard]] std::vector< Oid > oids() const;
+
+	//! The returned pointers borrow this binding set. Do not move or mutate it, including appending
+	//! another parameter, while they are in use.
 	[[nodiscard]] std::vector< const char* > pointers() const;
 	[[nodiscard]] std::vector< int > lengths() const;
 	[[nodiscard]] std::vector< int > formats() const;

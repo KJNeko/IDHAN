@@ -21,19 +21,30 @@ void FileRelationshipsWorker::preprocess()
 		idhan::hydrus::TransactionBase client_tr { m_importer->client_db };
 
 		client_tr
-		        << "SELECT COUNT(*) FROM duplicate_file_members dfm JOIN duplicate_files df ON dfm.media_id = df.media_id WHERE hash_id != king_hash_id"
-		    >> [ & ]( std::size_t count ) { emit processedMaxDuplicates( count ); };
+		<< "SELECT\n"
+		"    COUNT(*)\n"
+		"FROM duplicate_file_members dfm\n"
+		"    JOIN duplicate_files df ON dfm.media_id = df.media_id\n"
+		"WHERE hash_id != king_hash_id"
+		>> [ & ]( std::size_t count ) { emit processedMaxDuplicates( count ); };
 	}
 
 	emit statusMessage( "Counting alternative file relationships in Hydrus" );
 	{
 		idhan::hydrus::TransactionBase client_tr { m_importer->client_db };
 
-		client_tr << "SELECT COALESCE( SUM( member_count ), 0 ) FROM "
-					 "( SELECT COUNT(*) AS member_count FROM alternate_file_group_members "
-					 "JOIN duplicate_files USING (media_id) GROUP BY alternates_group_id ) grouped "
-					 "WHERE member_count > 1"
-		    >> [ & ]( std::size_t count ) { emit processedMaxAlternatives( count ); };
+		client_tr << "SELECT\n"
+		"    COALESCE(SUM(member_count), 0)\n"
+		"FROM (\n"
+		"    SELECT\n"
+		"        COUNT(*) AS member_count\n"
+		"    FROM alternate_file_group_members\n"
+		"        JOIN duplicate_files USING (media_id)\n"
+		"    GROUP BY\n"
+		"        alternates_group_id\n"
+		") grouped\n"
+		"WHERE member_count > 1"
+		>> [ & ]( std::size_t count ) { emit processedMaxAlternatives( count ); };
 	}
 }
 
@@ -64,7 +75,6 @@ void FileRelationshipsWorker::process()
 		if ( hash_ids.empty() ) return;
 
 		const auto batch_map { m_importer->mapHydrusRecords( hash_ids ) };
-		// merge the new map into the existing one
 
 		for ( const auto& [ hy_hash_id, idhan_hash_id ] : batch_map )
 			record_map.insert_or_assign( hy_hash_id, idhan_hash_id );
@@ -74,7 +84,12 @@ void FileRelationshipsWorker::process()
 
 	idhan::hydrus::Query< HashID, KingID > duplicate_files {
 		client_tr,
-		"SELECT hash_id, king_hash_id FROM duplicate_file_members dfm JOIN duplicate_files df ON dfm.media_id = df.media_id WHERE hash_id != king_hash_id"
+		"SELECT\n"
+		"    hash_id,\n"
+		"    king_hash_id\n"
+		"FROM duplicate_file_members dfm\n"
+		"    JOIN duplicate_files df ON dfm.media_id = df.media_id\n"
+		"WHERE hash_id != king_hash_id"
 	};
 
 	std::vector< std::pair< HashID, KingID > > pairs {};
@@ -144,7 +159,11 @@ void FileRelationshipsWorker::process()
 	emit statusMessage( "Reading alternative file groups from Hydrus" );
 	idhan::hydrus::Query< HashID, GroupID > alternative_files {
 		client_tr,
-		"SELECT king_hash_id, alternates_group_id FROM alternate_file_group_members JOIN duplicate_files USING (media_id)"
+		"SELECT\n"
+		"    king_hash_id,\n"
+		"    alternates_group_id\n"
+		"FROM alternate_file_group_members\n"
+		"    JOIN duplicate_files USING (media_id)"
 	};
 
 	std::unordered_map< GroupID, std::vector< idhan::hydrus::HashID > > alternative_map {};

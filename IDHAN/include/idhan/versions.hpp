@@ -14,7 +14,6 @@
 #error Patch version must be specified for release builds
 #endif
 
-//! Version components are supplied by the build system.
 #define IDHAN_VERSION MAKE_IDHAN_VERSION( IDHAN_MAJOR_VERSION, IDHAN_MINOR_VERSION, IDHAN_PATCH_VERSION )
 
 #define IDHAN_BUILD_TIME __TIME__

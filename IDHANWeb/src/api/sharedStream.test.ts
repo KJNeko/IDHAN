@@ -12,7 +12,6 @@ const SESSION_SNAPSHOT = {
 
 type Stream = { calls: string[]; send: (payload: unknown) => void };
 
-/** Serves every /events request from a stream the test writes to; anything else answers 404. */
 function install(initial: unknown[] = [SESSION_SNAPSHOT, {type: 'snapshot_complete'}]): Stream {
     const calls: string[] = [];
     let controller: ReadableStreamDefaultController<Uint8Array> | undefined;

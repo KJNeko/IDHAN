@@ -33,7 +33,6 @@ interface SearchResponse {
   query_ms: number;
 }
 
-/** The label a term carries in its row. Records read as an id, since that is all there is to show. */
 function termLabel(term: Term): string {
     return term.kind === 'text' ? term.text : `record ${term.recordId}`;
 }

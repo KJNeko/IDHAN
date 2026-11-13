@@ -13,7 +13,7 @@ class ImportSinkFactory
 
 	virtual ~ImportSinkFactory() = default;
 
-	// Looks up a locally present file without importing it or applying metadata.
+	//! Looks up a locally present file without importing it or applying metadata.
 	virtual folly::coro::Task< std::expected< std::optional< RecordID >, std::string > > findStoredRecord(
 		[[maybe_unused]] ImportRequest request )
 	{

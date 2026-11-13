@@ -220,8 +220,16 @@ class ImportCluster
 		{
 			pqxx::work tx { m_connection };
 			tx.exec(
-				"DELETE FROM file_info WHERE cluster_id IN "
-				"(SELECT cluster_id FROM file_clusters WHERE folder_path = $1)",
+				//language=postgresql
+				R"SQL(
+					DELETE FROM file_info
+					WHERE cluster_id IN (
+					        SELECT
+					            cluster_id
+					        FROM file_clusters
+					        WHERE folder_path = $1
+					)
+				)SQL",
 				pqxx::params { m_path.string() } );
 			tx.commit();
 			if ( m_api ) CHECK( m_api->del( std::format( "/clusters/{}/remove", m_cluster_id ) ).status == 200 );
@@ -476,16 +484,33 @@ TEST_CASE_METHOD(
 	{
 		pqxx::nontransaction transaction { db() };
 		const auto dates { transaction.exec_params(
-			"SELECT extract(epoch FROM posted_at)::bigint, post_dates_complete FROM download_session_records "
-			"WHERE download_session_id=$1 AND record_id=$2",
+			//language=postgresql
+			R"SQL(
+				SELECT
+				    extract(epoch FROM posted_at)::bigint,
+				    post_dates_complete
+				FROM download_session_records
+				WHERE download_session_id = $1
+				    AND record_id = $2
+			)SQL",
 			session_id,
 			record_id ) };
 		REQUIRE( dates.size() == 1 );
 		CHECK( dates[ 0 ][ 0 ].as< std::int64_t >() == 1700000000 );
 		CHECK( dates[ 0 ][ 1 ].as< bool >() );
 		const auto source_dates { transaction.exec(
-			"SELECT extract(epoch FROM posted_at)::bigint, post_dates_complete FROM download_session_urls "
-			"WHERE download_session_id=$1 AND record_id=$2 ORDER BY download_session_url_id DESC LIMIT 1",
+			//language=postgresql
+			R"SQL(
+				SELECT
+				    extract(epoch FROM posted_at)::bigint,
+				    post_dates_complete
+				FROM download_session_urls
+				WHERE download_session_id = $1
+				    AND record_id = $2
+				ORDER BY
+				    download_session_url_id DESC
+				LIMIT 1
+			)SQL",
 			pqxx::params { session_id, record_id } ) };
 		REQUIRE( source_dates.size() == 1 );
 		CHECK( source_dates[ 0 ][ 0 ].as< std::int64_t >() == 1700000000 );
@@ -504,8 +529,15 @@ TEST_CASE_METHOD(
 	{
 		pqxx::nontransaction transaction { db() };
 		const auto dates { transaction.exec_params(
-			"SELECT extract(epoch FROM posted_at)::bigint, post_dates_complete FROM download_session_records "
-			"WHERE download_session_id=$1 AND record_id=$2",
+			//language=postgresql
+			R"SQL(
+				SELECT
+				    extract(epoch FROM posted_at)::bigint,
+				    post_dates_complete
+				FROM download_session_records
+				WHERE download_session_id = $1
+				    AND record_id = $2
+			)SQL",
 			session_id,
 			record_id ) };
 		REQUIRE( dates.size() == 1 );
@@ -523,15 +555,38 @@ TEST_CASE_METHOD(
 	{
 		pqxx::nontransaction tx { db() };
 		const auto domain_id { tx.query_value< TagDomainID >(
-			"SELECT tag_domain_id FROM tag_domains WHERE domain_name = $1", pqxx::params { name } ) };
+				//language=postgresql
+				R"SQL(
+				SELECT
+				    tag_domain_id
+				FROM tag_domains
+				WHERE domain_name = $1
+			)SQL",
+				pqxx::params{ name } )
+		};
 		CHECK(
 			tx.query_value< int >(
-				"SELECT COUNT(*) FROM tag_mappings WHERE record_id = $1 AND tag_domain_id = $2",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    COUNT(*)
+					FROM tag_mappings
+					WHERE record_id = $1
+					    AND tag_domain_id = $2
+				)SQL",
 				pqxx::params { record_id, domain_id } )
 		    == 1 );
 		CHECK(
 			tx.query_value< std::string >(
-				"SELECT subtag_text FROM tag_mappings JOIN tags USING (tag_id) WHERE record_id = $1 AND tag_domain_id = $2",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    subtag_text
+					FROM tag_mappings
+					    JOIN tags USING (tag_id)
+					WHERE record_id = $1
+					    AND tag_domain_id = $2
+				)SQL",
 				pqxx::params { record_id, domain_id } )
 		    == subtag );
 	}
@@ -579,10 +634,31 @@ SCENARIO_METHOD(
 	CHECK( session_duplicates == 1 );
 	{
 		pqxx::nontransaction tx { db() };
-		CHECK( tx.query_value< int >( "SELECT COUNT(*) FROM tag_domains WHERE domain_name = 'downloader tags'" ) == 1 );
+		CHECK(
+			tx.query_value< int >(
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    COUNT(*)
+					FROM tag_domains
+					WHERE domain_name = 'downloader tags'
+				)SQL" )
+			== 1 );
 		CHECK( tx.query_value< bool >(
-			"SELECT (SELECT COUNT(*) FROM pg_inherits WHERE inhparent = 'tag_mappings'::regclass) "
-			"= (SELECT COUNT(*) FROM tag_domains)" ) );
+			//language=postgresql
+			R"SQL(
+				SELECT
+				    (
+				        SELECT
+				            COUNT(*)
+				        FROM pg_inherits
+				        WHERE inhparent = 'tag_mappings'::regclass
+				    ) = (
+				        SELECT
+				            COUNT(*)
+				        FROM tag_domains
+				    )
+			)SQL" ) );
 	}
 
 	const auto records { api().get( std::format( "/download_sessions/{}/records", session_id ) ) };
@@ -642,11 +718,18 @@ SCENARIO_METHOD(
 	{
 		pqxx::read_transaction tx { db() };
 		persisted = tx.query_value< bool >(
-			"SELECT count(*) = 2 FROM download_session_urls child "
-			"JOIN download_session_urls parent ON parent.download_session_id = child.download_session_id "
-			"AND parent.download_session_url_id = child.parent_url_id "
-			"WHERE child.download_session_id = $1 AND child.state = 'pending' "
-			"AND parent.state = 'completed' AND child.url = $2",
+			//language=postgresql
+			R"SQL(
+				SELECT
+				    count(*) = 2
+				FROM download_session_urls child
+				    JOIN download_session_urls parent ON parent.download_session_id = child.download_session_id
+				        AND parent.download_session_url_id = child.parent_url_id
+				WHERE child.download_session_id = $1
+				    AND child.state = 'pending'
+				    AND parent.state = 'completed'
+				    AND child.url = $2
+			)SQL",
 			pqxx::params { session_id, fixture.url( "/file.gif" ) } );
 		if ( persisted ) break;
 		std::this_thread::sleep_for( 25ms );
@@ -663,13 +746,18 @@ SCENARIO_METHOD(
 	pqxx::read_transaction tx { db() };
 	CHECK(
 		tx.query_value< int >(
-			"SELECT count(*) FROM download_session_urls WHERE download_session_id = $1 "
-			"AND state IN ('pending', 'processing')",
+			//language=postgresql
+			R"SQL(
+				SELECT
+				    count(*)
+				FROM download_session_urls
+				WHERE download_session_id = $1
+				    AND state IN ('pending', 'processing')
+			)SQL",
 			pqxx::params { session_id } )
 		== 0 );
 }
 
-//! Waits for a session_state event announcing the given state.
 static Json::Value waitForSessionState( JobEventStream& events, const std::string_view state )
 {
 	for ( int attempt {}; attempt < 8; ++attempt )
@@ -686,9 +774,15 @@ static std::string downloadSessionImportStates( pqxx::connection& db, const Down
 {
 	pqxx::read_transaction tx { db };
 	return tx.query_value< std::string >(
-		"SELECT jsonb_agg(jsonb_build_array(download_session_url_id, record_id, state, finished_at) "
-		"ORDER BY download_session_url_id)::text FROM download_session_urls "
-		"WHERE download_session_id = $1 AND record_id IS NOT NULL",
+		//language=postgresql
+		R"SQL(
+			SELECT
+			    jsonb_agg(jsonb_build_array(download_session_url_id, record_id, state, finished_at)
+			    ORDER BY download_session_url_id)::text
+			FROM download_session_urls
+			WHERE download_session_id = $1
+			    AND record_id IS NOT NULL
+		)SQL",
 		pqxx::params { session_id } );
 }
 
@@ -786,8 +880,15 @@ TEST_CASE_METHOD(
 			// This modifies only the isolated API test schema.
 			pqxx::work tx { db() };
 			tx.exec(
-				"UPDATE download_session_urls SET state = 'processing', finished_at = NULL "
-				"WHERE download_session_id = $1 AND download_session_url_id = $2",
+				//language=postgresql
+				R"SQL(
+					UPDATE
+					    download_session_urls
+					SET state = 'processing',
+					    finished_at = NULL
+					WHERE download_session_id = $1
+					    AND download_session_url_id = $2
+				)SQL",
 				pqxx::params { session_id, root } );
 			tx.commit();
 		}
@@ -803,13 +904,19 @@ TEST_CASE_METHOD(
 		pqxx::read_transaction tx { db() };
 		CHECK(
 			tx.query_value< int >(
-				"SELECT count(*) FROM download_session_urls WHERE download_session_id = $1 AND record_id IS NOT NULL",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    count(*)
+					FROM download_session_urls
+					WHERE download_session_id = $1
+					    AND record_id IS NOT NULL
+				)SQL",
 				pqxx::params { session_id } )
 		    == 2 );
 	}
 }
 
-//! Waits for the URL to be updated to the given state, skipping earlier updates.
 static Json::Value waitForUrlState(
 	JobEventStream& events,
 	const DownloadSessionUrlID url_id,

@@ -35,7 +35,6 @@ export type OptionMetadata = OptionDefinition & {
 export interface GeneratorMetadata {
 	/** Stable operation ID referenced by URL classes. */
 	readonly id: string;
-	/** Public prototype method to invoke on the parser instance. */
 	readonly method: string;
 	readonly parameters: ParameterDefinitions;
 }
@@ -62,7 +61,6 @@ export interface DiscoveryMetadata {
  */
 export interface ParserMetadata {
 	readonly formatVersion: 1;
-	/** SDK release used to build this parser. */
 	readonly sdkVersion: string;
 	readonly id: string;
 	readonly version: number;

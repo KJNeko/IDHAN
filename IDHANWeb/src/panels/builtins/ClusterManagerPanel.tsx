@@ -1,9 +1,3 @@
-/**
- * Cluster Manager: the on-disk storage clusters files live in (GET /clusters/list). Covers the full
- * lifecycle: add a path, toggle read-only, rename, cap size, rescan, and remove. Modify is a PATCH,
- * so the CORS allow-list must permit PATCH for this to be reachable cross-origin.
- */
-
 import { useCallback, useEffect, useState } from 'react';
 import type { PanelProps } from '../../host/types';
 import { formatBytes } from './RecordInfoView';
@@ -175,7 +169,6 @@ function ClusterManagerPanel({ host }: PanelProps) {
     }
   }
 
-    // One-click hash-only scan, no modal.
   function fastScan(c: Cluster) {
     setScanTarget(null);
     void runScan(c, fastScanPreset(DEFAULT_SCAN_PARAMS));
@@ -238,7 +231,6 @@ function ClusterManagerPanel({ host }: PanelProps) {
     </label>
   );
 
-  // The scan is effectively read-only if the cluster is, or the user forced it.
   const effectiveReadonly = scanTarget ? scanTarget.readonly || scanParams.readonly : false;
 
   return (

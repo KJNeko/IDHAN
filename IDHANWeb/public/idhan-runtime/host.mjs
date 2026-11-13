@@ -6,8 +6,6 @@
 const host = globalThis.__IDHAN_RUNTIME__?.host;
 if (!host) throw new Error('[idhan] host runtime not installed before a plugin imported "@idhan/host"');
 
-/** Register a PanelDefinition into the catalog. Duplicate/invalid types are warned and skipped. */
 export const registerPanel = host.registerPanel;
 
-/** The host API version this build implements (a plugin manifest declares a compatible range). */
 export const HOST_API_VERSION = host.HOST_API_VERSION;

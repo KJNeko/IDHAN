@@ -24,8 +24,8 @@ struct ClusterMarker
 [[nodiscard]] std::expected< std::optional< ClusterMarker >, std::string > readClusterMarkerSync( int root_fd );
 [[nodiscard]] runtime::Task< std::expected< std::optional< ClusterMarker >, std::string > > readClusterMarker(
 	int root_fd );
-// Installs a complete marker atomically without replacing any existing entry.
-// A racing creator's valid marker is returned instead of being overwritten.
+//! Installs a complete marker atomically without replacing any existing entry.
+//! A racing creator's valid marker is returned instead of being overwritten.
 [[nodiscard]] std::expected< ClusterMarker, std::string > initializeClusterMarker(
 	int root_fd,
 	const boost::uuids::uuid& uuid );

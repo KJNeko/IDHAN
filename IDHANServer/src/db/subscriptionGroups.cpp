@@ -15,17 +15,68 @@ static runtime::Task< std::vector< SubscriptionGroup > > loadSubscriptionGroups(
 		co_await db
 			.query(
 				std::string { subscriptionRecordsCte } +
-				"SELECT subscription_group_id, name, generator, interval_seconds, enabled, "
-				"(SELECT count(*) FROM subscriptions s WHERE s.subscription_group_id=g.subscription_group_id), "
-				"(SELECT count(DISTINCT log.record_id) FROM subscriptions s JOIN subscription_records log USING (subscription_id) "
-				"WHERE s.subscription_group_id=g.subscription_group_id), "
-				"(SELECT count(*) FROM subscriptions s WHERE s.subscription_group_id=g.subscription_group_id AND active_session_id IS NOT NULL), "
-				"(SELECT count(*) FROM subscriptions s WHERE s.subscription_group_id=g.subscription_group_id AND dead), "
-				"(SELECT count(*) FROM subscriptions s WHERE s.subscription_group_id=g.subscription_group_id AND last_error IS NOT NULL), origin, "
-				"(SELECT COALESCE(sum(f.size),0)::bigint FROM file_info f WHERE EXISTS ("
-				"SELECT 1 FROM subscriptions s JOIN subscription_records log USING (subscription_id) "
-				"WHERE s.subscription_group_id=g.subscription_group_id AND log.record_id=f.record_id)) "
-				"FROM subscription_groups g WHERE ($1::integer=0 OR subscription_group_id=$1) ORDER BY subscription_group_id",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    subscription_group_id,
+					    name,
+					    generator,
+					    interval_seconds,
+					    enabled,
+					    (
+					        SELECT
+					            count(*)
+					        FROM subscriptions s
+					        WHERE s.subscription_group_id = g.subscription_group_id
+					    ),
+					    (
+					        SELECT
+					            count(DISTINCT log.record_id)
+					        FROM subscriptions s
+					            JOIN subscription_records log USING (subscription_id)
+					        WHERE s.subscription_group_id = g.subscription_group_id
+					    ),
+					    (
+					        SELECT
+					            count(*)
+					        FROM subscriptions s
+					        WHERE s.subscription_group_id = g.subscription_group_id
+					            AND active_session_id IS NOT NULL
+					    ),
+					    (
+					        SELECT
+					            count(*)
+					        FROM subscriptions s
+					        WHERE s.subscription_group_id = g.subscription_group_id
+					            AND dead
+					    ),
+					    (
+					        SELECT
+					            count(*)
+					        FROM subscriptions s
+					        WHERE s.subscription_group_id = g.subscription_group_id
+					            AND last_error IS NOT NULL
+					    ),
+					    origin,
+					    (
+					        SELECT
+					            COALESCE(sum(f.size), 0)::bigint
+					        FROM file_info f
+					        WHERE EXISTS (
+					                SELECT
+					                    1
+					                FROM subscriptions s
+					                    JOIN subscription_records log USING (subscription_id)
+					                WHERE s.subscription_group_id = g.subscription_group_id
+					                    AND log.record_id = f.record_id
+					        )
+					    )
+					FROM subscription_groups g
+					WHERE ($1::integer = 0
+					    OR subscription_group_id = $1)
+					ORDER BY
+					    subscription_group_id
+				)SQL",
 				std::move( bindings ) )
 			.rows<
 				SubscriptionGroupID,
@@ -75,8 +126,12 @@ runtime::Task< SubscriptionGroupID > createSubscriptionGroup( DBContext& db, Sub
 	const auto rows {
 		co_await db
 			.query(
-				"INSERT INTO subscription_groups (name, generator, interval_seconds, enabled, origin) VALUES ($1,$2,$3,$4,$5) "
-				"RETURNING subscription_group_id",
+				//language=postgresql
+				R"SQL(
+					INSERT INTO subscription_groups (name, generator, interval_seconds, enabled, origin)
+					    VALUES ($1, $2, $3, $4, $5)
+					RETURNING subscription_group_id
+				)SQL",
 				std::move( bindings ) )
 			.rows< SubscriptionGroupID >()
 	};
@@ -91,7 +146,16 @@ runtime::Task< bool > updateSubscriptionGroup( DBContext& db, SubscriptionGroup 
 	const auto current {
 		co_await transaction
 			.query(
-				"SELECT generator, interval_seconds, origin FROM subscription_groups WHERE subscription_group_id=$1 FOR UPDATE",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    generator,
+					    interval_seconds,
+					    origin
+					FROM subscription_groups
+					WHERE subscription_group_id = $1
+					FOR UPDATE
+				)SQL",
 				std::move( lookup ) )
 			.rows< std::string, std::int64_t, std::string >()
 	};
@@ -106,7 +170,15 @@ runtime::Task< bool > updateSubscriptionGroup( DBContext& db, SubscriptionGroup 
 		const auto active {
 			co_await transaction
 				.query(
-					"SELECT subscription_id FROM subscriptions WHERE subscription_group_id=$1 AND active_root_id IS NOT NULL LIMIT 1",
+					//language=postgresql
+					R"SQL(
+						SELECT
+						    subscription_id
+						FROM subscriptions
+						WHERE subscription_group_id = $1
+						    AND active_root_id IS NOT NULL
+						LIMIT 1
+					)SQL",
 					std::move( active_bindings ) )
 				.rows< SubscriptionID >()
 		};
@@ -122,8 +194,17 @@ runtime::Task< bool > updateSubscriptionGroup( DBContext& db, SubscriptionGroup 
 	bindings.bind( group.origin );
 	co_await transaction
 		.query(
-			"UPDATE subscription_groups SET name=$2, generator=$3, interval_seconds=$4, enabled=$5, origin=$6 "
-			"WHERE subscription_group_id=$1",
+			//language=postgresql
+			R"SQL(
+				UPDATE
+				    subscription_groups
+				SET name = $2,
+				    generator = $3,
+				    interval_seconds = $4,
+				    enabled = $5,
+				    origin = $6
+				WHERE subscription_group_id = $1
+			)SQL",
 			std::move( bindings ) )
 		.result();
 	if ( changed_generator )
@@ -132,8 +213,18 @@ runtime::Task< bool > updateSubscriptionGroup( DBContext& db, SubscriptionGroup 
 		reset.bind( group.id );
 		co_await transaction
 			.query(
-				"UPDATE subscriptions SET initial_sync_complete=false, latest_post_at=NULL, post_dates_complete=false, dead=false, "
-				"next_run_at=now(), last_error=NULL WHERE subscription_group_id=$1",
+				//language=postgresql
+				R"SQL(
+					UPDATE
+					    subscriptions
+					SET initial_sync_complete = false,
+					    latest_post_at = NULL,
+					    post_dates_complete = false,
+					    dead = false,
+					    next_run_at = now(),
+					    last_error = NULL
+					WHERE subscription_group_id = $1
+				)SQL",
 				std::move( reset ) )
 			.result();
 	}
@@ -144,8 +235,14 @@ runtime::Task< bool > updateSubscriptionGroup( DBContext& db, SubscriptionGroup 
 		reschedule.bind( group.interval_seconds );
 		co_await transaction
 			.query(
-				"UPDATE subscriptions SET next_run_at=COALESCE(last_finished_at + $2::bigint * interval '1 second', now()) "
-				"WHERE subscription_group_id=$1 AND active_session_id IS NULL",
+				//language=postgresql
+				R"SQL(
+					UPDATE
+					    subscriptions
+					SET next_run_at = COALESCE(last_finished_at + $2::bigint * interval '1 second', now())
+					WHERE subscription_group_id = $1
+					    AND active_session_id IS NULL
+				)SQL",
 				std::move( reschedule ) )
 			.result();
 	}
@@ -162,7 +259,14 @@ runtime::Task< bool > deleteSubscriptionGroup( DBContext& db, const Subscription
 	const auto group {
 		co_await transaction
 			.query(
-				"SELECT subscription_group_id FROM subscription_groups WHERE subscription_group_id=$1 FOR UPDATE",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    subscription_group_id
+					FROM subscription_groups
+					WHERE subscription_group_id = $1
+					FOR UPDATE
+				)SQL",
 				std::move( lookup ) )
 			.rows< SubscriptionGroupID >()
 	};
@@ -173,8 +277,19 @@ runtime::Task< bool > deleteSubscriptionGroup( DBContext& db, const Subscription
 	const auto deleted {
 		co_await transaction
 			.query(
-				"DELETE FROM subscription_groups WHERE subscription_group_id=$1 AND NOT EXISTS ("
-				"SELECT 1 FROM subscriptions WHERE subscription_group_id=$1 AND active_session_id IS NOT NULL) RETURNING subscription_group_id",
+				//language=postgresql
+				R"SQL(
+					DELETE FROM subscription_groups
+					WHERE subscription_group_id = $1
+					    AND NOT EXISTS (
+					        SELECT
+					            1
+					        FROM subscriptions
+					        WHERE subscription_group_id = $1
+					            AND active_session_id IS NOT NULL
+					    )
+					RETURNING subscription_group_id
+				)SQL",
 				std::move( bindings ) )
 			.rows< SubscriptionGroupID >()
 	};
@@ -189,9 +304,31 @@ runtime::Task< bool > requestSubscriptionGroupRun( DBContext& db, const Subscrip
 	const auto groups {
 		co_await db
 			.query(
-				"WITH selected AS (SELECT subscription_group_id FROM subscription_groups WHERE subscription_group_id=$1 AND enabled), "
-				"scheduled AS (UPDATE subscriptions SET next_run_at=now() WHERE enabled AND active_session_id IS NULL "
-				"AND subscription_group_id IN (SELECT subscription_group_id FROM selected)) SELECT subscription_group_id FROM selected",
+				//language=postgresql
+				R"SQL(
+					WITH selected AS (
+					    SELECT
+					        subscription_group_id
+					    FROM subscription_groups
+					    WHERE subscription_group_id = $1
+					        AND enabled
+					),
+					scheduled AS (
+					    UPDATE
+					        subscriptions
+					    SET next_run_at = now()
+					    WHERE enabled
+					        AND active_session_id IS NULL
+					        AND subscription_group_id IN (
+					            SELECT
+					                subscription_group_id
+					            FROM selected
+					        )
+					)
+					SELECT
+					    subscription_group_id
+					FROM selected
+				)SQL",
 				std::move( bindings ) )
 			.rows< SubscriptionGroupID >()
 	};

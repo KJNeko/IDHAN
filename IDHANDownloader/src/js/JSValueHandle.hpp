@@ -6,7 +6,7 @@
 namespace idhan::downloader
 {
 
-// Must be destroyed before its owning context; release transfers ownership to QuickJS.
+//! Must be destroyed before its owning context; release transfers ownership to QuickJS.
 class JSValueHandle
 {
 	JSContext* m_context;

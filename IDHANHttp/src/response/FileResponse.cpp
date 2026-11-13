@@ -34,7 +34,7 @@ constexpr std::chrono::seconds immutable_cache_max_age { std::chrono::hours { 24
 	return std::string { buffer, length };
 }
 
-// Comma-separated list of quoted (or weak) entity tags, or "*".
+//! Comma-separated list of quoted (or weak) entity tags, or "*".
 [[nodiscard]] bool etagListMatches( std::string_view header, const std::string_view quoted_etag )
 {
 	if ( header.empty() ) return false;
@@ -74,9 +74,7 @@ struct RangeResult
 
 constexpr std::string_view bytes_prefix { "bytes=" };
 
-// Single-range only: "bytes=N-" or "bytes=N-M". Suffix ranges ("bytes=-N") and
-// multi-range requests are treated as absent, per the "malformed falls back to
-// a full 200" policy in docs/designs/http.md.
+//! Single-range only: "bytes=N-" or "bytes=N-M". Anything else is treated as absent.
 [[nodiscard]] RangeResult parseRange( const std::string_view header, const std::uint64_t size )
 {
 	if ( !header.starts_with( bytes_prefix ) ) return {};
