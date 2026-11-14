@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "IDHANTypes.hpp"
+#include "SessionResult.hpp"
 #include "idhan/http/streaming/SSEEventHub.hpp"
 
 //! Builders and publishers for the `downloader` SSE stream. Every payload carries a `type` field;
@@ -58,6 +59,8 @@ struct SessionInfo
 	std::int64_t created_at {};
 	std::int64_t last_used_at {};
 	bool is_subscription {};
+	std::int64_t total_imported_count {};
+	std::optional< std::int64_t > last_scan_imported_count {};
 };
 
 struct SessionBandwidth
@@ -89,7 +92,9 @@ void urlRemoved( DownloadSessionID session_id, DownloadSessionUrlID url_id );
 void urlProgress( DownloadSessionID session_id, DownloadSessionUrlID url_id, std::uint64_t bytes, std::uint64_t total );
 void requestError( DownloadSessionID session_id, const RequestError& error );
 void requestErrorsCleared( DownloadSessionID session_id, const std::vector< std::int64_t >& error_ids );
+void sessionImportCounts( DownloadSessionID session_id, std::int64_t total );
 void sessionCreated( const SessionInfo& session );
+void sessionResult( DownloadSessionID session_id, const SessionResult& result );
 void sessionState( DownloadSessionID session_id, std::string_view state, std::optional< std::int64_t > last_used_at );
 void sessionDeleted( DownloadSessionID session_id );
 void network( DownloadSessionID session_id, const SessionSnapshot& snapshot );

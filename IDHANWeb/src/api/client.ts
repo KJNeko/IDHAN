@@ -197,6 +197,12 @@ export const api = {
         },
     },
     downloadSessions: {
+		result(sessionId: number, signal?: AbortSignal): Promise<import('./types').DownloadSessionResult | null> {
+			return request(`/download_sessions/${sessionId}/result`, {signal});
+		},
+		retry(sessionId: number): Promise<{ retried: boolean }> {
+			return request(`/download_sessions/${sessionId}/retry`, {method: 'POST'});
+		},
 		checkUrl(url: string): Promise<import('./types').UrlCheckResult> {
 			return request('/download_sessions/check_url', {method: 'POST', body: {url}});
 		},
@@ -876,6 +882,9 @@ function upsertSession(store: DownloaderStore, payload: StreamPayload, id: numbe
         last_used_at: optionalNumber(payload.last_used_at) ?? existing?.info.last_used_at ?? 0,
         state: (optionalString(payload.state) as DownloadSessionState | null) ?? existing?.info.state ?? 'idle',
         error_count: existing?.errors.size ?? 0,
+		total_imported_count: optionalNumber(payload.total_imported_count) ?? existing?.info.total_imported_count ?? 0,
+		last_scan_imported_count: payload.last_scan_imported_count === null ? null
+			: optionalNumber(payload.last_scan_imported_count) ?? existing?.info.last_scan_imported_count ?? null,
     };
     if (existing) {
         existing.info = info;
@@ -976,6 +985,33 @@ function applyDownloaderEvent(store: DownloaderStore, payload: StreamPayload): v
     }
     const stored = store.sessions.get(id);
     if (!stored) return;
+	if (type === 'session_import_counts') {
+		if (typeof payload.total_imported_count !== 'number') return;
+		stored.info = {
+			...stored.info,
+			total_imported_count: Math.max(stored.info.total_imported_count ?? 0, payload.total_imported_count)
+		};
+		markDirty(store, id);
+		return;
+	}
+	if (type === 'session_result') {
+		if (typeof payload.imported_count !== 'number' || typeof payload.known_count !== 'number'
+			|| typeof payload.finished_at !== 'number') return;
+		stored.info = {
+			...stored.info,
+			total_imported_count: Math.max(stored.info.total_imported_count ?? 0, optionalNumber(payload.total_imported_count) ?? 0),
+			last_scan_imported_count: payload.imported_count,
+			result: {
+				imported_count: payload.imported_count,
+				known_count: payload.known_count,
+				...(typeof payload.total_imported_count === 'number' ? {total_imported_count: payload.total_imported_count} : {}),
+				finished_at: payload.finished_at,
+				error: typeof payload.error === 'string' ? payload.error : null,
+			},
+		};
+		markDirty(store, id);
+		return;
+	}
     if (type === 'session_state') {
         if (typeof payload.state === 'string') stored.info = {
             ...stored.info,

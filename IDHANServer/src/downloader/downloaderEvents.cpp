@@ -8,7 +8,6 @@
 
 #include "events/ServerEvents.hpp"
 #include "logging/log.hpp"
-#include "subscriptions/SubscriptionEventHub.hpp"
 
 namespace idhan::downloader::events
 {
@@ -137,6 +136,8 @@ static void appendSessionFields( JsonObject& object, const SessionInfo& session 
 	object.field( "created_at", session.created_at );
 	object.field( "last_used_at", session.last_used_at );
 	object.field( "is_subscription", session.is_subscription );
+	object.field( "total_imported_count", session.total_imported_count );
+	object.optionalField( "last_scan_imported_count", session.last_scan_imported_count );
 }
 
 http::SSEInitialEvent bandwidthSnapshot( const Bandwidth& speeds )
@@ -195,16 +196,6 @@ void setSubscriptionSession( const DownloadSessionID session_id, const bool subs
 		subscription_sessions.erase( session_id );
 }
 
-static void subscriptionRecordsChanged( const DownloadSessionID session_id )
-{
-	{
-		const std::scoped_lock lock { subscription_sessions_mutex };
-		if ( !subscription_sessions.contains( session_id ) ) return;
-	}
-
-	subscriptions::SubscriptionEventHub::instance().sessionRecordsChanged( session_id );
-}
-
 bool interested( const DownloadSessionID session_id )
 {
 	{
@@ -235,8 +226,6 @@ void urlCreated( const DownloadSessionID session_id, const UrlRow& row )
 
 void urlUpdated( const DownloadSessionID session_id, const DownloadSessionUrlID url_id, const UrlState& state )
 {
-	if ( state.record_id.has_value() ) subscriptionRecordsChanged( session_id );
-
 	if ( !interested( session_id ) ) return;
 
 	simdjson::builder::string_builder builder;
@@ -251,7 +240,6 @@ void urlUpdated( const DownloadSessionID session_id, const DownloadSessionUrlID 
 
 void urlRemoved( const DownloadSessionID session_id, const DownloadSessionUrlID url_id )
 {
-	subscriptionRecordsChanged( session_id );
 
 	if ( !interested( session_id ) ) return;
 
@@ -320,6 +308,36 @@ void requestErrorsCleared( const DownloadSessionID session_id, const std::vector
 	builder.end_array();
 	object.end();
 	publish( "request_errors_cleared", session_id, std::to_string( session_id ), builder );
+}
+
+void sessionImportCounts( const DownloadSessionID session_id, const std::int64_t total )
+{
+	if ( !interested( session_id ) ) return;
+
+	simdjson::builder::string_builder builder;
+	JsonObject object { builder };
+	object.field( "type", "session_import_counts" );
+	object.field( "session_id", session_id );
+	object.field( "total_imported_count", total );
+	object.end();
+	publish( "session_import_counts", session_id, std::to_string( session_id ), builder );
+}
+
+void sessionResult( const DownloadSessionID session_id, const SessionResult& result )
+{
+	if ( !interested( session_id ) ) return;
+
+	simdjson::builder::string_builder builder;
+	JsonObject object { builder };
+	object.field( "type", "session_result" );
+	object.field( "session_id", session_id );
+	object.field( "total_imported_count", result.total_imported_count );
+	object.field( "imported_count", result.imported_count );
+	object.field( "known_count", result.known_count );
+	object.optionalField( "error", result.error );
+	object.field( "finished_at", result.finished_at );
+	object.end();
+	publish( "session_result", session_id, std::to_string( session_id ), builder );
 }
 
 void sessionCreated( const SessionInfo& session )

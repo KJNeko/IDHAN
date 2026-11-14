@@ -37,6 +37,7 @@ body {
   display: flex;
   flex-direction: column;
   height: 100%;
+    overflow: hidden;
 }
 
 .toolbar {
@@ -113,6 +114,8 @@ body {
   left: 0;
     min-width: min(12rem, calc(100vw - 1.25rem));
     max-width: min(32rem, calc(100vw - 1.25rem));
+    max-height: calc(100dvh - 4rem);
+    overflow-y: auto;
     overflow-wrap: anywhere;
   padding: 0.25rem;
     border: 1px solid var(--border);
@@ -4135,9 +4138,39 @@ body {
     color: #fff;
 }
 
+:root {
+    --scrollbar-size: 16px;
+}
+
 * {
-    scrollbar-width: thin;
     scrollbar-color: var(--border-strong) var(--bg);
+}
+
+/* Chromium ignores ::-webkit-scrollbar sizing unless scrollbar-width and scrollbar-color are both auto. */
+@supports selector(::-webkit-scrollbar) {
+    * {
+        scrollbar-color: auto;
+    }
+
+    ::-webkit-scrollbar {
+        width: var(--scrollbar-size);
+        height: var(--scrollbar-size);
+    }
+
+    ::-webkit-scrollbar-track,
+    ::-webkit-scrollbar-corner {
+        background: var(--bg);
+    }
+
+    ::-webkit-scrollbar-thumb {
+        border: 3px solid var(--bg);
+        border-radius: var(--scrollbar-size);
+        background: var(--border-strong);
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: var(--muted);
+    }
 }
 
 .toolbar {

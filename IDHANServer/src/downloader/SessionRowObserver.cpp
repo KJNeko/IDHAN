@@ -4,6 +4,7 @@
 
 #include "DownloadSessionEventHub.hpp"
 #include "DownloadSessionManager.hpp"
+#include "SessionResult.hpp"
 #include "logging/log.hpp"
 #include "sessionRows.hpp"
 #include "urls/AssociateUrls.hpp"
@@ -104,6 +105,20 @@ bool SessionRowObserver::hasSavedImport( const DownloadSessionUrlID row ) const
 {
 	const std::scoped_lock lock { m_mutex };
 	return m_saved_imports.contains( row );
+}
+
+bool SessionRowObserver::belongsToStartedRoot( DownloadSessionUrlID row ) const
+{
+	const std::scoped_lock lock { m_mutex };
+	while ( true )
+	{
+		const auto saved { m_saved_parents.find( row ) };
+		if ( saved == m_saved_parents.end() ) return true;
+
+		if ( saved->second == 0 ) return m_live.contains( row );
+
+		row = saved->second;
+	}
 }
 
 void SessionRowObserver::adopt( const WorkID work, const DownloadSessionUrlID row )
@@ -256,6 +271,9 @@ folly::coro::Task< void > SessionRowObserver::onFinished()
 	{
 		if ( m_stopping.load() ) co_return;
 
+		// Another saved root may still be waiting for submission by a session-wide retry.
+		if ( !belongsToStartedRoot( row ) ) continue;
+
 		co_await finishRow(
 			row,
 			events::UrlState {
@@ -264,6 +282,7 @@ folly::coro::Task< void > SessionRowObserver::onFinished()
 				.error = "The download session finished without completing this URL; retry the URL to recover it" } );
 	}
 
+	(void)co_await reportSessionResult( DownloadSessionManager::dbContext(), m_session_id );
 	DownloadSessionEventHub::instance().finished( m_session_id );
 	co_return;
 }

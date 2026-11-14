@@ -1,4 +1,3 @@
-#include "subscriptionRecordQueries.hpp"
 #include "idhan/db/DBContext.hpp"
 #include "idhan/db/DBTransaction.hpp"
 #include "subscriptions.hpp"
@@ -14,52 +13,16 @@ static runtime::Task< std::vector< SubscriptionGroup > > loadSubscriptionGroups(
 	const auto rows {
 		co_await db
 			.query(
-				std::string { subscriptionRecordsCte } +
 				//language=postgresql
 				R"SQL(
-					SELECT
-					    subscription_group_id,
-					    name,
-					    generator,
-					    interval_seconds,
-					    enabled,
-					    (
-					        SELECT
-					            count(*)
-					        FROM subscriptions s
-					        WHERE s.subscription_group_id = g.subscription_group_id
-					    ),
-					    COALESCE(stats.record_count, 0),
-					    (
-					        SELECT
-					            count(*)
-					        FROM subscriptions s
-					        WHERE s.subscription_group_id = g.subscription_group_id
-					            AND active_session_id IS NOT NULL
-					    ),
-					    (
-					        SELECT
-					            count(*)
-					        FROM subscriptions s
-					        WHERE s.subscription_group_id = g.subscription_group_id
-					            AND dead
-					    ),
-					    (
-					        SELECT
-					            count(*)
-					        FROM subscriptions s
-					        WHERE s.subscription_group_id = g.subscription_group_id
-					            AND last_error IS NOT NULL
-					    ),
-					    origin,
-					    COALESCE(stats.total_size_bytes, 0)
-					FROM subscription_groups g
-					    LEFT JOIN group_record_stats stats USING (subscription_group_id)
-					WHERE ($1::integer = 0
-					    OR subscription_group_id = $1)
-					ORDER BY
-					    subscription_group_id
-				)SQL",
+			SELECT g.subscription_group_id, g.name, g.generator, g.interval_seconds,
+			       g.enabled, count(s.subscription_id),
+			       count(s.subscription_id) FILTER (WHERE s.active_session_id IS NOT NULL),
+			       count(s.subscription_id) FILTER (WHERE s.last_error IS NOT NULL), g.origin
+			FROM subscription_groups g LEFT JOIN subscriptions s USING (subscription_group_id)
+			WHERE ($1::integer = 0 OR g.subscription_group_id = $1)
+			GROUP BY g.subscription_group_id ORDER BY g.subscription_group_id
+		)SQL",
 				std::move( bindings ) )
 			.rows<
 				SubscriptionGroupID,
@@ -70,17 +33,11 @@ static runtime::Task< std::vector< SubscriptionGroup > > loadSubscriptionGroups(
 				std::int64_t,
 				std::int64_t,
 				std::int64_t,
-				std::int64_t,
-				std::int64_t,
-				std::string,
-				std::int64_t >()
+				std::string >()
 	};
 	std::vector< SubscriptionGroup > result;
-	for (
-		const auto& [ group_id, name, generator, interval, enabled, items, records, running, dead, errors, origin, total_size_bytes ] :
-		rows )
-		result.push_back(
-			{ group_id, name, generator, interval, enabled, items, records, running, dead, errors, origin, total_size_bytes } );
+	for ( const auto& [ group_id, name, generator, interval, enabled, count, running, errors, origin ] : rows )
+		result.push_back( { group_id, name, generator, interval, enabled, count, running, errors, origin } );
 
 	co_return result;
 }
@@ -159,7 +116,7 @@ runtime::Task< bool > updateSubscriptionGroup( DBContext& db, SubscriptionGroup 
 						    subscription_id
 						FROM subscriptions
 						WHERE subscription_group_id = $1
-						    AND active_root_id IS NOT NULL
+						    AND active_session_id IS NOT NULL
 						LIMIT 1
 					)SQL",
 					std::move( active_bindings ) )
@@ -200,11 +157,7 @@ runtime::Task< bool > updateSubscriptionGroup( DBContext& db, SubscriptionGroup 
 				R"SQL(
 					UPDATE
 					    subscriptions
-					SET initial_sync_complete = false,
-					    latest_post_at = NULL,
-					    post_dates_complete = false,
-					    dead = false,
-					    next_run_at = now(),
+					SET next_run_at = now(),
 					    last_error = NULL
 					WHERE subscription_group_id = $1
 				)SQL",
@@ -299,7 +252,7 @@ runtime::Task< bool > requestSubscriptionGroupRun( DBContext& db, const Subscrip
 					scheduled AS (
 					    UPDATE
 					        subscriptions
-					    SET next_run_at = now()
+					    SET next_run_at = now(), run_requested = true
 					    WHERE enabled
 					        AND active_session_id IS NULL
 					        AND subscription_group_id IN (

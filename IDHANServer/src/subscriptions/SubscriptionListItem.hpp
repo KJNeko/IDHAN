@@ -15,16 +15,15 @@ struct SubscriptionListItem
 	std::optional< DownloadSessionID > session_id {};
 	std::optional< DownloadSessionID > active_session_id {};
 	std::optional< std::string > last_error {};
-	bool dead {};
-	std::int64_t record_count {};
-	std::int64_t imported_count {};
-	std::int64_t total_size_bytes {};
+	std::optional< std::int64_t > last_finished_at {};
+	bool run_requested {};
 };
 
 [[nodiscard]] inline SubscriptionListItem subscriptionListItem( db::Subscription item )
 {
-	return { item.id,          item.group_id,     std::move( item.parameters ), item.enabled,
-	         item.next_run_at, item.session_id,   item.active_session_id,       std::move( item.last_error ),
-	         item.dead,        item.record_count, item.imported_count,          item.total_size_bytes };
+	return {
+		item.id,         item.group_id,          std::move( item.parameters ), item.enabled,          item.next_run_at,
+		item.session_id, item.active_session_id, std::move( item.last_error ), item.last_finished_at, item.run_requested
+	};
 }
 } // namespace idhan::subscriptions

@@ -965,6 +965,8 @@ TEST_CASE_METHOD(
 	"[api][session-events]" )
 {
 	DownloadSessionHttpFixture fixture;
+	ImportCluster cluster { db(), std::filesystem::temp_directory_path() / "idhan-session-results-cluster" };
+	cluster.registerWith( api() );
 	Json::Value body;
 	body[ "name" ] = "session event lifecycle";
 	const auto created { api().post( "/download_sessions", body ) };
@@ -1038,6 +1040,8 @@ TEST_CASE_METHOD(
 	"[api][download-sessions][direct-row]" )
 {
 	DownloadSessionHttpFixture fixture;
+	ImportCluster cluster { db(), std::filesystem::temp_directory_path() / "idhan-session-results-cluster" };
+	cluster.registerWith( api() );
 	Json::Value body;
 	body[ "url" ] = fixture.url( "/unclaimed-missing" );
 	const auto submitted { api().post( "/download_sessions/urls", body ) };
@@ -1136,6 +1140,168 @@ TEST_CASE_METHOD( ServerFixture, "Hydrus URL routes reject invalid requests", "[
 		CHECK( api().post( "/hyapi/add_urls/add_url", body, auth ).status == 400 );
 	}
 	CHECK( api().get( "/download_sessions" ).json.empty() );
+}
+
+static Json::Value waitForSessionResult( ApiClient& api, const DownloadSessionID id, const std::int64_t after = 0 )
+{
+	const auto deadline { std::chrono::steady_clock::now() + std::chrono::seconds { 15 } };
+	while ( std::chrono::steady_clock::now() < deadline )
+	{
+		const auto result { api.get( "/download_sessions/" + std::to_string( id ) + "/result" ) };
+		REQUIRE( result.status == 200 );
+		if ( !result.json.isNull() && result.json[ "finished_at" ].asInt64() >= after ) return result.json;
+
+		std::this_thread::sleep_for( std::chrono::milliseconds { 50 } );
+	}
+	throw std::runtime_error( "Timed out waiting for downloader session result" );
+}
+
+SCENARIO_METHOD(
+	ServerFixture,
+	"Every downloader session reports distinct new and known files on completion",
+	"[api][downloads][session-result]" )
+{
+	DownloadSessionHttpFixture fixture;
+	ImportCluster cluster { db(), std::filesystem::temp_directory_path() / "idhan-session-results-cluster" };
+	cluster.registerWith( api() );
+	Json::Value body;
+	body[ "name" ] = "session results";
+	const auto created { api().post( "/download_sessions", body ) };
+	REQUIRE( created.status == 201 );
+	const auto id { created.json[ "id" ].as< DownloadSessionID >() };
+	const auto path { "/download_sessions/" + std::to_string( id ) };
+	CHECK( api().get( path + "/result" ).json.isNull() );
+	CHECK( created.json[ "total_imported_count" ].asInt64() == 0 );
+	CHECK( created.json[ "last_scan_imported_count" ].isNull() );
+	body[ "url" ] = fixture.url( "/gallery" );
+	const auto submitted { api().post( path + "/urls", body ) };
+	REQUIRE( submitted.status == 201 );
+	const auto first { waitForSessionResult( api(), id ) };
+	INFO( first.toStyledString() );
+	CHECK( first[ "error" ].isNull() );
+	CHECK( first[ "imported_count" ].asInt64() == 1 );
+	CHECK( first[ "known_count" ].asInt64() == 0 );
+	CHECK( first[ "total_imported_count" ].asInt64() == 1 );
+	const auto first_info { api().get( path ).json };
+	CHECK( first_info[ "total_imported_count" ].asInt64() == 1 );
+	CHECK( first_info[ "last_scan_imported_count" ].asInt64() == 1 );
+	// A session can contain several saved roots; completion of one must not fail the others during retry.
+	body[ "url" ] = fixture.url( "/post?source=other" );
+	REQUIRE( api().post( path + "/urls", body ).status == 201 );
+	(void)waitForSessionResult( api(), id );
+	const auto retried { api().postWithoutBody( path + "/retry" ) };
+	INFO( retried.body );
+	REQUIRE( retried.status == 200 );
+	const auto second { waitForSessionResult( api(), id, first[ "finished_at" ].asInt64() ) };
+	INFO( second.toStyledString() );
+	CHECK( second[ "error" ].isNull() );
+	CHECK( second[ "imported_count" ].asInt64() == 0 );
+	CHECK( second[ "known_count" ].asInt64() == 1 );
+	CHECK( second[ "total_imported_count" ].asInt64() == 1 );
+	const auto second_info { api().get( path ).json };
+	CHECK( second_info[ "total_imported_count" ].asInt64() == 1 );
+	CHECK( second_info[ "last_scan_imported_count" ].asInt64() == 0 );
+	const auto listed { api().get( "/download_sessions" ).json };
+	REQUIRE( listed.size() == 1 );
+	CHECK( listed[ 0 ][ "total_imported_count" ].asInt64() == 1 );
+	CHECK( listed[ 0 ][ "last_scan_imported_count" ].asInt64() == 0 );
+
+	// A different session finding the same file has no new imports of its own.
+	body[ "name" ] = "known files only";
+	const auto known_session { api().post( "/download_sessions", body ) };
+	REQUIRE( known_session.status == 201 );
+	const auto known_id { known_session.json[ "id" ].as< DownloadSessionID >() };
+	body[ "url" ] = fixture.url( "/gallery" );
+	REQUIRE( api().post( "/download_sessions/" + std::to_string( known_id ) + "/urls", body ).status == 201 );
+	const auto known_result { waitForSessionResult( api(), known_id ) };
+	CHECK( known_result[ "imported_count" ].asInt64() == 0 );
+	CHECK( known_result[ "total_imported_count" ].asInt64() == 0 );
+	CHECK( api().get( path + "/records" ).json[ "record_ids" ].size() == 1 );
+	// Counts are durable session state, independent of the current URL history.
+	{
+		pqxx::work transaction { db() };
+		transaction.exec( "DELETE FROM download_session_urls WHERE download_session_id = $1", pqxx::params { id } );
+		transaction.commit();
+	}
+	testServer().restart( false );
+	const auto restored { api().get( path ).json };
+	CHECK( restored[ "total_imported_count" ].asInt64() == 1 );
+	CHECK( restored[ "last_scan_imported_count" ].asInt64() == 0 );
+	JobEventStream events { serverPort(), api().key(), std::format( "/events?filter=downloader&session_ids={}", id ) };
+	const auto snapshot { events.waitFor( "session_snapshot" ) };
+	REQUIRE_FALSE( snapshot.isNull() );
+	CHECK( snapshot[ "total_imported_count" ].asInt64() == 1 );
+	CHECK( snapshot[ "last_scan_imported_count" ].asInt64() == 0 );
+	CHECK( api().get( "/download_sessions/99999999/result" ).status == 404 );
+}
+
+SCENARIO_METHOD(
+	ServerFixture,
+	"A running subscription blocks its group while other groups are admitted",
+	"[api][subscriptions][scheduler]" )
+{
+	DownloadSessionHttpFixture fixture;
+	fixture.holdFiles( true );
+	ImportCluster cluster { db(), std::filesystem::temp_directory_path() / "idhan-subscription-blocking-cluster" };
+	cluster.registerWith( api() );
+	Json::Value group_body;
+	group_body[ "name" ] = "Group";
+	group_body[ "generator" ] = "fixture:echo";
+	group_body[ "origin" ] = "https://example.invalid";
+	group_body[ "enabled" ] = false;
+	const auto blocked_group { api().post( "/subscription_groups", group_body ) };
+	const auto other_group { api().post( "/subscription_groups", group_body ) };
+	REQUIRE( blocked_group.status == 201 );
+	REQUIRE( other_group.status == 201 );
+	Json::Value body;
+	body[ "parameters" ][ "query" ] = "  raw query, untouched  ";
+	const auto blocked_path { "/subscription_groups/" + blocked_group.json[ "id" ].asString() + "/subscriptions" };
+	const auto blocked { api().post( blocked_path, body ) };
+	REQUIRE( blocked.status == 201 );
+	body[ "parameters" ][ "query" ] = "waiting";
+	const auto waiting { api().post( blocked_path, body ) };
+	REQUIRE( waiting.status == 201 );
+	body[ "parameters" ][ "query" ] = "  raw query, untouched  ";
+	const auto other {
+		api().post( "/subscription_groups/" + other_group.json[ "id" ].asString() + "/subscriptions", body )
+	};
+	REQUIRE( other.status == 201 );
+	Json::Value session_body;
+	session_body[ "name" ] = "Blocking session";
+	const auto session { api().post( "/download_sessions", session_body ) };
+	REQUIRE( session.status == 201 );
+	const auto session_id { session.json[ "id" ].as< DownloadSessionID >() };
+	Json::Value url_body;
+	url_body[ "url" ] = fixture.url( "/post" );
+	REQUIRE( api().post( "/download_sessions/" + std::to_string( session_id ) + "/urls", url_body ).status == 201 );
+	{
+		pqxx::work transaction { db() };
+		transaction.exec(
+			"UPDATE subscriptions SET session_id = $2, active_session_id = $2 WHERE subscription_id = $1",
+			pqxx::params { blocked.json[ "id" ].as< SubscriptionID >(), session_id } );
+		transaction.exec( "UPDATE subscription_groups SET enabled = true" );
+		transaction.commit();
+	}
+	const auto deadline { std::chrono::steady_clock::now() + std::chrono::seconds { 40 } };
+	bool admitted {};
+	while ( std::chrono::steady_clock::now() < deadline )
+	{
+		const auto listed { api().get( "/subscriptions" ) };
+		for ( const auto& item : listed.json )
+		{
+			if ( item[ "id" ] == waiting.json[ "id" ] ) CHECK( item[ "session_id" ].isNull() );
+
+			if ( item[ "id" ] == blocked.json[ "id" ] ) CHECK( item[ "active_session_id" ] == session.json[ "id" ] );
+
+			if ( item[ "id" ] == other.json[ "id" ] && !item[ "session_id" ].isNull() ) admitted = true;
+		}
+		if ( admitted ) break;
+
+		std::this_thread::sleep_for( std::chrono::milliseconds { 100 } );
+	}
+	CHECK( admitted );
+	fixture.holdFiles( false );
+	(void)waitForSessionResult( api(), session_id );
 }
 
 } // namespace idhan::test

@@ -6,8 +6,9 @@
 #include <utility>
 #include <vector>
 
-#include "db/fileInfo.hpp"
 #include "db/downloadSessionRecords.hpp"
+#include "db/fileInfo.hpp"
+#include "downloaderEvents.hpp"
 #include "filesystem/recordFilePath.hpp"
 #include "idhan/SHA256.hpp"
 #include "idhan/db/DBContext.hpp"
@@ -96,12 +97,14 @@ static runtime::Task< std::expected< ImportResult, std::string > > finishImport(
 
 	if ( session_id != 0 )
 	{
-		const bool first_in_session {
-			co_await db::recordDownloadSessionImport( db, session_id, record_id, posted_at )
+		const auto recorded {
+			co_await db::recordDownloadSessionImport( db, session_id, record_id, posted_at, !existing )
 		};
 
+		events::sessionImportCounts( session_id, recorded.total_imported_count );
+
 		if ( existing )
-			note = first_in_session ? "Already in the database" : "Already imported earlier in this session";
+			note = recorded.first_in_session ? "Already in the database" : "Already imported earlier in this session";
 	}
 
 	co_return ImportResult { .record_id = record_id, .note = std::move( note ), .existing = existing };

@@ -274,7 +274,19 @@ export interface DownloadBandwidth {
 /** `paused` and `cancelled` are reserved; the server does not produce them yet. */
 export type DownloadSessionState = 'active' | 'idle' | 'paused' | 'cancelled';
 
+export interface DownloadSessionResult {
+	total_imported_count?: number;
+	imported_count: number;
+	known_count: number;
+	error: string | null;
+	finished_at: number;
+}
+
 export interface DownloadSessionInfo {
+	total_imported_count?: number;
+	/** Newly imported files in the last completed scan; null until one completes. */
+	last_scan_imported_count?: number | null;
+	result?: DownloadSessionResult;
 	is_subscription?: boolean;
     downloading?: number;
     waiting?: number;
@@ -569,9 +581,6 @@ export interface SubscriptionRunProgress {
 	kind: 'subscription';
 	subscription_id: number;
 	session_id?: number;
-	root_id?: number;
-	imported_count: number;
-	known_count: number;
 	error?: string;
 }
 
@@ -598,10 +607,7 @@ export interface SubscriptionGroupInput {
 export interface SubscriptionGroup extends SubscriptionGroupInput {
 	id: number;
 	subscription_count: number;
-	record_count: number;
-	total_size_bytes: number;
 	running_count: number;
-	dead_count: number;
 	error_count: number;
 }
 
@@ -611,21 +617,12 @@ export interface Subscription extends SubscriptionInput {
 	id: number;
 	group_id: number;
 	session_id?: number | null;
-	active_root_id?: number | null;
-	/** New files added by the most recently completed run. */
-	imported_count?: number;
-	known_count?: number;
-	total_size_bytes: number;
-	record_count: number;
-	latest_post_at: number | null;
-	post_dates_complete: boolean;
-	dead: boolean;
 	next_run_at: number;
-	initial_sync_complete: boolean;
 	active_session_id: number | null;
 	last_session_id: number | null;
 	last_finished_at: number | null;
 	last_error: string | null;
+	run_requested: boolean;
 }
 
 export interface ParserCacheEntry {
@@ -651,7 +648,7 @@ export interface SubscriptionsSnapshot {
 
 export type SubscriptionListItem = Pick<Subscription,
 	'id' | 'group_id' | 'parameters' | 'enabled' | 'next_run_at' | 'session_id' | 'active_session_id'
-	| 'last_error' | 'dead' | 'record_count' | 'imported_count' | 'total_size_bytes'>;
+	| 'last_error' | 'last_finished_at' | 'run_requested'>;
 
 export type SubscriptionsEvent =
 	| ({ type: 'snapshot' } & SubscriptionsSnapshot)

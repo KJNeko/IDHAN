@@ -92,7 +92,9 @@ static http::HTTPTask< std::optional< std::int64_t > > touchSession(
 	const std::int64_t created_at,
 	const std::int64_t last_used_at,
 	const std::int64_t error_count,
-	const bool is_subscription = false )
+	const bool is_subscription = false,
+	const std::int64_t total_imported_count = 0,
+	const std::optional< std::int64_t > last_scan_imported_count = std::nullopt )
 {
 	const auto network { downloader::downloadSessionManager().networkSnapshot( id ) };
 	return {
@@ -111,7 +113,9 @@ static http::HTTPTask< std::optional< std::int64_t > > touchSession(
 		network.download_bytes_per_second,
 		network.downloaded_bytes,
 		network.average_import_bytes,
-		is_subscription
+		is_subscription,
+		total_imported_count,
+		last_scan_imported_count
 	};
 }
 
@@ -280,20 +284,28 @@ http::HTTPTask< http::JsonResult< std::vector< DownloadSessionResponse > > > lis
 					            count(*)
 					        FROM download_session_errors
 					        WHERE download_session_errors.download_session_id = download_sessions.download_session_id
-					    ) AS error_count
+					    ) AS error_count, total_imported_count, last_scan_imported_count
 					FROM download_sessions
 					WHERE NOT is_subscription
 					ORDER BY
 					    last_used_at DESC,
 					    download_session_id DESC
 				)SQL" )
-			.rows< DownloadSessionID, std::string, std::int64_t, std::int64_t, std::int64_t >()
+			.rows<
+				DownloadSessionID,
+				std::string,
+				std::int64_t,
+				std::int64_t,
+				std::int64_t,
+				std::int64_t,
+				std::optional< std::int64_t > >()
 	};
 
 	std::vector< DownloadSessionResponse > response;
 	response.reserve( rows.size() );
-	for ( const auto& [ id, name, created_at, last_used_at, error_count ] : rows )
-		response.push_back( sessionResponse( id, name, created_at, last_used_at, error_count ) );
+	for ( const auto& [ id, name, created_at, last_used_at, error_count, total, last_scan ] : rows )
+		response.push_back(
+			sessionResponse( id, name, created_at, last_used_at, error_count, false, total, last_scan ) );
 
 	co_return http::JsonResponse< std::vector< DownloadSessionResponse > > { std::move( response ) };
 }
@@ -381,18 +393,28 @@ http::HTTPTask< http::JsonResult< DownloadSessionResponse > > getSession(
 					        FROM download_session_errors
 					        WHERE download_session_errors.download_session_id = download_sessions.download_session_id
 					    ) AS error_count,
-					    is_subscription
+					    is_subscription, total_imported_count, last_scan_imported_count
 					FROM download_sessions
 					WHERE download_session_id = $1
 				)SQL",
 				std::move( bindings ) )
-			.rows< DownloadSessionID, std::string, std::int64_t, std::int64_t, std::int64_t, bool >()
+			.rows<
+				DownloadSessionID,
+				std::string,
+				std::int64_t,
+				std::int64_t,
+				std::int64_t,
+				bool,
+				std::int64_t,
+				std::optional< std::int64_t > >()
 	};
 
-	const auto& [ id, name, created_at, last_used_at, error_count, is_subscription ] { rows.row( 0 ) };
+	const auto& [ id, name, created_at, last_used_at, error_count, is_subscription, total, last_scan ] {
+		rows.row( 0 )
+	};
 
 	co_return http::JsonResponse< DownloadSessionResponse > {
-		sessionResponse( id, name, created_at, last_used_at, error_count, is_subscription )
+		sessionResponse( id, name, created_at, last_used_at, error_count, is_subscription, total, last_scan )
 	};
 }
 
@@ -1102,6 +1124,37 @@ http::HTTPTask< http::JsonResult< DownloadSessionErrorsResponse > > listErrors(
 		response.errors.push_back( { id, url_id, url, status, lane, message, occurred_at } );
 
 	co_return http::JsonResponse< DownloadSessionErrorsResponse > { std::move( response ) };
+}
+
+http::HTTPTask< http::JsonResult< std::optional< downloader::SessionResult > > > getSessionResult(
+	db::DBContext& db,
+	http::RequestContext context )
+{
+	const auto id_e { context.parameters().scalar< DownloadSessionID >( "session_id" ) };
+	if ( !id_e.has_value() ) co_return http::Response::error( 400, id_e.error().message );
+
+	if ( !( co_await touchSession( db, id_e.value() ) ).has_value() )
+		co_return http::Response::error( 404, "Download session no longer exists" );
+
+	co_return http::JsonResponse< std::optional< downloader::SessionResult > > {
+		co_await downloader::sessionResult( db, id_e.value() )
+	};
+}
+
+http::HTTPTask< http::JsonResult< DownloadSessionRetryResponse > > retrySession(
+	db::DBContext& db,
+	http::RequestContext context )
+{
+	const auto id_e { context.parameters().scalar< DownloadSessionID >( "session_id" ) };
+	if ( !id_e.has_value() ) co_return http::Response::error( 400, id_e.error().message );
+
+	if ( !( co_await touchSession( db, id_e.value() ) ).has_value() )
+		co_return http::Response::error( 404, "Download session no longer exists" );
+
+	const auto retried_e { co_await downloader::retrySession( db, id_e.value() ) };
+	if ( !retried_e.has_value() ) co_return http::Response::error( 409, retried_e.error() );
+
+	co_return http::JsonResponse< DownloadSessionRetryResponse > {};
 }
 
 } // namespace idhan::httpapi

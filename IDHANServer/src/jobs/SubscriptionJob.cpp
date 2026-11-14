@@ -28,9 +28,6 @@ class SubscriptionJob::Progress final : public JobProgress
 		value[ "kind" ] = "subscription";
 		value[ "subscription_id" ] = result.subscription_id;
 		if ( result.session_id ) value[ "session_id" ] = result.session_id.value();
-		if ( result.root_id ) value[ "root_id" ] = result.root_id.value();
-		value[ "imported_count" ] = result.imported_count;
-		value[ "known_count" ] = result.known_count;
 		if ( error ) value[ "error" ] = error.value();
 		return value;
 	}
@@ -54,15 +51,6 @@ SubscriptionJob::SubscriptionJob( db::SubscriptionRunResult result, std::string 
 SubscriptionJob::~SubscriptionJob()
 {
 	finish( "Run tracking stopped; download recovery will resume after restart" );
-}
-
-void SubscriptionJob::update( db::SubscriptionRunResult result )
-{
-	std::lock_guard lock { m_progress->mutex };
-	if ( m_progress->finished ) return;
-
-	m_progress->result = result;
-	m_progress->changed();
 }
 
 void SubscriptionJob::finish( std::optional< std::string > error )

@@ -36,7 +36,7 @@ Object.assign(globalThis, {IS_REACT_ACT_ENVIRONMENT: true});
 
 const group: SubscriptionGroup = {
 	id: 7, name: 'Artists', generator: 'gelbooru:search', interval_seconds: 86400, enabled: true,
-	subscription_count: 1, record_count: 12, total_size_bytes: 3145728, running_count: 0, dead_count: 0, error_count: 0,
+	subscription_count: 1, running_count: 0, error_count: 0,
 };
 const parsers: DownloaderParser[] = [
 	{
@@ -55,17 +55,12 @@ const item: Subscription = {
 	tags: 'old_artist',
 	parameters: {tags: 'old_artist'},
 	enabled: true,
-	record_count: 12,
-	total_size_bytes: 1048576,
-	latest_post_at: null,
-	post_dates_complete: false,
-	dead: false,
 	next_run_at: 0,
-	initial_sync_complete: true,
 	active_session_id: null,
 	last_session_id: null,
 	last_finished_at: null,
 	last_error: null,
+	run_requested: false,
 };
 let view: HTMLDivElement;
 let root: Root;
@@ -104,7 +99,7 @@ async function input(field: HTMLInputElement, value: string) {
 it('adds a parameter-only search through the group input and keeps its name on the group', async () => {
 	await render();
 	expect(view.querySelector('h3')?.textContent).toBe('Artists');
-	expect(view.textContent).toContain('1 item · 12 files');
+	expect(view.textContent).toContain('1 item');
 	expect(view.querySelector('.subscription-items')?.textContent).toContain('old_artist');
 	expect(view.querySelector('.subscription-settings')).toBeNull();
 	const field = view.querySelector<HTMLInputElement>('input[aria-label="Tags"]')!;
@@ -261,12 +256,12 @@ it('pastes newline-delimited searches as a batch, preserving spaces and commas w
 	expect(api.subscriptions.create).not.toHaveBeenCalled();
 });
 
-it('shows the previous run count as a stat without a files button', async () => {
-	vi.mocked(api.subscriptions.list).mockResolvedValue([{...item, session_id: 42, imported_count: 3}]);
+it('shows the last outcome without download statistics', async () => {
+	vi.mocked(api.subscriptions.list).mockResolvedValue([{...item, last_finished_at: 1794576232}]);
 	await render();
-	expect(view.querySelector('.subscription-items tbody tr')?.children[2].textContent).toBe('3');
-	expect(view.textContent).not.toContain('Files since last run');
-	expect(api.subscriptions.records).not.toHaveBeenCalled();
+	expect(view.textContent).toContain('Succeeded');
+	expect(view.textContent).not.toContain('Added last run');
+	expect(view.textContent).not.toContain('Files');
 });
 
 it('keeps other generator defaults when pasting multiple values for one field', async () => {
@@ -287,30 +282,15 @@ it('keeps other generator defaults when pasting multiple values for one field', 
 	]);
 });
 
-it('keeps the previous run stat visible while another run is active', async () => {
+it('keeps the last outcome visible while the next check runs', async () => {
 	vi.mocked(api.subscriptions.list).mockResolvedValue([{
-		...item,
-		active_session_id: 42,
-		active_root_id: 8,
-		imported_count: 2
+		...item, active_session_id: 42, last_finished_at: 1794576232, last_error: 'Parser failed',
 	}]);
 	await render();
-	expect(view.querySelector('.subscription-items tbody tr')?.children[2].textContent).toBe('2');
-	expect(view.querySelector('.subscription-items')?.textContent).toContain('Running');
+	expect(view.textContent).toContain('Failed');
+	expect(view.textContent).toContain('Parser failed');
+	expect(view.textContent).toContain('Running');
 });
-
-it('shows subscription stats in labeled columns and keeps group totals', async () => {
-	await render();
-	expect(view.querySelector('.subscription-group .subscription-group-header')?.textContent).toContain('12 files · 3 MiB');
-	expect([...view.querySelectorAll('.subscription-items thead th')].map(cell => cell.textContent))
-	.toEqual(['Subscription', 'Files', 'Added last run', 'Size', 'Status / next run', 'Actions']);
-	expect([...view.querySelectorAll('.subscription-items tbody tr > *')].slice(0, 4).map(cell => cell.textContent))
-	.toEqual(['old_artist', '12', '0', '1 MiB']);
-	expect(view.querySelector('[aria-label="Total size for old_artist"]')?.textContent).toBe('1 MiB');
-	expect(view.querySelector('.subscription-group-header [title="3,145,728 bytes"]')).not.toBeNull();
-	expect(view.querySelector('.subscription-items [title="1,048,576 bytes"]')).not.toBeNull();
-});
-
 
 it('uses streamed updates without refetching lists or parsers after commands', async () => {
 	await render();
@@ -327,18 +307,18 @@ it('uses streamed updates without refetching lists or parsers after commands', a
 });
 
 
-it('puts running subscriptions first, then earliest next runs, with dead subscriptions last as live status changes', async () => {
+it('puts running subscriptions first, then earliest next runs as live status changes', async () => {
 	const items: Subscription[] = [
 		{...item, id: 1, tags: 'zebra', parameters: {tags: 'zebra'}, active_session_id: null, next_run_at: 100},
 		{...item, id: 2, tags: 'Zorro', parameters: {tags: 'Zorro'}, active_session_id: 22, next_run_at: 200},
 		{...item, id: 3, tags: '', parameters: {creator: 'alpha'}, active_session_id: null, next_run_at: 300},
 		{...item, id: 4, tags: 'beta', parameters: {tags: 'beta'}, active_session_id: 44, next_run_at: 400},
-		{...item, id: 5, tags: 'dead', parameters: {tags: 'dead'}, dead: true, next_run_at: 0},
+		{...item, id: 5, tags: 'later', parameters: {tags: 'later'}, next_run_at: 9999999999},
 	];
 	vi.mocked(api.subscriptions.list).mockResolvedValue(items);
 	await render();
 	const labels = () => [...view.querySelectorAll('.subscription-label')].map(cell => cell.textContent);
-	expect(labels()).toEqual(['Zorro', 'beta', 'zebra', 'alpha', 'dead']);
+	expect(labels()).toEqual(['Zorro', 'beta', 'zebra', 'alpha', 'later']);
 	const field = view.querySelector<HTMLInputElement>('input[aria-label="Tags"]')!;
 	await input(field, 'new artist');
 	await act(() => {
@@ -346,7 +326,7 @@ it('puts running subscriptions first, then earliest next runs, with dead subscri
 			groups: [group], items: items.map(row => ({...row, active_session_id: row.id === 1 ? 11 : null})),
 		});
 	});
-	expect(labels()).toEqual(['zebra', 'Zorro', 'alpha', 'beta', 'dead']);
+	expect(labels()).toEqual(['zebra', 'Zorro', 'alpha', 'beta', 'later']);
 	expect(field.value).toBe('new artist');
 	expect(view.querySelector('input[aria-label="Tags"]')).toBe(field);
 	expect(items.map(row => row.id)).toEqual([1, 2, 3, 4, 5]);

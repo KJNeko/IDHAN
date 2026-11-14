@@ -16,6 +16,7 @@
 #include "DownloadImports.hpp"
 #include "DownloadSessionEventHub.hpp"
 #include "SessionRowObserver.hpp"
+#include "SessionResult.hpp"
 #include "idhan/db/DBContext.hpp"
 #include "logging/format_ns.hpp"
 #include "logging/log.hpp"
@@ -345,6 +346,7 @@ runtime::Task< std::expected< void, std::string > > DownloadSessionManager::subm
 		url = std::move( origin );
 	}
 
+	co_await clearSessionResult( dbContext(), session_id );
 	const auto session { co_await sessionFor( session_id, settings ) };
 
 	if ( !session ) co_return std::unexpected( "The downloader is shutting down" );
@@ -524,6 +526,7 @@ runtime::Task< void > DownloadSessionManager::markUnresumable(
 		root.url_id,
 		events::UrlState {
 			.state = "failed", .stage = stage, .error = std::move( error ), .finished_at = failed_e.value() } );
+	(void)co_await reportSessionResult( db, root.session_id );
 }
 
 runtime::Task< std::expected< void, std::string > > DownloadSessionManager::setParserHost(

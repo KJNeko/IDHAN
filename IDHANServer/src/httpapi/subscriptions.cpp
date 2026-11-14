@@ -4,7 +4,7 @@
 #include <cctype>
 #include <expected>
 
-#include "maintenance/SubscriptionMaintenance.hpp"
+#include "downloader/GeneratorSession.hpp"
 #include "subscriptions/SubscriptionEventHub.hpp"
 
 namespace idhan::httpapi
@@ -93,7 +93,6 @@ http::HTTPTask< http::JsonResult< db::Subscription > > runSubscription(
 	if ( !co_await db::requestSubscriptionRun( db, id_e.value() ) )
 		co_return http::Response::error( 409, "Subscription is missing, paused, or already running" );
 
-	maintenance::SubscriptionMaintenance::wake();
 
 	co_return co_await subscriptionResponse( db, id_e.value() );
 }
@@ -152,11 +151,13 @@ http::HTTPTask< http::JsonResult< SubscriptionRecordsResponse > > subscriptionRe
 	const auto id_e { context.parameters().scalar< SubscriptionID >( "subscription_id" ) };
 	if ( !id_e.has_value() ) co_return http::Response::error( 400, id_e.error().message );
 
-	if ( !( co_await db::findSubscription( db, id_e.value() ) ).has_value() )
-		co_return http::Response::error( 404, "Subscription no longer exists" );
+	const auto item { co_await db::findSubscription( db, id_e.value() ) };
+	if ( !item.has_value() ) co_return http::Response::error( 404, "Subscription no longer exists" );
+
+	if ( !item->last_session_id.has_value() ) co_return http::JsonResponse< SubscriptionRecordsResponse > {};
 
 	co_return http::JsonResponse< SubscriptionRecordsResponse > {
-		{ co_await db::subscriptionRunRecords( db, id_e.value() ) }
+		{ co_await downloader::generatorRecords( db, item->last_session_id.value() ) }
 	};
 }
 } // namespace idhan::httpapi

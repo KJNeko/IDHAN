@@ -62,7 +62,6 @@ class ServerContext
 	std::unique_ptr< maintenance::TagCountMaintenance > m_tag_count_maintenance {};
 	std::unique_ptr< maintenance::BandwidthMaintenance > m_bandwidth_maintenance {};
 	std::unique_ptr< maintenance::SubscriptionMaintenance > m_subscription_maintenance {};
-	std::jthread m_subscription_events {};
 	std::unique_ptr< httpapi::HeartbeatService > m_heartbeat {};
 
 	std::unique_ptr< http::HTTPServer > m_http_server {};

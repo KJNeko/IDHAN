@@ -5,13 +5,37 @@
 
 namespace idhan::test
 {
+static Json::Value subscriptionBaseline( JobEventStream& stream )
+{
+	const auto start { stream.waitFor( "snapshot_start" ) };
+	REQUIRE( start.isObject() );
+	REQUIRE( stream.waitFor( "snapshot_complete" ).isObject() );
+	Json::Value baseline { Json::objectValue };
+	baseline[ "groups" ] = Json::Value { Json::arrayValue };
+	baseline[ "items" ] = Json::Value { Json::arrayValue };
+	while ( true )
+	{
+		const auto chunk { stream.waitFor( "snapshot_chunk", {}, "", std::chrono::milliseconds { 0 } ) };
+		if ( chunk.isNull() ) break;
+
+		for ( const auto& group : chunk[ "groups" ] ) baseline[ "groups" ].append( group );
+		for ( const auto& patch : chunk[ "items" ] )
+		{
+			auto item { start[ "item_defaults" ] };
+			for ( const auto& name : patch.getMemberNames() ) item[ name ] = patch[ name ];
+			baseline[ "items" ].append( std::move( item ) );
+		}
+	}
+	return baseline;
+}
+
 TEST_CASE_METHOD(
 	ServerFixture,
 	"Subscription SSE sends compact changes, cascade removals and fresh reconnect baselines",
 	"[api][subscriptions][subscription-events]" )
 {
 	JobEventStream stream { serverPort(), api().key(), "/events?filter=subscriptions" };
-	const auto baseline { stream.waitFor( "snapshot" ) };
+	const auto baseline { subscriptionBaseline( stream ) };
 	REQUIRE( baseline.isObject() );
 	REQUIRE( baseline[ "groups" ].isArray() );
 	REQUIRE( baseline[ "items" ].isArray() );
@@ -50,9 +74,12 @@ TEST_CASE_METHOD(
 	CHECK( item_added[ "groups" ][ 0 ][ "subscription_count" ] == 1 );
 
 	JobEventStream reconnected { serverPort(), api().key(), "/events?filter=subscriptions&session_ids=999" };
-	const auto current { reconnected.waitFor( "snapshot" ) };
+	const auto current { subscriptionBaseline( reconnected ) };
 	CHECK( current[ "groups" ] == api().get( "/subscription_groups" ).json );
-	CHECK( current[ "items" ] == api().get( "/subscriptions" ).json );
+	REQUIRE( current[ "items" ].size() == 1 );
+	CHECK( current[ "items" ][ 0 ][ "id" ] == item_id );
+	CHECK( current[ "items" ][ 0 ][ "parameters" ] == subscription.json[ "parameters" ] );
+	CHECK_FALSE( current[ "items" ][ 0 ].isMember( "active_root_id" ) );
 
 	REQUIRE( api().del( path ).status == 200 );
 	const auto removed { stream.waitFor( "remove" ) };

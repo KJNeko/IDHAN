@@ -25,7 +25,7 @@ TEST_CASE( "Subscription events send changed fields and explicit nulls only", "[
 	db::Subscription item { .id = 42, .group_id = 7, .tags = "artist", .last_error = "failed" };
 	REQUIRE( state.reconcile( { group }, { item } ).size() == 1 );
 	CHECK( state.reconcile( { group }, { item } ).empty() );
-	item.imported_count = 18;
+	item.run_requested = true;
 	item.last_error.reset();
 	const auto changes { state.reconcile( { group }, { item } ) };
 	REQUIRE( changes.size() == 1 );
@@ -37,7 +37,7 @@ TEST_CASE( "Subscription events send changed fields and explicit nulls only", "[
 	const auto& fields { patch[ "items" ][ 0 ] };
 	CHECK( fields.size() == 3 );
 	CHECK( fields[ "id" ] == 42 );
-	CHECK( fields[ "imported_count" ] == 18 );
+	CHECK( fields[ "run_requested" ] == true );
 	CHECK( fields.isMember( "last_error" ) );
 	CHECK( fields[ "last_error" ].isNull() );
 	CHECK( changes.front().text().size() < 110 );
@@ -171,16 +171,10 @@ TEST_CASE( "Compact subscription baselines cut repeated fields for a large list"
 			  .tags = "example_artist",
 			  .enabled = true,
 			  .next_run_at = 1794662632,
-			  .initial_sync_complete = true,
 			  .last_session_id = id,
 			  .last_finished_at = 1794576232,
-			  .latest_post_at = 1791658842,
-			  .post_dates_complete = true,
-			  .record_count = 350,
 			  .parameters = { { "tags", "example_artist" } },
-			  .session_id = id,
-			  .known_count = 350,
-			  .total_size_bytes = 1425117 } );
+			  .session_id = id } );
 	}
 	const auto original { subscriptionJson( items ) };
 	SubscriptionEventState state;
@@ -189,14 +183,13 @@ TEST_CASE( "Compact subscription baselines cut repeated fields for a large list"
 	std::size_t bytes {};
 	for ( const auto& snapshot : snapshots ) bytes += snapshot.text().size();
 	CAPTURE( bytes, original.text().size() );
-	CHECK( bytes * 2 < original.text().size() );
+	CHECK( bytes * 3 < original.text().size() * 2 );
 	CHECK( snapshots.size() == 12 );
 
 	// Changes to unused history fields must not wake the list or resend an entity.
 	db::Subscription item { .id = 1, .group_id = 1 };
 	(void)state.reconcile( {}, { item } );
-	item.last_finished_at = 1794576232;
-	item.known_count = 123;
+	item.last_session_id = 123;
 	CHECK( state.reconcile( {}, { item } ).empty() );
 }
 

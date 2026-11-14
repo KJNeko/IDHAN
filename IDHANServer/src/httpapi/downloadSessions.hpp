@@ -4,6 +4,7 @@
 
 #include "DownloaderResponses.hpp"
 #include "IDHANTypes.hpp"
+#include "downloader/SessionResult.hpp"
 #include "idhan/http/routing/ReflectedRoutes.hpp"
 #include "idhan/http/routing/RouteSpec.hpp"
 
@@ -14,6 +15,11 @@ class DBContext;
 
 namespace idhan::httpapi
 {
+
+struct DownloadSessionRetryResponse
+{
+	bool retried { true };
+};
 
 struct CreateSessionBody
 {
@@ -38,6 +44,21 @@ struct UrlCheckResponse
 	bool known_direct {};
 	std::vector< RecordID > record_ids;
 };
+
+// clang-format off
+[[= http::Endpoint{proxygen::HTTPMethod::GET, "/download_sessions/{session_id}/result"}]]
+[[= http::Validation< http::validation::PositiveInteger< DownloadSessionID > >{"session_id"}]]
+[[= http::Group{"Downloader"}]]
+[[= http::Output< http::ErrorResponse >{404}]]
+http::HTTPTask< http::JsonResult< std::optional< downloader::SessionResult > > > getSessionResult( db::DBContext& db, http::RequestContext context );
+
+[[= http::Endpoint{proxygen::HTTPMethod::POST, "/download_sessions/{session_id}/retry"}]]
+[[= http::Validation< http::validation::PositiveInteger< DownloadSessionID > >{"session_id"}]]
+[[= http::Group{"Downloader"}]]
+[[= http::Output< http::ErrorResponse >{404}]]
+[[= http::Output< http::ErrorResponse >{409}]]
+http::HTTPTask< http::JsonResult< DownloadSessionRetryResponse > > retrySession( db::DBContext& db, http::RequestContext context );
+// clang-format on
 
 // clang-format off
 [[= http::Endpoint{proxygen::HTTPMethod::POST, "/download_sessions/check_url"}]]

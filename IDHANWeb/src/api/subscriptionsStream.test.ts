@@ -9,7 +9,7 @@ const initial = {
 	groups: [{id: 7, name: 'Artists', enabled: true}],
 	items: [{
 		id: 42, group_id: 7, tags: 'artist', parameters: {tags: 'artist'},
-		imported_count: 1, last_error: 'failed', active_session_id: 9
+		last_finished_at: 1, last_error: 'failed', active_session_id: 9
 	}],
 };
 
@@ -26,8 +26,8 @@ it('expands shared defaults for compact rows and replaces them on reconnect', ()
 	const close = watchSubscriptions({onChange});
 	const defaults = {
 		id: 0, group_id: 0, parameters: {}, enabled: true, next_run_at: 0,
-		session_id: null, active_session_id: null, last_error: null, dead: false,
-		record_count: 0, imported_count: 0, total_size_bytes: 0,
+		session_id: null, active_session_id: null, last_error: null, run_requested: false,
+		last_finished_at: null,
 	};
 	try {
 		send({type: 'snapshot_start', item_defaults: defaults});
@@ -44,12 +44,12 @@ it('expands shared defaults for compact rows and replaces them on reconnect', ()
 			group_id: 7,
 			parameters: {tags: 'artist'}
 		});
-		send({type: 'patch', items: [{id: 42, active_session_id: 9, imported_count: 4}]});
+		send({type: 'patch', items: [{id: 42, active_session_id: 9, last_finished_at: 4}]});
 		send({type: 'patch', items: [{id: 42, active_session_id: null, last_error: 'failed'}]});
 		expect(onChange.mock.lastCall![0].items[0]).toMatchObject({
 			enabled: true,
 			active_session_id: null,
-			imported_count: 4,
+			last_finished_at: 4,
 			last_error: 'failed'
 		});
 		vi.mocked(watchEvents).mock.lastCall![0].onOpen?.();
@@ -67,10 +67,10 @@ it('merges disjoint fields, preserves omissions and clears explicit nulls', () =
 	const close = watchSubscriptions({onChange});
 	try {
 		send(initial);
-		send({type: 'patch', items: [{id: 42, imported_count: 18}]});
+		send({type: 'patch', items: [{id: 42, last_finished_at: 18}]});
 		send({type: 'patch', items: [{id: 42, last_error: null, active_session_id: null}]});
 		expect(onChange.mock.lastCall![0].items).toEqual([{
-			...initial.items[0], imported_count: 18, last_error: null, active_session_id: null,
+			...initial.items[0], last_finished_at: 18, last_error: null, active_session_id: null,
 		}]);
 		// Parameters are replaced as a complete field, so removed keys do not survive.
 		send({type: 'patch', items: [{id: 42, parameters: {}}]});
@@ -109,7 +109,7 @@ it('applies cascade removals and replaces state after reconnect', () => {
 		expect(onChange.mock.lastCall![0]).toMatchObject({groups: [], items: []});
 		vi.mocked(watchEvents).mock.lastCall![0].onOpen?.();
 		const calls = onChange.mock.calls.length;
-		send({type: 'patch', items: [{id: 42, imported_count: 99}]});
+		send({type: 'patch', items: [{id: 42, last_finished_at: 99}]});
 		expect(onChange).toHaveBeenCalledTimes(calls);
 		send(initial);
 		expect(onChange.mock.lastCall![0].items).toEqual(initial.items);
@@ -146,8 +146,8 @@ it('assembles snapshot chunks once, then applies queued live updates', () => {
 		expect(onChange).not.toHaveBeenCalled();
 		send({type: 'snapshot_complete'});
 		expect(onChange).toHaveBeenCalledExactlyOnceWith({groups: initial.groups, items: initial.items});
-		send({type: 'patch', items: [{id: 42, imported_count: 99}]});
-		expect(onChange.mock.lastCall![0].items[0].imported_count).toBe(99);
+		send({type: 'patch', items: [{id: 42, last_finished_at: 99}]});
+		expect(onChange.mock.lastCall![0].items[0].last_finished_at).toBe(99);
 	} finally {
 		close();
 	}

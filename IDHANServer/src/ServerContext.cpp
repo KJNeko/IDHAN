@@ -30,6 +30,7 @@
 #include "db/ManagementConnection.hpp"
 #include "events/ServerEvents.hpp"
 #include "downloader/DownloadSessionManager.hpp"
+#include "downloader/GeneratorSession.hpp"
 #include "downloader/SessionUrlIds.hpp"
 #include "downloader/downloaderEvents.hpp"
 #include "db/subscriptions.hpp"
@@ -47,7 +48,6 @@
 #include "httpapi/generateApiKey.hpp"
 #include "httpapi/health.hpp"
 #include "httpapi/heartbeat.hpp"
-#include "subscriptions/SubscriptionEventHub.hpp"
 #include "httpapi/hydrus.hpp"
 #include "httpapi/importFile.hpp"
 #include "httpapi/info.hpp"
@@ -221,7 +221,7 @@ static runtime::Task<> prepareDownloads( db::DBContext& db )
 {
 	co_await downloader::SessionUrlIds::instance().load( db );
 	co_await db::queueInterruptedSubscriptions( db );
-	const auto subscription_sessions { co_await db::subscriptionSessionIds( db ) };
+	const auto subscription_sessions { co_await downloader::subscriptionSessionIds( db ) };
 	for ( const auto id : subscription_sessions ) downloader::events::setSubscriptionSession( id, true );
 	log::info( "Checking downloader parsers before accepting API requests" );
 	try
@@ -296,9 +296,6 @@ void ServerContext::startReplacementStack()
 	m_hash_maintenance = std::make_unique< maintenance::HashMaintenance >( *m_db_context, db_executor );
 	m_tag_count_maintenance = std::make_unique< maintenance::TagCountMaintenance >( *m_db_context, db_executor );
 	m_subscription_maintenance = std::make_unique< maintenance::SubscriptionMaintenance >( *m_db_context, db_executor );
-	m_subscription_events = std::jthread(
-		[ this, db_executor ]( const std::stop_token stop )
-		{ subscriptions::SubscriptionEventHub::instance().runUpdates( *m_db_context, db_executor, stop ); } );
 
 	http::HTTPConfig http_config { http::HTTPConfig::defaults() };
 	http_config.ipv4_listen = config::get< std::string >( "host", "ipv4_listen", "127.0.0.1" );
@@ -390,9 +387,6 @@ void ServerContext::run()
 
 ServerContext::~ServerContext()
 {
-	m_subscription_events.request_stop();
-	if ( m_subscription_events.joinable() ) m_subscription_events.join();
-
 	if ( m_heartbeat != nullptr ) m_heartbeat->shutdown();
 	if ( m_http_server != nullptr ) m_http_server->stopAdmission();
 	server::events().shutdown();

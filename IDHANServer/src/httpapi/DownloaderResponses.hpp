@@ -31,6 +31,8 @@ struct[ [= http::SchemaName { "DownloadSession" }] ] DownloadSessionResponse
 	std::uint64_t downloaded_bytes;
 	std::uint64_t average_import_bytes;
 	bool is_subscription {};
+	std::int64_t total_imported_count {};
+	std::optional< std::int64_t > last_scan_imported_count {};
 };
 
 struct DownloaderDeletedResponse

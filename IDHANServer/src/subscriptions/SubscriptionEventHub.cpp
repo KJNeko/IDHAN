@@ -11,44 +11,6 @@ SubscriptionEventHub& SubscriptionEventHub::instance()
 	return hub;
 }
 
-void SubscriptionEventHub::sessionRecordsChanged( const DownloadSessionID session_id )
-{
-	if ( !server::events().interested( "subscriptions.changed" ) ) return;
-
-	m_pending.enqueue( session_id );
-}
-
-runtime::Task<> SubscriptionEventHub::refreshSessions( db::DBContext& db, std::vector< DownloadSessionID > session_ids )
-{
-	if ( !server::events().interested( "subscriptions.changed" ) ) co_return;
-
-	const auto lock { co_await m_mutex.co_scoped_lock() };
-	const auto groups { co_await db::subscriptionGroupsForSessions( db, std::move( session_ids ) ) };
-	for ( const auto group_id : groups ) co_await refreshLocked( db, group_id );
-}
-
-void SubscriptionEventHub::runUpdates(
-	db::DBContext& db,
-	folly::Executor::KeepAlive<> executor,
-	const std::stop_token stop )
-{
-	while ( !stop.stop_requested() )
-	{
-		auto sessions { m_pending.waitForBatch( stop ) };
-		if ( stop.stop_requested() ) return;
-
-		try
-		{
-			folly::coro::co_withExecutor( executor, refreshSessions( db, std::move( sessions ) ) ).start().get();
-		}
-		catch ( const std::exception& error )
-		{
-			// The scheduler's reconciliation repairs counts if a database refresh failed.
-			log::warn( "Subscription count update failed: {}", error.what() );
-		}
-	}
-}
-
 runtime::Task<> SubscriptionEventHub::refreshLocked(
 	db::DBContext& db,
 	const std::optional< SubscriptionGroupID > group_id )

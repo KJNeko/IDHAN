@@ -1,7 +1,6 @@
 import {useEffect, useState} from 'react';
 import {api} from '../../api/client';
 import {watchSubscriptions} from '../../api/subscriptionsStream';
-import {formatBytes} from './RecordInfoView';
 import type {
 	SubscriptionListItem,
 	SubscriptionGroup,
@@ -54,8 +53,7 @@ function itemLabel(item: SubscriptionListItem): string {
 const subscriptionOrder = new Intl.Collator(undefined, {sensitivity: 'base'});
 
 function compareSubscriptions(left: SubscriptionListItem, right: SubscriptionListItem): number {
-	return Number(left.dead) - Number(right.dead)
-		|| Number(right.active_session_id !== null) - Number(left.active_session_id !== null)
+	return Number(right.active_session_id !== null) - Number(left.active_session_id !== null)
 		|| left.next_run_at - right.next_run_at
 		|| subscriptionOrder.compare(itemLabel(left), itemLabel(right)) || left.id - right.id;
 }
@@ -196,7 +194,7 @@ function SubscriptionRunStatus({item, groupEnabled}: { item: SubscriptionListIte
 
 	if (!groupEnabled || !item.enabled) return <>Paused</>;
 
-	if (item.dead) return <>Dead</>;
+	if (item.run_requested) return <>Queued</>;
 
 	return <>Next: <NextRun at={item.next_run_at} paused={false} running={false}/></>;
 }
@@ -213,11 +211,9 @@ function SubscriptionGroupView({group, items, choices, busy, act}: {
 		<header className="subscription-group-header">
 			<div><h3>{group.name}</h3>
 				<div
-					className="muted">{group.subscription_count} item{group.subscription_count === 1 ? '' : 's'} · {group.record_count} file{group.record_count === 1 ? '' : 's'} · <span
-					title={`${group.total_size_bytes.toLocaleString()} bytes`}>{formatBytes(group.total_size_bytes)}</span>
+					className="muted">{group.subscription_count} item{group.subscription_count === 1 ? '' : 's'}
 					{' · '}{intervalLabel(group.interval_seconds)}
 					{group.running_count > 0 && ` · ${group.running_count} running`}
-					{group.dead_count > 0 && ` · ${group.dead_count} dead`}
 					{group.error_count > 0 && ` · ${group.error_count} failed`}
 					{!group.enabled && ' · Paused'}
 					<span className="subscription-next-run"
@@ -257,9 +253,7 @@ function SubscriptionGroupView({group, items, choices, busy, act}: {
 				<thead>
 				<tr>
 					<th scope="col">Subscription</th>
-					<th scope="col" className="subscription-number">Files</th>
-					<th scope="col" className="subscription-number">Added last run</th>
-					<th scope="col" className="subscription-number">Size</th>
+					<th scope="col">Last check</th>
 					<th scope="col">Status / next run</th>
 					<th scope="col">Actions</th>
 				</tr>
@@ -268,10 +262,12 @@ function SubscriptionGroupView({group, items, choices, busy, act}: {
 					<th scope="row" className="subscription-label">{itemLabel(item)}
 						{item.last_error && <small className="error">{item.last_error}</small>}
 					</th>
-					<td className="subscription-number">{item.record_count.toLocaleString()}</td>
-					<td className="subscription-number">{(item.imported_count ?? 0).toLocaleString()}</td>
-					<td className="subscription-number" aria-label={`Total size for ${itemLabel(item)}`}
-						title={`${item.total_size_bytes.toLocaleString()} bytes`}>{formatBytes(item.total_size_bytes)}</td>
+					<td>{item.last_finished_at === null ? 'Never checked' : <>
+						{item.last_error ? 'Failed' : 'Succeeded'}{' · '}
+						<time dateTime={new Date(item.last_finished_at * 1000).toISOString()}>
+							{new Date(item.last_finished_at * 1000).toLocaleString()}
+						</time>
+					</>}</td>
 					<td><span className="subscription-next-run" aria-label={`Next run for ${itemLabel(item)}`}>
 						<SubscriptionRunStatus item={item} groupEnabled={group.enabled}/>
 					</span></td>

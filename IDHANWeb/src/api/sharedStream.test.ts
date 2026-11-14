@@ -322,3 +322,56 @@ it('keeps subscription-owned sessions out of the normal download store', async (
 		close();
 	}
 });
+
+it('delivers completion counts without reconstructing them from URL events', async () => {
+	const stream = install();
+	const sessions: DownloadSessionInfo[] = [];
+	const close = watchDownloadSessions({onSession: session => sessions.push(session)});
+	try {
+		await settle();
+		stream.send({
+			type: 'session_result', session_id: 7, imported_count: 3, known_count: 8,
+			finished_at: 100, error: 'One import failed'
+		});
+		await settle();
+		expect(sessions.at(-1)?.result).toEqual({
+			imported_count: 3, known_count: 8,
+			finished_at: 100, error: 'One import failed'
+		});
+		stream.send({type: 'session_result', session_id: 7, imported_count: 0, known_count: 11, finished_at: 200});
+		await settle();
+		expect(sessions.at(-1)?.result).toEqual({imported_count: 0, known_count: 11, finished_at: 200, error: null});
+	} finally {
+		close();
+	}
+});
+
+it('restores saved scan counts and retains the last scan while lifetime imports advance', async () => {
+	const stream = install();
+	const sessions: DownloadSessionInfo[] = [];
+	const close = watchDownloadSessions({onSession: session => sessions.push(session)});
+	try {
+		await settle();
+		stream.send({
+			type: 'session_snapshot', session_id: 7, name: 'Source',
+			total_imported_count: 10, last_scan_imported_count: 2
+		});
+		await settle();
+		expect(sessions.at(-1)?.total_imported_count).toBe(10);
+		expect(sessions.at(-1)?.last_scan_imported_count).toBe(2);
+		stream.send({type: 'session_import_counts', session_id: 7, total_imported_count: 11});
+		stream.send({type: 'session_import_counts', session_id: 7, total_imported_count: 10});
+		await settle();
+		expect(sessions.at(-1)?.total_imported_count).toBe(11);
+		expect(sessions.at(-1)?.last_scan_imported_count).toBe(2);
+		stream.send({
+			type: 'session_result', session_id: 7, total_imported_count: 11,
+			imported_count: 1, known_count: 9, finished_at: 200
+		});
+		await settle();
+		expect(sessions.at(-1)?.total_imported_count).toBe(11);
+		expect(sessions.at(-1)?.last_scan_imported_count).toBe(1);
+	} finally {
+		close();
+	}
+});

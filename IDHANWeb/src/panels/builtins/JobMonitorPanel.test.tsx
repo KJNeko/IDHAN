@@ -49,9 +49,9 @@ it('renders streamed maintenance and scan progress, releases its subscription, a
         expect(view.textContent).toContain('completed');
 		await act(() => onJobs([{
 			job_id: 8, job_name: 'Subscription 9', status: 'running', completed: false,
-			progress: {kind: 'subscription', subscription_id: 9, imported_count: 123, known_count: 20}
+			progress: {kind: 'subscription', subscription_id: 9}
 		}]));
-		expect(view.textContent).toContain('123 imported · 20 known');
+		expect(view.textContent).toContain('Checking subscription 9');
         expect(fetch).not.toHaveBeenCalled();
 		vi.mocked(api.deduplicateUrls).mockResolvedValue({job_id: 3});
         await act(() => view.querySelector('.job-launcher')!.dispatchEvent(new Event('submit', {

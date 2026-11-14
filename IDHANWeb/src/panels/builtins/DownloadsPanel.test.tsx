@@ -95,6 +95,8 @@ it('refreshes tags on expanded downloads when a followed parser imports the same
     const session: DownloadSessionInfo = {
         id: 1,
         name: 'Source follow',
+		total_imported_count: 12,
+		last_scan_imported_count: 3,
         created_at: 0,
         last_used_at: 0,
         error_count: 0,
@@ -129,6 +131,8 @@ it('refreshes tags on expanded downloads when a followed parser imports the same
 			    sessions: [{session_id: 1, download_bytes_per_second: 12_000_000}]
 		    });
 		});
+		expect(view.querySelector('[aria-label="Session imported files"]')?.textContent).toContain('Imported: 12 total');
+		expect(view.querySelector('[aria-label="Session imported files"]')?.textContent).toContain('Last scan: 3');
         expect(view.querySelector('[aria-label="Session network stats"]')?.textContent)
 		.toBe('Downloading 8 · Waiting: 3 Parser, 32 Requests · Download: 12.0 MB/s · Downloaded: 120.0 MB · Avg/import: 2.0 MB');
         await act(() => view.querySelector<HTMLButtonElement>('.download-tree-twisty:not(:disabled)')!.click());

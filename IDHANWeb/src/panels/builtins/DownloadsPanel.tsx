@@ -1042,6 +1042,10 @@ function DownloadsPanel({host}: PanelProps) {
                             {' · '}Downloaded: {formatDownloadBytes(session.downloaded_bytes ?? 0)}
                             {' · '}Avg/import: {formatDownloadBytes(session.average_import_bytes ?? 0)}
                         </p>}
+						<p className="muted" aria-label="Session imported files">
+							Imported: {session.total_imported_count ?? 0} total
+							{' · '}Last scan: {session.last_scan_imported_count ?? 'Not completed'}
+						</p>
                         <DownloadSessionSummary nodes={trees[session.id]}/>
                         <ErrorLog
                             count={session.error_count}

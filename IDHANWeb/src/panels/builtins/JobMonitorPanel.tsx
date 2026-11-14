@@ -139,8 +139,7 @@ function JobMonitorPanel({host}: PanelProps) {
                         <UrlDeduplicationProgress progress={job.progress}/>}
                     {job.progress?.kind === 'cluster_scan' && <ClusterScanProgress progress={job.progress}/>}
 					{job.progress?.kind === 'subscription' && <div className="muted">
-						{job.progress.imported_count.toLocaleString()} imported
-                        · {job.progress.known_count.toLocaleString()} known
+                        Checking subscription {job.progress.subscription_id}
                     </div>}
                     {job.progress?.kind === 'background_service' && <BackgroundJobProgress progress={job.progress}/>}
               </li>

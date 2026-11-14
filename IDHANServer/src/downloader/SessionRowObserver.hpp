@@ -38,6 +38,7 @@ class SessionRowObserver final : public SessionObserver
 	std::unordered_map< DownloadSessionUrlID, DownloadSessionUrlID > m_saved_parents;
 	std::optional< DownloadSessionUrlID > takeSavedRow( DownloadSessionUrlID parent, const std::string& url );
 	bool hasSavedImport( DownloadSessionUrlID row ) const;
+	bool belongsToStartedRoot( DownloadSessionUrlID row ) const;
 
 	//! Must be called with m_mutex held, so concurrent milestones publish in the order they happened.
 	void moveLiveLocked( DownloadSessionUrlID row, LiveUrl& live, std::string_view state );

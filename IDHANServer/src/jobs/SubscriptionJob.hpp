@@ -23,7 +23,6 @@ class SubscriptionJob
 	~SubscriptionJob();
 	SubscriptionJob( const SubscriptionJob& ) = delete;
 	SubscriptionJob& operator=( const SubscriptionJob& ) = delete;
-	void update( db::SubscriptionRunResult result );
 	void finish( std::optional< std::string > error = {} );
 };
 } // namespace idhan::jobs

@@ -199,6 +199,7 @@ runtime::Task< void > DownloadSessionEventHub::initializeSubscription(
 					    sessions.name,
 					    extract(epoch FROM sessions.created_at)::bigint,
 					    extract(epoch FROM sessions.last_used_at)::bigint,
+					    sessions.total_imported_count, sessions.last_scan_imported_count,
 					    EXISTS (
 					        SELECT
 					            1
@@ -214,7 +215,14 @@ runtime::Task< void > DownloadSessionEventHub::initializeSubscription(
 					    sessions.download_session_id
 				)SQL",
 				std::move( session_bindings ) )
-			.rows< DownloadSessionID, std::string, std::int64_t, std::int64_t, bool >()
+			.rows<
+				DownloadSessionID,
+				std::string,
+				std::int64_t,
+				std::int64_t,
+				std::int64_t,
+				std::optional< std::int64_t >,
+				bool >()
 	};
 
 	db::DBBindings url_bindings;
@@ -352,7 +360,7 @@ runtime::Task< void > DownloadSessionEventHub::initializeSubscription(
 
 	std::vector< http::SSEInitialEvent > initial;
 	std::vector< DownloadSessionID > running;
-	for ( const auto& [ session_id, name, created_at, last_used_at, unfinished ] : sessions )
+	for ( const auto& [ session_id, name, created_at, last_used_at, total, last_scan, unfinished ] : sessions )
 	{
 		const bool is_active { active.contains( session_id ) || unfinished };
 		if ( active.contains( session_id ) ) running.push_back( session_id );
@@ -360,7 +368,12 @@ runtime::Task< void > DownloadSessionEventHub::initializeSubscription(
 		initial.push_back(
 			events::sessionSnapshot(
 				events::SessionInfo {
-					.id = session_id, .name = name, .created_at = created_at, .last_used_at = last_used_at },
+					.id = session_id,
+					.name = name,
+					.created_at = created_at,
+					.last_used_at = last_used_at,
+					.total_imported_count = total,
+					.last_scan_imported_count = last_scan },
 				is_active ? "active" : "idle" ) );
 	}
 
@@ -373,7 +386,7 @@ runtime::Task< void > DownloadSessionEventHub::initializeSubscription(
 		initial.push_back( events::networkSnapshot( session_id, entry->second ) );
 	}
 
-	for ( const auto& [ session_id, name, created_at, last_used_at, unfinished ] : sessions )
+	for ( const auto& [ session_id, name, created_at, last_used_at, total, last_scan, unfinished ] : sessions )
 	{
 		auto& rows { session_urls[ session_id ] };
 		if ( active.contains( session_id ) )
