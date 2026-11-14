@@ -428,4 +428,14 @@ void DBBindings::bind( T&& value )
 	else
 		append( DBCodec< Value >::encode( value ) );
 }
+
+template < typename... Ts >
+void DBBindings::bindSet( Ts&&... values )
+{
+	template for ( const auto&& value : { std::forward< Ts >( values )... } )
+	{
+		bind( value );
+	}
+}
+
 } // namespace idhan::db

@@ -9,8 +9,10 @@
 #include <format>
 #include <libpq-fe.h>
 #include <simdjson.h>
+#include <unordered_set>
 
 #include "apiAuth.hpp"
+#include "db/similarRecords.hpp"
 #include "helpers.hpp"
 #include "idValidation.hpp"
 #include "idhan/db/DBContext.hpp"
@@ -115,111 +117,54 @@ http::HTTPTask< http::JsonResult< SimilarRecordsResponse > > findSimilar(
 	const bool include_unrelated { query.value.include_unrelated.value_or( false ) };
 	const bool include_related { query.value.include_related.value_or( false ) };
 
-	db::DBBindings probe_bindings {};
-	probe_bindings.bind( record_id );
-	const auto probe_rows {
-		co_await db
-			.query(
-				//language=postgresql
-				R"SQL(
-					SELECT
-					    phash
-					FROM image_metadata
-					WHERE record_id = $1
-					    AND phash IS NOT NULL
-				)SQL",
-				std::move( probe_bindings ) )
-			.rows< std::bitset< 64 > >()
-	};
+	auto transaction { co_await db.transaction() };
+	// Every lookup must see the same relationship and hash snapshot.
+	co_await transaction.query( "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY" ).result();
 
-	if ( probe_rows.empty() )
+	const auto probe { co_await db::similarityProbe( transaction, record_id ) };
+	if ( !probe.has_value() )
+	{
+		co_await transaction.commit();
 		co_return http::Response::error(
 			404, std::format( "Record {} has no perceptual hash to compare against", record_id ) );
+	}
 
-	const auto probe { std::get< 0 >( probe_rows.row( 0 ) ) };
-
-	db::DBBindings bindings {};
-	bindings.bind( probe );
-	bindings.bind( record_id );
-	bindings.bind( static_cast< std::int32_t >( distance ) );
-	bindings.bind( static_cast< std::int32_t >( limit ) + 1 );
-	bindings.bind( include_unrelated );
-	bindings.bind( include_related );
-
-	const auto matches {
-		co_await db
-			.query(
-				//language=postgresql
-				R"SQL(
-					WITH probe_root AS (
-					    SELECT
-					        duplicate_king ($2) AS root_id
-					),
-					related (
-					    record_id
-					) AS (
-					    SELECT
-					        duplicate_group_members (root_id)
-					    FROM probe_root
-					    UNION
-					    SELECT
-					        member.record_id
-					    FROM probe_root
-					        JOIN alternative_records alternative ON alternative.lesser_record_id = root_id
-					            OR alternative.greater_record_id = root_id
-					        CROSS JOIN LATERAL duplicate_group_members (
-					            CASE WHEN alternative.lesser_record_id = root_id THEN alternative.greater_record_id
-					            ELSE
-					                alternative.lesser_record_id
-					            END
-					        ) AS member (record_id)
-					)
-					SELECT
-					    record_id,
-					    (phash <~> $1)::integer AS distance,
-					    EXISTS (
-					        SELECT
-					            1
-					        FROM unrelated_records marked
-					        WHERE marked.lesser_record_id = LEAST (duplicate_king ($2), duplicate_king (image_metadata.record_id))
-					            AND marked.greater_record_id = GREATEST (duplicate_king ($2), duplicate_king (image_metadata.record_id))
-					    ) AS unrelated
-					FROM image_metadata
-					WHERE phash IS NOT NULL
-					    AND record_id != $2
-					    AND (phash <~> $1)::integer <= $3::integer
-					    AND ($5::boolean
-					        OR NOT EXISTS (
-					            SELECT
-					                1
-					            FROM unrelated_records unrelated
-					            WHERE unrelated.lesser_record_id = LEAST (duplicate_king ($2), duplicate_king (image_metadata.record_id))
-					                AND unrelated.greater_record_id = GREATEST (duplicate_king ($2), duplicate_king (image_metadata.record_id))
-					        ))
-					    AND ($6::boolean
-					        OR NOT EXISTS (
-					            SELECT
-					                1
-					            FROM related
-					            WHERE related.record_id = image_metadata.record_id
-					        ))
-					ORDER BY
-					    distance,
-					    record_id
-					LIMIT $4::integer
-				)SQL",
-				std::move( bindings ) )
-			.rows< RecordID, std::int32_t, bool >()
-	};
-
-	const bool truncated { matches.size() > limit };
-
-	SimilarRecordsResponse response { record_id, distance, limit, include_unrelated, include_related, truncated, {} };
-	const auto result_count { std::min< std::size_t >( matches.size(), limit ) };
-	response.results.reserve( result_count );
-	for ( std::size_t index {}; index < result_count; ++index )
+	const auto& probe_value { probe.value() };
+	std::unordered_set< RecordID > related_kings { probe_value.king_id };
+	if ( !include_related )
 	{
-		const auto& [ match_id, match_distance, unrelated ] { matches.row( index ) };
+		const auto alternatives { co_await db::alternativeKingPairs( transaction, probe_value.king_id ) };
+		for ( const auto& [ lesser, greater ] : alternatives )
+			related_kings.insert( lesser == probe_value.king_id ? greater : lesser );
+	}
+
+	const auto unrelated_pairs { co_await db::unrelatedKingPairs( transaction, probe_value.king_id ) };
+
+	std::unordered_set< RecordID > unrelated_kings;
+
+	for ( const auto& [ lesser, greater ] : unrelated_pairs )
+		unrelated_kings.insert( lesser == probe_value.king_id ? greater : lesser );
+
+	const auto matches { co_await db::similarityCandidates(
+		transaction, probe_value.phash, record_id, static_cast< Integer >( distance ) ) };
+
+	co_await transaction.commit();
+
+	SimilarRecordsResponse response { record_id, distance, limit, include_unrelated, include_related, false, {} };
+	response.results.reserve( std::min< std::size_t >( matches.size(), limit ) );
+	for ( const auto& [ match_id, match_distance, king_id ] : matches )
+	{
+		if ( !include_related && related_kings.contains( king_id ) ) continue;
+
+		const bool unrelated { unrelated_kings.contains( king_id ) };
+		if ( !include_unrelated && unrelated ) continue;
+
+		if ( response.results.size() == limit )
+		{
+			response.truncated = true;
+			break;
+		}
+
 		response.results.push_back( { match_id, match_distance, unrelated } );
 	}
 	co_return http::JsonResponse< SimilarRecordsResponse > { std::move( response ) };
@@ -376,14 +321,14 @@ http::HTTPTask< http::JsonResult< RelationshipUpdatedResponse > > setBetterDupli
 		bindings.bind( std::move( worse_ids ) );
 		bindings.bind( std::move( better_ids ) );
 		co_await db
-				 .query(
-					 //language=postgresql
-					 R"SQL(
+			.query(
+				//language=postgresql
+				R"SQL(
 					SELECT
 					    insert_duplicate_pair ($1::INTEGER[], $2::INTEGER[])
 				)SQL",
-					 std::move( bindings ) )
-				 .result();
+				std::move( bindings ) )
+			.result();
 	}
 	catch ( const std::exception& e )
 	{
@@ -490,27 +435,27 @@ http::HTTPTask< http::JsonResult< ClearedRelationshipResponse > > clearRelations
 
 	auto transaction { co_await db.transaction() };
 	co_await transaction
-			 .query(
-				 //language=postgresql
-				 R"SQL(
+		.query(
+			//language=postgresql
+			R"SQL(
 				SELECT
 				    pg_advisory_xact_lock(16609, 1)
 			)SQL" )
-			 .result();
+		.result();
 
 	db::DBBindings duplicate_bindings {};
 	duplicate_bindings.bind( record_id_a );
 	duplicate_bindings.bind( record_id_b );
 	const auto removed_rows {
 		co_await transaction
-				 .query(
-					 //language=postgresql
-					 R"SQL(
+			.query(
+				//language=postgresql
+				R"SQL(
 					SELECT
 					    remove_duplicate_pair ($1, $2) AS removed
 				)SQL",
-					 std::move( duplicate_bindings ) )
-				 .rows< bool >()
+				std::move( duplicate_bindings ) )
+			.rows< bool >()
 	};
 	const bool duplicate_removed { !removed_rows.empty() && std::get< 0 >( removed_rows.row( 0 ) ) };
 

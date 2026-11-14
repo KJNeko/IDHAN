@@ -4,7 +4,7 @@ option(BUILD_IDHAN_DOCS "Builds the API and source docs" ON)
 option(BUILD_IDHAN_SERVER "Builds the server" ON)
 option(BUILD_IDHAN_DOWNLOADER "Builds the downloader runtime" ON)
 
-option(BUILD_IDHAN_TESTS "Builds all tests relating to IDHAN" OFF)
+option(BUILD_IDHAN_TESTS "Builds the GoogleTest C++ suites" OFF)
 
 option(BUILD_IDHAN_CLIENT "Builds the shared library for the IDHANClient" ON)
 option(BUILD_IDHAN_HTTP "Builds the proxygen backed HTTP layer" ON)
@@ -32,12 +32,11 @@ function(idhan_require_option DEPENDENT DEPENDENCY)
 	endif ()
 endfunction()
 
-# Resolve the component graph to a fixed point; tests/docs may enable the server,
+# Resolve the component graph to a fixed point; docs may enable the server,
 # which in turn enables HTTP and the downloader.
 set(IDHAN_OPTIONS_CHANGED TRUE)
 while (IDHAN_OPTIONS_CHANGED)
 	set(IDHAN_OPTIONS_CHANGED FALSE)
-	idhan_require_option(BUILD_IDHAN_TESTS BUILD_IDHAN_SERVER)
 	idhan_require_option(BUILD_IDHAN_DOCS BUILD_IDHAN_SERVER)
 	idhan_require_option(BUILD_IDHAN_SERVER BUILD_IDHAN_HTTP)
 	idhan_require_option(BUILD_IDHAN_SERVER BUILD_IDHAN_DOWNLOADER)

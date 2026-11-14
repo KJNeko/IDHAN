@@ -1,21 +1,2 @@
-find_package(CURL REQUIRED)
-set(IDHAN_TEST_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
-
-add_subdirectory(cmake)
-add_subdirectory(http)
+# API tests run independently with pytest; see api/README.md.
 add_subdirectory(shared)
-add_subdirectory(hydrusImporter)
-if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
-	add_subdirectory(filesystem)
-endif ()
-
-add_subdirectory(modules)
-add_subdirectory(downloader)
-add_subdirectory(fileRecovery)
-add_subdirectory(db)
-add_subdirectory(hashMaintenance)
-add_subdirectory(api)
-add_subdirectory(parameters)
-add_subdirectory(openapi)
-add_subdirectory(routes)
-add_subdirectory(clusterMarkers)

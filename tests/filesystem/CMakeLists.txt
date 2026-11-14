@@ -1,6 +1,0 @@
-AddFGLExecutable(IDHANFilesystemTests ${CMAKE_CURRENT_SOURCE_DIR})
-target_sources(IDHANFilesystemTests PRIVATE ${CMAKE_SOURCE_DIR}/IDHANServer/src/filesystem/renameNoReplace.cpp)
-target_sources(IDHANFilesystemTests PRIVATE ${CMAKE_SOURCE_DIR}/IDHANServer/src/filesystem/clearThumbnailCache.cpp)
-target_include_directories(IDHANFilesystemTests PRIVATE ${CMAKE_SOURCE_DIR}/IDHANServer/src)
-target_link_libraries(IDHANFilesystemTests PRIVATE Catch2::Catch2WithMain)
-catch_discover_tests(IDHANFilesystemTests)

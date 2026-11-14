@@ -52,3 +52,11 @@ run-dev-remote.sh
 # Credentials and private downloaders
 /IDHANDownloader/premade/secrets.json
 /IDHANDownloader/premade/url-classes/private/**
+
+# Python API test environment
+/.venv/
+__pycache__/
+.pytest_cache/
+
+# Local pytest benchmark results
+.benchmarks/

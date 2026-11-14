@@ -64,8 +64,12 @@ cmake --build build/debug --target IDHANSharedTests
 ctest --test-dir build/debug/tests/shared --output-on-failure
 ```
 
-Enable tests with `BUILD_IDHAN_TESTS`; CTest is enabled at the project root.
-Database/API suites require PostgreSQL as described in `tests/api/README.md`.
+Enable GoogleTest C++ suites with `BUILD_IDHAN_TESTS`; install GoogleTest with
+its CMake package configuration available. CTest is enabled at the project root.
+This option does not require the server; disable unused components for a smaller
+build. `IDHANSharedTests` includes SHA256 known-vector and input-validation tests.
+API tests run separately with pytest as described in `tests/api/README.md`.
+The standalone `BUILD_PTR_CORE_TESTS` suite still uses Catch2.
 Component option checks can also run without compiling or finding dependencies:
 
 ```sh

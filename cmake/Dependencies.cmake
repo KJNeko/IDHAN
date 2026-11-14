@@ -25,7 +25,12 @@ if (BUILD_IDHAN_SERVER)
 	include(toml)
 endif ()
 
-if (BUILD_IDHAN_TESTS OR BUILD_PTR_CORE_TESTS)
+if (BUILD_IDHAN_TESTS)
+	find_package(GTest CONFIG REQUIRED)
+	include(GoogleTest)
+endif ()
+
+if (BUILD_PTR_CORE_TESTS)
 	find_package(Catch2 3 REQUIRED)
 	include(Catch)
 endif ()

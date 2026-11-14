@@ -47,6 +47,9 @@ class DBBindings
 	DBBindings();
 	template < typename T >
 	void bind( T&& value );
+	template < typename... Ts >
+	void bindSet( Ts&&... values );
+
 	void append( DBParameter );
 	[[nodiscard]] std::span< const DBParameter > values() const noexcept;
 	[[nodiscard]] std::vector< Oid > oids() const;
