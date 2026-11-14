@@ -19,9 +19,7 @@ from referencing.jsonschema import DRAFT202012
 ROOT = Path(__file__).resolve().parents[2]
 OFFICIAL_SCHEMA = "https://spec.openapis.org/oas/3.2/schema-base/2026-08-30"
 METHODS = {"get", "post", "put", "patch", "delete", "head", "options", "trace", "query"}
-# UI entrypoints and static-file routes are outside the API contract.
-UI_PATHS = {"/", "/status", "/index.html", "/api", "/assets/{filename}", "/plugins/{*path}",
-            "/log/pretty"}
+DOCUMENTATION_PATHS = {"/api"}
 
 
 def official_registry(cache):
@@ -60,7 +58,7 @@ def registered_routes():
     # Compatibility routes are excluded from the published contract pending their rework.
     return {
         (method, path) for method, path in routes
-        if path not in UI_PATHS and not path.startswith("/hyapi/")
+        if path not in DOCUMENTATION_PATHS and not path.startswith("/hyapi/")
     }
 
 

@@ -25,20 +25,17 @@
 namespace idhan::httpapi
 {
 
-static http::HTTPTask< http::Response > serveStaticHtml(
-	http::RequestContext context,
-	std::string filename,
-	std::string missing_message )
+static http::HTTPTask< http::Response > serveAPIDocsHtml( http::RequestContext context )
 {
-	const auto file_path { getStaticPath() / filename };
+	const auto file_path { getAPIDocsPath() / "apidocs.html" };
 
 	auto file_e { folly::File::makeFile( file_path.c_str(), O_RDONLY ) };
-	if ( !file_e ) co_return http::Response::error( 404, missing_message );
+	if ( !file_e ) co_return http::Response::error( 404, "API docs are not built into this server" );
 
 	auto file { std::move( *file_e ) };
 	struct stat status {};
 	if ( ::fstat( file.fd(), &status ) != 0 || !S_ISREG( status.st_mode ) )
-		co_return http::Response::error( 404, missing_message );
+		co_return http::Response::error( 404, "API docs are not built into this server" );
 
 	http::FileMetadata metadata {
 		.size = static_cast< std::uint64_t >( status.st_size ),
@@ -46,7 +43,7 @@ static http::HTTPTask< http::Response > serveStaticHtml(
 		.changed = std::chrono::system_clock::from_time_t( status.st_ctime ),
 		.etag = std::format( "{:x}-{:x}", status.st_mtime, status.st_size ),
 		.content_type = "text/html; charset=utf-8",
-		.filename = filename,
+		.filename = "apidocs.html",
 	};
 
 	co_return co_await http::FileResponse::create( context, std::move( file ), std::move( metadata ) );
@@ -54,14 +51,7 @@ static http::HTTPTask< http::Response > serveStaticHtml(
 
 http::HTTPTask< http::EncodedResult< std::string, "text/html" > > apiDocsIndex( http::RequestContext context )
 {
-	co_return http::encodedResponse< std::string, "text/html" >(
-		co_await serveStaticHtml( std::move( context ), "apidocs.html", "API docs are not built into this server" ) );
-}
-
-http::HTTPTask< http::EncodedResult< std::string, "text/html" > > logPretty( http::RequestContext context )
-{
-	co_return http::encodedResponse< std::string, "text/html" >( co_await serveStaticHtml(
-		std::move( context ), "logs.html", "The log viewer is not installed on this server" ) );
+	co_return http::encodedResponse< std::string, "text/html" >( co_await serveAPIDocsHtml( std::move( context ) ) );
 }
 
 [[nodiscard]] static spdlog::level::level_enum parseLevelString( const std::string_view level_str )
@@ -129,9 +119,9 @@ static LogResponse renderLogJson(
 	return http::JsonResponse< LogEntriesResponse > { std::move( response ) };
 }
 
-static http::HTTPTask< LogResponse > fetchLogImpl( const FetchLogQuery& parameters, const bool json_by_default )
+static http::HTTPTask< LogResponse > fetchLogImpl( const FetchLogQuery& parameters )
 {
-	const std::string format { parameters.format.value_or( json_by_default ? "json" : "text" ) };
+	const std::string format { parameters.format.value_or( "text" ) };
 	if ( format != "text" && format != "json" ) co_return http::Response::error( 400, "format must be text or json" );
 
 	auto logger { log::getServerLogger() };
@@ -181,12 +171,7 @@ static http::HTTPTask< LogResponse > fetchLogImpl( const FetchLogQuery& paramete
 
 http::HTTPTask< LogResponse > fetchLog( http::Query< FetchLogQuery > query )
 {
-	co_return co_await fetchLogImpl( query.value, false );
-}
-
-http::HTTPTask< LogResponse > fetchLogEntries( http::Query< FetchLogEntriesQuery > query )
-{
-	co_return co_await fetchLogImpl( query.value, true );
+	co_return co_await fetchLogImpl( query.value );
 }
 
 } // namespace idhan::httpapi

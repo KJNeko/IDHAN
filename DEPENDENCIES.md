@@ -8,8 +8,6 @@
 | [libFGL](https://git.futuregadgetlabs.net/KJ16609/libFGL)              | `dependencies/libFGL`      | in-tree | CMake helpers: `AddFGLLibrary`, `AddFGLExecutable`, `AddFGLModule`                                       |
 | [chardet](https://github.com/Joungkyun/libchardet)                     | `dependencies/chardet`     | in-tree | Character encoding detection for metadata extraction                                                     |
 | [hydrus](https://github.com/hydrusnetwork/hydrus)                      | `3rd-party/hydrus`         | in-tree | Source of Hydrus constants; scanned at CMake configure time to generate `IDHAN/include/hydrus/*_gen.hpp` |
-| [hydrus-web](https://github.com/floogulinc/hydrus-web)                 | `3rd-party/hydrus-web`     | in-tree | Hydrus web client bundled as a static asset                                                              |
-| [hydrui](https://github.com/hydrui/hydrui)                             | `3rd-party/hydrui`         | in-tree | Alternative web UI bundled as a static asset                                                             |
 | [doxygen-awesome-css](https://github.com/jothepro/doxygen-awesome-css) | `docs/doxygen-awesome-css` | in-tree | Doxygen theme                                                                                            |
 
 ## System packages (Ubuntu 24.04 / `apt`)

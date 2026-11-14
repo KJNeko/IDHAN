@@ -1,17 +1,5 @@
 # syntax=docker/dockerfile:1.7
 
-FROM --platform=$BUILDPLATFORM node:22-slim AS webbuilder
-
-ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
-RUN corepack enable
-WORKDIR /web
-
-COPY IDHANWeb/package.json IDHANWeb/pnpm-lock.yaml IDHANWeb/pnpm-workspace.yaml ./
-RUN --mount=type=cache,target=/pnpm-store,id=idhan-pnpm-v1,sharing=locked \
-    pnpm config set store-dir /pnpm-store && pnpm install --frozen-lockfile
-COPY IDHANWeb/ ./
-RUN pnpm exec vite build --outDir /web/dist
-
 FROM --platform=$BUILDPLATFORM node:22-slim AS parserbuilder
 WORKDIR /parsers
 
@@ -168,7 +156,6 @@ RUN --mount=type=cache,target=/root/.ccache,id=idhan-ccache-v1 \
     -DBUILD_IDHAN_TESTS=OFF \
     -DBUILD_HYDRUS_IMPORTER=OFF \
     -DBUILD_IDHAN_DOCS=ON \
-    -DBUILD_IDHAN_WEB=OFF \
     -DBUILD_IDHAN_DOWNLOADER=ON \
     -DBUILD_IDHAN_DOWNLOADER_TESTER=OFF \
     -DIDHAN_DOWNLOADER_PREBUILT_DIR=/build/parser-bundles \
@@ -239,8 +226,7 @@ RUN apt-get update && \
 COPY --from=builder /build/bin/IDHANServer /usr/bin/IDHANServer
 
 COPY --from=builder /build/bin/IDHANModuleRunner /usr/bin/IDHANModuleRunner
-COPY --from=builder /build/bin/static/ /usr/share/idhan/static
-COPY --from=webbuilder /web/dist/ /usr/share/idhan/static
+COPY --from=builder /build/bin/docs/ /usr/share/idhan/docs
 COPY --from=builder /build/bin/modules/ /usr/share/idhan/modules
 COPY --from=builder /build/bin/config.toml /usr/share/idhan/config.toml
 # Parser bundles come from parserbuilder and are staged with non-code assets by CMake.

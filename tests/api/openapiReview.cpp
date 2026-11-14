@@ -9,6 +9,32 @@
 namespace idhan::test
 {
 
+TEST_CASE_METHOD( ServerFixture, "The server no longer hosts a WebUI", "[api][removed-ui]" )
+{
+	for ( const auto path :
+	      { "/",
+	        "/status",
+	        "/index.html",
+	        "/assets/app.js",
+	        "/plugins",
+	        "/plugins/hello/index.js",
+	        "/layouts",
+	        "/layouts/1f7893ba-1305-42af-bc99-4862ab219b29",
+	        "/log/pretty",
+	        "/log/pretty/entries",
+	        "/integrity" } )
+	{
+		CAPTURE( path );
+		CHECK( api().get( path ).status == 404 );
+	}
+	CHECK( api().get( "/api" ).status == 200 );
+	CHECK( api().get( "/health" ).status == 200 );
+	CHECK( api().get( "/log", { { "format", "json" } } ).status == 200 );
+
+	pqxx::nontransaction tx { db() };
+	CHECK_FALSE( tx.query_value< bool >( "SELECT to_regclass('webui_layouts') IS NOT NULL" ) );
+}
+
 TEST_CASE_METHOD( ServerFixture, "Storage sunburst decodes PostgreSQL table and index names", "[api][stats][sunburst]" )
 {
 	const auto response { api().get( "/db/stats/sunburst" ) };
@@ -197,16 +223,6 @@ TEST_CASE_METHOD(
 	CHECK( api().post( "/search", body ).status == 200 );
 	body[ "record_ids" ] = Json::Value { Json::arrayValue };
 	CHECK( api().post( "/records/metadata", body ).status == 200 );
-	body[ "id" ] = "1f7893ba-1305-42af-bc99-4862ab219b29";
-	body[ "name" ] = "Large review layout";
-	body[ "schema" ] = 1;
-	REQUIRE( api().post( "/layouts", body ).status == 201 );
-	const auto layouts { api().get( "/layouts" ) };
-	REQUIRE( layouts.status == 200 );
-	REQUIRE( layouts.json.size() == 1 );
-	CHECK( layouts.json[ 0 ][ "created_at" ].isIntegral() );
-	CHECK( layouts.json[ 0 ][ "updated_at" ].isIntegral() );
-	CHECK( api().del( "/layouts/1f7893ba-1305-42af-bc99-4862ab219b29" ).status == 200 );
 	CHECK( api().postOctets( "/search", "{" + padding ).status == 400 );
 }
 

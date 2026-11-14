@@ -100,10 +100,6 @@ render_threads = 2
 # Defaults beside IDHANModuleRunner; set this to override that location.
 #model_path = "/usr/share/idhan/models"
 
-[plugins]
-# WebUI plugin directory; each plugin needs manifest.json. Overrides must remain under the static root.
-#path = "./static/plugins"
-
 [cluster]
 # Acknowledge missing writable cluster marker/root recovery; reset to false before recovery.
 # Check that the intended storage is mounted. Existing conflicting markers are never replaced.

@@ -21,7 +21,6 @@ class MaintenanceServices
 
 	[[nodiscard]] runtime::Task<> start();
 	void stopIndependentProducers() noexcept;
-	[[nodiscard]] runtime::Task<> integrityCheck();
 	[[nodiscard]] runtime::Task<> sweepHamming();
 	[[nodiscard]] runtime::Task<> sweepPhash();
 	[[nodiscard]] runtime::Task<> drain();

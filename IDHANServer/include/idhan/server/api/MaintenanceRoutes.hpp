@@ -16,7 +16,6 @@ class MaintenanceRoutes final : public ApiRouteGroup
 	[[nodiscard]] static http::HTTPTask< http::Response > parseMime( http::RequestContext );
 	[[nodiscard]] static http::HTTPTask< http::Response > generateThumbnail( http::RequestContext );
 	[[nodiscard]] static http::HTTPTask< http::Response > listMimes( http::RequestContext );
-	[[nodiscard]] static http::HTTPTask< http::Response > integrity( http::RequestContext );
 	[[nodiscard]] static http::HTTPTask< http::Response > purgeThumbnails( http::RequestContext );
 	[[nodiscard]] static http::HTTPTask< http::Response > jobStatus( http::RequestContext );
 	[[nodiscard]] static http::HTTPTask< http::Response > jobsStatus( http::RequestContext );

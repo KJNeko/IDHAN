@@ -55,7 +55,7 @@ TEST_CASE( "SSE compression delivers snapshots and updates before stream end", "
 	events.publish( "test.update", "entity", std::move( update_e.value() ) );
 	const auto update { stream.waitFor( "update" ) };
 	CHECK( update[ "value" ].asInt() == 2 );
-	// Keep the client connected while stopping, as the WebUI does during SIGTERM.
+	// Keep the client connected while stopping, to exercise shutdown with an active SSE stream.
 	// Admission closes first so a reconnect cannot create a new live subscription.
 	server.stopAdmission();
 	events.shutdown();

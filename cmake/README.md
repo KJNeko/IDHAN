@@ -33,16 +33,15 @@ configuration are supported. Dependency fetching retains its existing behavior;
 for offline builds, provide installed packages or CMake FetchContent source
 overrides for the pinned dependencies.
 
-Existing `BUILD_IDHAN_*`, `BUILD_HYDRUS_IMPORTER`, and `IDHAN_*` cache option names
-remain supported. Tests and docs enable the server, which enables HTTP and the
-downloader. The downloader tester enables the downloader; tools and the importer
+Component options are declared in `cmake/Options.cmake`. Tests and docs enable
+the server, which enables HTTP and the downloader. The downloader tester enables the downloader; tools and the importer
 enable the Qt client. Dependency resolution reaches the complete graph even
 when several prerequisite options were explicitly disabled. HTTP can also be
 built without the server. `BUILD_IDHAN_TOOLS` retains its existing behavior of
 building the importer. `BUILD_PTR_CORE_TESTS` can build storage tests without Qt.
 
 For a client-only configuration, disable server, docs, HTTP, downloader,
-downloader tester, WebUI, tools, and importer, and enable `BUILD_IDHAN_CLIENT`.
+downloader tester, tools, and importer, and enable `BUILD_IDHAN_CLIENT`.
 `IDHAN_ENABLE_TRACE` defaults OFF for a fresh Debug cache and ON otherwise;
 explicit values are respected. Hardening defaults remain OFF for Debug and ON
 otherwise. These defaults use `CMAKE_BUILD_TYPE`; multi-configuration generators
@@ -54,7 +53,7 @@ Hydrus headers are generated into `<build>/IDHAN/generated/hydrus` and propagate
 through the IDHAN target. Configure never clones Hydrus into the source tree.
 The migration source remains in `<build>/IDHANMigration` and regenerates when
 its SQL, templates, or generator change. Generation does not apply migrations.
-The OpenAPI snapshot and WebUI/parser staging retain their existing behavior.
+The OpenAPI snapshot and parser staging retain their existing behavior.
 
 Executables remain in `<build>/bin`, and loadable modules in `bin/modules`.
 Test support files now live under `<build>/tests/<suite>`.

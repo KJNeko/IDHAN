@@ -1,7 +1,6 @@
 include_guard(GLOBAL)
 
 option(BUILD_IDHAN_DOCS "Builds the API and source docs" ON)
-option(BUILD_IDHAN_WEB "Builds the React WebUI for IDHAN server" ON)
 option(BUILD_IDHAN_SERVER "Builds the server" ON)
 option(BUILD_IDHAN_DOWNLOADER "Builds the downloader runtime" ON)
 
@@ -58,6 +57,5 @@ endif ()
 
 option(IDHAN_HARDEN "Block same-uid ptrace of the server and disable worker core dumps" ${IDHAN_HARDEN_DEFAULT})
 
-option(IDHAN_WEB_AUTO_REBUILD "Rebuild the WebUI whenever IDHANServer is built" ON)
 option(IDHAN_PACKAGE_HYDRUS_IMPORTER "Bundle the Hydrus Importer runtime for releases" OFF)
 option(BUILD_PTR_CORE_TESTS "Build the standalone PTR file storage tests" OFF)

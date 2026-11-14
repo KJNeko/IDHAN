@@ -124,22 +124,23 @@ std::filesystem::path getModuleRunnerPath()
 	return runner_path;
 }
 
-std::filesystem::path getStaticPath()
+std::filesystem::path getAPIDocsPath()
 {
-	static std::filesystem::path static_path {};
-	static std::once_flag static_path_once {};
+	static std::filesystem::path docs_path {};
+	static std::once_flag docs_path_once {};
 
 	std::call_once(
-		static_path_once,
-		[ & ]()
+		docs_path_once,
+		[]()
 		{
-			if ( std::filesystem::exists( "./static" ) )
-				static_path = std::filesystem::absolute( "./static" );
+			const auto bundled_docs { getExecutableDir() / "docs" };
+			if ( std::filesystem::exists( bundled_docs ) )
+				docs_path = bundled_docs;
 			else
-				static_path = IDHAN_STATIC_PATH;
+				docs_path = IDHAN_API_DOCS_PATH;
 		} );
 
-	return static_path;
+	return docs_path;
 }
 
 std::filesystem::path getThumbnailsPath()
@@ -152,25 +153,6 @@ std::filesystem::path getThumbnailsPath()
 		[]() { thumbnails_path = idhan::config::get< std::string >( "thumbnails", "path", "./thumbnails" ); } );
 
 	return thumbnails_path;
-}
-
-std::filesystem::path getPluginsPath()
-{
-	static std::filesystem::path plugins_path {};
-	static std::once_flag plugins_path_once {};
-
-	std::call_once(
-		plugins_path_once,
-		[]()
-		{
-			const auto configured { idhan::config::getSilentDefault< std::string >( "plugins", "path", "" ) };
-			if ( !configured.empty() )
-				plugins_path = configured;
-			else
-				plugins_path = getStaticPath() / "plugins";
-		} );
-
-	return plugins_path;
 }
 
 const std::vector< std::size_t >& getCacheableThumbnailSizes()

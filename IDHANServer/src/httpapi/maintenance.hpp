@@ -54,13 +54,6 @@ struct[ [= http::SchemaName { "DatabaseStats" }] ] DatabaseStatsResponse
 	bool mappings_estimated;
 };
 
-struct[ [= http::SchemaName { "IntegrityCheck" }] ] IntegrityCheckResponse
-{
-	[[= http::Name { "static" }]] std::string static_path;
-	bool static_exists;
-	std::vector< std::string > files;
-};
-
 struct[ [= http::SchemaName { "PurgeThumbnails" }] ] PurgeThumbnailsResponse
 {
 	bool success { true };
@@ -111,13 +104,6 @@ http::HTTPTask< http::JsonResult< SunburstResponse > > sunburst( db::DBContext& 
 [[= http::Endpoint{proxygen::HTTPMethod::GET, "/db/stats"}]]
 [[= http::Group{"Maintenance"}]]
 http::HTTPTask< http::JsonResult< DatabaseStatsResponse > > databaseStats( db::DBContext& db, [[maybe_unused]] http::RequestContext context );
-// clang-format on
-
-// clang-format off
-[[= http::Endpoint{proxygen::HTTPMethod::GET, "/integrity"}]]
-[[= http::Group{"Maintenance"}]]
-[[= http::Output< http::ErrorResponse >{500}]]
-http::HTTPTask< http::JsonResult< IntegrityCheckResponse > > integrityCheck( [[maybe_unused]] db::DBContext& db, [[maybe_unused]] http::RequestContext context );
 // clang-format on
 
 // clang-format off

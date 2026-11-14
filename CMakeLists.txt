@@ -43,10 +43,6 @@ if (BUILD_IDHAN_DOCS)
 	add_subdirectory(docs)
 endif ()
 
-if (BUILD_IDHAN_WEB)
-	add_subdirectory(IDHANWeb)
-endif ()
-
 if (BUILD_IDHAN_TESTS)
 	add_subdirectory(tests)
 endif ()

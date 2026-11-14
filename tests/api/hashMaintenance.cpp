@@ -162,7 +162,7 @@ class BackfillCluster
 			const auto directory { m_path / ( "f" + hash.substr( 0, 2 ) ) };
 			std::filesystem::create_directories( directory );
 			std::filesystem::copy_file(
-				IDHAN_SOURCE_DIR "/IDHANServer/src/static/Titorv2.png", directory / ( hash + ".png" ) );
+				IDHAN_SOURCE_DIR "/tests/api/fixtures/Titorv2.png", directory / ( hash + ".png" ) );
 		}
 		transaction.exec(
 			//language=postgresql

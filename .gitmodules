@@ -1,6 +1,3 @@
-[submodule "3rd-party/hydrus-web"]
-	path = 3rd-party/hydrus-web
-	url = https://github.com/floogulinc/hydrus-web.git
 [submodule "3rd-party/hydrus"]
 	path = 3rd-party/hydrus
 	url = https://github.com/hydrusnetwork/hydrus.git
@@ -10,9 +7,6 @@
 [submodule "dependencies/libFGL"]
 	path = dependencies/libFGL
 	url = https://git.futuregadgetlabs.net/KJ16609/libFGL.git
-[submodule "3rd-party/hydrui"]
-	path = 3rd-party/hydrui
-	url = https://github.com/hydrui/hydrui.git
 [submodule "dependencies/chardet"]
 	path = dependencies/chardet
 	url = https://github.com/Joungkyun/libchardet.git

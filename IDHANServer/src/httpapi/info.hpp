@@ -27,8 +27,6 @@ struct FetchLogQuery
 	http::possiblyMissing< std::uint64_t > limit;
 };
 
-using FetchLogEntriesQuery = FetchLogQuery;
-
 struct LogEntryResponse
 {
 	std::uint64_t t;
@@ -58,22 +56,9 @@ http::HTTPTask< http::EncodedResult< std::string, "text/html" > > apiDocsIndex( 
 // clang-format on
 
 // clang-format off
-[[= http::Endpoint{proxygen::HTTPMethod::GET, "/log/pretty"}]]
-[[= http::Public {}]]
-[[= http::UnrestrictedParameters {}]]
-http::HTTPTask< http::EncodedResult< std::string, "text/html" > > logPretty( http::RequestContext context );
-// clang-format on
-
-// clang-format off
 [[= http::Endpoint{proxygen::HTTPMethod::GET, "/log"}]]
 [[= http::Group{"Logs"}]]
 http::HTTPTask< LogResponse > fetchLog( http::Query< FetchLogQuery > query );
-// clang-format on
-
-// clang-format off
-[[= http::Endpoint{proxygen::HTTPMethod::GET, "/log/pretty/entries"}]]
-[[= http::Group{"Logs"}]]
-http::HTTPTask< LogResponse > fetchLogEntries( http::Query< FetchLogEntriesQuery > query );
 // clang-format on
 
 } // namespace idhan::httpapi

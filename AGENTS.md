@@ -4,7 +4,7 @@
 
 IDHAN is a C++26 media-management and archival server with a booru-compatible
 tagging model and Hydrus Network compatibility. It uses CMake, PostgreSQL,
-Proxygen/Folly, libpq (libpqxx in legacy code/tests), Qt6, and a React WebUI.
+Proxygen/Folly, libpq (libpqxx in legacy code/tests), and Qt6.
 
 ## Repository layout
 
@@ -19,17 +19,8 @@ Proxygen/Folly, libpq (libpqxx in legacy code/tests), Qt6, and a React WebUI.
 - `IDHANClient/`: Qt6 REST client library.
 - `tools/HydrusImporter/`: Qt GUI Hydrus database importer.
 - `tests/`: Catch2 suites and database/API fixtures.
-- `IDHANWeb/`: React WebUI.
 - `dependencies/` and `3rd-party/`: vendored dependencies; avoid modifying
   them unless the task explicitly requires it.
-
-## WebUI disclosure (strict requirement)
-
-- The WebUI must visibly and clearly label itself as
-  "Vibecoded slop" in the main toolbar.
-- Preserve this disclosure during all UI reviews, redesigns, and text cleanup.
-  Do not remove it, soften it to a generic label such as "Preview", or move it
-  exclusively into a tooltip, settings screen, or documentation.
 
 ## Git workflow
 
@@ -74,7 +65,7 @@ Run a focused case or tag against an existing binary when practical:
 ```
 
 Build output is in `<build-dir>/bin/`. Options and defaults are declared in
-`CMakeLists.txt`; tests default OFF, server/client/importer/WebUI default ON.
+`CMakeLists.txt`; tests default OFF, server/client/importer default ON.
 
 ## C++ conventions
 

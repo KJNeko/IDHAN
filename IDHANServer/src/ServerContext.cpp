@@ -52,9 +52,7 @@
 #include "httpapi/importFile.hpp"
 #include "httpapi/info.hpp"
 #include "httpapi/jobs.hpp"
-#include "httpapi/layouts.hpp"
 #include "httpapi/maintenance.hpp"
-#include "httpapi/plugins.hpp"
 #include "httpapi/rateLimit.hpp"
 #include "httpapi/recordFile.hpp"
 #include "httpapi/records.hpp"
@@ -62,7 +60,6 @@
 #include "httpapi/search.hpp"
 #include "httpapi/tags.hpp"
 #include "httpapi/thumbnail.hpp"
-#include "httpapi/ui.hpp"
 #include "httpapi/version.hpp"
 #include "idhan/db/DBConfig.hpp"
 #include "idhan/db/DBContext.hpp"
@@ -311,10 +308,6 @@ void ServerContext::startReplacementStack()
 	http::RouteRegistry routes {};
 	m_heartbeat = std::make_unique< httpapi::HeartbeatService >();
 	httpapi::registerNativeRoutes( routes, *m_db_context );
-	for ( const auto path : { "/", "/status", "/index.html" } ) routes.add( httpapi::indexRoute( path ) );
-
-	routes.add( httpapi::assetsRoute() );
-	routes.add( httpapi::pluginFilesRoute() );
 	for ( auto& route : httpapi::hydrusRoutes( *m_db_context ) ) routes.add( std::move( route ) );
 
 	routes.seal();

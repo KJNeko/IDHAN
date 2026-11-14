@@ -428,7 +428,7 @@ TEST_CASE_METHOD(
 	"[api][cluster-scan][scan-progress]" )
 {
 	create();
-	std::ifstream source { IDHAN_SOURCE_DIR "/IDHANServer/src/static/Titorv2.png", std::ios::binary };
+	std::ifstream source { IDHAN_SOURCE_DIR "/tests/api/fixtures/Titorv2.png", std::ios::binary };
 	REQUIRE( source.is_open() );
 	std::ostringstream bytes;
 	bytes << source.rdbuf();

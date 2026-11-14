@@ -132,33 +132,6 @@ http::HTTPTask< http::JsonResult< DatabaseStatsResponse > > databaseStats(
 	co_return http::JsonResponse< DatabaseStatsResponse > { { records, tags, clusters, mappings, mappings_estimated } };
 }
 
-http::HTTPTask< http::JsonResult< IntegrityCheckResponse > > integrityCheck(
-	[[maybe_unused]] db::DBContext& db,
-	[[maybe_unused]] http::RequestContext context )
-{
-	const auto static_path { getStaticPath() };
-	const bool static_exists { std::filesystem::exists( static_path ) };
-
-	std::vector< std::string > files {};
-	const auto scan_root { static_path.parent_path() };
-	if ( std::filesystem::exists( scan_root ) )
-	{
-		try
-		{
-			for ( const auto& file : std::filesystem::recursive_directory_iterator( scan_root ) )
-				if ( file.is_regular_file() ) files.push_back( file.path().string() );
-		}
-		catch ( const std::filesystem::filesystem_error& e )
-		{
-			co_return http::Response::error( 500, std::format( "Failed to iterate static directory: {}", e.what() ) );
-		}
-	}
-
-	co_return http::JsonResponse< IntegrityCheckResponse > {
-		{ static_path.string(), static_exists, std::move( files ) }
-	};
-}
-
 http::HTTPTask< http::JsonResult< PurgeThumbnailsResponse > > purgeThumbnails(
 	[[maybe_unused]] db::DBContext& db,
 	[[maybe_unused]] http::RequestContext context )

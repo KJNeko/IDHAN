@@ -25,7 +25,6 @@ struct ServerConfig
 	http::HTTPConfig http;
 	db::DBConfig database;
 	modules::ModuleRuntimeConfig modules;
-	std::filesystem::path webui_root;
 	std::filesystem::path module_root;
 	std::chrono::milliseconds shutdown_timeout { 300000 };
 	std::chrono::milliseconds job_cleanup_interval { 10000 };
