@@ -12,16 +12,10 @@
 #include "idhan/http/routing/RouteRegistry.hpp"
 #include "idhan/http/server/HTTPConfig.hpp"
 
-namespace idhan
-{
-class IDHANServerContext;
-}
-
 namespace idhan::http
 {
 class HTTPServer final : public proxygen::coro::HTTPHandler
 {
-	IDHANServerContext* m_context {};
 	HTTPConfig m_config;
 	RouteRegistry m_routes;
 	runtime::DrainRegistry m_drain;
@@ -42,7 +36,6 @@ class HTTPServer final : public proxygen::coro::HTTPHandler
   public:
 
 	HTTPServer( HTTPConfig, RouteRegistry );
-	HTTPServer( IDHANServerContext&, HTTPConfig, RouteRegistry );
 	~HTTPServer() override;
 	HTTPServer( const HTTPServer& ) = delete;
 	HTTPServer& operator=( const HTTPServer& ) = delete;

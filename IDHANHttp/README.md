@@ -9,12 +9,12 @@ use the same responsibility folders. All types remain in `idhan::http`.
 |---------------|------------------------------------------------------------------------------------|
 | `server/`     | Server lifecycle, configuration, TLS certificates, logging, and compression        |
 | `routing/`    | Route definitions, registration, reflected handler dispatch, and middleware        |
-| `request/`    | Request context, parameters, validation rules, multipart data, and upload storage  |
+| `request/`    | Request context, parameters, validation rules, and upload storage                  |
 | `response/`   | Response types, reflected response conversion, files, and byte ranges              |
 | `json/`       | JSON parsing, serialization, validated values, and missing fields                  |
 | `reflection/` | Shared compile-time annotations, type inspection, and request/JSON codecs          |
 | `openapi/`    | API documentation annotations, authentication descriptions, and schema compilation |
-| `streaming/`  | Streaming response channels, JSON body sources, and server-sent events             |
+| `streaming/`  | Server-sent event streams and subscriptions                                        |
 
 Include headers by their full public path, for example
 `#include "idhan/http/routing/ReflectedRoutes.hpp"` for route declarations or
@@ -66,84 +66,36 @@ File creation and positional writes run on an owned worker executor, with each
 write awaited before receiving another chunk. Temporary files are unlinked and
 close automatically. Their SHA-256 covers the raw body, not extracted file parts.
 
-## Echo integration fixture
+## Routing and responses
 
-`IDHANHttp/test/EchoServer.cpp` is a cleartext HTTP/1.1 integration fixture. It
-uses `HTTPServer`, `RouteRegistry`, `RequestContext`, and `Response`; it does
-not implement a Proxygen handler. It registers `POST /echo`, preserving request
-bytes; `GET /version`, which returns the build version as JSON; and `GET /{id}`
-which returns the decoded `id` capture as plain text.
+Register `RouteDefinition` values with `RouteRegistry`, then move the registry
+and an `HTTPConfig` into `HTTPServer`. Start the server with `start()`. During
+shutdown, stop admission, await `drain()`, then call `stop()`.
+
+Handlers receive an owned `RequestContext` and return `HTTPTask<Response>`.
+`HTTPTask` aliases `folly::coro::Task`; await Folly tasks from another Folly task
+or supply an executor explicitly. Keep blocking work out of route handlers.
+
+Native server routes use reflected declarations in `IDHANServer/src/httpapi/`.
+`ReflectedRoutes.hpp` builds route definitions from annotated handlers, validates
+parameters, and converts reflected response values. Declare JSON success payloads
+with `JsonResponse<T>` or `JsonResult<T>`; return failures with
+`Response::error(status, message)`.
+
+For stored files, obtain an owning `folly::File` through the application storage
+layer and pass it with `FileMetadata` to `FileResponse::create()`. The response
+implementation handles file metadata and supported byte ranges; file bytes
+should remain immutable during transmission. The HTTP server uses Proxygen's
+compression filters. SSE support lives in `streaming/SSEBodySource.hpp` and
+`streaming/SSEEventHub.hpp`.
+
+## Tests
 
 ```sh
-cmake --build build/debug --target IDHANHttpTests
-./build/debug/bin/IDHANHttpTests "The echo server exposes echo and version endpoints"
+cmake --build build/debug --target IDHANHttpTests IDHANParameterTests
+./build/debug/bin/IDHANHttpTests
+./build/debug/bin/IDHANParameterTests
 ```
 
-The test starts on an ephemeral port and sends requests through `CurlHelper`.
-
-The Proxygen layer provides lazy coroutine routes for metadata and regular files. It
-has no database API dependency. Native IDHANServer routes use this layer; API
-tests use libcurl independently of the server runtime.
-
-```cpp
-http.addRoute("/metadata", [](const proxygen::HTTPMessage& request, const folly::IOBuf*) -> idhan::coro::Task<idhan::http::RouteResponse> {
-    // Validate request.getQueryParam("record_id") before looking up metadata.
-    Json::Value metadata;
-    metadata["status"] = "available";
-    auto response = idhan::http::RouteResponse::json(metadata);
-    response.message.getHeaders().set("Cache-Control", "no-store");
-    co_return response;
-});
-```
-
-`addRoute(path, handler, method)` defaults to GET. Paths are exact; query strings
-are available on the request and do not participate in matching. GET also handles
-HEAD unless an explicit HEAD handler exists. Different methods can share a path;
-unsupported paths or methods return 404. `removeRoute(path)` removes all methods.
-Handlers receive a borrowed IOBuf chain (possibly null), not necessarily one
-contiguous buffer. Request body buffering and spill behavior are described above;
-the in-memory threshold is not a metadata request-size limit.
-
-For a file, return `RouteResponse::fromFile(std::move(file), mime_type)` with an
-owning `folly::File`. Obtain that descriptor through the storage layer; do not map
-request paths directly to filesystem paths. The response keeps the descriptor
-alive until transmission completes and uses positional reads, so it does not
-change the descriptor's current offset. Set Content-Disposition and Cache-Control
-through `response.message.getHeaders()` when needed. File bytes should remain immutable during
-transmission; premature EOF aborts the response.
-
-Files are read on an owned two-thread Folly CPU executor, one 64 KiB chunk at a time, and sent on
-the HTTP event loop. Egress backpressure pauses subsequent reads. Disconnects defer
-handler destruction until an outstanding read completes. HEAD sends the same
-length and metadata without reading the body. Single byte ranges support closed,
-open-ended, and suffix ranges; unsatisfiable ranges return 416. Multiple ranges,
-unknown range units, and If-Range requests fall back to a full 200 response. HEAD
-ignores Range. Malformed ranges also fall back to the full response. A nonzero
-suffix range on an empty file returns the full empty response. The header-only
-`idhan/http/response/parseByteRange.hpp` parser is constexpr and has compile-time coverage.
-Automatic compression is disabled so file range offsets and
-Content-Length describe the bytes actually sent.
-
-`RouteResponse` holds Proxygen's `HTTPMessage` directly and an optional Folly
-`IOBuf` chain or open file. Set status and headers through `response.message`;
-there is no separate HTTP status/header representation to convert. Buffered
-bodies transfer ownership directly to Proxygen without another copy.
-
-The HTTP layer owns Content-Length and Transfer-Encoding. JSON responses use
-JsonCpp and application/json. An exception before headers becomes an empty 500;
-a failure after headers aborts the stream without exposing exception details.
-
-Route handlers return `idhan::coro::Task<RouteResponse>` and start when dispatched
-after request receipt. They may suspend with `co_await` and finish with `co_return`.
-Request data and route captures stay alive until completion, including after a
-client disconnect. A disconnected request discards the completed response. Task
-cancellation is not implemented, so pending operations must eventually complete.
-Response delivery always returns to the HTTP loop; route awaitables control where
-the route itself resumes. Do not put blocking libpqxx queries in route bodies. The database replacement will use libpqxx
-directly with
-connections owned by database workers and an asynchronous completion/coroutine
-bridge back to the HTTP loop. No database pool, WebSocket,
-parameterized-path router, or static-directory fallback is implemented here yet.
-
-Run `cmake --build build/debug --target IDHANHttpTests` and
-`./build/debug/bin/IDHANHttpTests` to validate the layer.
+HTTP tests exercise event streams and compression. Parameter tests cover reflected
+request validation, JSON codecs, response serialization, and handler dispatch.

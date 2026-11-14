@@ -34,7 +34,4 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Assets.cmake")
 add_dependencies(IDHANServer IDHANPremadeModules)
 add_dependencies(IDHANServer IDHANModuleRunner)
 
-add_subdirectory(runtime)
-add_subdirectory(contracts)
-
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/CompileOpenAPI.cmake")

@@ -62,10 +62,13 @@ consteval auto allMimeIDs()
 {
 	std::array< MimeID, std::meta::enumerators_of( ^^KnownMimeID ).size() - 1 > ids {};
 	std::size_t index { 0 };
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshadow"
 	template for ( constexpr auto enumerator : std::define_static_array( std::meta::enumerators_of( ^^KnownMimeID ) ) )
 	{
 		if constexpr ( [:enumerator:] != INVALID ) ids[ index++ ] = [:enumerator:];
 	}
+#pragma GCC diagnostic pop
 
 	return ids;
 }

@@ -224,7 +224,6 @@ static void addCorsHeaders( proxygen::HTTPMessage& message )
 }
 
 HTTPServer::HTTPServer( HTTPConfig config, RouteRegistry routes ) :
-  m_context {},
   m_config( std::move( config ) ),
   m_routes( std::move( routes ) ),
   m_drain {},
@@ -234,12 +233,6 @@ HTTPServer::HTTPServer( HTTPConfig config, RouteRegistry routes ) :
   m_port {},
   m_started( false )
 {}
-
-HTTPServer::HTTPServer( IDHANServerContext& context, HTTPConfig config, RouteRegistry routes ) :
-  HTTPServer( std::move( config ), std::move( routes ) )
-{
-	m_context = &context;
-}
 
 HTTPServer::~HTTPServer()
 {
@@ -405,7 +398,6 @@ HTTPTask< proxygen::coro::HTTPSourceHolder > HTTPServer::handleMatched(
 	if ( !work ) co_return rejectRequest( Response::error( 503, "Server is shutting down" ), http1, head );
 
 	RequestContext context {
-		m_context,
 		m_next_request_id.fetch_add( 1 ),
 		std::move( *request ),
 		std::move( parameters ),

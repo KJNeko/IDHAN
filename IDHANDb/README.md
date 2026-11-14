@@ -1,120 +1,47 @@
 # IDHANDb
 
-`IDHANPQContext` is a direct libpq pool using the same `folly::coro::Task`
-and `folly::EventBase` facilities as Proxygen's coroutine HTTP handlers.
-It uses libpq directly and has no HTTP-layer or libpqxx dependency.
+IDHANDb provides coroutine PostgreSQL access through libpq and Folly. Public
+headers live under `include/idhan/db/`; `include/IDHANDB.hpp` declares `DBTask`.
 
-Initialize Folly once in `main()` with `folly::Init`. Construct a context with
-an EventBase that will keep running until all submitted tasks finish:
+## Context and queries
 
-```cpp
-idhan::db::IDHANPQContext db {
-    event_base,
-    "hostaddr=127.0.0.1 dbname=idhan-db user=idhan password=idhan",
-    8,    // maximum connections for this context
-    128   // maximum additional pending queries
-};
-```
+Initialize Folly at process startup. Construct a `DBContext` with `DBConfig` and
+an application executor keep-alive token, then await `start()`. The context owns
+its reactor and connection pool; keep the application executor alive until work
+has drained. The process supports one `DBContext` instance.
 
-Connections open lazily and are reused. A shared context can be called from
-multiple HTTP executors; libpq operations run on its EventBase and Folly returns
-the awaiting coroutine to its caller's executor. Alternatively, use a context
-per HTTP EventBase and divide the total database connection budget among them.
-Returned tasks retain the pool even if the context handle is destroyed. The
-borrowed EventBase must still outlive those tasks. Destroying a lazy task before
-starting it submits nothing.
-
-Use `hostaddr` for TCP connections (optionally together with `host` for TLS name
-verification), or an explicit Unix socket directory. libpq can perform blocking
-DNS resolution when given only a hostname; this layer does not provide a DNS
-resolver. Socket waits during connection establishment and queries are
-nonblocking EventBase registrations. The query deadline also governs connection
-establishment; libpq's `connect_timeout` does not govern `PQconnectPoll`.
-
-## Binary parameters
-
-`PQParameter` stores text in `std::string`, binary data in `std::vector<std::byte>`,
-and SQL NULL as `std::monostate`. It exposes libpq's `Oid` and format codes.
-`PQsendQueryParams` receives types, values, explicit lengths, and formats. Each
-parameter may independently use text (0) or binary (1). Binary data may contain
-embedded NUL bytes and is sent without hex or decimal encoding.
+Bind runtime values with `DBBindings`, including typed arrays. Codecs encode
+PostgreSQL wire values and decode result columns into domain types:
 
 ```cpp
-using idhan::db::PQParameter;
-namespace pq_oid = idhan::db::pq_oid;
-
-std::vector<PQParameter> parameters;
-parameters.push_back(PQParameter::int64(123456789));
-parameters.push_back(PQParameter::binary(pq_oid::bytea, hash_bytes));
-parameters.push_back(PQParameter::null(pq_oid::bytea, 1)); // binary SQL NULL
-
-auto result = co_await db.query(
-    "SELECT $1::int8, octet_length($2::bytea), $3::bytea",
-    std::move(parameters));
+idhan::db::DBBindings bindings;
+bindings.bind(std::int64_t { 42 });
+auto rows = co_await db.query("SELECT $1::bigint", std::move(bindings))
+    .rows<std::int64_t>();
 ```
 
-`int32` and `int64` encode signed PostgreSQL integers in network byte order using
-4 and 8 bytes. Arbitrary `binary(type_oid, bytes)` values must already use that
-PostgreSQL type's binary wire format. Raw native structs, native-endian integers,
-and the binary format of one type cannot be substituted for another type's
-format. Text parameters reject embedded NULs. Empty binary values and SQL NULL
-are distinct. The vector overload accepts moved storage; the span overload copies
-bytes so lazy coroutine execution cannot outlive borrowed input.
+`query()` returns a lazy `DBTask`. Await `.rows<T...>()` for typed rows, `.result()`
+when no typed rows are needed. Query
+errors throw `DBQueryError`; decoding errors retain query and column context.
 
-`PQOid.hpp` defines the built-in scalar and array OIDs used by IDHAN. This includes
-`text_array`, `bytea_array`, all integer and floating-point arrays, UUID arrays,
-JSON/JSONB arrays, numeric arrays, and date/time arrays. Array parameters use the
-same API as scalar parameters. Text array input can use PostgreSQL's array literal
-format, for example `PQParameter::text(R"({"a","b"})", pq_oid::text_array)`.
-Binary array input must use PostgreSQL's binary array wire format, including its
-array header and per-element lengths.
+Use `co_await db.transaction()` for a transaction lease. Queries on that lease
+share a transaction connection; explicitly await `commit()` or `rollback()`.
+Callers control transaction policy. Await `DBContext::drain()` during shutdown.
 
-Results default to text. Pass `1` as the fourth query argument to request binary
-fields for every result column:
-
-```cpp
-auto result = co_await db.query("SELECT 42::int4", {}, std::chrono::seconds(30), 1);
-// Decode according to PQftype/PQfformat. Use PQgetlength, not strlen.
-```
-
-`PQResult` owns `PGresult` with a `PQclear` deleter. Use libpq's result APIs directly;
-field pointers remain valid until that result is destroyed, independently of the
-pool connection's next query.
-
-## Failure and scope
-
-The default deadline is 30 seconds, measured from task execution, including the
-executor queue, pool wait, connection establishment, and query. Supported values
-are positive durations up to 24 hours. The pending limit bounds admitted queries;
-callers must also bound task creation and request payload sizes.
-
-Errors throw `PQError`, retaining SQLSTATE for server errors. Invalid arguments
-throw `std::invalid_argument`; Folly cancellation throws `folly::OperationCancelled`.
-Timeouts, cancellation, and database errors discard the connection and release
-its pool slot. A subsequent query opens a replacement. Queries are never retried:
-a disconnect or cancellation can leave a write's commit outcome uncertain.
-Closing a connection does not guarantee immediate interruption of server-side
-execution; configure PostgreSQL `statement_timeout` where server-side limits are
-required.
-
-This initial API executes one statement per query in autocommit mode. Explicit
-transactions and COPY are rejected and their connections discarded. Session-changing
-SQL (SET, LISTEN, session locks, temporary tables) is outside the supported pool
-contract: no session reset is performed between successful queries. Dedicated
-transaction leases, COPY streaming, prepared-statement caching, and pipeline mode
-are not implemented. Existing IDHANServer database call sites have not yet been
-migrated to this context.
+`DBConfig` controls normal and transaction connection counts, reactor threads,
+statement timeout, and query diagnostics. `DBBindings.hpp`, `DBResult.hpp`, and
+their `detail/` headers define codecs and typed row access.
 
 ## Tests
 
 ```sh
 cmake --build build/debug --target IDHANDbTests
-./build/debug/bin/IDHANDbTests '[pq]'
-IDHAN_PQ_TEST_CONNINFO='hostaddr=127.0.0.1 dbname=idhan-db user=idhan password=idhan' \
-    ./build/debug/bin/IDHANDbTests '[.pq-integration]'
+./build/debug/bin/IDHANDbTests '[db][decode]'
+./build/debug/bin/IDHANDbTests '[postgres]'
 ```
 
-Integration tests are opt-in and use only transient sessions and SELECT queries;
-they do not require the IDHAN schema. They cover binary/text/NULL binding, binary
-results, overlapping connections, caller-executor resumption, pool bounds,
-deadlines, cancellation, errors, and connection reuse.
+PostgreSQL integration tests require a running database. The connection tests in
+`test/ManagementConnection.cpp` accept `IDHAN_PQ_TEST_CONNINFO`; transaction and
+codec tests use `DBConfig` defaults. These tests exercise database connections,
+transactions, diagnostics, and typed codecs. The connection tests also exercise
+management-role connections directly through `DBConnection`.
