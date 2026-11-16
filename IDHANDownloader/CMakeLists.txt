@@ -18,6 +18,8 @@ target_include_directories(IDHANDownloader SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/de
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/ParserAssets.cmake)
 
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/tests)
+
 if (BUILD_IDHAN_DOWNLOADER_TESTER)
 	AddFGLExecutable(IDHANDownloaderScriptTester ${CMAKE_CURRENT_SOURCE_DIR}/tester)
 	file(GLOB_RECURSE IDHAN_TESTER_FILE_IO_SOURCES CONFIGURE_DEPENDS
@@ -33,3 +35,4 @@ if (BUILD_IDHAN_DOWNLOADER_TESTER)
 	target_include_directories(IDHANDownloaderScriptTester SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/dependencies/ada/include)
 	add_dependencies(IDHANDownloaderScriptTester IDHANDownloaderAssets)
 endif ()
+
