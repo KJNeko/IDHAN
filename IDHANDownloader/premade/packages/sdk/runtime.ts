@@ -237,8 +237,8 @@ async function invoke(instance: object, method: string, input: unknown, session?
 	return Reflect.apply(handler, instance, [input, session]);
 }
 
-function validateParameters(values: Readonly<Record<string, string>>, definitions: ParameterDefinitions): Record<string, string> {
-	const result: Record<string, string> = Object.create(null);
+function validateParameters(values: Readonly<Record<string, string>>, definitions: ParameterDefinitions): Record<string, string | number> {
+	const result: Record<string, string | number> = Object.create(null);
 
 	for (const [name, definition] of Object.entries(definitions)) {
 		const value = values[name] ?? definition.default;
@@ -246,6 +246,23 @@ function validateParameters(values: Readonly<Record<string, string>>, definition
 		if (value === undefined) {
 			if (!definition.optional) throw new Error("Missing generator parameter: " + name);
 
+			continue;
+		}
+
+		if (definition.type === "integer") {
+			// Signed decimal integer, e.g. id=123 in https://gelbooru.com/index.php?id=123.
+			if (typeof value === "string" && !/^[+-]?[0-9]+$/.test(value)) {
+				throw new Error("Invalid integer parameter: " + name);
+			}
+
+			const integer = Number(value);
+			if (!Number.isSafeInteger(integer)
+				|| (definition.minimum !== undefined && integer < definition.minimum)
+				|| (definition.maximum !== undefined && integer > definition.maximum)) {
+				throw new Error("Integer parameter out of range: " + name);
+			}
+
+			result[name] = integer;
 			continue;
 		}
 

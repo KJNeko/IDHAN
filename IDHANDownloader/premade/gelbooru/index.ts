@@ -1,10 +1,10 @@
 import {decode} from "he";
 import {bindParser} from "../packages/sdk/runtime.js";
 import * as validation from "../packages/sdk/validation.js";
-import {applyOptions, generator, option, parser} from "../packages/sdk/decorators.js";
+import {applyOptions, describeParameters, generator, option, parameter, parser} from "../packages/sdk/decorators.js";
 import type {GeneratorInput, ParserMetadata} from "../packages/sdk/parser.js";
 import type {DomainContext, Session} from "../packages/sdk/session.js";
-import type {BoundURLClass, ParameterDefinitions, ParameterValues} from "../packages/sdk/url-class.js";
+import type {URLClassDefinition} from "../packages/sdk/url-class.js";
 
 const POST_PAGE_SIZE = 100;
 const TAG_BATCH_SIZE = 100;
@@ -12,29 +12,22 @@ const TAG_BATCH_SIZE = 100;
 // Matches decimal IDs, e.g. id=123 in https://gelbooru.com/index.php?page=post&s=view&id=123.
 const decimalId = /^\d+$/;
 
-export const parameters = {
-	search: {
-		tags: {
-			name: "Tags",
-			type: "string",
-			optional: true,
-			default: ""
-		},
+class SearchParams {
+	@parameter({
+		name: "Tags",
+		type: "string"
+	})
+	tags: string = "";
+}
 
-	},
-	post: {
-		// Decimal ID in https://gelbooru.com/index.php?page=post&s=view&id=123.
-		id: {
-			name: "Post ID",
-			type: "string",
-			pattern: "^\\d+$"
-		},
-	},
-} as const satisfies Record<string, ParameterDefinitions>;
-
-type SearchParams = ParameterValues<typeof parameters.search>;
-
-type PostParams = ParameterValues<typeof parameters.post>;
+class PostParams {
+	@parameter({
+		name: "Post ID",
+		type: "integer",
+		minimum: 1,
+	})
+	id!: number;
+}
 
 interface Credentials {
 	apiKey: string;
@@ -156,17 +149,17 @@ export const urlClasses = [
 				id: "search",
 				handler: "search",
 				name: "Tag search",
-				params: parameters.search
+				params: describeParameters(SearchParams)
 			},
 			{
 				id: "post",
 				handler: "post",
 				name: "Post",
-				params: parameters.post
+				params: describeParameters(PostParams)
 			},
 		],
 	}
-] as const satisfies readonly BoundURLClass<typeof parameters>[];
+] as const satisfies readonly URLClassDefinition[];
 
 function credentials(context: Session): Credentials {
 	validation.requiredSecrets(context.secrets, ["apiKey", "userID"]);
@@ -499,12 +492,12 @@ export default class Gelbooru {
 		await this.site.setCookie("tag_blacklist", encodeURIComponent(blacklist.join("%20")));
 	}
 
-	@generator("search", parameters.search)
+	@generator("search", SearchParams)
 	async search(
 		input: GeneratorInput<SearchParams>,
 		session: Session
 	): Promise<void> {
-		const tags = input.params.tags ?? parameters.search.tags.default;
+		const tags = input.params.tags ?? "";
 		const site = new URL(input.domain);
 		const auth = credentials(session);
 		let before: bigint | undefined;
@@ -542,12 +535,12 @@ export default class Gelbooru {
 		}
 	}
 
-	@generator("post", parameters.post)
+	@generator("post", PostParams)
 	async post(
 		input: GeneratorInput<PostParams>,
 		session: Session
 	): Promise<void> {
-		const {id} = input.params;
+		const id = String(input.params.id);
 
 		if (!decimalId.test(id)) {
 			throw new Error("Post ID must be a decimal integer");

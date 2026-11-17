@@ -6,6 +6,11 @@ AddFGLLibrary(
 		${CMAKE_CURRENT_SOURCE_DIR}/src
 		${CMAKE_CURRENT_SOURCE_DIR}/include)
 
+file(GLOB_RECURSE IDHAN_DOWNLOADER_INCLUDE_SOURCES CONFIGURE_DEPENDS
+		${CMAKE_CURRENT_SOURCE_DIR}/include/**.cpp)
+
+target_sources(IDHANDownloader PRIVATE ${IDHAN_DOWNLOADER_INCLUDE_SOURCES})
+
 target_link_libraries(
 		IDHANDownloader
 		PUBLIC IDHANQuickJS ada::ada Jsoncpp_lib Folly::folly_executors_cpu_thread_pool_executor
@@ -17,8 +22,6 @@ target_include_directories(IDHANDownloader SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/de
 # including direct filesystem and process access, which parser scripts must not have.
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/ParserAssets.cmake)
-
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/tests)
 
 if (BUILD_IDHAN_DOWNLOADER_TESTER)
 	AddFGLExecutable(IDHANDownloaderScriptTester ${CMAKE_CURRENT_SOURCE_DIR}/tester)

@@ -5,11 +5,14 @@ export interface URLClassPatternDefinition extends Readonly<URLPatternInit> {
 
 export interface ParameterDefinition {
 	readonly name: string;
-	readonly type: "string";
+	readonly type: "string" | "integer";
 	readonly optional?: boolean;
 	readonly pattern?: string;
-	readonly default?: string;
+	readonly default?: string | number;
+	readonly minimum?: number;
+	readonly maximum?: number;
 }
+
 
 export type ParameterDefinitions = Readonly<Record<string, ParameterDefinition>>;
 
@@ -17,11 +20,11 @@ export type ParameterDefinitions = Readonly<Record<string, ParameterDefinition>>
 export type ParameterValues<Definitions extends ParameterDefinitions> = {
 	[Name in keyof Definitions as Definitions[ Name ] extends {
 		readonly optional: true
-	} ? never : Name]: string;
+	} ? never : Name]: Definitions[Name]["type"] extends "integer" ? number : string;
 } & {
 	[Name in keyof Definitions as Definitions[ Name ] extends {
 		readonly optional: true
-	} ? Name : never]?: string;
+	} ? Name : never]?: Definitions[Name]["type"] extends "integer" ? number : string;
 };
 
 export interface RequestRateDefinition {

@@ -1,5 +1,30 @@
 # IDHAN Agent Guide
 
+## Read-only role
+
+Agents are restricted to reading source code and reviewing it. Report findings,
+explain behavior, and recommend changes for a human to implement. Do not implement
+fixes or modify code.
+
+- Do not create, edit, delete, rename, move, or format repository files, including
+  source, tests, documentation, configuration, migrations, and generated files.
+- Do not apply patches, run code generators, install dependencies, initialize or
+  update submodules, configure builds, build targets, or execute tests or servers.
+  These operations can change files, databases, or other runtime state.
+- Use only read-only inspection commands, such as source searches, file reads,
+  and Git status, diff, and log inspection. Do not change the working tree, index,
+  branches, commits, or remotes; do not commit or push.
+- Do not modify databases, stored media, external services, or other persistent
+  state, even temporarily.
+- Provide review findings in the response, with file and line references,
+  supporting evidence, and suggested corrections where useful. Do not write
+  reports or proposed patches into the repository.
+- When asked to implement a change, explain this read-only restriction and
+  provide analysis or review guidance for a human instead.
+
+The conventions below are review criteria and architectural context, not
+permission to make changes or execute the application.
+
 ## Project overview
 
 IDHAN is a C++26 media-management and archival server with a booru-compatible
@@ -19,53 +44,7 @@ Proxygen/Folly, libpq (libpqxx in legacy code/tests), and Qt6.
 - `IDHANClient/`: Qt6 REST client library.
 - `tools/HydrusImporter/`: Qt GUI Hydrus database importer.
 - `tests/`: Catch2 suites and database/API fixtures.
-- `dependencies/` and `3rd-party/`: vendored dependencies; avoid modifying
-  them unless the task explicitly requires it.
-
-## Git workflow
-
-- Target `dev` for features and fixes; `master` is release-only.
-- Do not create commits. The user must review and author commits before pushing.
-- Preserve unrelated working-tree changes.
-
-## Build and test
-
-Initialize submodules before configuring a new checkout:
-
-```sh
-git submodule update --init --recursive
-cmake -S . -B build -DCMAKE_BUILD_TYPE=System
-cmake --build build -j"$(nproc)" --target IDHANServer
-```
-
-Prefer an existing configured build directory when available, for example:
-
-```sh
-cmake --build build/debug --target IDHANServer
-```
-
-Enable and run tests with PostgreSQL available at
-`dbname=idhan-db user=idhan password=idhan host=localhost`:
-
-```sh
-cmake -S . -B build -DBUILD_IDHAN_TESTS=ON
-cmake --build build -j"$(nproc)"
-ctest --test-dir build --output-on-failure
-```
-
-Tests use Catch2, with separate targets such as `IDHANDBTests`, `IDHANAPITests`,
-and `IDHANHttpTests` (see `tests/CMakeLists.txt`). PostgreSQL settings can be
-overridden with `IDHAN_TEST_PG_{HOST,PORT,DB,USER,PASSWORD}`; see
-`tests/api/README.md` and `docs/database-initialization.md` for setup.
-Run a focused case or tag against an existing binary when practical:
-
-```sh
-./build/bin/IDHANDBTests "[tag]"
-# or: ./build/bin/IDHANAPITests "test case name"
-```
-
-Build output is in `<build-dir>/bin/`. Options and defaults are declared in
-`CMakeLists.txt`; tests default OFF, server/client/importer default ON.
+- `dependencies/` and `3rd-party/`: vendored dependencies for read-only inspection.
 
 ## C++ conventions
 
@@ -140,18 +119,12 @@ Build output is in `<build-dir>/bin/`. Options and defaults are declared in
 
 ## Database and storage
 
-- Never apply persistent schema changes directly to the live database, including
-  indexes, tables, functions, and triggers. Implement them as migrations and let
-  the normal migration process apply them. A request to implement a schema change
-  does not authorize applying it manually to the live database.
-- Temporary, non-destructive changes solely for testing are allowed, provided
-  they are rolled back or cleaned up after testing and leave no persistent changes
-  to the live schema or existing data.
-- Add migrations under `IDHANMigration/src/<type>_<object>/NNN-description.sql`,
-  one object per file. Use the globally highest number plus one, zero-padded;
-  numbers must be unique across directories. Startup runs them in numeric order.
-  See `IDHANMigration/src/README.md` and
-  `IDHANMigration/cmake_modules/GenerateMigrations.cmake`.
+- Schema changes belong in migrations under
+  `IDHANMigration/src/<type>_<object>/NNN-description.sql`, one object per file.
+  Migration numbers are globally unique, zero-padded, and sequential; startup
+  applies them in numeric order. Review migration conventions in
+  `IDHANMigration/src/README.md` and
+  `IDHANMigration/cmake_modules/GenerateMigrations.cmake` without applying them.
 - Prefer typed domain helpers for reusable queries, including ordinary CRUD,
   existence checks, and stable lookups even when they currently have only one
   caller. Search for an existing helper before writing SQL at a call site.

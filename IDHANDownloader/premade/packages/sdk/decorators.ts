@@ -30,6 +30,59 @@ const optionRegistrations = new WeakMap<object, OptionMetadata>();
 
 const classOptions = new WeakMap<object, readonly OptionMetadata[]>();
 
+
+type ParameterConstructor<T extends object = object> = new () => T;
+
+interface ParameterOptions {
+	name: string;
+	type: "string" | "integer";
+	optional?: boolean;
+	minimum?: number;
+	maximum?: number;
+	pattern?: string;
+}
+
+const parameterRegistrations = new WeakMap<object, Map<string, ParameterOptions>>();
+
+export function parameter(options: ParameterOptions) {
+	return function <This extends object, Value>(
+		_target: undefined,
+		context: ClassFieldDecoratorContext<This, Value>
+	): void {
+		if (context.static || context.private || typeof context.name !== "string") {
+			throw new Error("Parameters must be public instance fields with string names");
+		}
+
+		const name = context.name;
+		context.addInitializer(function () {
+			let fields = parameterRegistrations.get(this);
+			if (fields === undefined) {
+				fields = new Map();
+				parameterRegistrations.set(this, fields);
+			}
+
+			fields.set(name, {...options});
+		});
+	};
+}
+
+/** Constructs a data-only parameter class to collect decorators and initialized defaults. */
+export function describeParameters(Parameters: ParameterConstructor): ParameterDefinitions {
+	const instance = new Parameters();
+	const definitions: Record<string, ParameterDefinitions[string]> = Object.create(null);
+	for (const [name, options] of parameterRegistrations.get(instance) ?? []) {
+		const value: unknown = Reflect.get(instance, name);
+		if (value !== undefined && typeof value !== "string" && typeof value !== "number") {
+			throw new Error("Invalid parameter default: " + name);
+		}
+
+		definitions[name] = value === undefined ? {...options} : {...options, default: value};
+	}
+
+	return definitions;
+}
+
+
 function validateOption(value: unknown, definition: OptionDefinition, name: string):
 	boolean | number | string | readonly string[] {
 	switch (definition.type) {
@@ -182,10 +235,16 @@ export function applyOptions(instance: object, overrides: Readonly<Record<string
 }
 
 /** IDs identify parser operations, so independently installed URL classes can reference them. */
-export function generator<const Parameters extends ParameterDefinitions>(id: string, parameters: Parameters) {
-	return function decorateGenerator<This>(
-		method: GeneratorMethod<This, Parameters>,
-		context: ClassMethodDecoratorContext<This, GeneratorMethod<This, Parameters>>,
+export function generator<Params extends object>(id: string, parameters: ParameterConstructor<Params>):
+	<This>(method: (this: This, input: GeneratorInput<Params>, session: Session) => Promise<void>,
+		   context: ClassMethodDecoratorContext<This, (this: This, input: GeneratorInput<Params>, session: Session) => Promise<void>>) => void;
+export function generator<const Parameters extends ParameterDefinitions>(id: string, parameters: Parameters):
+	<This>(method: GeneratorMethod<This, Parameters>, context: ClassMethodDecoratorContext<This, GeneratorMethod<This, Parameters>>) => void;
+export function generator(id: string, source: ParameterDefinitions | ParameterConstructor) {
+	const parameters = typeof source === "function" ? describeParameters(source) : source;
+	return function decorateGenerator<This, Args extends unknown[]>(
+		method: (this: This, ...args: Args) => Promise<void>,
+		context: ClassMethodDecoratorContext<This, (this: This, ...args: Args) => Promise<void>>,
 	): void {
 		if (id.trim() === '') {
 			throw new Error('Generator ID must not be empty');
