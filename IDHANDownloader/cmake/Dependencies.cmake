@@ -35,5 +35,6 @@ target_compile_options(IDHANQuickJS PRIVATE -fwrapv)
 target_link_libraries(IDHANQuickJS PUBLIC Threads::Threads ${CMAKE_DL_LIBS} m)
 
 add_subdirectory(${CMAKE_SOURCE_DIR}/dependencies/ada ${CMAKE_CURRENT_BINARY_DIR}/ada EXCLUDE_FROM_ALL)
+target_compile_definitions(ada PUBLIC ADA_USE_UNSAFE_STD_REGEX_PROVIDER)
 add_subdirectory(${CMAKE_SOURCE_DIR}/dependencies/lexbor ${CMAKE_CURRENT_BINARY_DIR}/lexbor EXCLUDE_FROM_ALL SYSTEM)
 

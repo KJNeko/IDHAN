@@ -4,6 +4,7 @@
 
 #include <spdlog/spdlog.h>
 
+#include <stdexcept>
 #include <utility>
 
 #include "ParserInstance.hpp"
@@ -21,19 +22,30 @@ ParserRegistry::ParserRegistry( std::filesystem::path search_dir ) : m_dir( std:
 		{
 			auto script { readScript( file.path() ) };
 			const auto explore_instance { script->createInstance() };
+			Entry entry { std::move( script ) };
 
 			if ( explore_instance->hasManifest() )
 			{
-				auto manifest { explore_instance->manifest() };
-				spdlog::trace( "Parser manifest for {}: {}", file.path().filename().string(), manifest );
+				entry.manifest.emplace( explore_instance->manifest() );
+				spdlog::trace(
+					"Decoded parser manifest for {}: id={}, version={}",
+					file.path().filename().string(),
+					entry.manifest->m_id,
+					entry.manifest->m_version );
+				entry.url_classes = entry.manifest->m_url_classes;
 			}
-
-			if ( explore_instance->hasUrlClass() )
+			else if ( explore_instance->hasUrlClass() )
 			{
-				spdlog::trace( "Found {} has url class", file.path().string() );
+				entry.url_classes = explore_instance->urlClasses();
+			}
+			else
+			{
+				throw std::runtime_error( "Module has neither parser metadata nor URL classes" );
 			}
 
-			m_parsers.push_back( { std::move( script ) } );
+			spdlog::info(
+				"Registered module {} with {} URL classes", file.path().filename().string(), entry.url_classes.size() );
+			m_parsers.push_back( std::move( entry ) );
 		}
 		catch ( const std::exception& error )
 		{

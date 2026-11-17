@@ -13,7 +13,7 @@ target_sources(IDHANDownloader PRIVATE ${IDHAN_DOWNLOADER_INCLUDE_SOURCES})
 
 target_link_libraries(
 		IDHANDownloader
-		PUBLIC IDHANQuickJS ada::ada Jsoncpp_lib Folly::folly_executors_cpu_thread_pool_executor
+		PUBLIC IDHANQuickJS ada::ada Jsoncpp_lib simdjson::simdjson Folly::folly_executors_cpu_thread_pool_executor
 		Folly::folly_io_async_async_base Folly::folly_coro_task Folly::folly_coro_baton Folly::folly_coro_async_scope Folly::folly_coro_mutex
 		PRIVATE IDHAN lexbor_static spdlog::spdlog CURL::libcurl OpenSSL::Crypto)
 target_include_directories(IDHANDownloader SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/dependencies/ada/include)

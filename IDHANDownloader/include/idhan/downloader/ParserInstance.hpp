@@ -5,6 +5,7 @@
 #include "IDHANJSRuntime.hpp"
 #include "JSReturn.hpp"
 #include "ParserScript.hpp"
+#include "manifest/ParserManifest.hpp"
 
 class JSModule
 {
@@ -40,7 +41,8 @@ class ParserInstance
 
   public:
 
-	std::string manifest();
+	[[nodiscard]] ParserManifest manifest();
+	[[nodiscard]] std::vector< URLClass > urlClasses() const;
 	[[nodiscard]] bool hasManifest() const;
 	[[nodiscard]] bool hasUrlClass() const;
 };

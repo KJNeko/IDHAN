@@ -153,6 +153,44 @@ bool ParserInstance::hasUrlClass() const
 	return !urlClasses.isUndefined() && !urlClasses.isNull();
 }
 
+std::vector< URLClass > ParserInstance::urlClasses() const
+{
+	const auto classes { m_module.getExport( "urlClasses" ) };
+	if ( !classes.isArray() )
+	{
+		throw std::runtime_error( "urlClasses export must be an array" );
+	}
+
+	const auto json { classes.stringifyJson() };
+	if ( json.isException() || !json.isString() )
+	{
+		throw std::runtime_error( "Failed to serialize URL classes" );
+	}
+
+	const auto text { json.toString() };
+	simdjson::dom::parser parser {};
+	simdjson::dom::element root {};
+	const auto error { parser.parse( text ).get( root ) };
+	if ( error )
+	{
+		throw std::runtime_error( simdjson::error_message( error ) );
+	}
+
+	simdjson::dom::array values {};
+	if ( root.get_array().get( values ) )
+	{
+		throw std::runtime_error( "URL classes must be an array" );
+	}
+
+	std::vector< URLClass > result {};
+	for ( const auto value : values )
+	{
+		result.emplace_back( value );
+	}
+
+	return result;
+}
+
 JSReturn ParserInstance::loadBytecode() const
 {
 	spdlog::trace( "Loading parser bytecode for {}", m_script->filename() );
@@ -175,7 +213,7 @@ ParserInstance::ParserInstance( const std::shared_ptr< CompiledScript >& script 
   m_module( loadBytecode(), m_script->filename() )
 {}
 
-std::string ParserInstance::manifest()
+ParserManifest ParserInstance::manifest()
 {
 	const auto parser_class { m_module.getExport( "default" ) };
 
@@ -203,5 +241,14 @@ std::string ParserInstance::manifest()
 		throw std::runtime_error( "Failed to serialize parser manifest" );
 	}
 
-	return json.toString();
+	const auto text { json.toString() };
+	simdjson::dom::parser parser {};
+	simdjson::dom::element root {};
+	const auto error { parser.parse( text ).get( root ) };
+	if ( error )
+	{
+		throw std::runtime_error( simdjson::error_message( error ) );
+	}
+
+	return ParserManifest { root };
 }
