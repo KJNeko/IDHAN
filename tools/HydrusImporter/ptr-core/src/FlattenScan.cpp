@@ -96,7 +96,8 @@ ScanResult scanCorpus( const std::filesystem::path& ptr_dir,
 		if ( update.index < 0 || update.index > static_cast< int >( MAX_UPDATE_INDEX ) )
 			throw std::runtime_error(
 				std::format(
-					"Update index {} is outside the range MappingEvent can represent (0..{})",
+					"Update\n"
+					"    index {} is outside the range MappingEvent can represent (0.. {})",
 					update.index,
 					MAX_UPDATE_INDEX ) );
 	}
@@ -151,7 +152,10 @@ ScanResult scanCorpus( const std::filesystem::path& ptr_dir,
 
 		if ( missing )
 		{
-			spdlog::warn( "Update file missing, skipping: {}", path.string() );
+			spdlog::warn( "Update\n"
+						  "    file missing,\n"
+						  "    skipping: {}",
+						  path.string() );
 			skipped_files.fetch_add( 1, std::memory_order_relaxed );
 		}
 		else if ( !parse_error.empty() )

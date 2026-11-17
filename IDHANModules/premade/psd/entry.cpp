@@ -7,7 +7,6 @@
 
 using namespace idhan;
 
-//! The module instances this library exports.
 std::vector< std::shared_ptr< IDHANModule > > getModules( ModuleCallbacks callbacks )
 {
 	return { std::make_shared< PsdMetadata >( callbacks ), std::make_shared< PsdThumbnailer >( callbacks ) };

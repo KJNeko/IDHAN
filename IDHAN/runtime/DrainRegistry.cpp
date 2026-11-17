@@ -23,7 +23,6 @@ struct WorkRegistration::State
 			--count;
 			finished = closed && count == 0;
 		}
-		// Posting may resume a coroutine inline; never do so while holding the lock.
 		if ( finished ) drained.post();
 	}
 

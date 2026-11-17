@@ -48,8 +48,6 @@ runtime::Task<> DBPool::start()
 				std::make_shared< DBConnection >( id++, ConnectionRole::transaction, m_config, *m_reactor ) );
 	}
 
-	// Startup is before HTTP admission. Sequential awaits simplify failure
-	// propagation; all query-time connection progress remains concurrent.
 	try
 	{
 		for ( const auto& connection : normal ) co_await connection->connect();
@@ -87,8 +85,15 @@ runtime::Task< DBTransaction > DBPool::transaction()
 	}
 
 	auto connection { co_await leases->dequeue() };
-	auto operation {
-		std::make_shared< DBOperation >( "BEGIN", DBBindings {}, QueryOptions {}, m_application_executor )
+	auto operation{
+		std::make_shared< DBOperation >(
+			//language=postgresql
+			R"SQL(
+			BEGIN
+		)SQL",
+			DBBindings{},
+			QueryOptions{},
+			m_application_executor )
 	};
 	operation->setStarter( [ connection ]( std::shared_ptr< DBOperation > queued )
 	                       { connection->enqueue( std::move( queued ) ); } );

@@ -1,5 +1,0 @@
-type: string
-description: The half of a tag after the colon.
-minLength: 0
-examples:
-  - toujou koneko

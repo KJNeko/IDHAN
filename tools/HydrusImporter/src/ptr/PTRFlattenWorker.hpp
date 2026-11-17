@@ -13,8 +13,7 @@
 namespace idhan::hydrus::ptr
 {
 
-//! QRunnable wrapper around runFlatten. Deliberately thin: every decision lives in PTRCore, so
-//! the pipeline stays testable without Qt.
+//! QRunnable wrapper around runFlatten.
 class PTRFlattenWorker : public QObject, public QRunnable
 {
 	Q_OBJECT

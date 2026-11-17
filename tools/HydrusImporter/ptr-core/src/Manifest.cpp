@@ -11,9 +11,8 @@
 namespace idhan::hydrus::ptr
 {
 
-//! \throws std::runtime_error if \p key is absent. Every field this build writes is required on
-//!         read: there is no backwards compatibility, so a missing key means a manifest from an
-//!         older format, and defaulting it would silently misreport what the run actually did.
+//! \throws std::runtime_error if \p key is absent. Every field is required; there is no
+//!         backwards compatibility.
 const Json::Value& require( const Json::Value& json, const char* const key )
 {
 	if ( !json.isObject() || !json.isMember( key ) )

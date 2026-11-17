@@ -15,7 +15,7 @@ struct ScanCandidate
 	std::uint64_t size {};
 };
 
-// Only the coordinator advances these iterators. Workers receive owned candidates.
+//! Only the coordinator advances these iterators. Workers receive owned candidates.
 class ScanDirectory
 {
 	std::filesystem::path m_root;

@@ -31,7 +31,7 @@ FileIOUring::FileDescriptor::FileDescriptor( const int fd ) : m_fd( fd )
 
 FileIOUring::FileDescriptor::~FileDescriptor()
 {
-	if ( m_fd > 0 ) close( m_fd );
+	if ( m_fd > 0 ) ::close( m_fd );
 }
 
 FileIOUring::FileDescriptor::FileDescriptor( FileDescriptor&& other ) noexcept : m_fd( std::exchange( other.m_fd, -1 ) )
@@ -41,7 +41,7 @@ FileIOUring::FileDescriptor& FileIOUring::FileDescriptor::operator=( FileDescrip
 {
 	if ( this != &other )
 	{
-		if ( m_fd > 0 ) close( m_fd );
+		if ( m_fd > 0 ) ::close( m_fd );
 		m_fd = other.m_fd;
 		other.m_fd = -1;
 	}
@@ -102,7 +102,21 @@ runtime::Task< std::vector< std::byte > > FileIOUring::read( const std::size_t o
 	co_return co_await IOUring::getInstance().read( nativeHandle(), offset, len );
 }
 
-runtime::Task< void > FileIOUring::write( const std::vector< std::byte > data, const std::size_t offset ) const
+runtime::Task< int > FileIOUring::close()
+{
+	const int descriptor { std::exchange( m_fd.m_fd, -1 ) };
+	if ( descriptor <= 0 ) co_return 0;
+
+	co_return co_await IOUring::getInstance().closeFile(
+		static_cast< IOUring::NativeHandle >( static_cast< unsigned int >( descriptor ) ) );
+}
+
+runtime::Task< int > FileIOUring::sync() const
+{
+	co_return co_await IOUring::getInstance().syncFile( nativeHandle() );
+}
+
+runtime::Task< void > FileIOUring::write( const std::span< const std::byte > data, const std::size_t offset ) const
 {
 	if ( m_readonly ) throw std::runtime_error( "Unable to write: file opened as read-only" );
 	co_await IOUring::getInstance().write( nativeHandle(), data, offset );
@@ -383,15 +397,14 @@ bool IOUringLinux::opUnsupported( const int result )
 	return result == -EINVAL || result == -EOPNOTSUPP || result == -ENOSYS;
 }
 
-//! Returns result unchanged so it can wrap a co_return.
 static int traceOp( const int result, const std::string_view op, const std::string_view target )
 {
 	if ( result < 0 ) log::trace( "{} {} failed: {}", op, target, strerror( -result ) );
 	return result;
 }
 
-// liburing's SQE contains GNU zero-length arrays. Prepare it outside coroutine
-// frames, then let the awaiter own the submission until await_suspend copies it.
+//! Liburing's SQE contains GNU zero-length arrays. Prepare it outside coroutine
+//! frames, then let the awaiter own the submission until await_suspend copies it.
 static ReadAwaiter prepareRead(
 	IOUringLinux& uring,
 	const IOUring::NativeHandle handle,
@@ -414,6 +427,8 @@ static WriteAwaiter prepareWrite(
 {
 	io_uring_sqe sqe {};
 	io_uring_prep_write( &sqe, static_cast< int >( handle ), data.data(), static_cast< __u32 >( data.size() ), offset );
+	// Without it the kernel copies a buffered write into the page cache inside io_uring_enter, on the submitting thread.
+	sqe.flags |= IOSQE_ASYNC;
 	return uring.sendWrite( sqe, executor );
 }
 
@@ -421,6 +436,36 @@ static OpAwaiter prepareUnlink( IOUringLinux& uring, const std::filesystem::path
 {
 	io_uring_sqe sqe {};
 	io_uring_prep_unlinkat( &sqe, AT_FDCWD, path.c_str(), 0 );
+	return uring.sendOp( sqe, executor );
+}
+
+static OpAwaiter prepareClose( IOUringLinux& uring, const IOUring::NativeHandle handle, folly::Executor* executor )
+{
+	io_uring_sqe sqe {};
+	io_uring_prep_close( &sqe, static_cast< int >( handle ) );
+	// The last reference's release runs on the submitting thread unless the close goes to a kernel worker.
+	sqe.flags |= IOSQE_ASYNC;
+	return uring.sendOp( sqe, executor );
+}
+
+static OpAwaiter prepareFsync( IOUringLinux& uring, const IOUring::NativeHandle handle, folly::Executor* executor )
+{
+	io_uring_sqe sqe {};
+	io_uring_prep_fsync( &sqe, static_cast< int >( handle ), 0 );
+	sqe.flags |= IOSQE_ASYNC;
+	return uring.sendOp( sqe, executor );
+}
+
+static OpAwaiter prepareOpen(
+	IOUringLinux& uring,
+	const std::filesystem::path& path,
+	const int flags,
+	const unsigned int mode,
+	folly::Executor* executor )
+{
+	io_uring_sqe sqe {};
+	io_uring_prep_openat( &sqe, AT_FDCWD, path.c_str(), flags, static_cast< mode_t >( mode ) );
+	sqe.flags |= IOSQE_ASYNC;
 	return uring.sendOp( sqe, executor );
 }
 
@@ -449,7 +494,8 @@ static OpAwaiter prepareStat(
 	folly::Executor* executor )
 {
 	io_uring_sqe sqe {};
-	io_uring_prep_statx( &sqe, AT_FDCWD, path.c_str(), AT_STATX_SYNC_AS_STAT, STATX_SIZE, &stx );
+	io_uring_prep_statx(
+		&sqe, AT_FDCWD, path.c_str(), AT_STATX_SYNC_AS_STAT, STATX_SIZE | STATX_TYPE | STATX_MODE, &stx );
 	return uring.sendOp( sqe, executor );
 }
 
@@ -481,27 +527,35 @@ runtime::Task< std::vector< std::byte > > IOUringLinux::read(
 
 runtime::Task< void > IOUringLinux::write(
 	const NativeHandle handle,
-	std::vector< std::byte > data,
+	const std::span< const std::byte > data,
 	const std::size_t offset )
 {
+	// One op's length is a __u32 and pwrite(2) stops near 2 GiB, so large writes go out in chunks.
+	constexpr std::size_t max_write_op { 512ull * 1024ull * 1024ull };
+
 	if ( !m_iouring_setup )
 	{
-		const auto bytes {
-			pwrite( static_cast< int >( handle ), data.data(), data.size(), static_cast< off_t >( offset ) )
-		};
-		if ( bytes < 0 ) throw std::runtime_error( format_ns::format( "pwrite failed: {}", strerror( errno ) ) );
+		std::size_t written { 0 };
+		while ( written < data.size() )
+		{
+			const auto chunk { data.subspan( written, std::min( max_write_op, data.size() - written ) ) };
+			const auto bytes { pwrite(
+				static_cast< int >( handle ), chunk.data(), chunk.size(), static_cast< off_t >( offset + written ) ) };
+			if ( bytes < 0 ) throw std::runtime_error( format_ns::format( "pwrite failed: {}", strerror( errno ) ) );
+
+			if ( bytes == 0 ) throw std::runtime_error( "pwrite made no progress" );
+
+			written += static_cast< std::size_t >( bytes );
+		}
 		co_return;
 	}
-
-	if ( data.size() >= std::numeric_limits< __u32 >::max() )
-		throw std::runtime_error( "Write length exceeds io_uring u32 limit" );
 
 	auto* executor { co_await folly::coro::co_current_executor };
 
 	std::size_t written { 0 };
 	while ( written < data.size() )
 	{
-		const auto remaining { std::span< const std::byte > { data }.subspan( written ) };
+		const auto remaining { data.subspan( written, std::min( max_write_op, data.size() - written ) ) };
 		const auto bytes { co_await prepareWrite( *this, handle, remaining, offset + written, executor ) };
 
 		if ( bytes == 0 )
@@ -527,6 +581,57 @@ runtime::Task< int > IOUringLinux::removeFile( const std::filesystem::path path 
 	}
 
 	co_return traceOp( unlink( path.c_str() ) == 0 ? 0 : -errno, "unlink", path.native() );
+}
+
+runtime::Task< int > IOUringLinux::openFile(
+	const std::filesystem::path path,
+	const int flags,
+	const unsigned int mode )
+{
+	log::trace( "open {}", path.native() );
+
+	if ( m_iouring_setup )
+	{
+		auto* executor { co_await folly::coro::co_current_executor };
+
+		const auto result { co_await prepareOpen( *this, path, flags, mode, executor ) };
+		if ( !opUnsupported( result ) ) co_return traceOp( result, "openat", path.native() );
+
+		log::trace( "openat unsupported, falling back to open for {}", path.native() );
+	}
+
+	const int descriptor { ::open( path.c_str(), flags, static_cast< mode_t >( mode ) ) };
+	co_return traceOp( descriptor >= 0 ? descriptor : -errno, "open", path.native() );
+}
+
+runtime::Task< int > IOUringLinux::closeFile( const NativeHandle handle )
+{
+	if ( m_iouring_setup )
+	{
+		auto* executor { co_await folly::coro::co_current_executor };
+
+		const auto result { co_await prepareClose( *this, handle, executor ) };
+		if ( !opUnsupported( result ) ) co_return result;
+
+		log::trace( "close unsupported, falling back to blocking close for fd {}", handle );
+	}
+
+	co_return ::close( static_cast< int >( handle ) ) == 0 ? 0 : -errno;
+}
+
+runtime::Task< int > IOUringLinux::syncFile( const NativeHandle handle )
+{
+	if ( m_iouring_setup )
+	{
+		auto* executor { co_await folly::coro::co_current_executor };
+
+		const auto result { co_await prepareFsync( *this, handle, executor ) };
+		if ( !opUnsupported( result ) ) co_return result;
+
+		log::trace( "fsync unsupported, falling back to blocking fsync for fd {}", handle );
+	}
+
+	co_return ::fsync( static_cast< int >( handle ) ) == 0 ? 0 : -errno;
 }
 
 runtime::Task< int > IOUringLinux::renameFile( const std::filesystem::path from, const std::filesystem::path to )
@@ -586,7 +691,6 @@ runtime::Task< int > IOUringLinux::createDirectories( const std::filesystem::pat
 			result = traceOp( mkdir( prefix.c_str(), 0777 ) == 0 ? 0 : -errno, "mkdir", prefix.native() );
 		}
 
-		// Every component but the last is expected to exist already on the common path.
 		if ( result != 0 && result != -EEXIST )
 		{
 			log::trace( "create directories {} aborted at {}", path.native(), prefix.native() );
@@ -620,12 +724,59 @@ runtime::Task< std::expected< std::uint64_t, int > > IOUringLinux::fileSize( con
 		log::trace( "statx unsupported, falling back to blocking statx for {}", path.native() );
 	}
 
-	if ( statx( AT_FDCWD, path.c_str(), AT_STATX_SYNC_AS_STAT, STATX_SIZE, &stx ) != 0 )
+	if ( statx( AT_FDCWD, path.c_str(), AT_STATX_SYNC_AS_STAT, STATX_SIZE | STATX_TYPE | STATX_MODE, &stx ) != 0 )
 		co_return std::unexpected( traceOp( -errno, "statx", path.native() ) );
 
 	co_return static_cast< std::uint64_t >( stx.stx_size );
 }
 
+static std::filesystem::file_status statusFromStat( const struct statx& status )
+{
+	using std::filesystem::file_type;
+	file_type type { file_type::unknown };
+	if ( S_ISREG( status.stx_mode ) )
+		type = file_type::regular;
+	else if ( S_ISDIR( status.stx_mode ) )
+		type = file_type::directory;
+	else if ( S_ISBLK( status.stx_mode ) )
+		type = file_type::block;
+	else if ( S_ISCHR( status.stx_mode ) )
+		type = file_type::character;
+	else if ( S_ISFIFO( status.stx_mode ) )
+		type = file_type::fifo;
+	else if ( S_ISSOCK( status.stx_mode ) )
+		type = file_type::socket;
+	else if ( S_ISLNK( status.stx_mode ) )
+		type = file_type::symlink;
+
+	return std::filesystem::file_status { type, static_cast< std::filesystem::perms >( status.stx_mode & 07777 ) };
+}
+
+runtime::Task< std::expected< std::filesystem::file_status, int > > IOUringLinux::fileStatus(
+	const std::filesystem::path path )
+{
+	struct statx status {};
+	if ( m_iouring_setup )
+	{
+		auto* executor { co_await folly::coro::co_current_executor };
+		const int result { co_await prepareStat( *this, path, status, executor ) };
+		if ( !opUnsupported( result ) )
+		{
+			if ( result < 0 ) co_return std::unexpected( result );
+
+			co_return statusFromStat( status );
+		}
+
+		log::trace( "statx unsupported, falling back to blocking statx for {}", path.native() );
+	}
+
+	// Only used when io_uring or its statx opcode is unavailable.
+	if ( statx( AT_FDCWD, path.c_str(), AT_STATX_SYNC_AS_STAT, STATX_TYPE | STATX_MODE, &status ) != 0 )
+		co_return std::unexpected( -errno );
+
+	co_return statusFromStat( status );
+}
+
 } // namespace idhan
 
-#endif // __linux__
+#endif

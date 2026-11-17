@@ -19,7 +19,6 @@ std::expected< ThumbnailInfo, ModuleError > ImageVipsThumbnailer::createThumbnai
 	std::size_t width,
 	std::size_t height )
 {
-	// Only attempt formats we declare handleable (handleableMimes() is derived from this same set).
 	if ( !VIPS_MIMES.contains( data.mime_id ) ) return std::unexpected( ModuleError { "Unsupported mime type" } );
 
 	VipsModuleSource source { data.file };

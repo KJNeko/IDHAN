@@ -57,8 +57,7 @@ class SHA256
 		return result;
 	}
 
-	//! \return The parsed hash, or an error message if \p str is not exactly 64 hex characters.
-	[[nodiscard]] static std::expected< SHA256, std::string > fromHex( std::string_view );
+	[[nodiscard]] static std::expected< SHA256, std::string > fromHex( std::string_view str );
 
 	[[nodiscard]] static SHA256 fromBuffer( std::span< const std::byte > data )
 	{

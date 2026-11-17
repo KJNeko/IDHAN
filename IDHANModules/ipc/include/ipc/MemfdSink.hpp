@@ -33,7 +33,6 @@ class MemfdSink final : public ModuleSink
 
 	[[nodiscard]] std::expected< void, ModuleError > write( std::span< const std::byte > bytes ) override;
 
-	//! Bytes written so far.
 	[[nodiscard]] std::size_t written() const { return m_written; }
 
 	[[nodiscard]] std::expected< UniqueFd, std::string > seal();

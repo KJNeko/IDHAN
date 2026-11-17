@@ -15,10 +15,10 @@ class UgoiraThumbnailer : public idhan::ThumbnailerModuleI
 
 	[[nodiscard]] idhan::ModuleVersion version() override { return { .m_major = 1, .m_minor = 0, .m_patch = 0 }; }
 
-	// no shared state; every call owns its own vips objects
+	//! No shared state; every call owns its own vips objects
 	[[nodiscard]] bool threadSafe() override { return true; }
 
-	// every frame is decoded, scaled and joined through vips
+	//! Every frame is decoded, scaled and joined through vips
 	[[nodiscard]] bool singleThreaded() override { return false; }
 
 	[[nodiscard]] idhan::ModuleResidency residency() override { return idhan::ModuleResidency::PERSISTENT; }
@@ -27,6 +27,7 @@ class UgoiraThumbnailer : public idhan::ThumbnailerModuleI
 
 	[[nodiscard]] std::vector< idhan::MimeID > handleableMimes() override;
 
+	//! Returns animated WebP; unreadable frames are skipped, and absent manifests use default delays.
 	[[nodiscard]] std::expected< idhan::ThumbnailInfo, idhan::ModuleError > createThumbnailRaw(
 		idhan::ModuleCallData& data,
 		std::size_t width,

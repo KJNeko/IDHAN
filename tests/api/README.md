@@ -1,50 +1,129 @@
-# API tests
+# How to use
 
-The API harness uses libcurl directly. The server uses Proxygen/Folly, and there
-is no test-only web framework or event-loop dependency. JSON parsing and writing
-use the project's existing JsonCpp dependency.
+Start the testing framework using docker-compose-test.yml
 
-Build the normal target with tests enabled. Use a separate build directory when
-CLion is managing another one:
+Run the python. Needs httpx
 
-```sh
-cmake -S . -B build/tests -DBUILD_IDHAN_TESTS=ON
-cmake --build build/tests --target IDHANAPITests -j4
-./build/tests/bin/IDHANAPITests
-```
+## Tag benchmarks
 
-Database-backed cases use an isolated migrated PostgreSQL schema. The defaults
-are `host=localhost port=5432 dbname=idhan-db user=idhan password=idhan`;
-`IDHAN_TEST_PG_HOST`, `IDHAN_TEST_PG_PORT`, `IDHAN_TEST_PG_DB`,
-`IDHAN_TEST_PG_USER`, and `IDHAN_TEST_PG_PASSWORD` select a test server. Required
-extensions must already be installed, as described in
-[database initialization](../../docs/database-initialization.md).
-The server and module runner are built alongside the test executable.
-`IDHAN_TEST_SERVER_BINARY` can explicitly select another server binary.
+Install `tests/api/requirements.txt` into your configured Python interpreter.
+The `pytest-benchmark` plugin measures everyday tag workflows using existing
+functional assertions: reads, creation, duplicate creation, exact search,
+normalization, batches, concurrent creation, autocomplete, and parent/alias
+creation and removal. Invalid inputs, rollback, cycle rejection, domain isolation,
+and disabled endpoints are covered by functional tests instead of benchmarks. Normal API test runs skip benchmarks.
 
-Transport cases need loopback sockets but no PostgreSQL or running IDHAN server:
+In CLion, run **Tests / Tag Benchmarks**. Its before-launch step starts Compose
+and waits for healthy services, just like **API Tests**.
+
+From the command line, with the test server running:
 
 ```sh
-./build/tests/bin/IDHANAPITests '[transport]'
+python -m pytest tests/api/benchmarks --run-benchmarks --benchmark-autosave
+python -m pytest tests/api/benchmarks --run-benchmarks --benchmark-compare
 ```
 
-Every request has its own libcurl easy handle, so concurrent test calls do not
-share mutable transfer state. Query names and values are percent-encoded while
-preserving repeated parameters. Requests connect directly to loopback without
-using environment proxy settings or following redirects. HTTP error statuses
-remain responses; connection and deadline failures throw with the request path
-and libcurl's diagnostic.
+There is one warm-up round followed by 10 measured rounds per scenario. Use
+`--api-benchmark-rounds=50` for more samples, or `-k autocomplete` to select cases.
+Results show latency distributions for each workflow. Saved results live in
+`.benchmarks/` and are ignored by Git. Comparisons report changes; they do not
+fail tests on a timing threshold by default.
 
-The harness retains binary request/response bytes, parses JSON when possible,
-and normalizes response header names to lowercase. Use lowercase names with
-`ApiResponse::header`. Interim response headers are discarded before the final
-response. JSON and ordinary requests have a 30-second total deadline; octet
-uploads have a 60-second deadline. The constructor accepts shorter positive
-limits for transport tests. libcurl is initialized once and released after the
-clients, and callbacks capture exceptions without unwinding through its C API.
+Each round receives fresh fixture data. Fixture tag/domain creation and domain
+cleanup happen outside the timer. The measured workflow includes HTTP client
+work, server/database time, response decoding, assertions, and multiple requests
+where the functional test uses them. The concurrency scenario also includes
+thread-pool startup and synchronization. OPS therefore means workflows per
+second, not individual requests per second or concurrent server throughput.
 
-The transport regressions cover repeated/escaped query values, empty values,
-authentication headers, JSON escaping, embedded-NUL and non-UTF-8 bytes,
-chunked/interim responses, PATCH/DELETE/bodyless POST, HTTP errors, redirects,
-timeouts, and refused connections. The API regressions exercise the same client
-against the real server, including concurrent calls and large request bodies.
+Tags have no deletion API, so rounds leave unused tags until the disposable
+stack is restarted. Database size and caches can affect later results. Compare
+runs using the same rounds, server build, hardware, and initial dataset; restart
+the entire stack before a fresh baseline. These scenarios use small datasets and
+do not yet characterize performance at production scale. Compose currently
+builds Debug: use a Release server for representative performance measurements.
+
+Benchmark times are displayed in milliseconds by default. Override with
+`--benchmark-time-unit=s` to display seconds.
+
+Batch creation benchmarks cover **1, 10, 100, 1,000, and 10,000 new tags per
+request**. Run only these with:
+
+```sh
+python -m pytest tests/api/benchmarks --run-benchmarks -k create_tag_batches --benchmark-autosave
+```
+
+Each round generates a fresh namespace and payload outside the timer. Only the
+HTTP request (including JSON encoding and response transfer) is timed. Response
+status, result count, and unique positive IDs are checked outside the timer.
+The grouped table shows milliseconds per batch; divide the batch size by mean
+seconds for tags/second. Batch size is also stored in benchmark result metadata.
+At the default rounds this adds 122,221 tags including warm-up, so reset the
+whole disposable stack before comparing fresh runs.
+
+## API-wide coverage
+
+Run all functional tests with `python -m pytest tests/api`. Add `--run-benchmarks`
+to include performance cases, or run **Tests / API Benchmarks** in CLion to
+benchmark every supported area. **Tag Benchmarks** selects the tag benchmark file.
+`--api-benchmark-rounds=10` sets rounds for all benchmarks; the earlier
+`--tag-benchmark-rounds` spelling remains an alias.
+
+| Area                 | Current functional coverage                                                                                                                                   |
+|----------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| System               | Health, authentication verification in the auth-disabled test stack, bandwidth, database stats, MIME registry, job listing/status, metadata-rescan completion |
+| Contract             | OpenAPI local references, operation IDs, response declarations, required path parameters, invalid IDs and malformed JSON                                      |
+| Records              | Single/batch creation, duplicate hashes, hash lookup, invalid hashes, notes, URLs                                                                             |
+| Files                | Unique generated PNG import, duplicate import, exact download bytes/SHA256, metadata/info, WebP thumbnails, fixture file deletion                             |
+| Tags                 | Creation/normalization/batches, lookup, autocomplete, concurrency, parent/alias relationships and cycle rejection                                             |
+| Record tags          | Add/remove, stored versus resolved tags, inheritance/aliases, domain filtering, eventual usage counts                                                         |
+| Search               | GET/POST tag/domain filters, IDs/hashes, offset, negative pagination validation                                                                               |
+| Record relationships | Duplicate, alternative and unrelated creation, reciprocal lookup and clearing                                                                                 |
+| Clusters             | Writable disposable cluster creation, listing, info, name/ratio modification, fixture removal                                                                 |
+| Hydrus               | Version/instance identity, services, client info, pages, popups, options                                                                                      |
+| Downloader           | Configuration/registry reads, empty session creation/list/detail/errors/records/deletion                                                                      |
+| Subscriptions        | Disabled group/subscription creation, listing, updates and deletion                                                                                           |
+
+The tests need a disposable server: they create records and tags and register a
+writable cluster beneath `/media`. Hash-only records/tags cannot be deleted via
+the API and remain until a full stack restart. Imported files, temporary domains,
+subscription groups/subscriptions, and sessions are cleaned up by fixtures.
+File tests generate a tiny valid PNG with fresh pixels using Python's standard
+library; no external sample assets or network downloads are needed.
+Tag usage counts are accumulated by a background job every 60 seconds. The count
+test can take around two minutes, polling for each expected update with a
+75-second deadline. Benchmark timings exclude these background-maintenance waits.
+
+The additional benchmark groups measure read endpoints, record batch creation (1/10/100/1,000 records), reads of
+imported records, GET/POST search, and creation
+of empty download sessions and disabled subscription groups. Request generation
+and validation are outside their timers. These are small-fixture HTTP benchmarks;
+large search corpora, large file transfers, and sustained concurrent load still
+need dedicated datasets.
+
+Coverage is expanding; this is not complete behavioral coverage of every route.
+Still needed: auth-enabled permissions, full Hydrus compatibility, job failure
+and cancellation, streamed events, rate limiting under load, parser upload,
+actual downloader runs against a local HTTP fixture, embedding models/search,
+thumbnail variants, maintenance workflows, and broader metadata/media formats.
+The OpenAPI checks inspect the entire native contract but do not replace those
+endpoint-specific tests.
+
+## Local services only
+
+API tests and benchmarks must target the disposable local test stack. `--api-url`
+and `IDHAN_TEST_API_URL` accept only HTTP loopback origins (`127.0.0.1`, `::1`,
+or `localhost`), without credentials, paths, queries, or fragments. The session
+network guard also blocks non-loopback DNS, TCP connections, and UDP sends from
+Python, including attempts made by clients other than the shared fixture.
+The API client ignores proxy environment variables and does not follow redirects.
+
+The Compose runtime network is `internal`, preventing the server and downloader
+from accessing external services. Fixed-destination TCP relays publish only the
+local API and PostgreSQL ports; the application containers have no external
+network attachment. Image builds and initial image pulls may download dependencies.
+Subscriptions are created disabled; URL-association tests store loopback URLs and
+do not fetch them. Future downloader tests must run local fake upstream services
+on the isolated Compose network, rather than using real websites. These controls
+do not identify other applications listening on loopback: use the dedicated test
+stack, not a development or production server exposed locally.

@@ -28,7 +28,6 @@ constexpr std::uint64_t TENSORTYPE_SHAPE { 2 }; //!< TypeProto.Tensor.shape
 constexpr std::uint64_t SHAPE_DIM { 1 }; //!< TensorShapeProto.dim
 constexpr std::uint64_t DIM_VALUE { 1 }; //!< TensorShapeProto.Dimension.dim_value
 
-//! A cursor over a protobuf message body.
 class Reader
 {
 	const std::byte* m_cursor { nullptr };
@@ -87,7 +86,6 @@ class Reader
 		return true;
 	}
 
-	//! Steps over a field whose contents are not wanted.
 	[[nodiscard]] bool skip( const std::uint8_t wire )
 	{
 		switch ( wire )
@@ -176,7 +174,6 @@ class Reader
 	return dims;
 }
 
-//! Reads one ValueInfoProto: its name, and the shape of its tensor type.
 [[nodiscard]] GraphTensorInfo readValueInfo( Reader value_info )
 {
 	GraphTensorInfo info {};
@@ -237,7 +234,6 @@ class Reader
 	return info;
 }
 
-//! A read-only memory mapping that closes itself.
 class Mapping
 {
 	const std::byte* m_data { nullptr };
@@ -281,7 +277,6 @@ class Mapping
 
 		void* const mapped { ::mmap( nullptr, m_size, PROT_READ, MAP_PRIVATE, fd, 0 ) };
 
-		// The descriptor has done its job; the mapping outlives it.
 		::close( fd );
 
 		if ( mapped == MAP_FAILED )

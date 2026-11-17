@@ -9,29 +9,24 @@
 
 #include "IDHANTypes.hpp"
 #include "idhan/db/DBContext.hpp"
-#include "idhan/http/RouteSpec.hpp"
+#include "idhan/http/openapi/RouteDocumentation.hpp"
+#include "idhan/http/routing/RouteSpec.hpp"
 #include "idhan/runtime/Task.hpp"
 
 namespace idhan::httpapi
 {
 
-struct TagDomainInfo
+struct[ [= http::SchemaName { "TagDomain" }] ] TagDomainInfo
 {
-	TagDomainID id;
-	std::string name;
+	[[= http::Name { "tag_domain_id" }]][ [= http::Minimum { 1 }] ] TagDomainID id;
+	[[= http::Name { "domain_name" }]] std::string name;
 };
-
-[[nodiscard]] http::PathParameter tagIdPathParameter( std::string name );
-[[nodiscard]] http::PathParameter tagDomainIdPathParameter( std::string name );
 
 [[nodiscard]] runtime::Task< std::optional< TagDomainInfo > > findTagDomain( TagDomainID id, db::DBContext& db );
 
 [[nodiscard]] runtime::Task< std::optional< TagDomainInfo > > findTagDomain( std::string_view name, db::DBContext& db );
 
 [[nodiscard]] runtime::Task< std::vector< TagDomainInfo > > listTagDomains( db::DBContext& db );
-
-[[nodiscard]] std::expected< TagDomainID, http::Response > tagDomainIdParameter(
-	const http::RequestParameters& parameters );
 
 [[nodiscard]] runtime::Task< std::expected< void, http::Response > > validateRelationshipIds(
 	TagDomainID tag_domain_id,

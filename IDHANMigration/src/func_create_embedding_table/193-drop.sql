@@ -2,7 +2,7 @@ CREATE OR REPLACE FUNCTION drop_embedding_model_table()
     RETURNS TRIGGER AS
 $$
 BEGIN
-    EXECUTE format( 'DROP TABLE IF EXISTS embeddings_%s', old.model_id );
+    EXECUTE format('DROP TABLE IF EXISTS embeddings_%s', old.model_id);
     RETURN old;
 END;
 $$ LANGUAGE plpgsql;

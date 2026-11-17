@@ -35,14 +35,6 @@ void removeWorkDirectory( const std::filesystem::path& work_dir )
 }
 
 //! Moves the finished chunks and the relations file out of the staging directory into \p out_dir.
-//!
-//! Everything a run produces is written inside the work directory until this call, so a cancelled
-//! or failed run leaves the output directory exactly as it found it. Without that, a run abandoned
-//! partway through the collapse would strand hundreds of chunk files that no manifest describes and
-//! that cannot be told apart from a previous good run's output.
-//!
-//! Staging is nested inside \p out_dir, so the two are always on one filesystem and every move is a
-//! rename rather than a copy.
 void publishStagedOutput( const std::filesystem::path& staging_dir,
                           const std::filesystem::path& out_dir,
                           const CompactManifest& manifest )

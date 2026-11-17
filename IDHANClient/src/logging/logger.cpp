@@ -18,9 +18,6 @@ void logResponse( QNetworkReply* reply )
 {
 	if ( !reply ) return;
 
-	// there is some data with the reply
-	// test if it's json
-
 	const auto header = reply->header( QNetworkRequest::ContentTypeHeader );
 	if ( header.isValid() && header.toString().contains( "application/json" ) )
 	{

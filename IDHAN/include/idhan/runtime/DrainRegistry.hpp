@@ -23,7 +23,6 @@ class WorkRegistration
 	WorkRegistration( WorkRegistration&& ) noexcept;
 	WorkRegistration& operator=( WorkRegistration&& ) noexcept;
 	~WorkRegistration();
-	// A child is registered before its parent can release the last registration.
 	[[nodiscard]] WorkRegistration child() const;
 };
 
@@ -40,8 +39,6 @@ class DrainRegistry
 	[[nodiscard]] std::optional< WorkRegistration > admit();
 	void closeAdmission();
 	[[nodiscard]] std::size_t outstanding() const;
-	// Closes external admission and waits for every registration, including children.
-	// The returned task owns the state and may outlive this registry.
 	[[nodiscard]] Task<> drain();
 };
 

@@ -32,7 +32,6 @@ runtime::Task< void > registerEmbeddingModels( db::DBContext& db );
 //! Claims model_id for a backfill. False if one is already running for it.
 [[nodiscard]] bool tryBeginBackfill( std::int32_t model_id );
 
-//! Releases a claim taken by tryBeginBackfill.
 void endBackfill( std::int32_t model_id );
 
 //! Sweeps every eligible record missing an embedding under model_id and embeds it.

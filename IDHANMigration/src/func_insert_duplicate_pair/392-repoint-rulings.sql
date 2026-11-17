@@ -118,22 +118,22 @@ BEGIN
     DELETE
     FROM hamming_distance hamming
         USING unnest(member_ids) AS member(record_id),
-        (SELECT greater_record_id AS king_id
-         FROM alternative_records
-         WHERE lesser_record_id = better
-         UNION
-         SELECT lesser_record_id
-         FROM alternative_records
-         WHERE greater_record_id = better
-         UNION
-         SELECT greater_record_id
-         FROM unrelated_records
-         WHERE lesser_record_id = better
-         UNION
-         SELECT lesser_record_id
-         FROM unrelated_records
-         WHERE greater_record_id = better) ruled,
-        LATERAL duplicate_group_members(ruled.king_id) AS other(record_id)
+            (SELECT greater_record_id AS king_id
+             FROM alternative_records
+             WHERE lesser_record_id = better
+             UNION
+             SELECT lesser_record_id
+             FROM alternative_records
+             WHERE greater_record_id = better
+             UNION
+             SELECT greater_record_id
+             FROM unrelated_records
+             WHERE lesser_record_id = better
+             UNION
+             SELECT lesser_record_id
+             FROM unrelated_records
+             WHERE greater_record_id = better) ruled,
+            LATERAL duplicate_group_members(ruled.king_id) AS other(record_id)
     WHERE hamming.left_id = LEAST(member.record_id, other.record_id)
       AND hamming.right_id = GREATEST(member.record_id, other.record_id);
 END;

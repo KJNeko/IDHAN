@@ -43,10 +43,8 @@ struct BucketCollapseResult
 	std::uint64_t terminal_delete_records { 0 };
 };
 
-//! Reads, sorts, and walks one bucket's events into whole records. Touches only its arguments --
-//! safe to run concurrently for different buckets.
-//!
-//! \param discard_terminal_deletes Count terminal deletes but do not emit them. See CollapseOptions.
+//! Reads, sorts, and walks one bucket's events into whole records. Safe to run concurrently for
+//! different buckets.
 BucketCollapseResult collapseOneBucket( const std::filesystem::path& work_dir,
                                         const std::size_t bucket,
 	const DefinitionReader& definitions,
@@ -128,15 +126,7 @@ BucketCollapseResult collapseOneBucket( const std::filesystem::path& work_dir,
 }
 
 //! Collects collapsed records from every worker and writes them out in chunks of \p cap.
-//!
-//! Shared by all workers and thread-safe. The lock covers only appending to the pending batch and
-//! recording a finished chunk; sealing a batch (building its string table, serialising tens of
-//! megabytes and deflating the lot, which is seconds of CPU and happens hundreds of times over a
-//! full corpus) runs with the lock released, so several workers can be sealing at once.
-//!
-//! Staging in one shared batch rather than one per worker is what keeps chunks full: per-worker
-//! batches would leave every worker holding a part-filled chunk at the end, and would multiply the
-//! records held in memory by the worker count for no gain.
+//! Thread-safe; sealing a batch runs with the lock released, so several workers can seal at once.
 class ChunkSink
 {
   public:
@@ -155,9 +145,7 @@ class ChunkSink
 
 	~ChunkSink() = default;
 
-	//! Appends \p records, sealing a chunk whenever the batch reaches the cap. The calling worker
-	//! is the one that seals, so the cost lands on whoever filled the batch rather than on a
-	//! dedicated thread that could fall behind.
+	//! Appends \p records, sealing a chunk on the calling worker whenever the batch reaches the cap.
 	void add( std::vector< CollapsedRecord > records )
 	{
 		std::unique_lock< std::mutex > lock { m_mutex };

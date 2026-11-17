@@ -1,8 +1,0 @@
-type: object
-required:
-  - tag_id
-properties:
-  tag_id:
-    type: integer
-    examples:
-      - 1

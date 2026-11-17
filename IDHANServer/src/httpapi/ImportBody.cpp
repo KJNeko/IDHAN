@@ -48,6 +48,7 @@ std::expected< ImportBody, std::string > ImportBody::create( http::RequestBody b
 		return std::unexpected( std::system_error( errno, std::generic_category(), "Mapping upload" ).what() );
 
 	result.m_mapping = { static_cast< const std::byte* >( mapping ), Unmap { static_cast< std::size_t >( size ) } };
+	result.m_file = std::move( file );
 	return result;
 }
 
@@ -61,6 +62,13 @@ std::span< const std::byte > ImportBody::bytes() const noexcept
 SHA256 ImportBody::hash() const
 {
 	return m_hash;
+}
+
+std::optional< int > ImportBody::descriptor() const
+{
+	if ( !m_file ) return std::nullopt;
+
+	return m_file.fd();
 }
 
 } // namespace idhan::httpapi

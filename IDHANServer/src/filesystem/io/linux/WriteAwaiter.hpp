@@ -51,4 +51,4 @@ struct [[nodiscard]] WriteAwaiter
 
 } // namespace idhan
 
-#endif // __linux__
+#endif

@@ -16,8 +16,8 @@ class BackgroundJob;
 
 namespace idhan::metadata
 {
-// Visits a bounded snapshot in batches of eight. Failed or blank images remain
-// eligible for future passes, without starving later IDs in this pass.
+//! Visits a bounded snapshot in batches of eight. Failed or blank images remain
+//! eligible for future passes, without starving later IDs in this pass.
 [[nodiscard]] runtime::Task<> runPhashSweep(
 	db::DBContext& db,
 	std::stop_token stop = {},

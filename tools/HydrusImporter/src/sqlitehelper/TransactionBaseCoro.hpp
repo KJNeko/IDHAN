@@ -12,8 +12,7 @@ class TransactionBaseCoro
 	sqlite3* m_db;
 
   public:
-
-	//! \return The underlying sqlite3 connection (asserts it is non-null).
+	//! Asserts the connection is non-null.
 	sqlite3* db()
 	{
 		FGL_ASSERT( m_db != nullptr, "Database pointer was null in TransactionBaseCoro" );

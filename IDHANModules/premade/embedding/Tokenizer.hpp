@@ -15,7 +15,6 @@ namespace premade
 //! A byte-pair encoder driven entirely by a HuggingFace `tokenizer.json`.
 class BpeTokenizer
 {
-	//! What a merge rule produces, and how early it applies.
 	struct Merge
 	{
 		std::int32_t m_rank { 0 }; //!< Lower wins. Merge order is the whole of BPE's behaviour.
@@ -38,16 +37,14 @@ class BpeTokenizer
 	std::int32_t m_pad_id { 0 };
 	std::size_t m_context_length { 64 };
 
-	//! Runs the merge rules over one already-normalised phrase.
 	[[nodiscard]] std::vector< std::int32_t > applyMerges( std::string_view normalised ) const;
 
   public:
 
 	BpeTokenizer() = default;
 
-	//! Loads a `tokenizer.json`.
-	/** \param context_length What the text graph's input axis declares. The file's own padding
-	 *         strategy is used when it names one and this is zero. */
+	//! \param context_length What the text graph's input axis declares. When zero, the file's fixed
+	//!        padding length is used, or 64 if it names none.
 	[[nodiscard]] static std::expected< BpeTokenizer, std::string > load(
 		const std::filesystem::path& tokenizer_path,
 		std::size_t context_length );

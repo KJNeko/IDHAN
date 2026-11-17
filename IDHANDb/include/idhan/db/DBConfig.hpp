@@ -42,6 +42,6 @@ struct QueryOptions
 };
 
 inline constexpr std::size_t row_prefetch { 256 };
-inline constexpr std::size_t pump_operation_budget { 64 };
+inline constexpr std::size_t connection_operation_budget { 64 };
 
 } // namespace idhan::db

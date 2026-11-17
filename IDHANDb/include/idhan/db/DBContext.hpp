@@ -7,7 +7,6 @@
 #include "DBPool.hpp"
 #include "DBTransaction.hpp"
 #include "IDHANDB.hpp"
-#include "ManagementConnection.hpp"
 
 namespace idhan::db
 {

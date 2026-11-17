@@ -11,7 +11,7 @@ class DBContext;
 
 namespace idhan::filesystem
 {
-// Ordinary access never recreates markers. Boot recovery requires a consumed acknowledgement.
+//! Ordinary access never recreates markers. Boot recovery requires a consumed acknowledgement.
 [[nodiscard]] runtime::Task< std::expected< ClusterAccess, std::string > > openCluster(
 	db::DBContext& db,
 	ClusterID id );

@@ -42,13 +42,14 @@ class DBReactor
 	void request( const std::shared_ptr< Watch >& );
 	void run();
 
-	// Locked m_watches lookups/mutations shared by the public watch API below.
+	//! Locked m_watches lookups/mutations shared by the public watch API below.
 	[[nodiscard]] std::shared_ptr< Watch > findWatch( DBConnection* );
 	[[nodiscard]] std::shared_ptr< Watch > findOrCreateWatch( std::shared_ptr< DBConnection > );
 	[[nodiscard]] std::shared_ptr< Watch > removeWatch( DBConnection& );
-	// registerWatch/updateWatch hold the lock across their epoll_ctl call, so a
-	// concurrent rearm/unwatch for the same connection can't race the decision
-	// between EPOLL_CTL_ADD and EPOLL_CTL_MOD.
+
+	//! registerWatch/updateWatch hold the lock across their epoll_ctl call, so a
+	//! concurrent rearm/unwatch for the same connection can't race the decision
+	//! between EPOLL_CTL_ADD and EPOLL_CTL_MOD.
 	void registerWatch( std::shared_ptr< DBConnection >, int socket, SocketInterest );
 	void updateWatch( DBConnection&, SocketInterest );
 

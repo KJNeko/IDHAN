@@ -28,7 +28,7 @@ BEGIN
     DELETE
     FROM hamming_distance hamming
         USING duplicate_group_members(new.lesser_record_id) AS left_member(record_id),
-        duplicate_group_members(new.greater_record_id) AS right_member(record_id)
+            duplicate_group_members(new.greater_record_id) AS right_member(record_id)
     WHERE hamming.left_id = LEAST(left_member.record_id, right_member.record_id)
       AND hamming.right_id = GREATEST(left_member.record_id, right_member.record_id);
 

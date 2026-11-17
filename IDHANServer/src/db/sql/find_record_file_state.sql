@@ -8,7 +8,9 @@ SELECT r.record_id,
        (extract(epoch FROM fi.file_mtime) * 1000000)::bigint,
        (extract(epoch FROM fi.file_ctime) * 1000000)::bigint,
        fi.cluster_store_time IS NOT NULL,
-       EXISTS (SELECT 1 FROM metadata md WHERE md.record_id = r.record_id)
+       EXISTS (SELECT 1
+               FROM metadata md
+               WHERE md.record_id = r.record_id)
 FROM records r
          LEFT JOIN file_info fi USING (record_id)
          LEFT JOIN mime m USING (mime_id)

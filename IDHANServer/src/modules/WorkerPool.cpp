@@ -2,7 +2,6 @@
 
 #include <format>
 
-#include "downloader/DebugEvents.hpp"
 #include "logging/log.hpp"
 
 namespace idhan::modules
@@ -39,40 +38,8 @@ std::expected< std::shared_ptr< WorkerProcess >, std::string > WorkerPool::acqui
 	std::erase_if( m_workers, []( const auto& entry ) { return entry.expired(); } );
 	m_workers.emplace_back( worker );
 	guard.unlock();
-	downloader::notifyDebugChanged();
 
 	return worker;
-}
-
-WorkerPoolSnapshot WorkerPool::snapshot()
-{
-	WorkerPoolSnapshot snapshot {};
-	const std::lock_guard< std::mutex > guard { m_mutex };
-	for ( const auto& entry : m_workers )
-	{
-		const auto worker { entry.lock() };
-		if ( worker == nullptr ) continue;
-
-		if ( !worker->alive() ) continue;
-
-		++snapshot.workers;
-		const auto activity { worker->moduleActivity() };
-		if ( !activity.has_value() )
-		{
-			snapshot.reporting = false;
-			continue;
-		}
-
-		const auto& modules { activity.value() };
-		if ( snapshot.modules.size() < modules.size() ) snapshot.modules.resize( modules.size() );
-
-		for ( std::size_t index = 0; index < modules.size(); ++index )
-		{
-			snapshot.modules[ index ].queued += modules[ index ].queued;
-			snapshot.modules[ index ].running += modules[ index ].running;
-		}
-	}
-	return snapshot;
 }
 
 void WorkerPool::prewarm()
@@ -101,7 +68,7 @@ IDHANTask< std::shared_ptr< CallOutcome > > WorkerPool::dispatch(
 			co_return outcome;
 		}
 
-		auto manifest { co_await ( *worker )->awaitManifestAsync( m_settings.liveness_grace ) };
+		auto manifest { co_await ( *worker )->awaitManifest( m_settings.liveness_grace ) };
 		if ( !manifest )
 		{
 			( *worker )->terminate( "worker did not provide a valid startup manifest" );

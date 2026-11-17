@@ -188,8 +188,6 @@ void TagDomainRelationshipWidget::on_aliasTargetResults_itemClicked(QListWidgetI
     exitAliasSearchMode();
 }
 
-// Relationship add/remove buttons
-
 void TagDomainRelationshipWidget::on_addParentButton_clicked() {
     if (m_tagID == 0 || m_domainID == 0) return;
     bool ok;

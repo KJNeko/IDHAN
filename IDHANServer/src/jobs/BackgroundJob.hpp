@@ -12,8 +12,8 @@ class JobContext;
 
 namespace idhan::jobs
 {
-// Tracks a service on its existing executor. The job suspends until the owner
-// finishes it; it does not occupy a job-pool thread or own the service's dependencies.
+//! Tracks a service on its existing executor. The job suspends until the owner
+//! finishes it; it does not occupy a job-pool thread or own the service's dependencies.
 class BackgroundJob
 {
 	class Progress;
@@ -36,7 +36,8 @@ class BackgroundJob
 	void activity( std::string phase, std::string message );
 	void processed( std::uint64_t count = 1 );
 	void recordFailure( std::string message );
-	// Call only after service work has drained. Repeated calls are harmless.
+
+	//! Call only after service work has drained. Repeated calls are harmless.
 	void finish( std::optional< std::string > error = {} );
 };
 } // namespace idhan::jobs

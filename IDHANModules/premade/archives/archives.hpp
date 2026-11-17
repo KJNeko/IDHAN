@@ -12,8 +12,8 @@
 #include "ModuleBase.hpp"
 #include "ModuleSink.hpp"
 
-struct archive; // libarchive opaque type
-struct archive_entry; // libarchive opaque type
+struct archive;
+struct archive_entry;
 
 //! The mime ids the archive modules handle. A Pixiv Ugoira is a zip, so it is thumbnailed and
 //! parsed by the same modules as any other.
@@ -23,7 +23,6 @@ const static std::vector< idhan::MimeID > archive_handleable_mimes {
 	idhan::mime_ids::PIXIV_UGOIRA
 };
 
-//! \return The mime ids the archive modules handle (see archive_handleable_mimes).
 [[nodiscard]] inline std::vector< idhan::MimeID > getHandleableMimesForArchives()
 {
 	return archive_handleable_mimes;
@@ -66,7 +65,6 @@ class ArchiveModuleReader
 	[[nodiscard]] std::expected< void, idhan::ModuleError > open( archive* a );
 };
 
-//! Streams the archive's current entry into \p out.
 [[nodiscard]] std::expected< void, idhan::ModuleError > writeArchiveEntryData( archive* a, idhan::ModuleSink& out );
 
 //! Detects the character encoding of a NUL-terminated string using chardet.
@@ -78,10 +76,8 @@ class ArchiveModuleReader
 //! \return The UTF-8 string, or a ModuleError if detection or conversion fails.
 [[nodiscard]] std::expected< std::string, idhan::ModuleError > sanitizeEncoding( const char* str );
 
-//! Reads all data for the archive's current entry into a buffer.
 [[nodiscard]] std::expected< std::vector< std::byte >, idhan::ModuleError > readArchiveEntryData( archive* a );
 
-//! SHA-256 digest and uncompressed size of a single archive entry.
 struct ArchiveEntryHash
 {
 	std::array< std::byte, ( 256 / 8 ) > m_hash {};
@@ -95,15 +91,13 @@ struct ArchiveEntryHash
 //! Converts a wide (wchar_t) archive path to UTF-8 via iconv (WCHAR_T -> UTF-8).
 [[nodiscard]] std::expected< std::string, idhan::ModuleError > wideToUtf8( const wchar_t* str );
 
-//! Outcome of asking an entry for its name.
 enum class EntryNameResult
 {
-	OK, //!< A name was resolved.
+	OK,
 	UNNAMED, //!< libarchive gave no name in any encoding; the entry has to be skipped.
 	FAILED //!< A name exists but could not be transcoded to UTF-8.
 };
 
-//! The UTF-8 name of the archive's current entry.
 [[nodiscard]] EntryNameResult entryFilename(
 	archive_entry* entry,
 	std::expected< std::string, idhan::ModuleError >& out );

@@ -1,5 +1,3 @@
-// You may need to build the project (run Qt uic code generator) to get "ui_HydrusImporter.h" resolved
-
 #include "HydrusImporterWidget.hpp"
 
 #include <moc_HydrusImporterWidget.cpp>
@@ -186,7 +184,8 @@ void HydrusImporterWidget::on_selectHydrusPath_clicked()
 {
 	QString dir = QFileDialog::getExistingDirectory(
 		this,
-		tr( "Select Hydrus Directory" ),
+		tr( "Select\n"
+			"    Hydrus Directory" ),
 		ui->hydrusFolderPath->text(),
 		QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks );
 

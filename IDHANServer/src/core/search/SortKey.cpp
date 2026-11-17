@@ -6,51 +6,139 @@ namespace idhan::search
 {
 
 constexpr std::string_view resolution_joins {
-	" LEFT JOIN image_metadata im USING (record_id)"
-	" LEFT JOIN video_metadata vm USING (record_id)"
-	" LEFT JOIN image_project_metadata ipm USING (record_id)"
+	//language=postgresql
+	R"SQL(
+		LEFT JOIN image_metadata im
+		    USING (record_id)
+		    LEFT JOIN video_metadata vm
+		    USING (record_id)
+		    LEFT JOIN image_project_metadata ipm
+		    USING (record_id)
+	)SQL"
 };
 
-constexpr std::string_view width_expr { "COALESCE(im.width, vm.width, ipm.width)::BIGINT" };
-constexpr std::string_view height_expr { "COALESCE(im.height, vm.height, ipm.height)::BIGINT" };
+constexpr std::string_view width_expr{
+	//language=postgresql
+	R"SQL(
+		COALESCE(im.width,
+		    vm.width,
+		    ipm.width)::BIGINT
+	)SQL"
+};
+constexpr std::string_view height_expr{
+	//language=postgresql
+	R"SQL(
+		COALESCE(im.height,
+		    vm.height,
+		    ipm.height)::BIGINT
+	)SQL"
+};
 
-// bigint casts prevent int*int overflow on large images (50000x50000 exceeds INT32_MAX).
+//! Bigint casts prevent int*int overflow on large images (50000x50000 exceeds INT32_MAX).
 constexpr std::string_view num_pixels_expr {
-	"(COALESCE(im.width, vm.width, ipm.width)::BIGINT"
-	" * COALESCE(im.height, vm.height, ipm.height)::BIGINT)"
+	//language=postgresql
+	R"SQL(
+		(COALESCE(im.width, vm.width, ipm.width)::BIGINT * COALESCE(im.height, vm.height, ipm.height)::BIGINT)
+	)SQL"
 };
 
 constexpr std::string_view ratio_expr {
-	"(COALESCE(im.width, vm.width, ipm.width)::FLOAT"
-	" / NULLIF(COALESCE(im.height, vm.height, ipm.height), 0))"
+	//language=postgresql
+	R"SQL(
+		(COALESCE(im.width, vm.width, ipm.width)::FLOAT / NULLIF (COALESCE(im.height, vm.height, ipm.height), 0))
+	)SQL"
 };
 
-constexpr std::string_view store_time_expr { "(EXTRACT(EPOCH FROM fi.cluster_store_time) * 1000000)::BIGINT" };
-constexpr std::string_view file_mtime_expr { "(EXTRACT(EPOCH FROM fi.file_mtime) * 1000000)::BIGINT" };
-constexpr std::string_view file_ctime_expr { "(EXTRACT(EPOCH FROM fi.file_ctime) * 1000000)::BIGINT" };
-constexpr std::string_view record_creation_time_expr { "(EXTRACT(EPOCH FROM rc.creation_time) * 1000000)::BIGINT" };
+constexpr std::string_view store_time_expr{
+	//language=postgresql
+	R"SQL(
+		(EXTRACT(EPOCH FROM fi.cluster_store_time) * 1000000)::BIGINT
+	)SQL"
+};
+constexpr std::string_view file_mtime_expr{
+	//language=postgresql
+	R"SQL(
+		(EXTRACT(EPOCH FROM fi.file_mtime) * 1000000)::BIGINT
+	)SQL"
+};
+constexpr std::string_view file_ctime_expr{
+	//language=postgresql
+	R"SQL(
+		(EXTRACT(EPOCH FROM fi.file_ctime) * 1000000)::BIGINT
+	)SQL"
+};
+constexpr std::string_view record_creation_time_expr{
+	//language=postgresql
+	R"SQL(
+		(EXTRACT(EPOCH FROM rc.creation_time) * 1000000)::BIGINT
+	)SQL"
+};
 
-constexpr std::string_view records_join { " JOIN records rc USING (record_id)" };
-constexpr std::string_view video_join { " LEFT JOIN video_metadata vm USING (record_id)" };
+constexpr std::string_view records_join{
+	//language=postgresql
+	R"SQL(
+		JOIN records rc
+		USING (record_id)
+	)SQL"
+};
+constexpr std::string_view video_join{
+	//language=postgresql
+	R"SQL(
+		LEFT JOIN video_metadata vm
+		    USING (record_id)
+	)SQL"
+};
 constexpr std::string_view duration_joins {
-	" LEFT JOIN video_metadata vm USING (record_id)"
-	" LEFT JOIN audio_metadata am USING (record_id)"
-	" LEFT JOIN animation_metadata anm USING (record_id)"
+	//language=postgresql
+	R"SQL(
+		LEFT JOIN video_metadata vm
+		    USING (record_id)
+		    LEFT JOIN audio_metadata am
+		    USING (record_id)
+		    LEFT JOIN animation_metadata anm
+		    USING (record_id)
+	)SQL"
 };
 
 //! Spells out what active_tag_mappings_final holds instead of reading the view. The view splits on
 //! ideal_tag_id so that point lookups match the partial indexes; that split costs the record_id
 //! ordering the primary key gives this full scan, turning it into a seq scan plus a 14M row sort.
 constexpr std::string_view num_tags_join {
-	" LEFT JOIN (SELECT record_id, COUNT(DISTINCT tag_id) AS tag_count FROM ("
-	" SELECT record_id, COALESCE(ideal_tag_id, tag_id) AS tag_id FROM active_tag_mappings"
-	" UNION ALL SELECT record_id, tag_id FROM active_tag_mappings_parents"
-	" ) atm GROUP BY record_id) ntc USING (record_id)"
+	//language=postgresql
+	R"SQL(
+		LEFT JOIN (
+		        SELECT
+		            record_id,
+		            COUNT(DISTINCT tag_id) AS tag_count
+		        FROM (
+		            SELECT
+		                record_id,
+		                COALESCE(ideal_tag_id, tag_id) AS tag_id
+		            FROM active_tag_mappings
+		        UNION ALL
+		        SELECT
+		            record_id,
+		            tag_id
+		        FROM active_tag_mappings_parents
+		        ) atm
+		    GROUP BY
+		        record_id
+		    ) ntc USING (record_id)
+	)SQL"
 };
 
 constexpr std::string_view stored_num_tags_join {
-	" LEFT JOIN (SELECT record_id, COUNT(DISTINCT tag_id) AS tag_count"
-	" FROM tag_mappings GROUP BY record_id) ntc USING (record_id)"
+	//language=postgresql
+	R"SQL(
+		LEFT JOIN (
+		        SELECT
+		            record_id,
+		            COUNT(DISTINCT tag_id) AS tag_count
+		        FROM tag_mappings
+		        GROUP BY
+		            record_id
+		    ) ntc USING (record_id)
+	)SQL"
 };
 
 SortKeySpec sortKeySpec( const SortType type, const HydrusDisplayType display )
@@ -68,7 +156,6 @@ SortKeySpec sortKeySpec( const SortType type, const HydrusDisplayType display )
 		case SortType::FILE_CREATED_TIME:
 			return { {}, file_ctime_expr, SortKeyType::Integer, true };
 		case SortType::MIME:
-			// the raw mime_id FK, not a semantic filetype-category ordering
 			return { {}, "fi.mime_id::BIGINT", SortKeyType::Integer, false };
 		case SortType::RECORD_CREATION_TIME:
 			return { records_join, record_creation_time_expr, SortKeyType::Integer, false };
@@ -79,7 +166,6 @@ SortKeySpec sortKeySpec( const SortType type, const HydrusDisplayType display )
 		case SortType::FRAMERATE:
 			return { video_join, "COALESCE(vm.framerate, 0)", SortKeyType::Real, false };
 		case SortType::HAS_AUDIO:
-			// silent records and records with no video metadata both rank below records with audio
 			return { video_join, "COALESCE(vm.has_audio::INT, 0)::BIGINT", SortKeyType::Integer, false };
 		case SortType::WIDTH:
 			return { resolution_joins, width_expr, SortKeyType::Integer, true };
@@ -90,11 +176,11 @@ SortKeySpec sortKeySpec( const SortType type, const HydrusDisplayType display )
 		case SortType::RATIO:
 			return { resolution_joins, ratio_expr, SortKeyType::Real, true };
 		case SortType::NUM_TAGS:
-			// zero tags is a real answer, not missing data, so this one is never excluded
 			return { display == HydrusDisplayType::STORED ? stored_num_tags_join : num_tags_join,
-				     "COALESCE(ntc.tag_count, 0)",
-				     SortKeyType::Integer,
-				     false };
+					 "COALESCE(ntc.tag_count, 0)",
+					 SortKeyType::Integer,
+					 false
+			};
 		case SortType::RANDOM:
 			return { {}, {}, SortKeyType::None, false };
 	}
@@ -172,15 +258,15 @@ SortKeyColumn emptyColumn( const SortKeyType type )
 
 SortKeyColumn emptyColumnLike( const SortKeyColumn& like )
 {
-	return std::visit( []( const auto& held ) -> SortKeyColumn { return std::decay_t< decltype( held ) > {}; }, like );
+	return std::visit( []< typename T0 >( const T0& held ) -> SortKeyColumn { return std::decay_t< T0 >{}; }, like );
 }
 
 SortKeyType columnType( const SortKeyColumn& column )
 {
 	return std::visit(
-		[]( const auto& held ) -> SortKeyType
+		[]< typename T0 >( const T0& held ) -> SortKeyType
 		{
-			using Held = std::decay_t< decltype( held ) >;
+			using Held = std::decay_t< T0 >;
 			if constexpr ( std::same_as< Held, std::vector< std::int64_t > > )
 				return SortKeyType::Integer;
 			else if constexpr ( std::same_as< Held, std::vector< double > > )

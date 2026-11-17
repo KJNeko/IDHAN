@@ -6,8 +6,8 @@
 #include "logging/log.hpp"
 
 #ifdef __linux__
-#ifndef IDHAN_STATIC_PATH
-#define IDHAN_STATIC_PATH "/usr/share/idhan/static"
+#ifndef IDHAN_API_DOCS_PATH
+#define IDHAN_API_DOCS_PATH "/usr/share/idhan/docs"
 #endif
 
 #ifndef IDHAN_MODULES_PATH
@@ -19,8 +19,8 @@
 #endif
 
 #elif defined( _WIN32 )
-#ifndef IDHAN_STATIC_PATH
-#define IDHAN_STATIC_PATH "C:\\ProgramData\\IDHAN\\static"
+#ifndef IDHAN_API_DOCS_PATH
+#define IDHAN_API_DOCS_PATH "C:\\ProgramData\\IDHAN\\docs"
 #endif
 
 #ifndef IDHAN_MODULES_PATH
@@ -44,20 +44,16 @@ std::vector< std::filesystem::path > getModulePaths();
 
 std::filesystem::path getModuleRunnerPath();
 
-std::filesystem::path getStaticPath();
+std::filesystem::path getAPIDocsPath();
 
-std::filesystem::path getApiDocsPath();
 std::filesystem::path getThumbnailsPath();
 
-//! Requests outside `[thumbnails] cacheable_sizes` are generated but not cached. Read live per miss.
+//! Requests outside `[thumbnails] cacheable_sizes` are generated but not cached. Read once and cached.
 const std::vector< std::size_t >& getCacheableThumbnailSizes();
 
 bool getThumbnailCachingEnabled();
 
 //! `[thumbnails] purge_on_boot` applies at startup only.
 bool getPurgeThumbnailsOnBoot();
-
-//! `[plugins] path` must still be reachable under `/plugins/...` for the browser to fetch bundles.
-std::filesystem::path getPluginsPath();
 
 } // namespace idhan

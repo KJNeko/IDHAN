@@ -17,8 +17,19 @@ static runtime::Task< std::optional< RecordID > > findRecordWith( const SHA256& 
 	db::DBBindings bindings {};
 	bindings.bind( std::vector< std::byte > { sha256.data().begin(), sha256.data().end() } );
 
-	const auto rows { co_await db.query( "SELECT record_id FROM records WHERE sha256 = $1", std::move( bindings ) )
-		                  .template rows< RecordID >() };
+	const auto rows{
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    record_id
+					FROM records
+					WHERE sha256 = $1
+				)SQL",
+					 std::move( bindings ) )
+				 .template rows< RecordID >()
+	};
 
 	if ( rows.empty() ) co_return std::nullopt;
 	co_return std::get< 0 >( rows.row( 0 ) );
@@ -40,7 +51,14 @@ static runtime::Task< std::expected< RecordID, std::string > > createRecordWith(
 		const auto rows {
 			co_await db
 				.query(
-					"INSERT INTO records (sha256) VALUES ($1) ON CONFLICT DO NOTHING RETURNING record_id",
+					//language=postgresql
+					R"SQL(
+						INSERT INTO records (sha256)
+						    VALUES ($1)
+						ON CONFLICT
+						    DO NOTHING
+						RETURNING record_id
+					)SQL",
 					std::move( bindings ) )
 				.template rows< RecordID >()
 		};

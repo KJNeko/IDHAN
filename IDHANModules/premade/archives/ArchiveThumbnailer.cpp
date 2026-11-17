@@ -32,8 +32,7 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 		return std::unexpected( idhan::ModuleError { "Expected an extra json for archive thumbnailer" } );
 	}
 
-	// jsoncpp hands these back sorted, but the keys are SHA-256 digests, so that order is meaningless
-	// to a reader. Order by the member path instead.
+	// Member names are SHA-256 digests; order by member path instead.
 	auto members { extra.getMemberNames() };
 
 	std::ranges::sort(
@@ -61,7 +60,6 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 			width,
 			height ) };
 
-		// The C loader takes the raw buffer directly, with no VipsBlob to allocate and hand-free.
 		VipsImage* svg_raw { nullptr };
 		if ( vips_svgload_buffer(
 				 const_cast< void* >( static_cast< const void* >( svg_data_sized.data() ) ),
@@ -114,11 +112,9 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 	{
 		if ( member.size() != ( 256 / 8 ) * 2 )
 		{
-			// fixes trying to use members that are not hashes
 			continue;
 		}
 
-		// member should be a hex string of a sha256
 		const auto hash { idhan::SHA256::fromHex( member ) };
 		if ( !hash ) return std::unexpected( idhan::ModuleError { hash.error() } );
 
@@ -143,20 +139,17 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > ArchiveThumbnailer::cr
 
 		if ( !thumbnail_rgb_e.has_value() )
 		{
-			// Do not cache the thumbnail if we failed to thumbnail whatever was generated
 			flag_cache_thumbnail = false;
 			counter += 1;
 			continue;
 		}
 
-		// if the grid size is 1 just return the image
 		if ( grid_size == 1 )
 		{
 			spdlog::info( "Skipping grid processing, Only 1 item found. Should this really be a archive?" );
 			return std::move( thumbnail_rgb_e.value() );
 		}
 
-		// figure out where in the grid we should put this thumbnail
 		const auto x { counter % grid_size };
 		const auto y { counter / grid_size };
 		counter += 1;

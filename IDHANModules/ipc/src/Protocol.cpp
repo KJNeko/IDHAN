@@ -1,5 +1,6 @@
 #include "ipc/Protocol.hpp"
 
+#include <algorithm>
 #include <exception>
 #include <format>
 #include <optional>
@@ -174,6 +175,9 @@ Json::Value toJson( const ManifestEntry& entry )
 	Json::Value mimes { Json::arrayValue };
 	for ( const auto mime_id : entry.mimes ) mimes.append( static_cast< Json::Int >( mime_id ) );
 	json[ field::MIMES ] = mimes;
+	Json::Value phash_mimes { Json::arrayValue };
+	for ( const auto mime_id : entry.phash_mimes ) phash_mimes.append( static_cast< Json::Int >( mime_id ) );
+	json[ field::PHASH_MIMES ] = std::move( phash_mimes );
 
 	json[ field::MODEL_NAME ] = entry.model_name;
 	json[ field::DIMENSIONS ] = static_cast< Json::UInt >( entry.dimensions );
@@ -281,6 +285,27 @@ std::expected< ManifestEntry, std::string > manifestEntryFromJson( const Json::V
 		entry.mimes.emplace_back( static_cast< MimeID >( mime.asInt() ) );
 	}
 
+	// Older manifests omit this capability and conservatively opt out of backfill.
+	if ( json.isMember( field::PHASH_MIMES ) )
+	{
+		const auto& phash_mimes { json[ field::PHASH_MIMES ] };
+		if ( !phash_mimes.isArray() ) return std::unexpected( "manifest entry has no phash mime array" );
+
+		for ( const auto& mime : phash_mimes )
+		{
+			if ( !mime.isInt() ) return std::unexpected( "manifest entry has a non-integer phash mime" );
+
+			const auto mime_id { static_cast< MimeID >( mime.asInt() ) };
+			if ( ( entry.type & ModuleTypeFlags::METADATA ) == 0 )
+				return std::unexpected( "phash capability requires a metadata parser" );
+
+			if ( !std::ranges::contains( entry.mimes, mime_id ) )
+				return std::unexpected( "phash mime is not a handleable mime" );
+
+			entry.phash_mimes.push_back( mime_id );
+		}
+	}
+
 	return entry;
 }
 
@@ -314,6 +339,9 @@ std::string manifestSignature( const std::vector< ManifestEntry >& entries )
 			entry.model_name,
 			entry.dimensions,
 			entry.supports_text );
+
+		signature += "|phash:";
+		for ( const auto mime_id : entry.phash_mimes ) signature += std::to_string( mime_id ) + ',';
 
 		signature += '\n';
 	}

@@ -6,7 +6,7 @@ BEGIN
         UPDATE file_clusters fc
         SET size_used  = fc.size_used + agg.total_size,
             file_count = fc.file_count + agg.total_count
-        FROM (SELECT cluster_id, SUM( size ) AS total_size, COUNT(*) AS total_count
+        FROM (SELECT cluster_id, SUM(size) AS total_size, COUNT(*) AS total_count
               FROM new_rows
               WHERE cluster_id IS NOT NULL
               GROUP BY cluster_id) agg
@@ -16,7 +16,7 @@ BEGIN
         UPDATE file_clusters fc
         SET size_used  = fc.size_used - agg.total_size,
             file_count = fc.file_count - agg.total_count
-        FROM (SELECT cluster_id, SUM( size ) AS total_size, COUNT(*) AS total_count
+        FROM (SELECT cluster_id, SUM(size) AS total_size, COUNT(*) AS total_count
               FROM old_rows
               WHERE cluster_id IS NOT NULL
               GROUP BY cluster_id) agg
@@ -26,7 +26,7 @@ BEGIN
         UPDATE file_clusters fc
         SET size_used  = fc.size_used + d.size_delta,
             file_count = fc.file_count + d.count_delta
-        FROM (SELECT cluster_id, SUM( size_delta ) AS size_delta, SUM( count_delta ) AS count_delta
+        FROM (SELECT cluster_id, SUM(size_delta) AS size_delta, SUM(count_delta) AS count_delta
               FROM (SELECT cluster_id, -size AS size_delta, -1 AS count_delta
                     FROM old_rows
                     WHERE cluster_id IS NOT NULL

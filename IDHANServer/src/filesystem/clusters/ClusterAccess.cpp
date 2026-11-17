@@ -1,57 +1,53 @@
 #include "ClusterAccess.hpp"
 
-#include <boost/uuid/uuid_io.hpp>
-
 #include <fcntl.h>
 #include <format>
+#include <system_error>
 
 #include "ClusterMarker.hpp"
+#include "filesystem/io/IOUring.hpp"
 
 namespace idhan::filesystem
 {
 
-ClusterAccess::ClusterAccess( folly::File root, const boost::uuids::uuid uuid, const bool readonly ) :
-  m_root( std::move( root ) ),
-  m_uuid( uuid ),
-  m_readonly( readonly )
-{}
-
-std::expected< ClusterAccess, std::string > ClusterAccess::open(
-	const std::filesystem::path& root,
-	const boost::uuids::uuid& expected,
+runtime::Task< std::expected< ClusterAccess, std::string > > ClusterAccess::open(
+	const std::filesystem::path root,
+	const boost::uuids::uuid expected,
 	const bool readonly )
 {
-	auto file { folly::File::makeFile( root.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC ) };
-	if ( !file ) return std::unexpected( std::format( "Cannot open cluster directory {}", root.string() ) );
+	const int descriptor { co_await IOUring::getInstance().openFile( root, O_RDONLY | O_DIRECTORY | O_CLOEXEC, 0 ) };
+	if ( descriptor < 0 )
+		co_return std::unexpected(
+			std::format(
+				"Cannot open cluster directory {}: {}",
+				root.string(),
+				std::error_code { -descriptor, std::generic_category() }.message() ) );
 
-	ClusterAccess access { std::move( *file ), expected, readonly };
-	auto valid { access.verify() };
-	if ( !valid ) return std::unexpected( std::move( valid.error() ) );
-
-	return access;
-}
-
-std::expected< void, std::string > ClusterAccess::verify() const
-{
-	const auto marker { readClusterMarker( m_root.fd() ) };
-	if ( !marker ) return std::unexpected( marker.error() );
-
-	if ( !*marker )
+	ClusterAccess access { folly::File { descriptor, true }, expected, readonly };
+	const auto valid_e { co_await access.verify() };
+	if ( !valid_e.has_value() )
 	{
-		if ( m_readonly ) return {};
-
-		return std::unexpected( "Cluster marker is missing; restart with the acknowledged marker-recovery flag" );
+		(void)co_await access.close();
+		co_return std::unexpected( valid_e.error() );
 	}
 
-	if ( ( **marker ).uuid != m_uuid )
-		return std::unexpected(
-			std::format( "Cluster marker UUID does not match expected {}", boost::uuids::to_string( m_uuid ) ) );
-	return {};
+	co_return access;
 }
 
-std::filesystem::path ClusterAccess::root() const
+runtime::Task< std::expected< void, std::string > > ClusterAccess::verify() const
 {
-	return std::format( "/proc/self/fd/{}", m_root.fd() );
+	const auto marker_e { co_await readClusterMarker( m_root.fd() ) };
+	if ( !marker_e.has_value() ) co_return std::unexpected( marker_e.error() );
+
+	co_return verifyMarker( marker_e.value() );
+}
+
+runtime::Task< int > ClusterAccess::close()
+{
+	const int descriptor { m_root.release() };
+	if ( descriptor < 0 ) co_return 0;
+
+	co_return co_await IOUring::getInstance().closeFile( static_cast< IOUring::NativeHandle >( descriptor ) );
 }
 
 } // namespace idhan::filesystem

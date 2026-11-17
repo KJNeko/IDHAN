@@ -80,8 +80,15 @@ static void queueRollback( const std::shared_ptr< DBTransaction::State >& state 
 	}
 	if ( !rollback ) return;
 
-	folly::coro::co_withExecutor( state->application_executor, finalize( state, "ROLLBACK" ) )
-		.start( []( folly::Try< void >&& ) {} );
+	folly::coro::co_withExecutor(
+		state->application_executor,
+		finalize(
+			state,
+			//language=postgresql
+			R"SQL(
+				ROLLBACK
+			)SQL" ) )
+	.start( []( folly::Try< void >&& ) {} );
 }
 
 DBTransaction::DBTransaction( std::shared_ptr< State > state ) : m_state( std::move( state ) )
@@ -136,7 +143,12 @@ runtime::Task<> DBTransaction::commit()
 			throw std::logic_error( "Cannot commit a database transaction that is not active" );
 		m_state->current_phase = TransactionPhase::finalizing;
 	}
-	co_await finalize( m_state, "COMMIT" );
+	co_await finalize(
+		m_state,
+		//language=postgresql
+		R"SQL(
+			COMMIT
+		)SQL" );
 }
 
 runtime::Task<> DBTransaction::rollback()
@@ -148,7 +160,12 @@ runtime::Task<> DBTransaction::rollback()
 			throw std::logic_error( "Cannot roll back a database transaction that is not active" );
 		m_state->current_phase = TransactionPhase::finalizing;
 	}
-	co_await finalize( m_state, "ROLLBACK" );
+	co_await finalize(
+		m_state,
+		//language=postgresql
+		R"SQL(
+			ROLLBACK
+		)SQL" );
 }
 
 TransactionPhase DBTransaction::phase() const noexcept

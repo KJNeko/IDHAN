@@ -24,9 +24,8 @@
 #include "idhan/IDHANClient.hpp"
 #include "splitTag.hpp"
 
-//! Split [0,n) into [start,end) chunks of at most \p batch_size and invoke \p launch(start,end) for
-//! each, returning all the futures it produced. Nothing is awaited here; every batch is submitted
-//! before any is waited on, so they run concurrently (bounded only by QNetworkAccessManager).
+//! Splits [0,n) into [start,end) chunks of at most \p batch_size and calls \p launch(start,end) for
+//! each, returning the futures unawaited so the batches run concurrently.
 template < typename Launch >
 auto launchBatches( const std::size_t n, const std::size_t batch_size, Launch&& launch )
 {
@@ -266,7 +265,6 @@ bool PTRImportWorker::processInOrder()
 
 	spdlog::info( "Processing up to {} files across {} update indices", total_files, m_metadata.updates.size() );
 
-	// Get or create the tag domain once before the loop
 	const TagDomainID domain_id = ensureTagDomain();
 
 	int64_t processed = 0;
@@ -374,7 +372,6 @@ bool PTRImportWorker::processInOrder()
 			catch ( const std::exception& e )
 			{
 				spdlog::error( "Failed to process {}: {}", hash_hex, e.what() );
-				// Continue with next file rather than aborting the whole import
 			}
 
 			emit fileProcessed( static_cast< int >( processed ), static_cast< int >( total_files ) );
@@ -409,7 +406,6 @@ ContentStats PTRImportWorker::processSingleContentFile(
 	emit subProgress( 0, 0, progress_prefix + " - Analyzing..." );
 	spdlog::trace( "Processing content file: {}", hash_hex );
 
-	// ---- Gather unique ids and per-record tag sets in a single pass over each list ----
 	std::unordered_map< int /*hash_id*/, std::set< int /*tag_id*/ > > hash_to_tags;
 	std::unordered_map< int /*hash_id*/, std::set< int /*tag_id*/ > > hash_to_tags_delete;
 	std::unordered_set< int > all_hash_ids;
@@ -467,7 +463,6 @@ ContentStats PTRImportWorker::processSingleContentFile(
 
 	spdlog::trace( "Phase 1: {} unique hash_ids, {} unique tag_ids", all_hash_ids.size(), all_tag_ids.size() );
 
-	// ---- Translate hash_ids -> hex, tag_ids -> (namespace, subtag) ----
 	std::vector< std::string > hash_hexes;
 	std::unordered_map< int, std::string > hash_id_to_hex;
 	hash_hexes.reserve( all_hash_ids.size() );
@@ -626,9 +621,7 @@ ContentStats PTRImportWorker::processSingleContentFile(
 		return out;
 	};
 
-	// parent endpoints want (parent, child); raw pairs are (child, parent).
 	const auto parent_order = []( const TagID child, const TagID parent ) { return std::pair { parent, child }; };
-	// alias endpoints want (bad, good); raw pairs are already (bad, good).
 	const auto alias_order = []( const TagID bad, const TagID good ) { return std::pair { bad, good }; };
 
 	auto add_mappings = buildRecordTagSets( hash_to_tags );
@@ -650,7 +643,6 @@ ContentStats PTRImportWorker::processSingleContentFile(
 			ops.end(), std::make_move_iterator( futures.begin() ), std::make_move_iterator( futures.end() ) );
 	};
 
-	// Phase 6: apply mappings
 	append( launchBatches(
 		add_recs.size(),
 		BATCH_SIZE,
@@ -665,7 +657,6 @@ ContentStats PTRImportWorker::processSingleContentFile(
 			return client.addTags( std::move( br ), domain_id, std::move( bs ) );
 		} ) );
 
-	// Phase 7: add parent relationships
 	append( launchBatches(
 		parent_add.size(),
 		BATCH_SIZE,
@@ -678,7 +669,6 @@ ContentStats PTRImportWorker::processSingleContentFile(
 					parent_add.begin() + static_cast< std::ptrdiff_t >( e ) ) );
 		} ) );
 
-	// Phase 8: add alias relationships
 	append( launchBatches(
 		alias_add.size(),
 		BATCH_SIZE,
@@ -691,7 +681,6 @@ ContentStats PTRImportWorker::processSingleContentFile(
 					alias_add.begin() + static_cast< std::ptrdiff_t >( e ) ) );
 		} ) );
 
-	// Phase 9: remove mappings
 	append( launchBatches(
 		del_recs.size(),
 		BATCH_SIZE,
@@ -706,7 +695,6 @@ ContentStats PTRImportWorker::processSingleContentFile(
 			return client.removeTags( std::move( br ), domain_id, std::move( bs ) );
 		} ) );
 
-	// Phase 10: remove parent relationships
 	append( launchBatches(
 		parent_del.size(),
 		BATCH_SIZE,
@@ -719,7 +707,6 @@ ContentStats PTRImportWorker::processSingleContentFile(
 					parent_del.begin() + static_cast< std::ptrdiff_t >( e ) ) );
 		} ) );
 
-	// Phase 11: remove alias relationships
 	append( launchBatches(
 		alias_del.size(),
 		BATCH_SIZE,

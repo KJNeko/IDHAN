@@ -47,11 +47,13 @@ class DBBindings
 	DBBindings();
 	template < typename T >
 	void bind( T&& value );
+	template < typename... Ts >
+	void bindSet( Ts&&... values );
+
 	void append( DBParameter );
 	[[nodiscard]] std::span< const DBParameter > values() const noexcept;
-	// Returned pointers borrow this binding set. Do not move or mutate it while
-	// those pointers are in use (including appending another parameter).
 	[[nodiscard]] std::vector< Oid > oids() const;
+
 	[[nodiscard]] std::vector< const char* > pointers() const;
 	[[nodiscard]] std::vector< int > lengths() const;
 	[[nodiscard]] std::vector< int > formats() const;

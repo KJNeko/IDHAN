@@ -100,7 +100,6 @@ static void addToGroup( TypeGroups& groups, const SimpleMimeType type, const Rec
 	}
 }
 
-//! Builds the initial EntryMap and sorts parsed records into TypeGroups.
 static runtime::Task<> fetchBaseMetadata(
 	db::DBContext& db,
 	const std::vector< RecordID >& record_ids,
@@ -113,15 +112,25 @@ static runtime::Task<> fetchBaseMetadata(
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT r.record_id, r.sha256, fi.size, fi.mime_id, m.name, m.best_extension, "
-				"(EXTRACT(EPOCH FROM fi.file_mtime) * 1000000)::BIGINT AS file_mtime, "
-				"(EXTRACT(EPOCH FROM fi.file_ctime) * 1000000)::BIGINT AS file_ctime, "
-				"md.simple_mime_type, md.json::text AS json "
-				"FROM records r "
-				"LEFT JOIN file_info fi ON fi.record_id = r.record_id "
-				"LEFT JOIN mime m ON m.mime_id = fi.mime_id "
-				"LEFT JOIN metadata md ON md.record_id = r.record_id "
-				"WHERE r.record_id = ANY($1)",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    r.record_id,
+					    r.sha256,
+					    fi.size,
+					    fi.mime_id,
+					    m.name,
+					    m.best_extension,
+					    (EXTRACT(EPOCH FROM fi.file_mtime) * 1000000)::BIGINT AS file_mtime,
+					    (EXTRACT(EPOCH FROM fi.file_ctime) * 1000000)::BIGINT AS file_ctime,
+					    md.simple_mime_type,
+					    md.json::text AS json
+					FROM records r
+					    LEFT JOIN file_info fi ON fi.record_id = r.record_id
+					    LEFT JOIN mime m ON m.mime_id = fi.mime_id
+					    LEFT JOIN metadata md ON md.record_id = r.record_id
+					WHERE r.record_id = ANY ($1)
+				)SQL",
 				std::move( bindings ) )
 			.rows<
 				RecordID,
@@ -183,9 +192,27 @@ static runtime::Task<> fillImageMetadata(
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT record_id, width, height, channels, phash, has_exif, has_gps, has_xmp, has_iptc, "
-				"has_icc_profile, lossless, quality, subsampling, progressive, comment "
-				"FROM image_metadata WHERE record_id = ANY($1)",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    record_id,
+					    width,
+					    height,
+					    channels,
+					    phash,
+					    has_exif,
+					    has_gps,
+					    has_xmp,
+					    has_iptc,
+					    has_icc_profile,
+					    lossless,
+					    quality,
+					    subsampling,
+					    progressive,
+					    comment
+					FROM image_metadata
+					WHERE record_id = ANY ($1)
+				)SQL",
 				std::move( bindings ) )
 			.rows<
 				RecordID,
@@ -250,8 +277,19 @@ static runtime::Task<> fillVideoMetadata(
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT record_id, width, height, duration, framerate, bitrate, has_audio FROM video_metadata "
-				"WHERE record_id = ANY($1)",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    record_id,
+					    width,
+					    height,
+					    duration,
+					    framerate,
+					    bitrate,
+					    has_audio
+					FROM video_metadata
+					WHERE record_id = ANY ($1)
+				)SQL",
 				std::move( bindings ) )
 			.rows< RecordID, std::uint32_t, std::uint32_t, double, double, std::uint32_t, bool >()
 	};
@@ -284,8 +322,17 @@ static runtime::Task<> fillImageProjectMetadata(
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT record_id, width, height, channels, layers FROM image_project_metadata "
-				"WHERE record_id = ANY($1)",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    record_id,
+					    width,
+					    height,
+					    channels,
+					    layers
+					FROM image_project_metadata
+					WHERE record_id = ANY ($1)
+				)SQL",
 				std::move( bindings ) )
 			.rows< RecordID, std::uint32_t, std::uint32_t, std::uint16_t, std::uint16_t >()
 	};
@@ -316,8 +363,17 @@ static runtime::Task<> fillAudioMetadata(
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT record_id, duration, bitrate, channels, sample_rate FROM audio_metadata "
-				"WHERE record_id = ANY($1)",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    record_id,
+					    duration,
+					    bitrate,
+					    channels,
+					    sample_rate
+					FROM audio_metadata
+					WHERE record_id = ANY ($1)
+				)SQL",
 				std::move( bindings ) )
 			.rows< RecordID, double, std::uint32_t, std::uint16_t, std::uint32_t >()
 	};
@@ -348,8 +404,18 @@ static runtime::Task<> fillAnimationMetadata(
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT record_id, width, height, frame_count, duration, loops FROM animation_metadata "
-				"WHERE record_id = ANY($1)",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    record_id,
+					    width,
+					    height,
+					    frame_count,
+					    duration,
+					    loops
+					FROM animation_metadata
+					WHERE record_id = ANY ($1)
+				)SQL",
 				std::move( bindings ) )
 			.rows< RecordID, std::uint32_t, std::uint32_t, std::uint32_t, double, bool >()
 	};
@@ -381,11 +447,21 @@ static runtime::Task<> fillArchiveMetadata(
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT am.record_id, am.archive_id, am.encrypted, count(map.record_id) AS file_count "
-				"FROM archive_metadata am "
-				"LEFT JOIN archive_map map ON map.archive_id = am.archive_id "
-				"WHERE am.record_id = ANY($1) "
-				"GROUP BY am.record_id, am.archive_id, am.encrypted",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    am.record_id,
+					    am.archive_id,
+					    am.encrypted,
+					    count(map.record_id) AS file_count
+					FROM archive_metadata am
+					    LEFT JOIN archive_map map ON map.archive_id = am.archive_id
+					WHERE am.record_id = ANY ($1)
+					GROUP BY
+					    am.record_id,
+					    am.archive_id,
+					    am.encrypted
+				)SQL",
 				std::move( bindings ) )
 			.rows< RecordID, ArchiveID, bool, std::int64_t >()
 	};
@@ -415,8 +491,17 @@ static runtime::Task<> fillArchiveMembership(
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT DISTINCT record_id, archive_id FROM archive_map "
-				"WHERE record_id = ANY($1) ORDER BY record_id, archive_id",
+				//language=postgresql
+				R"SQL(
+					SELECT DISTINCT
+					    record_id,
+					    archive_id
+					FROM archive_map
+					WHERE record_id = ANY ($1)
+					ORDER BY
+					    record_id,
+					    archive_id
+				)SQL",
 				std::move( bindings ) )
 			.rows< RecordID, ArchiveID >()
 	};
@@ -440,12 +525,21 @@ static runtime::Task<> fillTags( db::DBContext& db, const std::vector< RecordID 
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT DISTINCT m.record_id, d.domain_name, t.tag_text "
-				"FROM active_tag_mappings_final m "
-				"JOIN tags t ON t.tag_id = m.tag_id "
-				"JOIN tag_domains d ON d.tag_domain_id = m.tag_domain_id "
-				"WHERE m.record_id = ANY($1) "
-				"ORDER BY m.record_id, d.domain_name, t.tag_text",
+				//language=postgresql
+				R"SQL(
+					SELECT DISTINCT
+					    m.record_id,
+					    d.domain_name,
+					    t.tag_text
+					FROM active_tag_mappings_final m
+					    JOIN tags t ON t.tag_id = m.tag_id
+					    JOIN tag_domains d ON d.tag_domain_id = m.tag_domain_id
+					WHERE m.record_id = ANY ($1)
+					ORDER BY
+					    m.record_id,
+					    d.domain_name,
+					    t.tag_text
+				)SQL",
 				std::move( bindings ) )
 			.rows< RecordID, std::string, std::string >()
 	};
@@ -469,8 +563,18 @@ static runtime::Task<> fillUrls( db::DBContext& db, const std::vector< RecordID 
 	const auto rows {
 		co_await db
 			.query(
-				"SELECT record_id, url FROM url_mappings JOIN urls USING (url_id) "
-				"WHERE record_id = ANY($1) ORDER BY record_id, url",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    record_id,
+					    url
+					FROM url_mappings
+					    JOIN urls USING (url_id)
+					WHERE record_id = ANY ($1)
+					ORDER BY
+					    record_id,
+					    url
+				)SQL",
 				std::move( bindings ) )
 			.rows< RecordID, std::string >()
 	};

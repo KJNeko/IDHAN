@@ -47,11 +47,14 @@ void TagServiceWorker::preprocess()
 	std::size_t parent_counter { 0 };
 	std::size_t sibling_counter { 0 };
 
-	// Batched COUNT(*) queries instead of full table scans
 	emit statusMessage( "Counting tag mappings in Hydrus" );
 	{
 		idhan::hydrus::Query< std::size_t > count_query {
-			mappings_tr, std::format( "SELECT COUNT(*) FROM {}", current_mappings_name )
+			mappings_tr,
+			std::format( "SELECT\n"
+						 "    COUNT(*)\n"
+						 "FROM {}",
+						 current_mappings_name )
 		};
 
 		for ( const auto& [ count ] : count_query )
@@ -67,7 +70,10 @@ void TagServiceWorker::preprocess()
 	emit statusMessage( "Counting parent relationships in Hydrus" );
 	{
 		idhan::hydrus::TransactionBase client_tr { m_importer->client_db };
-		client_tr << std::format( "SELECT COUNT(*) FROM {}", current_parents_name ) >> [ & ]( std::size_t count )
+		client_tr << std::format( "SELECT\n"
+								  "    COUNT(*)\n"
+								  "FROM {}",
+								  current_parents_name ) >> [ & ]( std::size_t count )
 		{ parent_counter = count; };
 	}
 	emit processedMaxParents( parent_counter );
@@ -76,7 +82,10 @@ void TagServiceWorker::preprocess()
 	emit statusMessage( "Counting aliases in Hydrus" );
 	{
 		idhan::hydrus::TransactionBase client_tr { m_importer->client_db };
-		client_tr << std::format( "SELECT COUNT(*) FROM {}", current_siblings_name ) >> [ & ]( std::size_t count )
+		client_tr << std::format( "SELECT\n"
+								  "    COUNT(*)\n"
+								  "FROM {}",
+								  current_siblings_name ) >> [ & ]( std::size_t count )
 		{ sibling_counter = count; };
 	}
 
@@ -99,14 +108,12 @@ void TagServiceWorker::processPairs( const std::vector< MappingPair >& pairs )
 	std::unordered_set< HyHashID > hy_hash_id_set {};
 	hy_hash_id_set.reserve( pairs.size() );
 
-	// First pass: collect unique hash and tag ids
 	for ( const auto& [ hash_id, tag_id ] : pairs )
 	{
 		hy_hash_id_set.emplace( hash_id );
 		hy_hash_tag_map[ hash_id ].emplace_back( tag_id );
 	}
 
-	// --- Batch query tag names ---
 	std::unordered_map< HyTagID, TagPair > hy_tag_map {};
 	{
 		std::vector< HyTagID > all_tag_ids;
@@ -116,7 +123,7 @@ void TagServiceWorker::processPairs( const std::vector< MappingPair >& pairs )
 			if ( !hy_tag_map.contains( tag_id ) )
 			{
 				all_tag_ids.emplace_back( tag_id );
-				hy_tag_map[ tag_id ] = {}; // placeholder
+				hy_tag_map[ tag_id ] = {};
 			}
 		}
 
@@ -127,7 +134,13 @@ void TagServiceWorker::processPairs( const std::vector< MappingPair >& pairs )
 			const auto chunk_size = chunk_end - offset;
 
 			std::string sql =
-				"SELECT tag_id, namespace, subtag FROM tags NATURAL JOIN namespaces NATURAL JOIN subtags WHERE tag_id IN (";
+			"SELECT tag_id,\n"
+			"       namespace,\n"
+			"       subtag\n"
+			"FROM tags\n"
+			"NATURAL JOIN namespaces\n"
+			"NATURAL JOIN subtags\n"
+			"WHERE tag_id IN (";
 			for ( std::size_t i = 0; i < chunk_size; ++i )
 			{
 				if ( i > 0 ) sql += ", ";
@@ -147,7 +160,6 @@ void TagServiceWorker::processPairs( const std::vector< MappingPair >& pairs )
 		}
 	}
 
-	// --- Batch query hashes ---
 	emit statusMessage( QString( "Reading %L1 file hashes from Hydrus" ).arg( hy_hash_id_set.size() ) );
 	std::unordered_map< HyHashID, std::string > hash_map {};
 	{
@@ -159,7 +171,10 @@ void TagServiceWorker::processPairs( const std::vector< MappingPair >& pairs )
 			const auto chunk_end = std::min( offset + CHUNK_SIZE, hash_ids_vec.size() );
 			const auto chunk_size = chunk_end - offset;
 
-			std::string sql = "SELECT hash_id, hex(hash) FROM hashes WHERE hash_id IN (";
+			std::string sql = "SELECT hash_id,\n"
+			"       hex(hash)\n"
+			"FROM hashes\n"
+			"WHERE hash_id IN (";
 			for ( std::size_t i = 0; i < chunk_size; ++i )
 			{
 				if ( i > 0 ) sql += ", ";
@@ -286,7 +301,15 @@ void TagServiceWorker::processMappingsBatch(
 
 	emit statusMessage( "Reading and ordering tag mappings from Hydrus" );
 	idhan::hydrus::Query< int, int > query {
-		mappings_tr, std::format( "SELECT tag_id, hash_id FROM {} ORDER BY hash_id, tag_id", current_mappings_name )
+		mappings_tr,
+		std::format( "SELECT\n"
+					 "    tag_id,\n"
+					 "    hash_id\n"
+					 "FROM {}\n"
+					 "ORDER BY\n"
+					 "    hash_id,\n"
+					 "    tag_id",
+					 current_mappings_name )
 	};
 
 	std::size_t mappings_counter { 0 };
@@ -309,7 +332,6 @@ void TagServiceWorker::processMappingsBatch(
 
 	for ( const auto& [ tag_id, hash_id ] : query )
 	{
-		// dump before processing the next item if we are over the limit
 		const auto hash_changed { hash_id != last_id };
 		if ( hash_id_set.size() >= hash_limit && hash_changed )
 		{
@@ -443,7 +465,6 @@ void TagServiceWorker::processSiblings(
 				bad_ids << '\n';
 			}
 
-			// Do nothing
 			siblings.clear();
 		}
 	}
@@ -522,10 +543,14 @@ void TagServiceWorker::processRelationships()
 
 	std::vector< std::pair< ChildID, ParentID > > hy_parents {};
 	emit statusMessage( "Reading parent relationships from Hydrus" );
-	// Get all parent mappings, insert into the tag_set set to get a list of unique ids
 	{
 		Query< ParentID, ChildID > query {
-			client_tr, std::format( "SELECT child_tag_id, parent_tag_id FROM {}", current_parents_name )
+			client_tr,
+			std::format( "SELECT\n"
+						 "    child_tag_id,\n"
+						 "    parent_tag_id\n"
+						 "FROM {}",
+						 current_parents_name )
 		};
 
 		for ( const auto& [ child_id, parent_id ] : query )
@@ -538,10 +563,14 @@ void TagServiceWorker::processRelationships()
 
 	std::vector< std::pair< BadTagID, GoodTagID > > hy_siblings {};
 	emit statusMessage( "Reading aliases from Hydrus" );
-	// Get all the sibling, insert into the tag_set set to get a list of unique ids
 	{
 		Query< int, int > query {
-			client_tr, std::format( "SELECT bad_tag_id, good_tag_id FROM {}", current_siblings_name )
+			client_tr,
+			std::format( "SELECT\n"
+						 "    bad_tag_id,\n"
+						 "    good_tag_id\n"
+						 "FROM {}",
+						 current_siblings_name )
 		};
 
 		for ( const auto& [ bad_id, good_id ] : query )
@@ -554,7 +583,6 @@ void TagServiceWorker::processRelationships()
 
 	std::unordered_map< int, std::pair< std::string, std::string > > tag_pairs {};
 	emit statusMessage( QString( "Reading %L1 relationship tag names from Hydrus" ).arg( tag_set.size() ) );
-	// Batch query all unique tag names in one go instead of N+1 individual queries
 	{
 		std::vector< HyTagID > tag_ids_vec( tag_set.begin(), tag_set.end() );
 
@@ -565,7 +593,13 @@ void TagServiceWorker::processRelationships()
 			const auto chunk_size = chunk_end - offset;
 
 			std::string sql =
-				"SELECT tag_id, namespace, subtag FROM tags NATURAL JOIN namespaces NATURAL JOIN subtags WHERE tag_id IN (";
+			"SELECT tag_id,\n"
+			"       namespace,\n"
+			"       subtag\n"
+			"FROM tags\n"
+			"NATURAL JOIN namespaces\n"
+			"NATURAL JOIN subtags\n"
+			"WHERE tag_id IN (";
 			for ( std::size_t i = 0; i < chunk_size; ++i )
 			{
 				if ( i > 0 ) sql += ", ";
@@ -633,7 +667,6 @@ void TagServiceWorker::processRelationships()
 	emit phaseStarted( Phase::Aliases, std::chrono::steady_clock::now() );
 	processSiblings( hy_siblings, tag_pairs, tag_translation_map, set_limit );
 
-	// Process parents
 	emit phaseStarted( Phase::Parents, std::chrono::steady_clock::now() );
 	processParents( hy_parents, tag_translation_map, set_limit );
 }

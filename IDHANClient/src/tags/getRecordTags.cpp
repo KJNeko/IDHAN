@@ -20,12 +20,6 @@ QFuture< std::vector< TagID > > IDHANClient::getRecordTags( RecordID record_id, 
 		const auto data { response->readAll() };
 		if ( !response->isFinished() ) throw std::runtime_error( "Failed to read response" );
 
-		/*
-			 * Will be an array of objects like
-			 * { "tag_domain_id": 2, "tag_ids": [1,2,3] }
-			 *
-			 */
-
 		const QJsonDocument doc { QJsonDocument::fromJson( data ) };
 		const auto array = doc.array();
 

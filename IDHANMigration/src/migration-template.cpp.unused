@@ -21,4 +21,9 @@ std::size_t doMigration( pqxx::nontransaction& tx, std::size_t migration_id )
 {
 NEXT_MIGRATION
 }
+
+std::size_t latestMigrationId()
+{
+	return LATEST_MIGRATION_ID;
+}
 }

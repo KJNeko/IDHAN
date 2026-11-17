@@ -12,16 +12,14 @@
 namespace idhan::hydrus::ptr
 {
 
-//! Worker threads scanCorpus uses when \p thread_count is 0 (the default): every reported
-//! hardware thread. Decompressing and JSON-parsing each update file is the CPU-bound part of a
-//! flatten pass, and each file is independent until the merge step, so this scales close to
-//! linearly with cores.
+//! Every reported hardware thread, the count scanCorpus's thread_count = 0 stands for.
+//! TODO: unused; parallelIndexed falls back to defaultWorkerCount() directly.
 unsigned defaultScanThreadCount();
 
 #pragma pack( push, 1 )
 
 //! An add-or-delete of one tag relationship. For parents (a, b) is (child, parent); for siblings
-//! it is (bad, good). Held in memory rather than spilled: the whole corpus has roughly 186,000.
+//! it is (bad, good).
 struct RelationEvent
 {
 	std::uint32_t a;
@@ -35,12 +33,10 @@ struct RelationEvent
 
 static_assert( sizeof( RelationEvent ) == 12 );
 
-//! Host hooks. All may be empty; scanCorpus checks before calling.
+//! Host hooks. All may be empty.
 //!
-//! \warning These are called from scanCorpus's worker threads, not from the calling thread. They
-//!          are serialised against each other, so they need no locking of their own and may share
-//!          mutable state. One slow callback stalls every worker, so keep them to bumping
-//!          counters or emitting a queued signal.
+//! \warning Called from worker threads, serialised against each other. A slow callback stalls
+//!          every worker.
 struct ScanCallbacks
 {
 	//! Polled once per update file. Return true to stop early.
@@ -61,33 +57,20 @@ struct ScanResult
 	std::uint64_t events_written { 0 };
 	std::uint64_t skipped_files { 0 }; //!< missing or unparseable
 	std::uint64_t rejected_hashes { 0 };
-	//! In no particular order: files complete concurrently. collapseRelations sorts by the full key
-	//! before doing anything with these, so the order they arrive in cannot affect its output.
+	//! In no particular order; collapseRelations sorts them.
 	std::vector< RelationEvent > parents {};
 	std::vector< RelationEvent > siblings {};
 	bool cancelled { false };
 };
 
 //! Reads every update file listed in \p metadata, writing definitions into \p work_dir's
-//! definition store and mapping events into its buckets.
+//! definition store and mapping events into its buckets. Files are processed concurrently by
+//! \p thread_count workers (0 picks defaultScanThreadCount()).
 //!
-//! \p thread_count worker threads process update files concurrently; 0 (the default) picks
-//! defaultScanThreadCount(). A file is handled end to end (inflate, parse, hex-decode, definition
-//! writes, bucket spilling) with no lock held: the definition store addresses its output by id
-//! and the bucket writer locks per bucket, so neither needs the caller to serialise it. Only
-//! merging the relation events and firing the callbacks is serialised, and that is a few
-//! microseconds per file.
+//! A file that is missing or fails to parse is logged, counted in skipped_files, and skipped.
 //!
-//! Each event carries its true update_index, so ordering downstream of the scan is unaffected by
-//! which thread happened to process which file.
-//!
-//! A file that is missing or fails to parse is logged, counted in skipped_files, and stepped over:
-//! one bad file must not abort a multi-hour run.
-//!
-//! \throws std::runtime_error if an update index exceeds MAX_UPDATE_INDEX. Truncating it would
-//!         silently corrupt chain ordering, so this fails loudly instead.
-//! \throws Anything a worker threw, such as a full disk or a short write, rethrown once the pool has
-//!         joined, so a failure mid-run is reportable rather than fatal to the process.
+//! \throws std::runtime_error if an update index exceeds MAX_UPDATE_INDEX.
+//! \throws Anything a worker threw, rethrown once the pool has joined.
 ScanResult scanCorpus( const std::filesystem::path& ptr_dir,
                        const MetadataUpdate& metadata,
                        const std::filesystem::path& work_dir,

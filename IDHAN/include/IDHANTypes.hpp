@@ -50,8 +50,11 @@ using CursorID = Integer;
 using NoteID = Integer;
 #define NOTE_PG_TYPE_NAME INTEGER_PG_TYPE_NAME
 
+using SubscriptionGroupID = Integer;
+using SubscriptionID = Integer;
+
 using DownloadSessionID = BigInt;
-using DownloadSessionUrlID = BigInt;
+using DownloadSessionUrlID = Integer;
 
 enum class SimpleMimeType : std::uint16_t
 {

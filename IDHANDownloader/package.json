@@ -1,10 +1,29 @@
 {
   "name": "idhan-downloader-assets",
   "private": true,
-  "dependencies": {
-    "zod": "4.5.4"
+  "type": "module",
+  "scripts": {
+    "typecheck:parsers": "tsc --project tsconfig.json --noEmit",
+    "build:parsers": "node scripts/build-parsers.mjs",
+    "watch:parsers": "node scripts/build-parsers.mjs --watch",
+    "test:direct-import": "node scripts/direct-import.test.mjs",
+    "test:build": "node --test scripts/build-parsers.test.mjs",
+    "test:mega-crypto": "node --test scripts/mega-crypto.test.mjs",
+    "test:mega-import": "node scripts/mega-import.test.mjs",
+    "analyze:parsers": "node scripts/build-parsers.mjs --analyze"
   },
   "devDependencies": {
+    "typescript": "5.9.3",
     "esbuild": "0.28.2"
-  }
+  },
+  "workspaces": [
+    "premade/discord",
+    "premade/e621",
+    "premade/gelbooru",
+    "premade/hyshare",
+    "premade/pawchive",
+    "premade/pixiv",
+    "premade/twitter",
+    "premade/mega"
+  ]
 }

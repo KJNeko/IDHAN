@@ -44,13 +44,10 @@ constexpr std::size_t MAX_CALLBACK_THUMBNAIL_SIZE { 8192 };
 	return std::min( static_cast< std::size_t >( requested ), MAX_CALLBACK_THUMBNAIL_SIZE );
 }
 
-//! Calls one worker runs at once when the operator has not named a number.
 constexpr std::size_t DEFAULT_POOL_THREADS { 4 };
 
-//! Share of the machine the module system takes when the operator has not named a number.
-/** The server itself is deliberately unrestricted; the modules are the part that has to be kept from
- *  taking the machine over, since libvips and the codec pools will each happily spin up one pool per
- *  core per call. */
+//! Share of the machine's threads the module workers may use. The server itself is unrestricted;
+//! libvips and the codec pools would otherwise spin up one pool per core per call.
 constexpr std::size_t MODULE_THREAD_PERCENT { 25 };
 
 //! Never zero, so it is safe to divide by.
@@ -60,7 +57,7 @@ constexpr std::size_t MODULE_THREAD_PERCENT { 25 };
 }
 
 //! Reads a worker setting, letting `[modules.<library>]` override the `[modules]` default.
-/** \param library The library's file stem, e.g. IDHANVips. */
+//! \p library is the library's file stem, e.g. IDHANVips.
 template < typename T >
 [[nodiscard]] std::optional< T > moduleSetting( const std::string& library, const std::string_view name )
 {
@@ -69,7 +66,6 @@ template < typename T >
 	return config::get< T >( "modules", name );
 }
 
-//! \copydoc moduleSetting
 template < typename T >
 [[nodiscard]] T moduleSetting( const std::string& library, const std::string_view name, const T fallback )
 {
@@ -77,7 +73,7 @@ template < typename T >
 }
 
 //! A configured thread count, in which zero asks for every thread the machine has.
-/** \return Nothing when the operator did not set it, leaving the caller to derive a default. */
+//! \return nullopt when the operator did not set it, leaving the caller to derive a default.
 [[nodiscard]] std::optional< std::size_t > threadSetting( const std::string& library, const std::string_view name )
 {
 	const auto configured { moduleSetting< std::size_t >( library, name ) };
@@ -191,7 +187,7 @@ bool ModuleLoader::registerLibrary( const std::filesystem::path& path )
 			return false;
 		}
 
-		auto manifest { interrogator->awaitManifest(
+		auto manifest { interrogator->awaitManifestSync(
 			std::chrono::seconds { config::get< std::size_t >( "modules", "describe_timeout_sec", 10 ) } ) };
 
 		if ( !manifest )
@@ -234,10 +230,8 @@ bool ModuleLoader::registerLibrary( const std::filesystem::path& path )
 	auto settings { settingsFor( path ) };
 	settings.expected_signature = ipc::manifestSignature( entries );
 
-	// A worker's budget is pool_threads * render_threads either way. When nothing in the library can
-	// use a render thread inside a call, that budget buys concurrency instead of going unspent.
-	// all_of, not any_of: the modules share one process, so one that does parallelise would end up
-	// with both the multiplied pool and its own render threads.
+	// When no module can use render threads inside a call, spend that budget on concurrency instead.
+	// all_of, not any_of: the modules share one process.
 	const bool folds_render_threads {
 		std::ranges::all_of( entries, []( const auto& entry ) { return entry.single_threaded; } )
 	};
@@ -249,11 +243,10 @@ bool ModuleLoader::registerLibrary( const std::filesystem::path& path )
 	}
 
 	log::info(
-		"Module library {} runs {} concurrent call(s), each allowed {} render thread(s){}",
+		"Module library {}: {} concurrent call(s), {} thread(s) per call",
 		path.filename().string(),
 		settings.pool_threads,
-		settings.render_threads,
-		folds_render_threads ? " (single-threaded: the render budget went to the pool)" : "" );
+		settings.render_threads );
 
 	const auto library_index { m_pools.size() };
 
@@ -311,6 +304,8 @@ bool ModuleLoader::registerLibrary( const std::filesystem::path& path )
 			}
 		}
 
+		for ( const auto mime_id : entry.phash_mimes ) m_by_mime_phash[ mime_id ].emplace_back( slot );
+
 		for ( const auto mime_id : entry.mimes )
 		{
 			if ( ( entry.type & ModuleTypeFlags::METADATA ) != 0 ) m_by_mime_metadata[ mime_id ].emplace_back( slot );
@@ -350,6 +345,7 @@ void ModuleLoader::unloadModules()
 	for ( const auto& pool : m_pools ) pool->shutdown();
 
 	m_by_mime_metadata.clear();
+	m_by_mime_phash.clear();
 	m_by_mime_thumbnailer.clear();
 	m_by_mime_generator.clear();
 	m_by_mime_parser.clear();
@@ -388,6 +384,19 @@ std::vector< std::shared_ptr< RemoteModule > > ModuleLoader::getParserFor( const
 	return lookup( m_by_mime_metadata, mime_id );
 }
 
+std::vector< std::shared_ptr< RemoteModule > > ModuleLoader::getPhashParserFor( const MimeID mime_id ) const
+{
+	return lookup( m_by_mime_phash, mime_id );
+}
+
+std::vector< MimeID > ModuleLoader::phashMimes() const
+{
+	std::vector< MimeID > mimes;
+	mimes.reserve( m_by_mime_phash.size() );
+	for ( const auto& [ mime_id, slots ] : m_by_mime_phash ) mimes.push_back( mime_id );
+	return mimes;
+}
+
 std::shared_ptr< RemoteModule > ModuleLoader::getEmbedderFor( const std::string_view model_name ) const
 {
 	const auto found { m_by_model_embedding.find( std::string { model_name } ) };
@@ -419,7 +428,6 @@ std::vector< std::shared_ptr< RemoteModule > > ModuleLoader::getMimeParserFor( c
 
 using ExpectedInput = std::expected< std::shared_ptr< const CallInput >, std::string >;
 
-//! Wraps a descriptor a module sent with its callback as an input for the nested call.
 [[nodiscard]] ExpectedInput makeCallbackInput( ipc::UniqueFd fd )
 {
 	auto blob { ipc::Blob::adoptSealed( std::move( fd ) ) };
@@ -593,36 +601,6 @@ void ModuleLoader::serviceCallback( std::shared_ptr< WorkerProcess > worker, ipc
 	folly::coro::co_withExecutor(
 		folly::getGlobalCPUExecutor(), runCallback( std::move( worker ), std::move( frame ) ) )
 		.start();
-}
-
-std::vector< ModuleQueueSnapshot > ModuleLoader::queueSnapshots() const
-{
-	std::vector< WorkerPoolSnapshot > pools {};
-	pools.reserve( m_pools.size() );
-	for ( const auto& pool : m_pools ) pools.emplace_back( pool->snapshot() );
-
-	std::vector< ModuleQueueSnapshot > snapshots {};
-	snapshots.reserve( m_descriptors.size() );
-	for ( const auto& descriptor : m_descriptors )
-	{
-		const auto& pool { pools[ descriptor.library_index ] };
-		const auto activity {
-			descriptor.module_index < pool.modules.size() ?
-				pool.modules[ descriptor.module_index ] :
-				ipc::ModuleActivity {}
-		};
-		snapshots.emplace_back(
-			ModuleQueueSnapshot {
-				.library_index = descriptor.library_index,
-				.module_index = descriptor.module_index,
-				.library = m_pools[ descriptor.library_index ]->library().filename().string(),
-				.name = descriptor.name,
-				.activity = activity,
-				.workers = pool.workers,
-				.reporting = pool.reporting,
-				.thread_safe = descriptor.thread_safe } );
-	}
-	return snapshots;
 }
 
 } // namespace idhan::modules

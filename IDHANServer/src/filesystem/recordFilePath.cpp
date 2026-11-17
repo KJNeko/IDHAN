@@ -1,5 +1,6 @@
 #include "recordFilePath.hpp"
 
+#include <cerrno>
 #include <format>
 #include <span>
 #include <system_error>
@@ -8,6 +9,7 @@
 #include "PathHelpers.hpp"
 #include "clusters/clusterIdentity.hpp"
 #include "db/fileInfo.hpp"
+#include "filesystem/io/IOUring.hpp"
 #include "idhan/SHA256.hpp"
 #include "idhan/db/DBContext.hpp"
 
@@ -52,18 +54,28 @@ runtime::Task< std::expected< std::optional< VerifiedRecordPath >, std::string >
 	if ( !*resolved ) co_return std::optional< VerifiedRecordPath > {};
 
 	auto& location { **resolved };
-	std::error_code error {};
-	const auto status { std::filesystem::status( location.path(), error ) };
-	if ( error == std::errc::no_such_file_or_directory ) error.clear();
-	if ( error == std::errc::not_a_directory ) error.clear();
-	if ( error ) co_return std::unexpected( std::format( "Cannot inspect record {}: {}", record_id, error.message() ) );
+	const auto status_e { co_await IOUring::getInstance().fileStatus( location.path() ) };
+	if ( !status_e.has_value() && status_e.error() != -ENOENT && status_e.error() != -ENOTDIR )
+	{
+		(void)co_await location.close();
+		co_return std::unexpected(
+			std::format(
+				"Cannot inspect record {}: {}",
+				record_id,
+				std::error_code { -status_e.error(), std::generic_category() }.message() ) );
+	}
 
 	// Recheck the marker before interpreting a missing file as a change to library state.
-	const auto verified { location.verify() };
-	if ( !verified ) co_return std::unexpected( verified.error() );
-
-	if ( !std::filesystem::is_regular_file( status ) )
+	const auto verified_e { co_await location.cluster().verify() };
+	if ( !verified_e.has_value() )
 	{
+		(void)co_await location.close();
+		co_return std::unexpected( verified_e.error() );
+	}
+
+	if ( !status_e.has_value() || !std::filesystem::is_regular_file( status_e.value() ) )
+	{
+		(void)co_await location.close();
 		co_await db::detachMissingRecordFile( db, record_id, location.clusterId() );
 		co_return std::optional< VerifiedRecordPath > {};
 	}

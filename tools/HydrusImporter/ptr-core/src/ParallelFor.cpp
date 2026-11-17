@@ -21,7 +21,6 @@ bool parallelIndexed( const std::size_t count,
 {
 	if ( count == 0 ) return true;
 
-	// Never spawn more workers than there is work; harmless but pointless for a small corpus.
 	const auto requested = threads != 0 ? threads : defaultWorkerCount();
 	const auto workers = static_cast< unsigned >( std::min< std::size_t >( requested, count ) );
 

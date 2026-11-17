@@ -16,12 +16,10 @@ class ModuleFile;
 //! JPEG quantization table in zigzag order.
 using QuantizationTable = std::array< std::uint16_t, 64 >;
 
-//! Maximum retained comment length in bytes.
 constexpr std::size_t COMMENT_LIMIT { 255 };
 
 struct FileEncoding
 {
-	//! Absent when encoding information is unavailable.
 	std::optional< EncodingQuality > quality {};
 	//! Sanitized JPEG COM text. Empty if no text was retained; absent if comments were not parsed.
 	std::optional< std::string > comment {};

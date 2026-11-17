@@ -71,7 +71,6 @@ jobs:
             -DBUILD_IDHAN_HTTP=OFF \
             -DBUILD_IDHAN_TESTS=OFF \
             -DBUILD_IDHAN_DOCS=OFF \
-            -DBUILD_IDHAN_WEB=OFF \
             -DBUILD_IDHAN_TOOLS=OFF \
             -DBUILD_IDHAN_CLIENT=ON \
             -DBUILD_HYDRUS_IMPORTER=ON \
@@ -181,7 +180,6 @@ jobs:
             -DBUILD_IDHAN_HTTP=OFF \
             -DBUILD_IDHAN_TESTS=OFF \
             -DBUILD_IDHAN_DOCS=OFF \
-            -DBUILD_IDHAN_WEB=OFF \
             -DBUILD_IDHAN_TOOLS=OFF \
             -DBUILD_IDHAN_CLIENT=ON \
             -DBUILD_HYDRUS_IMPORTER=ON \

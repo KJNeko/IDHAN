@@ -1,5 +1,3 @@
-// You may need to build the project (run Qt uic code generator) to get "ui_UrlServiceWidget.h" resolved
-
 #include "UrlServiceWidget.hpp"
 
 #include <QThreadPool>

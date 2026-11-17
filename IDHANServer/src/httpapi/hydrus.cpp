@@ -20,6 +20,8 @@
 #include "IDHANTypes.hpp"
 #include "apiAuth.hpp"
 #include "apiVersion.hpp"
+#include "db/fileInfo.hpp"
+#include "downloadSessions.hpp"
 #include "hyapi/constants/UrlTypes.hpp"
 #include "hyapi/constants/header-names.hpp"
 #include "hyapi/constants/hydrus_version.hpp"
@@ -35,6 +37,8 @@
 #include "tags.hpp"
 #include "thumbnail.hpp"
 #include "urls/UrlDomain.hpp"
+#include "urls/UrlNormalization.hpp"
+#include "IDHANDownloader/urls/UrlNormalization.hpp"
 
 namespace idhan::httpapi
 {
@@ -161,33 +165,28 @@ static http::HTTPTask< http::Response > verifyAccessKey(
 	co_return hyResponse( builder );
 }
 
-static http::HTTPTask< http::Response > getService( db::DBContext& db, http::RequestContext context )
+static http::HTTPTask< http::Response > getService( db::DBContext& db, http::Query< HydrusServiceQuery > parameters )
 {
-	const auto service_key_e { context.parameters().optional< std::string >( "service_key" ) };
-	if ( !service_key_e ) co_return http::Response::error( 400, service_key_e.error().message );
-	const auto service_name_e { context.parameters().optional< std::string >( "service_name" ) };
-	if ( !service_name_e ) co_return http::Response::error( 400, service_name_e.error().message );
-
-	if ( !*service_key_e && !*service_name_e )
+	if ( !parameters.value.service_key && !parameters.value.service_name )
 		co_return http::Response::error( 400, "Must provide a service_key or service_name" );
 
 	const auto services { co_await hyapi::listServices( db ) };
 
 	std::optional< hyapi::ServiceInfo > found {};
 
-	if ( *service_key_e )
+	if ( parameters.value.service_key )
 	{
-		found = hyapi::findServiceByKey( services, **service_key_e );
+		found = hyapi::findServiceByKey( services, *parameters.value.service_key );
 		if ( !found )
 			co_return http::Response::error(
-				404, std::format( "Did not find a service with key \"{}\"", **service_key_e ) );
+				404, std::format( "Did not find a service with key \"{}\"", *parameters.value.service_key ) );
 	}
 	else
 	{
-		found = hyapi::findServiceByName( services, **service_name_e );
+		found = hyapi::findServiceByName( services, *parameters.value.service_name );
 		if ( !found )
 			co_return http::Response::error(
-				404, std::format( "Did not find a service with name \"{}\"", **service_name_e ) );
+				404, std::format( "Did not find a service with name \"{}\"", *parameters.value.service_name ) );
 	}
 
 	Json::Value root {};
@@ -329,13 +328,13 @@ static http::HTTPTask< http::Response > getClientOptions(
 	co_return http::Response::json( 200, folly::IOBuf::copyBuffer( root.toStyledString() ) );
 }
 
-static http::HTTPTask< http::Response > searchTags( [[maybe_unused]] db::DBContext& db, http::RequestContext context )
+static http::HTTPTask< http::Response > searchTags(
+	[[maybe_unused]] db::DBContext& db,
+	http::Query< HydrusTagSearchQuery > parameters )
 {
-	const auto search_e { context.parameters().optional< std::string >( "search" ) };
-	if ( !search_e ) co_return http::Response::error( 400, search_e.error().message );
-	if ( !*search_e ) co_return http::Response::error( 400, "Must provide search string" );
+	if ( !parameters.value.search ) co_return http::Response::error( 400, "Must provide search string" );
 
-	const auto search_value { search_e->value_or( "" ) };
+	const auto search_value { parameters.value.search.value_or( "" ) };
 
 	if ( search_value.empty() )
 	{
@@ -356,9 +355,7 @@ static http::HTTPTask< http::Response > searchTags( [[maybe_unused]] db::DBConte
 		co_return hyResponse( builder );
 	}
 
-	const auto display_type_e { context.parameters().optional< std::string >( "tag_display_type" ) };
-	if ( !display_type_e ) co_return http::Response::error( 400, display_type_e.error().message );
-	const auto display_type { display_type_e->value_or( "storage" ) };
+	const auto display_type { parameters.value.tag_display_type.value_or( "storage" ) };
 	if ( display_type != "storage" && display_type != "display" )
 		co_return http::Response::error( 400, "Invalid tag display type" );
 
@@ -392,15 +389,14 @@ static http::HTTPTask< http::Response > searchTags( [[maybe_unused]] db::DBConte
 	co_return hyResponse( builder );
 }
 
-static http::HTTPTask< http::Response > searchFiles( db::DBContext& db, http::RequestContext context )
+static http::HTTPTask< http::Response > searchFiles(
+	db::DBContext& db,
+	http::Query< HydrusFileSearchQuery > parameters )
 {
-	const auto tags_e { context.parameters().optional< std::string >( "tags" ) };
-	if ( !tags_e ) co_return http::Response::error( 400, tags_e.error().message );
-
 	constexpr std::string_view empty_tags { "[]" };
-	const auto tags_parameter { tags_e->value_or( std::string { empty_tags } ) };
+	const auto tags_text { parameters.value.tags.value_or( std::string { empty_tags } ) };
 
-	if ( tags_parameter == empty_tags )
+	if ( tags_text == empty_tags )
 	{
 		simdjson::builder::string_builder builder;
 		builder.start_object();
@@ -415,12 +411,12 @@ static http::HTTPTask< http::Response > searchFiles( db::DBContext& db, http::Re
 	simdjson::dom::array tags_json {};
 	try
 	{
-		if ( parser.parse( tags_parameter ).get( tags_json ) != simdjson::SUCCESS )
-			co_return http::Response::error( 400, std::format( "Invalid tags json: Was {}", tags_parameter ) );
+		if ( parser.parse( tags_text ).get( tags_json ) != simdjson::SUCCESS )
+			co_return http::Response::error( 400, std::format( "Invalid tags json: Was {}", tags_text ) );
 	}
 	catch ( const simdjson::simdjson_error& )
 	{
-		co_return http::Response::error( 400, std::format( "Invalid tags json: Was {}", tags_parameter ) );
+		co_return http::Response::error( 400, std::format( "Invalid tags json: Was {}", tags_text ) );
 	}
 
 	std::vector< std::string > search_tags {};
@@ -453,30 +449,20 @@ static http::HTTPTask< http::Response > searchFiles( db::DBContext& db, http::Re
 		co_return http::Response::error( 400, std::format( "Invalid system tag: {}", e.what() ) );
 	}
 
-	const auto file_sort_type_e { context.parameters().optional< std::uint64_t >( "file_sort_type" ) };
-	if ( !file_sort_type_e ) co_return http::Response::error( 400, file_sort_type_e.error().message );
 	const auto file_sort_type {
-		static_cast< HydrusSortType >( file_sort_type_e->value_or( HydrusSortType::DEFAULT ) )
+		static_cast< HydrusSortType >( parameters.value.file_sort_type.value_or( HydrusSortType::DEFAULT ) )
 	};
 
-	const auto file_sort_asc_e { context.parameters().optional< bool >( "file_sort_asc" ) };
-	if ( !file_sort_asc_e ) co_return http::Response::error( 400, file_sort_asc_e.error().message );
-	const auto file_sort_asc { file_sort_asc_e->value_or( true ) };
+	const auto file_sort_asc { parameters.value.file_sort_asc.value_or( true ) };
 
 	query.setSortType( hyToIDHANSortType( file_sort_type ) );
 	query.setSortOrder( file_sort_asc ? SortOrder::ASC : SortOrder::DESC );
 
-	const auto return_file_ids_e { context.parameters().optional< bool >( "return_file_ids" ) };
-	if ( !return_file_ids_e ) co_return http::Response::error( 400, return_file_ids_e.error().message );
-	const auto return_file_ids { return_file_ids_e->value_or( true ) };
+	const auto return_file_ids { parameters.value.return_file_ids.value_or( true ) };
 
-	const auto return_hashes_e { context.parameters().optional< bool >( "return_hashes" ) };
-	if ( !return_hashes_e ) co_return http::Response::error( 400, return_hashes_e.error().message );
-	const auto return_hashes { return_hashes_e->value_or( false ) };
+	const auto return_hashes { parameters.value.return_hashes.value_or( false ) };
 
-	const auto tag_display_type_e { context.parameters().optional< std::string >( "tag_display_type" ) };
-	if ( !tag_display_type_e ) co_return http::Response::error( 400, tag_display_type_e.error().message );
-	const auto tag_display_type { tag_display_type_e->value_or( "display" ) };
+	const auto tag_display_type { parameters.value.tag_display_type.value_or( "display" ) };
 
 	query.setDisplay( tag_display_type == "storage" ? HydrusDisplayType::STORED : HydrusDisplayType::DISPLAY );
 
@@ -603,7 +589,17 @@ static http::HTTPTask< http::Response > searchFiles( db::DBContext& db, http::Re
 	db::DBBindings find_bindings {};
 	find_bindings.bind( url );
 	const auto existing {
-		co_await db.query( "SELECT url_id FROM urls WHERE url = $1", std::move( find_bindings ) ).rows< UrlID >()
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    url_id
+					FROM urls
+					WHERE url = $1
+				)SQL",
+					 std::move( find_bindings ) )
+				 .rows< UrlID >()
 	};
 	if ( !existing.empty() ) co_return std::get< 0 >( existing.row( 0 ) );
 
@@ -613,7 +609,13 @@ static http::HTTPTask< http::Response > searchFiles( db::DBContext& db, http::Re
 	domain_bindings.bind( domain );
 	co_await db
 		.query(
-			"INSERT INTO url_domains (url_domain) VALUES ($1) ON CONFLICT (url_domain) DO NOTHING",
+			//language=postgresql
+			R"SQL(
+				INSERT INTO url_domains (url_domain)
+				    VALUES ($1)
+				ON CONFLICT (url_domain)
+				    DO NOTHING
+			)SQL",
 			std::move( domain_bindings ) )
 		.result();
 
@@ -621,8 +623,16 @@ static http::HTTPTask< http::Response > searchFiles( db::DBContext& db, http::Re
 	domain_lookup_bindings.bind( domain );
 	const auto domain_rows {
 		co_await db
-			.query( "SELECT url_domain_id FROM url_domains WHERE url_domain = $1", std::move( domain_lookup_bindings ) )
-			.rows< UrlDomainID >()
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    url_domain_id
+					FROM url_domains
+					WHERE url_domain = $1
+				)SQL",
+					 std::move( domain_lookup_bindings ) )
+				 .rows< UrlDomainID >()
 	};
 	if ( domain_rows.empty() )
 		co_return std::unexpected(
@@ -636,7 +646,14 @@ static http::HTTPTask< http::Response > searchFiles( db::DBContext& db, http::Re
 	const auto inserted {
 		co_await db
 			.query(
-				"INSERT INTO urls (url, url_domain_id) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING url_id",
+				//language=postgresql
+				R"SQL(
+					INSERT INTO urls (url, url_domain_id)
+					    VALUES ($1, $2)
+					ON CONFLICT
+					    DO NOTHING
+					RETURNING url_id
+				)SQL",
 				std::move( insert_bindings ) )
 			.rows< UrlID >()
 	};
@@ -645,7 +662,17 @@ static http::HTTPTask< http::Response > searchFiles( db::DBContext& db, http::Re
 	db::DBBindings retry_bindings {};
 	retry_bindings.bind( url );
 	const auto retry {
-		co_await db.query( "SELECT url_id FROM urls WHERE url = $1", std::move( retry_bindings ) ).rows< UrlID >()
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    url_id
+					FROM urls
+					WHERE url = $1
+				)SQL",
+					 std::move( retry_bindings ) )
+				 .rows< UrlID >()
 	};
 	if ( !retry.empty() ) co_return std::get< 0 >( retry.row( 0 ) );
 
@@ -710,7 +737,21 @@ static http::HTTPTask< http::Response > associateUrl( db::DBContext& db, http::R
 	if ( urls_to_add.empty() && urls_to_delete.empty() )
 		co_return http::Response::error( 400, "Did not find any URLs to add or delete" );
 
-	for ( const auto& url : urls_to_add )
+	auto normalized_add_e { co_await helpers::normalizeUrls( std::move( urls_to_add ) ) };
+	if ( !normalized_add_e.has_value() )
+	{
+		const auto& error { normalized_add_e.error() };
+		co_return http::Response::error( helpers::httpStatus( error ), error.message );
+	}
+
+	auto delete_spellings_e { co_await helpers::urlSpellings( std::move( urls_to_delete ) ) };
+	if ( !delete_spellings_e.has_value() )
+	{
+		const auto& error { delete_spellings_e.error() };
+		co_return http::Response::error( helpers::httpStatus( error ), error.message );
+	}
+
+	for ( const auto& url : normalized_add_e.value() )
 	{
 		auto url_id_e { co_await findOrCreateHydrusUrl( db, url ) };
 		if ( !url_id_e ) co_return std::move( url_id_e.error() );
@@ -722,43 +763,109 @@ static http::HTTPTask< http::Response > associateUrl( db::DBContext& db, http::R
 			bindings.bind( *url_id_e );
 			co_await db
 				.query(
-					"INSERT INTO url_mappings (record_id, url_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+					//language=postgresql
+					R"SQL(
+						INSERT INTO url_mappings (record_id, url_id)
+						    VALUES ($1, $2)
+						ON CONFLICT
+						    DO NOTHING
+					)SQL",
 					std::move( bindings ) )
 				.result();
 		}
 	}
 
-	for ( const auto& url : urls_to_delete )
+	auto& delete_spellings { delete_spellings_e.value() };
+	if ( !delete_spellings.empty() )
 	{
-		auto url_id_e { co_await findOrCreateHydrusUrl( db, url ) };
-		if ( !url_id_e ) co_return std::move( url_id_e.error() );
-
-		for ( const auto record_id : records )
-		{
-			db::DBBindings bindings {};
-			bindings.bind( record_id );
-			bindings.bind( *url_id_e );
-			co_await db.query( "DELETE FROM url_mappings WHERE record_id = $1 AND url_id = $2", std::move( bindings ) )
-				.result();
-		}
+		db::DBBindings bindings {};
+		bindings.bind( std::move( delete_spellings ) );
+		bindings.bind( records );
+		co_await db
+			.query(
+				//language=postgresql
+				R"SQL(
+					DELETE FROM url_mappings m USING urls u
+					WHERE u.url = ANY ($1::text[])
+					    AND m.url_id = u.url_id
+					    AND m.record_id = ANY ($2::integer[])
+				)SQL",
+				std::move( bindings ) )
+			.result();
 	}
 
 	co_return http::Response::json( 200, folly::IOBuf::copyBuffer( std::string_view { "{}" } ) );
 }
 
-static http::HTTPTask< http::Response > getUrlInfo( [[maybe_unused]] db::DBContext& db, http::RequestContext context )
+static http::HTTPTask< http::JsonResult< HydrusAddedUrlResponse > > addUrl(
+	db::DBContext& db,
+	http::JsonBody< HydrusAddUrlBody > body )
 {
-	const auto url_e { context.parameters().optional< std::string >( "url" ) };
-	if ( !url_e ) co_return http::Response::error( 400, url_e.error().message );
-	if ( !*url_e || ( *url_e )->empty() ) co_return http::Response::error( 400, "Must provide url parameter" );
+	const auto& url { body.value.url };
+	if ( url.empty() || url.size() > 8192 ) co_return http::Response::error( 400, "url must be 1 to 8192 characters" );
 
-	const auto& url_str { **url_e };
+	const auto parsed_e { downloader::parseUrl( url ) };
+	if ( !parsed_e.has_value() ) co_return http::Response::error( 400, parsed_e.error() );
+
+	const auto protocol { parsed_e.value().get_protocol() };
+	if ( protocol != "http:" && protocol != "https:" )
+		co_return http::Response::error( 400, "URL must use HTTP or HTTPS" );
+
+	auto submitted { co_await submitUrlSession(
+		db, http::JsonBody< SubmitUrlSessionBody > { { .name = {}, .url = url, .options = {} } } ) };
+	auto* error { std::get_if< http::Response >( &submitted ) };
+	if ( error ) co_return std::move( *error );
+
+	co_return http::JsonResponse< HydrusAddedUrlResponse > { { "URL queued for download", url } };
+}
+
+static http::HTTPTask< http::JsonResult< HydrusUrlFilesResponse > > getUrlFiles(
+	db::DBContext& db,
+	http::Query< HydrusUrlInfoQuery > parameters )
+{
+	if ( !parameters.value.url ) co_return http::Response::error( 400, "Must provide url parameter" );
+
+	const auto& url { *parameters.value.url };
+	if ( url.empty() || url.size() > 8192 ) co_return http::Response::error( 400, "url must be 1 to 8192 characters" );
+
+	auto normalized_e { co_await helpers::normalizeUrl( url ) };
+	if ( !normalized_e.has_value() )
+	{
+		const auto& error { normalized_e.error() };
+		co_return http::Response::error( helpers::httpStatus( error ), error.message );
+	}
+
+	auto& normalized { normalized_e.value() };
+	const auto hashes { co_await db::storedRecordHashesForUrl( db, normalized ) };
+	HydrusUrlFilesResponse response { .normalised_url = std::move( normalized ), .url_file_statuses = {} };
+	for ( const auto& hash : hashes )
+	{
+		// Hydrus status 2 means the file is already imported.
+		response.url_file_statuses.push_back( { 2, hash.hex(), "Already in the database" } );
+	}
+	co_return http::JsonResponse< HydrusUrlFilesResponse > { std::move( response ) };
+}
+
+static http::HTTPTask< http::Response > getUrlInfo(
+	[[maybe_unused]] db::DBContext& db,
+	http::Query< HydrusUrlInfoQuery > parameters )
+{
+	if ( !parameters.value.url || ( parameters.value.url )->empty() )
+		co_return http::Response::error( 400, "Must provide url parameter" );
+
+	const auto& url_str { *parameters.value.url };
+	const auto normalized_e { co_await helpers::normalizeUrl( url_str ) };
+	if ( !normalized_e.has_value() )
+	{
+		const auto& error { normalized_e.error() };
+		co_return http::Response::error( helpers::httpStatus( error ), error.message );
+	}
 
 	simdjson::builder::string_builder builder;
 	builder.start_object();
 	builder.append_key_value( "request_url", url_str );
 	builder.append_comma();
-	builder.append_key_value( "normalised_url", url_str );
+	builder.append_key_value( "normalised_url", normalized_e.value() );
 	builder.append_comma();
 	builder.append_key_value( "url_type", static_cast< std::uint64_t >( hydrus::gen_constants::URL_TYPE_UNKNOWN ) );
 	builder.append_comma();
@@ -775,46 +882,52 @@ static http::HTTPTask< http::Response > getUrlInfo( [[maybe_unused]] db::DBConte
 
 [[nodiscard]] static http::HTTPTask< std::expected< RecordID, http::Response > > resolveHydrusFileID(
 	db::DBContext& db,
-	http::RequestContext& context )
+	const HydrusFileQuery& parameters )
 {
-	const auto file_id_e { context.parameters().optional< RecordID >( "file_id" ) };
-	if ( !file_id_e ) co_return std::unexpected( http::Response::error( 400, file_id_e.error().message ) );
+	const auto& file_id { parameters.file_id };
 
-	const auto hash_e { context.parameters().optional< std::string >( "hash" ) };
-	if ( !hash_e ) co_return std::unexpected( http::Response::error( 400, hash_e.error().message ) );
+	const auto& hash { parameters.hash };
 
-	if ( *hash_e )
+	if ( hash )
 	{
-		const auto sha256 { SHA256::fromHex( **hash_e ) };
+		const auto sha256 { SHA256::fromHex( *hash ) };
 		if ( !sha256 ) co_return std::unexpected( http::Response::error( 400, "Invalid hash" ) );
 
 		const auto record_id { co_await findRecord( *sha256, db ) };
 		if ( !record_id )
 			co_return std::unexpected(
-				http::Response::error( 404, std::format( "No record with hash {} found", **hash_e ) ) );
+				http::Response::error( 404, std::format( "No record with hash {} found", *hash ) ) );
 
 		co_return *record_id;
 	}
 
-	if ( !*file_id_e ) co_return std::unexpected( http::Response::error( 400, "No hash or file_id specified" ) );
+	if ( !file_id ) co_return std::unexpected( http::Response::error( 400, "No hash or file_id specified" ) );
 
-	co_return **file_id_e;
+	co_return *file_id;
 }
 
-static http::HTTPTask< http::Response > file( db::DBContext& db, http::RequestContext context )
+static http::HTTPTask< http::Response > file(
+	db::DBContext& db,
+	http::RequestContext context,
+	http::Query< HydrusFileQuery > parameters )
 {
-	auto record_id_e { co_await resolveHydrusFileID( db, context ) };
+	auto record_id_e { co_await resolveHydrusFileID( db, parameters.value ) };
 	if ( !record_id_e ) co_return std::move( record_id_e.error() );
 
-	co_return co_await recordFileResponse( db, context, *record_id_e );
+	co_return co_await recordFileResponse(
+		db, context, *record_id_e, FetchRecordFileQuery { parameters.value.download } );
 }
 
-static http::HTTPTask< http::Response > thumbnail( db::DBContext& db, http::RequestContext context )
+static http::HTTPTask< http::Response > thumbnail(
+	db::DBContext& db,
+	http::RequestContext context,
+	http::Query< HydrusFileQuery > parameters )
 {
-	auto record_id_e { co_await resolveHydrusFileID( db, context ) };
+	auto record_id_e { co_await resolveHydrusFileID( db, parameters.value ) };
 	if ( !record_id_e ) co_return std::move( record_id_e.error() );
 
-	co_return co_await recordThumbnailResponse( db, context, *record_id_e );
+	co_return co_await recordThumbnailResponse(
+		db, context, *record_id_e, FetchThumbnailQuery { parameters.value.regenerate, parameters.value.size } );
 }
 
 static http::HTTPTask< http::Response > unsupported(
@@ -857,49 +970,49 @@ std::vector< http::RouteDefinition > hydrusRoutes( db::DBContext& db )
 	std::vector< http::RouteDefinition > routes {};
 
 	const auto add =
-		[ &routes, &db ](
-			const proxygen::HTTPMethod method,
-			std::string path,
-			const bool needs_auth,
-			http::HTTPTask< http::Response > ( *handler )( db::DBContext&, http::RequestContext ) )
+		[ &routes, &db ]< auto Handler >( const proxygen::HTTPMethod method, std::string path, const bool needs_auth )
 	{
 		std::vector< http::RequestValidation > before_body {};
 		if ( needs_auth ) before_body.push_back( hyAuthValidation( db ) );
 
-		auto bound = [ &db, handler ]( http::RequestContext context ) -> http::HTTPTask< http::Response >
-		{ co_return co_await handler( db, std::move( context ) ); };
+		using Arguments = typename http::HandlerArguments< decltype( Handler ) >::Tuple;
+		auto bound = [ &db ]( http::RequestContext context )
+		{ return http::invokeReflected< Handler, Arguments >( &db, std::move( context ) ); };
 
 		routes.push_back(
 			http::RouteDefinition {
 				http::RouteMetadata { method, std::move( path ), {}, std::move( before_body ) }, std::move( bound ) } );
 	};
 
-	add( proxygen::HTTPMethod::GET, "/hyapi/api_version", false, apiVersion );
-	add( proxygen::HTTPMethod::GET, "/hyapi/request_new_permissions", true, requestNewPermissions );
-	add( proxygen::HTTPMethod::GET, "/hyapi/session_key", true, sessionKey );
-	add( proxygen::HTTPMethod::GET, "/hyapi/verify_access_key", true, verifyAccessKey );
-	add( proxygen::HTTPMethod::GET, "/hyapi/get_service", true, getService );
-	add( proxygen::HTTPMethod::GET, "/hyapi/get_services", true, getServices );
-	add( proxygen::HTTPMethod::GET, "/hyapi/client_info", true, clientInfo );
+	add.template operator()< &apiVersion >( proxygen::HTTPMethod::GET, "/hyapi/api_version", false );
+	add.template
+		operator()< &requestNewPermissions >( proxygen::HTTPMethod::GET, "/hyapi/request_new_permissions", true );
+	add.template operator()< &sessionKey >( proxygen::HTTPMethod::GET, "/hyapi/session_key", true );
+	add.template operator()< &verifyAccessKey >( proxygen::HTTPMethod::GET, "/hyapi/verify_access_key", true );
+	add.template operator()< &getService >( proxygen::HTTPMethod::GET, "/hyapi/get_service", true );
+	add.template operator()< &getServices >( proxygen::HTTPMethod::GET, "/hyapi/get_services", true );
+	add.template operator()< &clientInfo >( proxygen::HTTPMethod::GET, "/hyapi/client_info", true );
 
-	add( proxygen::HTTPMethod::GET, "/hyapi/add_files/add_file", true, addFile );
+	add.template operator()< &addFile >( proxygen::HTTPMethod::GET, "/hyapi/add_files/add_file", true );
 
-	add( proxygen::HTTPMethod::GET, "/hyapi/get_files/search_files", true, searchFiles );
-	add( proxygen::HTTPMethod::GET, "/hyapi/get_files/file_hashes", true, fileHashes );
-	add( proxygen::HTTPMethod::GET, "/hyapi/get_files/file", true, file );
-	add( proxygen::HTTPMethod::GET, "/hyapi/get_files/thumbnail", true, thumbnail );
-	add( proxygen::HTTPMethod::GET, "/hyapi/get_files/file_path", true, unsupported );
-	add( proxygen::HTTPMethod::GET, "/hyapi/get_files/thumbnail_path", true, unsupported );
+	add.template operator()< &searchFiles >( proxygen::HTTPMethod::GET, "/hyapi/get_files/search_files", true );
+	add.template operator()< &fileHashes >( proxygen::HTTPMethod::GET, "/hyapi/get_files/file_hashes", true );
+	add.template operator()< &file >( proxygen::HTTPMethod::GET, "/hyapi/get_files/file", true );
+	add.template operator()< &thumbnail >( proxygen::HTTPMethod::GET, "/hyapi/get_files/thumbnail", true );
+	add.template operator()< &unsupported >( proxygen::HTTPMethod::GET, "/hyapi/get_files/file_path", true );
+	add.template operator()< &unsupported >( proxygen::HTTPMethod::GET, "/hyapi/get_files/thumbnail_path", true );
 
-	add( proxygen::HTTPMethod::POST, "/hyapi/add_urls/add_url", true, unsupported );
-	add( proxygen::HTTPMethod::POST, "/hyapi/add_urls/associate_url", true, associateUrl );
-	add( proxygen::HTTPMethod::GET, "/hyapi/add_urls/get_url_info", true, getUrlInfo );
+	add.template operator()< &addUrl >( proxygen::HTTPMethod::POST, "/hyapi/add_urls/add_url", true );
+	add.template operator()< &getUrlFiles >( proxygen::HTTPMethod::GET, "/hyapi/add_urls/get_url_files", true );
+	add.template operator()< &associateUrl >( proxygen::HTTPMethod::POST, "/hyapi/add_urls/associate_url", true );
+	add.template operator()< &getUrlInfo >( proxygen::HTTPMethod::GET, "/hyapi/add_urls/get_url_info", true );
 
-	add( proxygen::HTTPMethod::GET, "/hyapi/add_tags/search_tags", true, searchTags );
-	add( proxygen::HTTPMethod::GET, "/hyapi/manage_database/get_client_options", true, getClientOptions );
+	add.template operator()< &searchTags >( proxygen::HTTPMethod::GET, "/hyapi/add_tags/search_tags", true );
+	add.template
+		operator()< &getClientOptions >( proxygen::HTTPMethod::GET, "/hyapi/manage_database/get_client_options", true );
 
-	add( proxygen::HTTPMethod::GET, "/hyapi/manage_popups/get_popups", true, getPopups );
-	add( proxygen::HTTPMethod::GET, "/hyapi/manage_pages/get_pages", true, getPages );
+	add.template operator()< &getPopups >( proxygen::HTTPMethod::GET, "/hyapi/manage_popups/get_popups", true );
+	add.template operator()< &getPages >( proxygen::HTTPMethod::GET, "/hyapi/manage_pages/get_pages", true );
 
 	return routes;
 }

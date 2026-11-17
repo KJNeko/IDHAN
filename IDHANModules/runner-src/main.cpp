@@ -9,7 +9,6 @@
 
 #include "WorkerRunner.hpp"
 
-//! Sentinel meaning "no channel was supplied".
 constexpr int NO_CHANNEL { -1 };
 
 void usage()

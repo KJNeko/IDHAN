@@ -66,8 +66,14 @@ static runtime::Task< void > updateRecordFileTimesForScan(
 		bindings.bind( static_cast< SmallInt >( std::to_underlying( simple_type ) ) );
 		co_await db
 			.query(
-				"INSERT INTO metadata (record_id, simple_mime_type) VALUES ($1, $2) "
-				"ON CONFLICT (record_id) DO UPDATE SET simple_mime_type = $2",
+				//language=postgresql
+				R"SQL(
+					INSERT INTO metadata (record_id, simple_mime_type)
+					    VALUES ($1, $2)
+					ON CONFLICT (record_id)
+					    DO UPDATE SET
+					        simple_mime_type = $2
+				)SQL",
 				std::move( bindings ) )
 			.result();
 	}
@@ -79,8 +85,15 @@ static runtime::Task< void > updateRecordFileTimesForScan(
 		bindings.bind( metadata.m_extra.toStyledString() );
 		co_await db
 			.query(
-				"INSERT INTO metadata (record_id, simple_mime_type, json) VALUES ($1, $2, $3::json) "
-				"ON CONFLICT (record_id) DO UPDATE SET simple_mime_type = $2, json = $3::json",
+				//language=postgresql
+				R"SQL(
+					INSERT INTO metadata (record_id, simple_mime_type, json)
+					    VALUES ($1, $2, $3::json)
+					ON CONFLICT (record_id)
+					    DO UPDATE SET
+					        simple_mime_type = $2,
+					        json = $3::json
+				)SQL",
 				std::move( bindings ) )
 			.result();
 	}
@@ -197,7 +210,13 @@ static runtime::Task< void > updateRecordFileTimesForScan(
 				const auto existing_metadata {
 					co_await db
 						.query(
-							"SELECT archive_id FROM archive_metadata WHERE record_id = $1",
+							//language=postgresql
+							R"SQL(
+								SELECT
+								    archive_id
+								FROM archive_metadata
+								WHERE record_id = $1
+							)SQL",
 							std::move( archive_lookup_bindings ) )
 						.rows< std::int32_t >()
 				};
@@ -208,8 +227,15 @@ static runtime::Task< void > updateRecordFileTimesForScan(
 				if ( archive_id == 0 )
 				{
 					const auto inserted_archive_id {
-						co_await db.query( "INSERT INTO archives DEFAULT VALUES RETURNING archive_id" )
-							.rows< std::int32_t >()
+						co_await db
+								 .query(
+									 //language=postgresql
+									 R"SQL(
+									INSERT INTO archives DEFAULT
+									    VALUES
+									    RETURNING archive_id
+								)SQL" )
+								 .rows< std::int32_t >()
 					};
 					archive_id = std::get< 0 >( inserted_archive_id.row( 0 ) );
 				}
@@ -219,7 +245,12 @@ static runtime::Task< void > updateRecordFileTimesForScan(
 				delete_bindings.bind( paths );
 				co_await db
 					.query(
-						"DELETE FROM archive_map WHERE archive_id = $1 AND path <> ALL($2::text[])",
+						//language=postgresql
+						R"SQL(
+							DELETE FROM archive_map
+							WHERE archive_id = $1
+							    AND path <> ALL ($2::text[])
+						)SQL",
 						std::move( delete_bindings ) )
 					.result();
 
@@ -243,8 +274,14 @@ static runtime::Task< void > updateRecordFileTimesForScan(
 				archive_metadata_bindings.bind( archive_metadata.encrypted );
 				co_await db
 					.query(
-						"INSERT INTO archive_metadata (record_id, archive_id, encrypted) VALUES ($1, $2, $3) "
-						"ON CONFLICT (record_id) DO UPDATE SET encrypted = $3",
+						//language=postgresql
+						R"SQL(
+							INSERT INTO archive_metadata (record_id, archive_id, encrypted)
+							    VALUES ($1, $2, $3)
+							ON CONFLICT (record_id)
+							    DO UPDATE SET
+							        encrypted = $3
+						)SQL",
 						std::move( archive_metadata_bindings ) )
 					.result();
 
@@ -327,7 +364,7 @@ runtime::Task< std::expected< void, MetadataError > > storeRecordMetadata(
 	std::filesystem::path path,
 	const MetadataInfo& metadata )
 {
-	const auto valid_after_parse { cluster.verify() };
+	const auto valid_after_parse { cluster.verifySync() };
 	if ( !valid_after_parse ) co_return std::unexpected( MetadataError( 503, valid_after_parse.error() ) );
 
 	// Parsing runs outside the transaction; all writes for its result share one connection and commit.
@@ -339,7 +376,7 @@ runtime::Task< std::expected< void, MetadataError > > storeRecordMetadata(
 		co_return std::unexpected( std::move( written.error() ) );
 	}
 
-	const auto valid_before_commit { cluster.verify() };
+	const auto valid_before_commit { cluster.verifySync() };
 	if ( !valid_before_commit )
 	{
 		co_await transaction.rollback();

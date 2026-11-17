@@ -3,10 +3,14 @@ build/
 .cache/
 **/cmake-build-*/
 
-# Node dependencies and web build output — installed/built inside the image. Copying the host's
+# Node dependencies and parser build output — installed/built inside the image. Copying the host's
 # node_modules would clobber the image's freshly installed deps with broken store symlinks.
 **/node_modules/
-IDHANWeb/dist/
+IDHANDownloader/dist/
+docs/downloaders/examples/dist/
+# Local credentials are supplied at runtime rather than baked into parser assets.
+IDHANDownloader/premade/secrets.json
+IDHANDownloader/premade/url-classes/private/
 
 # IDE and editor files
 .idea/
@@ -38,12 +42,6 @@ push-nas.sh
 # /version metadata (branch/commit/tag) itself — `git describe` on the parent repo never consults
 # these, so dropping them keeps the git payload at ~24 MB instead of ~1.7 GB.
 .git/modules/
-
-# Large 3rd-party repos (not used in Docker build)
-3rd-party/web.sh
-3rd-party/hyui.sh
-3rd-party/hydrus-web
-3rd-party/hydrui
 
 # CI and Docker config (not needed in build context)
 .github/

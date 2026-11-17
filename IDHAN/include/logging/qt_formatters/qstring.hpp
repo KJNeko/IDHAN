@@ -4,8 +4,6 @@
 
 #include "logging/format_ns.hpp"
 
-//! format_ns/{fmt} formatter specialization that lets a QString be passed directly to
-//! format_ns::format; it is rendered via QString::toStdString().
 template <>
 struct format_ns::formatter< QString >
 {

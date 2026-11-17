@@ -1,4 +1,3 @@
-
 CREATE OR REPLACE FUNCTION createbatchtags(
     namespaces TEXT[],
     subtags TEXT[]

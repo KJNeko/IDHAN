@@ -23,8 +23,8 @@ enum class UpdateType
 //! A PTR "definitions" update: the id→value lookup tables the content updates reference.
 struct DefinitionsUpdate
 {
-	std::unordered_map< int, std::string > hash_ids_to_hashes; // service_hash_id → hex(SHA-256)
-	std::unordered_map< int, std::string > tag_ids_to_tags; // service_tag_id → "namespace:subtag"
+	std::unordered_map< int, std::string > hash_ids_to_hashes; //!< service_hash_id → hex(SHA-256)
+	std::unordered_map< int, std::string > tag_ids_to_tags; //!< service_tag_id → "namespace:subtag"
 };
 
 //! A single tag→files mapping within a content update (ids reference a DefinitionsUpdate).
@@ -38,12 +38,12 @@ struct ContentUpdateMapping
 struct ContentUpdate
 {
 	std::vector< ContentUpdateMapping > mappings_add;
-	std::vector< std::pair< int, int > > tag_parents_add; // (child_id, parent_id)
-	std::vector< std::pair< int, int > > tag_siblings_add; // (bad_id, good_id)
+	std::vector< std::pair< int, int > > tag_parents_add; //!< (child_id, parent_id)
+	std::vector< std::pair< int, int > > tag_siblings_add; //!< (bad_id, good_id)
 
 	std::vector< ContentUpdateMapping > mappings_delete;
-	std::vector< std::pair< int, int > > tag_parents_delete; // (child_id, parent_id)
-	std::vector< std::pair< int, int > > tag_siblings_delete; // (bad_id, good_id)
+	std::vector< std::pair< int, int > > tag_parents_delete; //!< (child_id, parent_id)
+	std::vector< std::pair< int, int > > tag_siblings_delete; //!< (bad_id, good_id)
 };
 
 //! One entry in a metadata update: which update files cover which hash range.

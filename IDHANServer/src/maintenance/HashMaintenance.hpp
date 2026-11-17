@@ -13,8 +13,8 @@ class DBContext;
 
 namespace idhan::maintenance
 {
-// Owns timer producers and drains their in-flight batches before dependencies
-// can be destroyed. Each producer has at most one sweep in flight.
+//! Owns timer producers and drains their in-flight batches before dependencies
+//! can be destroyed. Each producer has at most one sweep in flight.
 class HashMaintenance
 {
 	db::DBContext& m_db;

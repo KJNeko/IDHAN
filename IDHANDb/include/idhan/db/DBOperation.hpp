@@ -74,11 +74,13 @@ class DBOperation : public std::enable_shared_from_this< DBOperation >
 	DBOperation& operator=( const DBOperation& ) = delete;
 	[[nodiscard]] OperationPhase phase() const noexcept;
 	[[nodiscard]] std::uint64_t id() const noexcept;
-	// The owning pool installs this before exposing a cold DBTask.
+
+	//! The owning pool installs this before exposing a cold DBTask.
 	void setStarter( std::function< void( std::shared_ptr< DBOperation > ) > );
 	void abandon() noexcept;
 	void consumerAdvanced();
-	// Cleanup ownership persists independently of the consumer coroutine.
+
+	//! Cleanup ownership persists independently of the consumer coroutine.
 	void registerContinuation( std::coroutine_handle<> );
 	void unregisterContinuation() noexcept;
 };

@@ -3,7 +3,6 @@
 #include "MetadataModule.hpp"
 #include "ThumbnailerModule.hpp"
 
-//! Metadata parser for archives via libarchive (contained file hashes, decompressed size, encryption).
 class ArchiveMetadata : public idhan::MetadataModuleI
 {
   public:
@@ -16,7 +15,7 @@ class ArchiveMetadata : public idhan::MetadataModuleI
 
 	[[nodiscard]] idhan::ModuleVersion version() override;
 
-	// each call opens its own libarchive handle, no shared state: safe to run concurrently
+	//! Each call opens its own libarchive handle, no shared state: safe to run concurrently
 	[[nodiscard]] bool threadSafe() override { return true; }
 
 	[[nodiscard]] std::vector< idhan::MimeID > handleableMimes() override;

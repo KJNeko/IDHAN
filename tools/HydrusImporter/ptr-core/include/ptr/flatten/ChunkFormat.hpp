@@ -18,16 +18,12 @@ namespace idhan::hydrus::ptr
 
 inline constexpr std::array< char, 8 > CHUNK_MAGIC { { 'I', 'D', 'H', 'A', 'N', 'P', 'T', 'C' } };
 inline constexpr std::array< char, 8 > RELATIONS_MAGIC { { 'I', 'D', 'H', 'A', 'N', 'P', 'T', 'R' } };
-//! Bumped to 2 when terminal-delete discarding and the tag accounting landed. Nothing reads a
-//! version 1 directory: readChunk and isCompactedDirectory both reject an unrecognised version, so
-//! an old compacted directory fails loudly rather than importing under assumptions that no longer
-//! hold. Re-flattening the corpus is the migration.
+//! Readers reject any other version; re-flatten the corpus to migrate.
 inline constexpr std::uint32_t CHUNK_FORMAT_VERSION { 2 };
 
 #pragma pack( push, 1 )
 
-//! Uncompressed prefix of a chunk file. body_size lets a reader allocate exactly once before
-//! inflating, rather than growing a buffer.
+//! Uncompressed prefix of a chunk file.
 struct ChunkHeader
 {
 	std::array< char, 8 > magic;
@@ -49,16 +45,11 @@ struct ChunkStats
 	std::uint64_t missing_definitions { 0 };
 };
 
-//! Resolves a PTR tag id to its text. Kept as a callable so ChunkWriter has no dependency on
-//! where definitions actually live.
+//! Resolves a PTR tag id to its text.
 using TagLookup = std::function< std::optional< std::string_view >( std::uint32_t ) >;
 
-//! Accumulates records in memory, then writes one compacted chunk.
-//!
-//! Records are added carrying PTR tag ids. finish() collects every distinct id, resolves it
-//! through \p lookup, builds the string table sorted by ptr_tag_id, and rewrites each record's
-//! ids as indices into that table. Sorting by id groups tags created in the same PTR era, which
-//! share long prefixes and therefore compress well.
+//! Accumulates records carrying PTR tag ids, then writes one compacted chunk whose string table
+//! is sorted by ptr_tag_id.
 class ChunkWriter
 {
   public:
@@ -72,8 +63,6 @@ class ChunkWriter
 
 	~ChunkWriter();
 
-	//! \param sha256 The record's binary hash.
-	//! \param add_tag_ids PTR tag ids to apply. \param del_tag_ids PTR tag ids to remove.
 	void addRecord( std::array< std::byte, SHA256_BYTES > sha256,
 	                std::vector< std::uint32_t > add_tag_ids,
 	                std::vector< std::uint32_t > del_tag_ids );
@@ -84,11 +73,8 @@ class ChunkWriter
 
 	const std::filesystem::path& path() const noexcept { return m_path; }
 
-	//! Resolves, sorts, compresses and writes. Safe to call once; calling twice throws.
-	//!
-	//! \param usage Marked with every tag id that reaches this chunk's string table, or null to
-	//!        track nothing. The string table is exactly the set of ids being written, so this
-	//!        costs one pass over a list already in hand.
+	//! Resolves, sorts, compresses and writes. Calling twice throws.
+	//! \param usage Marked with every tag id in the string table, or null to track nothing.
 	ChunkStats finish( const TagLookup& lookup, TagUsageSet* usage = nullptr );
 
   private:

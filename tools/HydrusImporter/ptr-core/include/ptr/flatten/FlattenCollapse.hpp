@@ -13,15 +13,11 @@
 namespace idhan::hydrus::ptr
 {
 
-//! Worker threads collapseBuckets uses when \p thread_count is 0 (the default): every reported
-//! hardware thread. Every bucket is self-sufficient (MappingEvent.hpp), so reading, sorting, and
-//! walking chains for different buckets is independent work.
+//! Every reported hardware thread, the count CollapseOptions::thread_count = 0 stands for.
+//! TODO: unused; parallelIndexed falls back to defaultWorkerCount() directly.
 unsigned defaultCollapseThreadCount();
 
-//! Records per output chunk. Compile-time by design, alongside PTRImportWorker::BATCH_SIZE.
-//!
-//! This bounds the importer too: it holds one chunk's records and their RecordIDs at a time.
-//! At the default the full corpus produces roughly 975 chunks in place of 26,324 update files.
+//! Records per output chunk. Also bounds the importer, which holds one chunk at a time.
 inline constexpr std::size_t MAX_RECORDS_PER_CHUNK { 200'000 };
 
 //! Running collapse-stage counters, passed whole to the progress hook.
@@ -35,12 +31,10 @@ struct CollapseProgressStats
 	std::uint64_t skipped_missing_definitions { 0 };
 };
 
-//! Host hooks. All may be empty; collapseBuckets checks before calling.
+//! Host hooks. All may be empty.
 //!
-//! \warning These are called from collapseBuckets's worker threads, not from the calling thread.
-//!          They are serialised against each other, so they need no locking of their own and may
-//!          share mutable state. One slow callback stalls every worker, so keep them to
-//!          bumping counters or emitting a queued signal.
+//! \warning Called from worker threads, serialised against each other. A slow callback stalls
+//!          every worker.
 struct CollapseCallbacks
 {
 	//! Polled once per bucket. Return true to stop early.
@@ -48,9 +42,7 @@ struct CollapseCallbacks
 	//! (buckets done, buckets total, current status text). Counts completions, not bucket indices:
 	//! buckets finish out of order.
 	std::function< void( std::size_t, std::size_t, std::string_view ) > progress {};
-	//! Fired once per non-empty bucket, after it is processed. The chunk count trails the batch
-	//! still being filled and any chunk a peer worker is mid-seal on; the call made once the pool
-	//! has joined reports the settled totals.
+	//! Fired once per non-empty bucket. Totals settle in the final call, after the pool joins.
 	std::function< void( const CollapseProgressStats& ) > statsUpdated {};
 };
 
@@ -67,12 +59,7 @@ struct CollapseOptions
 {
 	std::size_t max_records_per_chunk { MAX_RECORDS_PER_CHUNK };
 
-	//! Drop terminal deletes instead of writing them into chunks.
-	//!
-	//! A chain ending in a delete collapses to that delete alone, never to a paired add, so at import
-	//! it is a removeTags for a mapping this import never made. That is a no-op against a database
-	//! whose tags came only from the PTR. They are counted either way; only whether they are written
-	//! changes.
+	//! Drop terminal deletes instead of writing them into chunks. They are counted either way.
 	bool discard_terminal_deletes { false };
 
 	//! 0 picks defaultCollapseThreadCount().
@@ -81,30 +68,12 @@ struct CollapseOptions
 
 //! Collapses every bucket in \p work_dir into record-major chunks in \p out_dir.
 //!
-//! Each bucket is read whole, sorted, and scanned once: sorting makes every (hash_id, tag_id) chain
-//! contiguous and chronological, so collapsing is a local decision over a span. A bucket holds every
-//! event for each of its records, so a record's output is final when its span ends.
+//! Buckets are processed concurrently, so which chunk a record lands in is not deterministic;
+//! every record's final tag set and every total is. Records whose hash has no definition are
+//! dropped; tags with no definition are dropped from their record and counted.
 //!
-//! options.thread_count workers handle different buckets concurrently. Survivors go into one shared
-//! batch, but sealing a full batch happens with no lock held, so several workers can seal at once.
-//! Only appending records and firing the callbacks is serialised.
-//!
-//! Buckets do not complete in index order, so which chunk a given record lands in is not
-//! deterministic across runs. Every record's final tag set, and every total, is unaffected.
-//!
-//! A chunk spans bucket boundaries. A bucket holds far fewer records than the cap, so confining a
-//! chunk to one bucket would make options.max_records_per_chunk unreachable. This is safe because
-//! every event for a record lives in exactly one bucket.
-//!
-//! Records whose hash has no definition are dropped: there is no way to address them. Tags with no
-//! definition are dropped from their record and counted.
-//!
-//! \param usage Marked with every tag id that reaches a chunk, so the caller can tell which of the
-//!        corpus's definitions were never written anywhere.
-//!
-//! \throws Anything a worker threw, such as a full disk, a truncated bucket or a zlib failure, rethrown
-//!         here once the pool has joined, so a failure mid-run is reportable rather than fatal to
-//!         the process.
+//! \param usage Marked with every tag id that reaches a chunk.
+//! \throws Anything a worker threw, rethrown once the pool has joined.
 CollapseResult collapseBuckets( const std::filesystem::path& work_dir,
                                 const std::filesystem::path& out_dir,
                                 const DefinitionReader& definitions,

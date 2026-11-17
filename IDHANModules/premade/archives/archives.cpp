@@ -260,7 +260,6 @@ EntryNameResult entryFilename( archive_entry* entry, std::expected< std::string,
 	}
 	else if ( const wchar_t* w_filename_raw = archive_entry_pathname_w( entry ); w_filename_raw != nullptr )
 	{
-		// Wide-only name: convert it rather than dropping the entry.
 		out = wideToUtf8( w_filename_raw );
 	}
 	else

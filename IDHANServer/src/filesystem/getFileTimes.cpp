@@ -28,7 +28,6 @@ std::optional< FileTimes > getFileTimes( const std::filesystem::path& path )
 
 	FileTimes times { .mtime = toTimePoint( stx.stx_mtime ), .btime = std::nullopt };
 
-	// The kernel leaves the bit clear on filesystems that record no birth time.
 	if ( stx.stx_mask & STATX_BTIME ) times.btime = toTimePoint( stx.stx_btime );
 
 	return times;

@@ -2,6 +2,9 @@
 
 #include <fcntl.h>
 
+#include <cstring>
+#include <format>
+
 #include "MimeIDs.hpp"
 #include "MimeReader.hpp"
 #include "filesystem/io/IOUring.hpp"
@@ -13,17 +16,46 @@
 namespace idhan::mime
 {
 
-runtime::Task< MimeID > identifyMime( const std::span< const std::byte > bytes, const std::string_view filename )
+//! dup() would retain write access; reopen read-only before passing the file to the module.
+static runtime::Task< std::expected< std::shared_ptr< const modules::CallInput >, std::string > > readOnlyInput(
+	const int descriptor,
+	const std::size_t size )
 {
-	auto mime_id { co_await prescanMime( MimeReader { bytes } ) };
+	const int reopened { co_await IOUring::getInstance().openFile(
+		std::format( "/proc/self/fd/{}", descriptor ), O_RDONLY | O_CLOEXEC, 0 ) };
+	if ( reopened < 0 )
+	{
+		co_return std::unexpected(
+			std::format( "could not reopen descriptor read-only: {}", std::strerror( -reopened ) ) );
+	}
+
+	auto input { modules::CallInput::forFd( ipc::UniqueFd { reopened }, size ) };
+	co_return std::make_shared< const modules::CallInput >( std::move( input ) );
+}
+
+runtime::Task< MimeID > identifyMime(
+	const std::span< const std::byte > bytes,
+	const std::string_view filename,
+	const std::optional< int > descriptor )
+{
+	MimeID mime_id { co_await prescanMime( MimeReader { bytes } ) };
 
 	if ( mime_id != mime_ids::UNKNOWN )
 	{
-		auto input { modules::CallInput::sharedForBytes( bytes ) };
-		if ( input )
-			mime_id = co_await specializeMimeID( mime_id, std::move( *input ), filename );
+		std::expected< std::shared_ptr< const modules::CallInput >, std::string > input_e {};
+		if ( descriptor.has_value() )
+		{
+			input_e = co_await readOnlyInput( descriptor.value(), bytes.size() );
+		}
 		else
-			log::warn( "Could not stage bytes to specialize mime id {}: {}", mime_id, input.error() );
+		{
+			input_e = modules::CallInput::sharedForBytes( bytes );
+		}
+
+		if ( input_e.has_value() )
+			mime_id = co_await specializeMimeID( mime_id, std::move( input_e.value() ), filename );
+		else
+			log::warn( "Could not stage bytes to specialize mime id {}: {}", mime_id, input_e.error() );
 	}
 
 	co_return mime_id;

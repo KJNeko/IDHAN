@@ -44,11 +44,21 @@ if (PROXYGEN_MISSING_TOOLS)
 	message(FATAL_ERROR "proxygen is missing dependencies: ${PROXYGEN_MISSING_TOOL_NAMES}")
 endif ()
 
-set(FIZZ_REVISION "963f906bb5f08cea100b79fe7dcd45594949cc9e"
-		CACHE STRING "fizz revision fetched when fizz is not installed")
+# proxygen's hash bot sometimes drops a pin from a tagged release. v2026.11.09.00 has no folly pin; this is the last
+# one proxygen recorded before it was removed on 2026-11-07.
+set(PROXYGEN_FALLBACK_FOLLY_REVISION "b6e123b9428174abb6a075ef9fd92886f44d2b63")
 
-function(proxygen_pinned_revision OUT_VAR NAME)
-	set(REVISION_FILE ${PROXYGEN_SOURCE_DIR}/build/deps/github_hashes/facebook/${NAME}-rev.txt)
+function(proxygen_pinned_revision OUT_VAR OWNER NAME)
+	set(REVISION_FILE ${PROXYGEN_SOURCE_DIR}/build/deps/github_hashes/${OWNER}/${NAME}-rev.txt)
+
+	string(TOUPPER ${NAME} NAME_UPPER)
+	set(FALLBACK_REVISION ${PROXYGEN_FALLBACK_${NAME_UPPER}_REVISION})
+
+	if (NOT EXISTS ${REVISION_FILE} AND FALLBACK_REVISION)
+		message(STATUS "proxygen: ${REVISION_FILE} is missing; using ${NAME} ${FALLBACK_REVISION}")
+		set(${OUT_VAR} ${FALLBACK_REVISION} PARENT_SCOPE)
+		return()
+	endif ()
 
 	if (NOT EXISTS ${REVISION_FILE})
 		message(FATAL_ERROR "proxygen no longer pins ${NAME}; ${REVISION_FILE} is missing")
@@ -63,9 +73,10 @@ function(proxygen_pinned_revision OUT_VAR NAME)
 	set(${OUT_VAR} ${CMAKE_MATCH_1} PARENT_SCOPE)
 endfunction()
 
-proxygen_pinned_revision(FOLLY_REVISION folly)
-proxygen_pinned_revision(WANGLE_REVISION wangle)
-proxygen_pinned_revision(MVFST_REVISION mvfst)
+proxygen_pinned_revision(FOLLY_REVISION facebook folly)
+proxygen_pinned_revision(FIZZ_REVISION facebookincubator fizz)
+proxygen_pinned_revision(WANGLE_REVISION facebook wangle)
+proxygen_pinned_revision(MVFST_REVISION facebook mvfst)
 
 set(FOLLY_GIT_REPOSITORY "https://github.com/facebook/folly.git")
 set(FIZZ_GIT_REPOSITORY "https://github.com/facebookincubator/fizz.git")

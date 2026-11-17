@@ -32,8 +32,8 @@ struct MetadataError
 	MimeID mime_id,
 	std::filesystem::path path );
 
-// The caller keeps cluster and metadata alive until completion. Metadata and file times
-// commit together, with cluster identity checks before the transaction and before commit.
+//! The caller keeps cluster and metadata alive until completion. Metadata and file times
+//! commit together, with cluster identity checks before the transaction and before commit.
 [[nodiscard]] runtime::Task< std::expected< void, MetadataError > > storeRecordMetadata(
 	db::DBContext& db,
 	RecordID record_id,
@@ -41,7 +41,7 @@ struct MetadataError
 	std::filesystem::path path,
 	const MetadataInfo& metadata );
 
-// The caller keeps cluster alive until completion. Parsing runs before acquiring a transaction.
+//! The caller keeps cluster alive until completion. Parsing runs before acquiring a transaction.
 [[nodiscard]] runtime::Task< std::expected< void, MetadataError > > parseAndStoreRecordMetadata(
 	db::DBContext& db,
 	RecordID record_id,

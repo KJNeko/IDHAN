@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <expected>
 #include <filesystem>
+#include <span>
 #include <vector>
 
 #include "fgl/defines.hpp"
@@ -23,9 +24,22 @@ class IOUring
 		std::size_t offset,
 		std::size_t len ) = 0;
 
-	virtual runtime::Task< void > write( NativeHandle handle, std::vector< std::byte > data, std::size_t offset ) = 0;
+	//! `data` must stay valid until the task completes.
+	virtual runtime::Task< void > write(
+		NativeHandle handle,
+		std::span< const std::byte > data,
+		std::size_t offset ) = 0;
 
 	virtual runtime::Task< int > removeFile( std::filesystem::path path ) = 0;
+
+	//! openat(2). Returns the new descriptor, or a negative errno.
+	virtual runtime::Task< int > openFile( std::filesystem::path path, int flags, unsigned int mode ) = 0;
+
+	//! close(2). Returns 0 or a negative errno.
+	virtual runtime::Task< int > closeFile( NativeHandle handle ) = 0;
+
+	//! fsync(2). Returns 0 or a negative errno.
+	virtual runtime::Task< int > syncFile( NativeHandle handle ) = 0;
 
 	//! renameat(2). Atomic, and requires both paths to be on the same filesystem.
 	virtual runtime::Task< int > renameFile( std::filesystem::path from, std::filesystem::path to ) = 0;
@@ -35,6 +49,10 @@ class IOUring
 
 	//! The error is a negative errno.
 	virtual runtime::Task< std::expected< std::uint64_t, int > > fileSize( std::filesystem::path path ) = 0;
+
+	//! Follows symlinks, like status(2). The error is a negative errno.
+	virtual runtime::Task< std::expected< std::filesystem::file_status, int > > fileStatus(
+		std::filesystem::path path ) = 0;
 
 	//! Associates a file handle with this backend. Required by IOCP; no-op for other backends.
 	virtual void associateHandle( [[maybe_unused]] NativeHandle handle ) {}
@@ -97,7 +115,15 @@ class [[nodiscard]] FileIOUring
 	//! length field is a __u32, so no single op can cover a file of 4 GiB or more.
 	[[nodiscard]] runtime::Task< std::vector< std::byte > > readAll() const;
 
-	[[nodiscard]] runtime::Task< void > write( std::vector< std::byte > data, std::size_t offset = 0 ) const;
+	//! `data` must stay valid until the task completes.
+	[[nodiscard]] runtime::Task< void > write( std::span< const std::byte > data, std::size_t offset = 0 ) const;
+
+	//! Releases the descriptor through the backend; the destructor closes it synchronously if this never runs.
+	//! Returns 0 or a negative errno.
+	[[nodiscard]] runtime::Task< int > close();
+
+	//! Flushes the file to storage. Returns 0 or a negative errno.
+	[[nodiscard]] runtime::Task< int > sync() const;
 
 	FileIOUring() = delete;
 };

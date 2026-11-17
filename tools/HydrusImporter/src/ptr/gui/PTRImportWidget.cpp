@@ -95,7 +95,8 @@ void PTRImportWidget::onSelectDirectory()
 {
 	const QString dir = QFileDialog::getExistingDirectory(
 		this,
-		"Select PTR files directory",
+		"Select\n"
+		"    PTR files directory",
 		ui->directoryPath->text(),
 		QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks );
 
@@ -157,7 +158,7 @@ void PTRImportWidget::onFileProcessed( int current, int total )
 	ui->fileCountLabel->setText( QString( "Files: %1 / %2" )
 	                                 .arg( QLocale::system().toString( current ) )
 	                                 .arg( QLocale::system().toString( total ) ) );
-	ui->subProgressBar->setValue( 0 ); // Reset sub-progress for next file
+	ui->subProgressBar->setValue( 0 );
 }
 
 void PTRImportWidget::onUpdateCompleted( const idhan::hydrus::ptr::PTRHistoryEntry& entry )

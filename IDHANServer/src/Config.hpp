@@ -17,7 +17,6 @@ struct std::hash< std::pair< std::string, std::string > >
 {
 	std::size_t operator()( const std::pair< std::string, std::string >& p ) const noexcept
 	{
-		// boost::hash_combine (matches the server's SHA256.hpp)
 		std::size_t seed { 0 };
 		seed ^= std::hash< std::string > {}( p.first ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
 		seed ^= std::hash< std::string > {}( p.second ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
@@ -29,7 +28,6 @@ namespace idhan::config
 {
 using ConfigType = std::variant< std::string, std::size_t >;
 
-//! Locations to search for config info, Searches user path first, then the inverse of this list
 #if defined( __linux__ )
 constexpr std::array< std::string_view, 4 > config_paths {
 	{ "/usr/share/idhan/config.toml", "/etc/idhan/config.toml", "~/.config/idhan/config.toml", "./config.toml" }
@@ -123,7 +121,6 @@ template < typename T >
 		{
 			return std::string( value );
 		}
-		// Same ordering as tryGetEnv: bool is integral, so it has to be taken first.
 		else if constexpr ( std::is_same_v< T, bool > )
 		{
 			if ( const auto parsed { parseBool( value ) } ) return *parsed;
@@ -356,7 +353,6 @@ template < typename T >
 
 	if ( auto result = tryGetEnv< T >( group, name ); result ) return *result;
 
-	// --config replaces the file search outright: when one was named, no other file is consulted.
 	if ( const auto user_config_path { getUserConfigPath() }; !user_config_path.empty() )
 	{
 		return getValueFromFile< T >( user_config_path, group, name );

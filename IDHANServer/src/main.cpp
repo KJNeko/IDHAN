@@ -123,13 +123,7 @@ void checkSystemLocale()
 
 int main( int argc, char** argv )
 {
-	// Folly singletons (e.g. getGlobalCPUExecutor()) abort if requested before the vault
-	// considers registration finished; this project has no other folly::init() call.
 	folly::SingletonVault::singleton()->registrationComplete();
-
-	mallopt( M_ARENA_MAX, 2 );
-	mallopt( M_MMAP_THRESHOLD, 1024 * 1024 * 128 );
-	mallopt( M_MMAP_MAX, 0 );
 
 	using namespace idhan;
 

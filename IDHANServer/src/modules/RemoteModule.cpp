@@ -8,7 +8,6 @@
 namespace idhan::modules
 {
 
-//! Copies a blob's bytes out into an owned buffer.
 [[nodiscard]] std::vector< std::byte > toVector( const ipc::Blob& blob )
 {
 	const auto bytes { blob.bytes() };

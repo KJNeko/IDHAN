@@ -28,11 +28,10 @@ namespace idhan::hydrus::ptr
 //! PTR id→value lookup tables, accumulated from the definitions updates.
 struct TranslationTables
 {
-	std::unordered_map< int, std::string > hash_id_to_sha256; // service_hash_id → hex SHA-256
-	std::unordered_map< int, std::string > tag_id_to_tag; // service_tag_id → "namespace:subtag"
+	std::unordered_map< int, std::string > hash_id_to_sha256;
+	std::unordered_map< int, std::string > tag_id_to_tag;
 };
 
-//! Running counts of what applying a content update produced.
 struct ContentStats
 {
 	int records_created = 0;
@@ -60,8 +59,7 @@ Q_DECLARE_METATYPE( idhan::hydrus::ptr::PTRHistoryEntry )
 namespace idhan::hydrus::ptr
 {
 
-//! QRunnable that imports downloaded PTR update files from a directory into IDHAN, applying them in
-//! dependency order and in batches. Cancellable via requestCancel(); progress via the signals below.
+//! Imports PTR updates in dependency order; supports concurrent downloads and cancellation.
 class PTRImportWorker : public QObject, public QRunnable
 {
 	Q_OBJECT
@@ -95,15 +93,18 @@ class PTRImportWorker : public QObject, public QRunnable
 	//! (or inferred as "running" from metadata.ptrupdate's mtime if that file doesn't exist yet).
 	struct DownloadStatus
 	{
-		std::string state; // "running" | "done" | "error" | "cancelled"
+		std::string state; //!< "running" | "done" | "error" | "cancelled"
 		std::chrono::seconds heartbeat_age;
 	};
 
 	void loadMetadata();
-	bool processInOrder(); // returns true if cancelled mid-run
+
+	//! Returns true when cancelled before all updates are imported.
+	bool processInOrder();
+
 	DownloadStatus readDownloadStatus() const;
-	//! Blocks (polling) until file_path exists, the downloader reports a terminal state, its
-	//! heartbeat goes stale, or cancellation is requested. Returns true iff the file now exists.
+
+	//! Waits for a file or downloader shutdown, stall, or cancellation; true means the file exists.
 	bool waitForFile( const std::filesystem::path& file_path );
 
 	ContentStats processSingleContentFile(
@@ -120,9 +121,7 @@ class PTRImportWorker : public QObject, public QRunnable
 	//! Imports every chunk the manifest lists. Returns true if cancelled mid-run.
 	bool processCompacted( idhan::TagDomainID domain_id );
 
-	//! Creates any tag in \p chunk's string table not yet in m_ptr_tag_to_idhan, then returns the
-	//! chunk's local string indices resolved to IDHAN TagIDs. Index i of the result corresponds to
-	//! chunk.strings[i]; an entry is 0 if the tag could not be created.
+	//! Returns IDs in chunk.strings order, creating missing tags; failed entries are zero.
 	std::vector< idhan::TagID > resolveChunkTags( const Chunk& chunk, const QString& progress_prefix );
 
 	ContentStats importChunk( const Chunk& chunk, idhan::TagDomainID domain_id, const QString& progress_prefix );
@@ -136,7 +135,6 @@ class PTRImportWorker : public QObject, public QRunnable
 	MetadataUpdate m_metadata;
 	std::unordered_set< std::string > m_imported_hashes;
 
-	//! True when the directory holds compacted output rather than raw update files.
 	bool m_compacted { false };
 	CompactManifest m_manifest;
 

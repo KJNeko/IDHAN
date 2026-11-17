@@ -14,6 +14,15 @@ namespace idhan::db
 {
 class DBContext;
 
+struct UrlRecordLookup
+{
+	bool known_direct {};
+	std::vector< RecordID > record_ids;
+};
+
+//! Takes a normalized URL and includes every associated record, even if its file is missing.
+[[nodiscard]] runtime::Task< UrlRecordLookup > recordsForUrl( DBContext& db, std::string url );
+
 struct RecordFileState
 {
 	RecordID record_id;
@@ -39,12 +48,11 @@ struct ClusterRecordFile
 	DBContext& db,
 	const SHA256& hash );
 
-// At least one equivalent URL must be classified as 'file'; all equivalent mappings
-// must identify the same stored record, including aliases of other URL types.
-[[nodiscard]] runtime::Task< std::optional< RecordID > > findStoredDirectRecordByUrl(
-	DBContext& db,
-	std::string url,
-	std::vector< std::string > ephemeral_query = {} );
+//! The normalized URL must be classified as 'file' and map to exactly one stored record.
+[[nodiscard]] runtime::Task< std::optional< RecordID > > findStoredDirectRecordByUrl( DBContext& db, std::string url );
+
+//! Takes a normalized URL. Includes page and source URLs; excludes records whose files are no longer stored.
+[[nodiscard]] runtime::Task< std::vector< SHA256 > > storedRecordHashesForUrl( DBContext& db, std::string url );
 
 [[nodiscard]] runtime::Task< void > markDirectUrls( DBContext& db, std::vector< std::string > urls );
 
@@ -63,7 +71,7 @@ struct ClusterRecordFile
 	std::string extension,
 	filesystem::FileTimes times );
 
-// Keyset pagination bounds preflight memory without keeping a database connection leased during I/O.
+//! Keyset pagination bounds preflight memory without keeping a database connection leased during I/O.
 [[nodiscard]] runtime::Task< std::vector< ClusterRecordFile > > clusterRecordFiles(
 	DBContext& db,
 	ClusterID cluster_id,

@@ -76,8 +76,8 @@ struct RecordInfoBatch
 	std::vector< RecordID > missing {};
 };
 
-//! batch.records mirrors record_ids exactly: same order, same repeats. Ids not found go into
-//! batch.missing instead, in the same relative order.
+//! batch.records follows record_ids' order, repeats included, skipping ids that were not found.
+//! Those go into batch.missing, in the same relative order.
 [[nodiscard]] runtime::Task< RecordInfoBatch > collectRecordInfo(
 	std::vector< RecordID > record_ids,
 	db::DBContext& db );

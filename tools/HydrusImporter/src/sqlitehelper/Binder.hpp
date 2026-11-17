@@ -13,9 +13,8 @@
 namespace idhan::hydrus
 {
 
-//! Fluent SQLite statement wrapper for the Hydrus import: bind parameters with operator<<, then
-//! execute and consume results with operator>> (into a value, a std::optional, a tuple, or a per-row
-//! callback). This operates directly on sqlite3.
+//! Fluent SQLite statement wrapper: bind parameters with operator<<, then execute and consume
+//! results with operator>> (into a value, a std::optional, a tuple, or a per-row callback).
 class Binder
 {
 	sqlite3* ptr;
@@ -164,7 +163,6 @@ class Binder
 				}
 			case SQLITE_DONE:
 				{
-					//Help hint to the compiler that it shouldn't keep an empty tuple around
 					if constexpr ( sizeof...( Ts ) > 0 ) tpl_opt = std::nullopt;
 					return;
 				}

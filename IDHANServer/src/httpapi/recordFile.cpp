@@ -14,7 +14,8 @@
 #include "filesystem/recordFilePath.hpp"
 #include "idhan/SHA256.hpp"
 #include "idhan/db/DBContext.hpp"
-#include "idhan/http/FileResponse.hpp"
+#include "idhan/http/response/FileResponse.hpp"
+#include "idhan/http/routing/ReflectedRoutes.hpp"
 #include "recordValidator.hpp"
 
 namespace idhan::httpapi
@@ -37,22 +38,26 @@ namespace idhan::httpapi
 http::HTTPTask< http::Response > recordFileResponse(
 	db::DBContext& db,
 	http::RequestContext& context,
-	const RecordID record_id )
+	const RecordID record_id,
+	const FetchRecordFileQuery& parameters )
 {
-	const auto download_e { context.parameters().optional< bool >( "download" ) };
-	if ( !download_e ) co_return http::Response::error( 400, download_e.error().message );
-
 	db::DBBindings bindings {};
 	bindings.bind( record_id );
 
 	auto rows {
 		co_await db
 			.query(
-				"SELECT sha256, mime.name AS mime_name "
-				"FROM records "
-				"JOIN file_info ON records.record_id = file_info.record_id "
-				"LEFT JOIN mime ON file_info.mime_id = mime.mime_id "
-				"WHERE records.record_id = $1 AND file_info.cluster_id IS NOT NULL",
+				//language=postgresql
+				R"SQL(
+					SELECT
+					    sha256,
+					    mime.name AS mime_name
+					FROM records
+					    JOIN file_info ON records.record_id = file_info.record_id
+					    LEFT JOIN mime ON file_info.mime_id = mime.mime_id
+					WHERE records.record_id = $1
+					    AND file_info.cluster_id IS NOT NULL
+				)SQL",
 				std::move( bindings ) )
 			.rows< std::span< const std::byte >, std::optional< std::string > >()
 	};
@@ -64,8 +69,14 @@ http::HTTPTask< http::Response > recordFileResponse(
 		const auto state_rows {
 			co_await db
 				.query(
-					"SELECT cluster_delete_time IS NOT NULL, cluster_store_time IS NOT NULL "
-					"FROM file_info WHERE record_id = $1",
+					//language=postgresql
+					R"SQL(
+						SELECT
+						    cluster_delete_time IS NOT NULL,
+						    cluster_store_time IS NOT NULL
+						FROM file_info
+						WHERE record_id = $1
+					)SQL",
 					std::move( state_bindings ) )
 				.rows< bool, bool >()
 		};
@@ -130,33 +141,21 @@ http::HTTPTask< http::Response > recordFileResponse(
 		.content_type = mime_name.value_or( "application/octet-stream" ),
 		.filename = sanitizeFilename( filename ),
 		.immutable = true,
-		.attachment = download_e->value_or( false ),
+		.attachment = parameters.download.value_or( false ),
 	};
 
 	co_return co_await http::FileResponse::create( context, std::move( file ), std::move( metadata ) );
 }
 
-static http::HTTPTask< http::Response > fetchRecordFile( db::DBContext& db, http::RequestContext context )
+http::HTTPTask< http::EncodedResult< http::RequestBody, "*/*" > > fetchRecordFile(
+	db::DBContext& db,
+	http::RequestContext context,
+	http::Query< FetchRecordFileQuery > query )
 {
-	const auto record_id_e { context.parameters().scalar< RecordID >( "record_id" ) };
-	if ( !record_id_e ) co_return http::Response::error( 400, record_id_e.error().message );
+	const auto record_id { *context.parameters().scalar< RecordID >( "record_id" ) };
 
-	co_return co_await recordFileResponse( db, context, *record_id_e );
-}
-
-http::RouteDefinition recordFileRoute( db::DBContext& db, std::string path )
-{
-	auto handler = [ &db ]( http::RequestContext context ) -> http::HTTPTask< http::Response >
-	{ co_return co_await fetchRecordFile( db, std::move( context ) ); };
-
-	return http::RouteDefinition {
-		http::RouteMetadata {
-			proxygen::HTTPMethod::GET,
-			std::move( path ),
-			{ recordIdPathParameter() },
-			{ apiAuthValidation( db ), recordExistsValidation( db ) } },
-		std::move( handler )
-	};
+	co_return http::encodedResponse< http::RequestBody, "*/*" >(
+		co_await recordFileResponse( db, context, record_id, query.value ) );
 }
 
 } // namespace idhan::httpapi

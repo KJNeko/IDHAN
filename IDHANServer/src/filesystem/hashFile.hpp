@@ -7,6 +7,6 @@
 
 namespace idhan::filesystem
 {
-// Reads in bounded chunks; the caller must keep any pinned cluster path alive until completion.
+//! Reads in bounded chunks; the caller must keep any pinned cluster path alive until completion.
 [[nodiscard]] runtime::Task< SHA256 > hashFile( std::filesystem::path path );
 } // namespace idhan::filesystem

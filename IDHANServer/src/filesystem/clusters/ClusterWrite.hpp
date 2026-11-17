@@ -9,8 +9,8 @@ namespace idhan::filesystem
 {
 class ClusterManager;
 
-// Owns the writer lock and transaction. Unfinished work rolls back on destruction;
-// only a successful commit publishes the new configuration snapshot.
+//! Owns the writer lock and transaction. Unfinished work rolls back on destruction;
+//! only a successful commit publishes the new configuration snapshot.
 class ClusterWrite
 {
 	friend class ClusterManager;
@@ -23,7 +23,7 @@ class ClusterWrite
 
 	ClusterWrite( ClusterWrite&& ) noexcept = default;
 
-	// Intentional borrowed access for transaction-local validation and writes.
+	//! Intentional borrowed access for transaction-local validation and writes.
 	[[nodiscard]] db::DBTransaction& transaction() { return m_transaction; }
 
 	[[nodiscard]] runtime::Task<> commit();

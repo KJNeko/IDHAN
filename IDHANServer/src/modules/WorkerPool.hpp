@@ -10,14 +10,6 @@
 namespace idhan::modules
 {
 
-struct WorkerPoolSnapshot
-{
-	std::size_t workers { 0 };
-	bool reporting { true };
-	std::vector< ipc::ModuleActivity > modules {};
-};
-
-//! Owns the worker process(es) for one module library and decides how long they live.
 class WorkerPool
 {
 	WorkerSettings m_settings;
@@ -55,7 +47,6 @@ class WorkerPool
 
 	[[nodiscard]] ModuleResidency residency() const { return m_residency; }
 
-	[[nodiscard]] WorkerPoolSnapshot snapshot();
 
 	//! Runs one call, retrying once in a fresh process if the worker died mid-flight.
 	[[nodiscard]] IDHANTask< std::shared_ptr< CallOutcome > > dispatch(

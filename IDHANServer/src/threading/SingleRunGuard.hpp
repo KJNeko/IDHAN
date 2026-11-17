@@ -5,7 +5,7 @@
 namespace idhan
 {
 
-// Owns a job's gate across coroutine suspension and releases it on every exit path.
+//! Owns a job's gate across coroutine suspension and releases it on every exit path.
 class SingleRunGuard
 {
 	std::atomic< bool >& m_running;

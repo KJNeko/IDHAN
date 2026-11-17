@@ -73,4 +73,4 @@ WriteAwaiter::~WriteAwaiter() = default;
 
 } // namespace idhan
 
-#endif // __linux__
+#endif

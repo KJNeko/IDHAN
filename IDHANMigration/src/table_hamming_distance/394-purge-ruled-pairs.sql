@@ -17,7 +17,7 @@ FROM hamming_distance hamming
            UNION ALL
            SELECT lesser_record_id, greater_record_id
            FROM unrelated_records) ruling,
-    LATERAL duplicate_group_members(ruling.lesser_record_id) AS left_member(record_id),
-    LATERAL duplicate_group_members(ruling.greater_record_id) AS right_member(record_id)
+        LATERAL duplicate_group_members(ruling.lesser_record_id) AS left_member(record_id),
+        LATERAL duplicate_group_members(ruling.greater_record_id) AS right_member(record_id)
 WHERE hamming.left_id = LEAST(left_member.record_id, right_member.record_id)
   AND hamming.right_id = GREATEST(left_member.record_id, right_member.record_id);

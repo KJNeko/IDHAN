@@ -20,10 +20,8 @@
 namespace idhan::ipc
 {
 
-//! Enough control-message space for MAX_FRAME_FDS descriptors.
 constexpr std::size_t CMSG_CAPACITY { CMSG_SPACE( sizeof( int ) * MAX_FRAME_FDS ) };
 
-//! Pulls any SCM_RIGHTS descriptors out of a received message into \p out.
 void collectFds( msghdr& message, std::vector< UniqueFd >& out )
 {
 	for ( cmsghdr* header { CMSG_FIRSTHDR( &message ) }; header != nullptr; header = CMSG_NXTHDR( &message, header ) )
@@ -38,7 +36,6 @@ void collectFds( msghdr& message, std::vector< UniqueFd >& out )
 	}
 }
 
-//! Writes every byte of \p data, retrying on interruption.
 [[nodiscard]] std::expected< void, std::string > sendAll( const int sock, const std::span< const std::byte > data )
 {
 	std::size_t sent { 0 };
@@ -222,7 +219,6 @@ std::expected< bool, std::string > FrameWriter::drain( const int sock )
 		if ( written < 0 )
 		{
 			if ( errno == EINTR ) continue;
-			// EWOULDBLOCK is EAGAIN on Linux, so testing both is redundant here.
 			if ( errno == EAGAIN ) return false;
 			return std::unexpected( errnoMessage( "writing frame failed" ) );
 		}
@@ -273,7 +269,6 @@ std::expected< std::vector< Frame >, std::string > FrameReader::read( const int 
 			if ( received < 0 )
 			{
 				if ( errno == EINTR ) continue;
-				// EWOULDBLOCK is EAGAIN on Linux, so testing both is redundant here.
 				if ( errno == EAGAIN ) break;
 				return std::unexpected( errnoMessage( "reading frame failed" ) );
 			}

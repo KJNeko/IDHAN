@@ -18,6 +18,12 @@ static http::ValidatedJson eventJson( const Json::Value& value )
 	return http::ValidatedJson::parse( Json::writeString( builder, value ) ).value();
 }
 
+static http::ValidatedJson statusJson( Json::Value value )
+{
+	value[ "type" ] = "status";
+	return eventJson( value );
+}
+
 JobEventHub::JobEventHub() : m_publisher( [ this ]( const std::stop_token stop ) { run( stop ); } )
 {}
 
@@ -57,10 +63,31 @@ void JobEventHub::remove( const JobID id )
 	std::lock_guard lock { m_mutex };
 	m_jobs.erase( id );
 	m_dirty.erase( id );
+	m_responses.erase( id );
 	Json::Value payload;
 	payload[ "job_id" ] = id;
 	payload[ "removed" ] = true;
-	server::events().remove( "job.status", std::to_string( id ), eventJson( payload ) );
+	server::events().remove( "job.status", std::to_string( id ), statusJson( std::move( payload ) ) );
+}
+
+http::SSEInitialEvent JobEventHub::snapshotEvent()
+{
+	std::vector< std::shared_ptr< JobTaskStatus > > statuses;
+	{
+		std::lock_guard lock { m_mutex };
+		for ( const auto& [ id, weak ] : m_jobs )
+		{
+			auto status { weak.lock() };
+			if ( status ) statuses.emplace_back( std::move( status ) );
+		}
+	}
+
+	Json::Value payload;
+	payload[ "type" ] = "snapshot";
+	payload[ "jobs" ] = Json::Value { Json::arrayValue };
+	for ( const auto& status : statuses ) payload[ "jobs" ].append( status->snapshot() );
+
+	return http::SSEInitialEvent { "job.snapshot", {}, eventJson( payload ) };
 }
 
 void JobEventHub::run( const std::stop_token stop )
@@ -85,11 +112,23 @@ void JobEventHub::run( const std::stop_token stop )
 			try
 			{
 				auto snapshot { status->snapshot() };
-				auto encoded { eventJson( snapshot ) };
+				auto encoded { statusJson( snapshot ) };
 				lock.lock();
 				if ( !m_jobs.contains( id ) ) continue;
 
-				server::events().publish( "job.status", std::to_string( id ), std::move( encoded ) );
+				server::events().publish(
+					"job.status", std::to_string( id ), std::move( encoded ), { .retain_snapshot = false } );
+				if ( snapshot.isMember( "response" )
+				     && ( !m_responses.contains( id ) || m_responses.at( id ) != snapshot[ "response" ] ) )
+				{
+					m_responses[ id ] = snapshot[ "response" ];
+					Json::Value payload;
+					payload[ "type" ] = "response";
+					payload[ "job_id" ] = id;
+					payload[ "response" ] = snapshot[ "response" ];
+					server::events().publish(
+						"job.response", std::to_string( id ), eventJson( payload ), { .retain_snapshot = false } );
+				}
 			}
 			catch ( const std::exception& error )
 			{

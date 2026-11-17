@@ -12,7 +12,6 @@ namespace idhan
 
 struct ConnectionArguments;
 
-//! This class is used for the inital setup, migrations, and management of the idhan database.
 class ManagementConnection
 {
 	pqxx::connection connection;

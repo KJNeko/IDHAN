@@ -88,7 +88,8 @@ bool DBOperation::send( PGconn* connection, const bool pipeline )
 			 static_cast< int >( m_options.result_format ) )
 	     != 1 )
 		return false;
-	if ( pipeline && PQpipelineSync( connection ) != 1 ) return false;
+	// Preserve each query's transaction/error boundary; the connection worker flushes the queued batch.
+	if ( pipeline && PQsendPipelineSync( connection ) != 1 ) return false;
 
 	std::lock_guard lock( m_mutex );
 	if ( m_phase != OperationPhase::queued ) throw std::logic_error( "Sent database operation was not queued" );

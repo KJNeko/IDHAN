@@ -12,15 +12,37 @@ runtime::Task< bool > keyExists( const SHA256& key_hash, db::DBContext& db )
 	db::DBBindings bindings {};
 	bindings.bind( std::vector< std::byte > { raw.begin(), raw.end() } );
 
-	const auto rows { co_await db.query( "SELECT 1 FROM auth_keys WHERE key_hash = $1 LIMIT 1", std::move( bindings ) )
-		                  .rows< std::int32_t >() };
+	const auto rows{
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    1
+					FROM auth_keys
+					WHERE key_hash = $1
+					LIMIT 1
+				)SQL",
+					 std::move( bindings ) )
+				 .rows< std::int32_t >()
+	};
 
 	co_return !rows.empty();
 }
 
 runtime::Task< std::size_t > keyCount( db::DBContext& db )
 {
-	const auto rows { co_await db.query( "SELECT count(*) FROM auth_keys" ).rows< std::int64_t >() };
+	const auto rows{
+		co_await db
+				 .query(
+					 //language=postgresql
+					 R"SQL(
+					SELECT
+					    count(*)
+					FROM auth_keys
+				)SQL" )
+				 .rows< std::int64_t >()
+	};
 
 	if ( rows.empty() ) co_return 0;
 

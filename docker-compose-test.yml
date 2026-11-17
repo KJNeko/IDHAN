@@ -1,0 +1,79 @@
+name: idhan-tests
+services:
+  postgres:
+    image: pgvector/pgvector:pg18-trixie
+    environment:
+      POSTGRES_USER: idhan
+      POSTGRES_PASSWORD: idhan
+      POSTGRES_DB: idhan-test
+      POSTGRES_INITDB_ARGS: "--locale=C.UTF-8"
+    command: [ "postgres", "-c", "shared_preload_libraries=pg_stat_statements" ]
+    shm_size: 256mb
+    tmpfs:
+      - /var/lib/postgresql
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "idhan", "-d", "idhan-test" ]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  server:
+    build:
+      context: .
+      args:
+        BUILD_JOBS: "${BUILD_JOBS:-4}"
+        IDHAN_DISABLE_API_AUTH: "ON"
+        CMAKE_BUILD_TYPE: "Debug"
+    environment:
+      IDHAN_DATABASE_HOST: postgres
+      IDHAN_DATABASE_USER: idhan
+      IDHAN_DATABASE_PASSWORD: idhan
+      IDHAN_DATABASE_DATABASE: idhan-test
+      IDHAN_THUMBNAILS_PATH: /media/thumbnails
+      IDHAN_SERVER_TEMP_PATH: /tmp/idhan
+    # All test files are disposable, including across container restarts.
+    # Register file clusters beneath /media through the API.
+    tmpfs:
+      - /media
+      - /tmp
+    depends_on:
+      postgres:
+        condition: service_healthy
+        restart: true
+    healthcheck:
+      test: [ "CMD", "curl", "--fail", "--silent", "http://localhost:16609/health" ]
+      interval: 2s
+      timeout: 5s
+      start_period: 60s
+      retries: 30
+
+  # Fixed-destination relays expose local ports without giving the server a
+  # route to external networks. No generic HTTP or SOCKS proxy is provided.
+  api-gateway:
+    image: alpine/socat:latest
+    command: [ "TCP-LISTEN:16609,fork,reuseaddr", "TCP:server:16609" ]
+    ports:
+      - "127.0.0.1:16609:16609"
+    networks: [ default, ingress ]
+    depends_on:
+      server:
+        condition: service_healthy
+        restart: true
+
+  postgres-gateway:
+    image: alpine/socat:latest
+    command: [ "TCP-LISTEN:5432,fork,reuseaddr", "TCP:postgres:5432" ]
+    ports:
+      - "127.0.0.1:55432:5432"
+    networks: [ default, ingress ]
+    depends_on:
+      postgres:
+        condition: service_healthy
+        restart: true
+
+# Only the fixed-destination relays join ingress. Runtime application services
+# stay isolated; image builds retain network access to install dependencies.
+networks:
+  default:
+    internal: true
+  ingress:

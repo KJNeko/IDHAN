@@ -19,7 +19,6 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
-// Custom deleters for FFmpeg types
 struct AVFormatContextDeleter
 {
 	void operator()( AVFormatContext* ctx ) const
@@ -148,7 +147,6 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > FFMPEGThumbnailer::cre
 		return std::unexpected( idhan::ModuleError( "Failed to find stream info" ) );
 	}
 
-	// Find video stream
 	int video_stream_index = -1;
 	AVCodecParameters* codec_params = nullptr;
 	for ( unsigned int i = 0; i < format_context->nb_streams; i++ )
@@ -166,17 +164,15 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > FFMPEGThumbnailer::cre
 		return std::unexpected( idhan::ModuleError( "No video stream found" ) );
 	}
 
-	// Calculate 10% duration and seek to it
 	const auto& stream { format_context->streams[ video_stream_index ] };
 	const auto duration { av_rescale_q( format_context->duration, AV_TIME_BASE_Q, stream->time_base ) };
-	const auto target_timestamp { duration / 10 }; // 10% of the total duration
+	const auto target_timestamp{ duration / 10 };
 
 	if ( av_seek_frame( format_context.get(), video_stream_index, target_timestamp, AVSEEK_FLAG_BACKWARD ) < 0 )
 	{
 		return std::unexpected( idhan::ModuleError( "Failed to seek to timestamp" ) );
 	}
 
-	// Find and open codec
 	const AVCodec* codec = avcodec_find_decoder( codec_params->codec_id );
 	if ( !codec )
 	{
@@ -203,7 +199,6 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > FFMPEGThumbnailer::cre
 		return std::unexpected( idhan::ModuleError( "Failed to open codec" ) );
 	}
 
-	// Read frames until we get a valid video frame
 	const std::unique_ptr< AVPacket, AVPacketDeleter > packet( av_packet_alloc() );
 	const std::unique_ptr< AVFrame, AVFrameDeleter > frame( av_frame_alloc() );
 
@@ -236,7 +231,6 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > FFMPEGThumbnailer::cre
 		return std::unexpected( idhan::ModuleError( "Failed to decode frame" ) );
 	}
 
-	// Convert frame to RGB24 using swscale
 	std::unique_ptr< SwsContext, SwsContextDeleter > sws_context( sws_getContext(
 		codec_context->width,
 		codec_context->height,
@@ -278,12 +272,10 @@ std::expected< idhan::ThumbnailInfo, idhan::ModuleError > FFMPEGThumbnailer::cre
 		rgb_frame->data,
 		rgb_frame->linesize );
 
-	// Create packed buffer without alignment padding
 	const size_t packed_line_size = static_cast< std::size_t >( rgb_frame->width ) * 3;
 	const size_t packed_size = packed_line_size * static_cast< std::size_t >( rgb_frame->height );
 	std::vector< unsigned char > packed_data( packed_size );
 
-	// Copy data line by line to remove padding
 	for ( int y = 0; y < rgb_frame->height; ++y )
 	{
 		std::memcpy(

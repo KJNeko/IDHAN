@@ -1,8 +1,8 @@
 #pragma once
 #include "ThumbnailerModule.hpp"
 
-//! Thumbnailer for archives: composites thumbnails of contained files into a grid. Re-entrant (it
-//! asks the host to thumbnail members), bounded by a thread_local depth guard.
+//! Thumbnailer for archives: composites thumbnails of contained files into a grid. Re-entrant: it
+//! asks the host to thumbnail members, and the host's callback depth limit bounds the recursion.
 class ArchiveThumbnailer : public idhan::ThumbnailerModuleI
 {
   public:
@@ -17,7 +17,7 @@ class ArchiveThumbnailer : public idhan::ThumbnailerModuleI
 
 	[[nodiscard]] bool threadSafe() override { return true; }
 
-	// the member grid is composited and encoded through vips
+	//! The member grid is composited and encoded through vips
 	[[nodiscard]] bool singleThreaded() override { return false; }
 
 	[[nodiscard]] std::vector< idhan::MimeID > handleableMimes() override;

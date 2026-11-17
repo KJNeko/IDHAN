@@ -38,17 +38,14 @@ struct FlattenStats
 	std::uint64_t used_tags { 0 };
 };
 
-//! The index of a compacted directory. Its presence is what marks the directory as compacted,
-//! which is why the flattener writes it last: a cancelled run leaves no manifest and therefore
-//! cannot be half-imported.
+//! The index of a compacted directory. Written last; its presence marks the directory as compacted.
 struct CompactManifest
 {
 	std::uint32_t format_version { CHUNK_FORMAT_VERSION };
 	std::int32_t first_update_index { 0 };
 	std::int32_t last_update_index { 0 };
 	std::uint64_t max_records_per_chunk { 0 };
-	//! Whether the run dropped terminal deletes instead of writing them. Records in these chunks
-	//! then carry adds only, which the Import tab surfaces so a delete-free import is explainable.
+	//! Whether the run dropped terminal deletes instead of writing them.
 	bool discard_terminal_deletes { false };
 	std::vector< ChunkEntry > chunks {};
 	std::string relations_file {};

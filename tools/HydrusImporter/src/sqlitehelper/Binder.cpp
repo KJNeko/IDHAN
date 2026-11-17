@@ -17,7 +17,6 @@ Binder::Binder( sqlite3* db, const std::string_view sql ) : ptr( db )
 
 	if ( unused != nullptr && strlen( unused ) > 0 )
 	{
-		//Check if the string is just empty (\n or \t)
 		const std::string_view leftovers { unused };
 		auto itter { leftovers.begin() };
 		while ( itter != leftovers.end() )

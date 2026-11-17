@@ -12,7 +12,7 @@ namespace idhan::hydrus
 
 class ImportServiceLabel;
 
-// All methods run on the GUI thread; workers deliver operation changes through queued signals.
+//! All methods run on the GUI thread; workers deliver operation changes through queued signals.
 class ImportServiceStatus final : public QObject
 {
 	ImportServiceLabel* m_label;

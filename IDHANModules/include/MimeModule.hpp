@@ -27,10 +27,8 @@ class FGL_EXPORT MimeModuleI : public ModuleBase
 	//! \return One of the constants in MimeIDs.hpp, or a ModuleError if the file could not be read.
 	[[nodiscard]] virtual std::expected< MimeID, ModuleError > parseMime( ModuleCallData& data ) = 0;
 
-	//! \return true if \p mime_id is one of handleableMimes().
 	[[nodiscard]] bool canExpandMime( MimeID mime_id );
 
-	//! \return ModuleTypeFlags::MIME_PARSE.
 	ModuleType type() override;
 };
 

@@ -170,7 +170,6 @@ void PTRDownloader::startSync()
 
 	loadMetadata();
 
-	// Try loading cached metadata from disk first
 	if ( loadCachedMetadata() )
 	{
 		spdlog::info( "Using cached metadata (less than {}h old)", METADATA_MAX_AGE.count() );
@@ -258,7 +257,10 @@ void PTRDownloader::buildDownloadQueue()
 			}
 			else
 			{
-				spdlog::debug( "Update sequence complete: indices 0 to {} ({} updates)", max_index, indices.size() );
+				spdlog::debug( "Update sequence complete:\n"
+							   "    indices 0 to {} ({} updates)",
+							   max_index,
+							   indices.size() );
 			}
 		}
 	}
@@ -334,7 +336,10 @@ void PTRDownloader::buildDownloadQueue()
 		m_total_downloads,
 		m_metadata.updates.size() );
 	for ( const auto& u : m_metadata.updates )
-		spdlog::trace( "  update index={}: {} hashes", u.index, u.hashes.size() );
+		spdlog::trace( "  update\n"
+					   "    index = {} : {} hashes",
+					   u.index,
+					   u.hashes.size() );
 
 	if ( m_total_downloads == 0 )
 	{
@@ -435,7 +440,6 @@ void PTRDownloader::onMetadataReply( QNetworkReply* reply )
 			m_port,
 			( m_port == 45871 ) ? "" : " (default PTR port is 45871)" );
 
-		// Log raw response if available
 		const auto response_data = reply->readAll();
 		if ( !response_data.isEmpty() )
 		{
@@ -460,7 +464,6 @@ void PTRDownloader::onMetadataReply( QNetworkReply* reply )
 
 	try
 	{
-		// Save raw metadata to disk before processing
 		const auto meta_path = m_output_dir / METADATA_FILENAME;
 		{
 			std::ofstream file( meta_path, std::ios::binary );
@@ -564,7 +567,10 @@ void PTRDownloader::downloadNextUpdate()
 		[ this, reply, hash_hex ]( QNetworkReply::NetworkError code )
 		{
 			spdlog::error(
-				"Update download error for {}: code={}, msg={}, http_status={}",
+				"Update\n"
+				"    download error for {} : code = {},\n"
+				"    msg = {},\n"
+				"    http_status = {}",
 				hash_hex,
 				static_cast< int >( code ),
 				reply->errorString().toStdString(),
@@ -585,7 +591,10 @@ void PTRDownloader::onUpdateReply( QNetworkReply* reply, QString hash_hex )
 	const auto error_code = reply->error();
 
 	spdlog::trace(
-		"Update reply for {}: http_status={}, error_code={}, msg={}",
+		"Update\n"
+		"    reply for {} : http_status = {},\n"
+		"    error_code = {},\n"
+		"    msg = {}",
 		hash_hex.toStdString(),
 		http_status,
 		static_cast< int >( error_code ),
@@ -595,7 +604,9 @@ void PTRDownloader::onUpdateReply( QNetworkReply* reply, QString hash_hex )
 
 	if ( m_cancelled )
 	{
-		spdlog::warn( "Update download cancelled for {}", hash_hex.toStdString() );
+		spdlog::warn( "Update\n"
+					  "    download cancelled for {}",
+					  hash_hex.toStdString() );
 		m_state = State::Idle;
 		emit finished( false, "Cancelled" );
 		return;
@@ -610,7 +621,6 @@ void PTRDownloader::onUpdateReply( QNetworkReply* reply, QString hash_hex )
 			http_status,
 			error_str );
 
-		// Log response body for debugging
 		const auto response_data = reply->readAll();
 		if ( !response_data.isEmpty() )
 		{
@@ -636,7 +646,6 @@ void PTRDownloader::onUpdateReply( QNetworkReply* reply, QString hash_hex )
 		}
 		else
 		{
-			// Verify SHA-256 matches filename
 			const auto actual_hash = QCryptographicHash::hash( data, QCryptographicHash::Sha256 ).toHex();
 			const auto expected_hash = hash_hex.toLower();
 			if ( actual_hash != expected_hash )
@@ -725,7 +734,6 @@ MetadataUpdate PTRDownloader::parseMetadataBytes( const QByteArray& data )
 	// Wire format: [21, 1, {"list_sim_sim": [["metadata_slice", [37, 1, metadata_data]], ...], ...}]
 	if ( root.isArray() && root.size() >= 3 && root[ 0 ].asInt() == SERIALISABLE_TYPE_METADATA )
 	{
-		// Already a bare MetadataUpdate tuple, nothing to unwrap
 	}
 	else if ( root.isArray() && root.size() >= 3 && root[ 0 ].asInt() == HYDRUS_TYPE_DICTIONARY )
 	{
@@ -790,7 +798,15 @@ void PTRDownloader::processMetadataResponse( const QByteArray& data )
 
 	for ( const auto& u : new_meta.updates )
 	{
-		spdlog::trace( "  update index={}: {} hashes, begin={}, end={}", u.index, u.hashes.size(), u.begin, u.end );
+		spdlog::trace( "  update\n"
+					   "    index = {} : {} hashes,\n"
+					   "begin\n"
+					   "    = {},\n"
+					   "    end = {}",
+					   u.index,
+					   u.hashes.size(),
+					   u.begin,
+					   u.end );
 	}
 
 	this->m_metadata = std::move( new_meta );

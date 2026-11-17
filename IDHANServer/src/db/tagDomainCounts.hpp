@@ -17,8 +17,8 @@ struct TagDomainCounts
 	std::int64_t display_count;
 };
 
-// Empty selection means all domains. Unused domains are returned with zero counts,
-// ordered by domain ID. Callers validate requested domain existence separately.
+//! Empty selection means all domains. Unused domains are returned with zero counts,
+//! ordered by domain ID. Callers validate requested domain existence separately.
 [[nodiscard]] runtime::Task< std::vector< TagDomainCounts > > tagDomainCounts(
 	DBContext& db,
 	TagID tag_id,

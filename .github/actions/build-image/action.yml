@@ -62,9 +62,7 @@ runs:
         cache-map: |
           {
             ".cache/docker-build/ccache": {"target": "/root/.ccache", "id": "idhan-ccache-v1"},
-            ".cache/docker-build/npm-amd64": {"target": "/root/.npm", "id": "idhan-npm-v1-amd64"},
-            ".cache/docker-build/npm-amd64v2": {"target": "/root/.npm", "id": "idhan-npm-v1-amd64v2"},
-            ".cache/docker-build/npm-amd64v3": {"target": "/root/.npm", "id": "idhan-npm-v1-amd64v3"},
+            ".cache/docker-build/parser-npm": {"target": "/root/.npm", "id": "idhan-parser-npm-v1", "sharing": "locked"},
             ".cache/docker-build/pnpm": {"target": "/pnpm-store", "id": "idhan-pnpm-v1", "sharing": "locked"}
           }
 

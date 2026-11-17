@@ -62,6 +62,8 @@ class JobRuntime
 
 	[[nodiscard]] std::vector< std::shared_ptr< JobContext > > getAllJobs();
 
+	[[nodiscard]] idhan::http::SSEInitialEvent eventSnapshot();
+
 	JobRuntime();
 	~JobRuntime();
 

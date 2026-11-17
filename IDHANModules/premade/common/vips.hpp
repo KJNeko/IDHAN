@@ -57,7 +57,6 @@ class VipsModuleSource
 		return static_cast< gint64 >( *count );
 	}
 
-	//! Serves a seek signal.
 	static gint64 onSeek( VipsSourceCustom*, const gint64 offset, const int whence, void* const user )
 	{
 		auto* const self { static_cast< VipsModuleSource* >( user ) };
