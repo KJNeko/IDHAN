@@ -13,7 +13,7 @@ std::shared_ptr< ParserInstance > CompiledScript::createInstance()
 	return std::shared_ptr< ParserInstance >( new ParserInstance( shared_from_this() ) );
 }
 
-std::shared_ptr< CompiledScript > ParserScript::compileModule( std::shared_ptr< IDHANJSRuntime > ctx ) const
+std::shared_ptr< CompiledScript > ParserScript::compileModule( const std::shared_ptr< IDHANJSRuntime >& ctx ) const
 {
 	auto value { this->eval( ctx, JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY ) };
 
@@ -24,7 +24,11 @@ std::shared_ptr< CompiledScript > ParserScript::compileModule( std::shared_ptr< 
 
 	if ( size <= 0 || bytes == nullptr ) throw std::runtime_error( "Failed to compile script" );
 
-	return std::make_shared< CompiledScript >( bytes, size, ctx, m_filename );
+	auto compiled { std::make_shared< CompiledScript >( bytes, size, m_filename ) };
+
+	js_free( ctx->context(), bytes );
+
+	return compiled;
 }
 
 JSReturn ParserScript::eval( const std::shared_ptr< IDHANJSRuntime >& ctx, int eval_type ) const
