@@ -2,9 +2,10 @@
 
 #include <memory>
 
+#include "JSReturn.hpp"
 #include "quickjs.h"
 
-class IDHANJSRuntime
+class IDHANJSRuntime : public std::enable_shared_from_this< IDHANJSRuntime >
 {
 	struct RuntimeDeleter
 	{
@@ -32,4 +33,21 @@ class IDHANJSRuntime
 	IDHANJSRuntime();
 
 	[[nodiscard]] JSContext* context() const noexcept;
+	[[nodiscard]] JSRuntime* runtime() const noexcept;
+
+	[[nodiscard]] JSReturn newObject();
+
+	[[nodiscard]] bool isRegisteredClass( JSClassID class_id ) const;
+
+	[[nodiscard]] int newClass( JSClassID class_id, const JSClassDef* definition ) const;
+	void setClassProto( JSClassID class_id, const JSReturn& proto ) const;
+	void setClassProto( JSClassID class_id, JSValue proto ) const;
+
+	[[nodiscard]] JSReturn createConstructor( const char* name, JSCFunction* callback, int arg_count );
+
+	[[nodiscard]] JSReturn createFunction( const char* name, JSCFunction* callback, int argument_count );
+
+	[[nodiscard]] JSReturn getGlobalObject() noexcept;
+
+	[[nodiscard]] int setConstructor( const JSReturn& constructor, const JSReturn& proto ) const;
 };

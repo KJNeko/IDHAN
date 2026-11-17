@@ -5,6 +5,8 @@
 #include <stdexcept>
 #include <utility>
 
+#include "bindings/installBindings.hpp"
+
 std::string JSModule::errorMessage( const char* operation, const JSReturn& exception ) const
 {
 	std::string message { std::string( operation ) + " [" + m_filename + "]: " };
@@ -153,7 +155,7 @@ JSReturn ParserInstance::loadBytecode() const
 
 ParserInstance::ParserInstance( const std::shared_ptr< CompiledScript >& script ) :
   m_script( script ),
-  m_runtime( std::make_shared< IDHANJSRuntime >() ),
+  m_runtime( idhan::js::installBindings( std::make_shared< IDHANJSRuntime >() ) ),
   m_module( loadBytecode(), m_script->filename() )
 {}
 

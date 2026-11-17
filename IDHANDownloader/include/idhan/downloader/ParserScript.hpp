@@ -37,11 +37,7 @@ class CompiledScript : public std::enable_shared_from_this< CompiledScript >
 
 	auto size() const { return m_bytes.size(); }
 
-	[[nodiscard]] std::span< const std::uint8_t > bytecode() const noexcept
-	{
-		return m_bytes;
-		;
-	}
+	[[nodiscard]] std::span< const std::uint8_t > bytecode() const noexcept { return m_bytes; }
 };
 
 class ParserScript

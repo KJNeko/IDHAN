@@ -3,8 +3,10 @@
 #include <memory>
 #include <string>
 
-#include "IDHANJSRuntime.hpp"
 #include "fgl/defines.hpp"
+#include "quickjs.h"
+
+class IDHANJSRuntime;
 
 struct JSReturn
 {
@@ -12,6 +14,13 @@ struct JSReturn
 	JSValue m_value { JS_UNDEFINED };
 
 	FGL_DELETE_COPY( JSReturn );
+
+	JSReturn() = default;
+	explicit JSReturn( std::shared_ptr< IDHANJSRuntime > ctx );
+	JSReturn( std::shared_ptr< IDHANJSRuntime > ctx, JSValue value );
+
+	JSReturn( JSReturn&& other ) noexcept;
+	JSReturn& operator=( JSReturn&& other ) noexcept;
 
 	[[nodiscard]] bool isException() const;
 	[[nodiscard]] bool isUndefined() const;
@@ -25,14 +34,9 @@ struct JSReturn
 
 	// Missing properties remain JS_UNDEFINED; access exceptions throw.
 	[[nodiscard]] JSReturn getProperty( const char* name ) const;
+	[[nodiscard]] int setProperty( const char* name, const JSReturn& value ) const;
 
-	JSReturn( JSReturn&& other ) noexcept;
-	JSReturn& operator=( JSReturn&& other ) noexcept;
-
-	JSReturn() = default;
-
-	explicit JSReturn( std::shared_ptr< IDHANJSRuntime > ctx );
-	explicit JSReturn( std::shared_ptr< IDHANJSRuntime > ctx, JSValue value );
+	[[nodiscard]] JSValue dupValue() const;
 
 	~JSReturn();
 };
