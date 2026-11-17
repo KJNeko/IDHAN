@@ -13,7 +13,7 @@ class JSModule
 	JSReturn m_namespace;
 	std::string m_filename;
 
-	[[nodiscard]] std::string errorMessage( const char* operation, JSReturn exception ) const;
+	[[nodiscard]] std::string errorMessage( const char* operation, const JSReturn& exception ) const;
 	void resolveImports() const;
 	void evaluate() const;
 	void loadNamespace();

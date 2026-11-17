@@ -5,28 +5,7 @@
 #include <stdexcept>
 #include <utility>
 
-JSModule::JSModule( JSReturn module, std::string filename ) :
-  m_module( std::move( module ) ),
-  m_filename( std::move( filename ) )
-{
-	if ( !m_module.m_ctx )
-	{
-		throw std::runtime_error( "Module requires a runtime" );
-	}
-
-	if ( JS_VALUE_GET_TAG( m_module.m_value ) != JS_TAG_MODULE )
-	{
-		throw std::runtime_error( "Expected a compiled JavaScript module" );
-	}
-
-	resolveImports();
-
-	evaluate();
-	loadNamespace();
-	spdlog::debug( "Initialized parser module {}", m_filename );
-}
-
-std::string JSModule::errorMessage( const char* operation, JSReturn exception ) const
+std::string JSModule::errorMessage( const char* operation, const JSReturn& exception ) const
 {
 	std::string message { std::string( operation ) + " [" + m_filename + "]: " };
 
@@ -110,6 +89,27 @@ void JSModule::loadNamespace()
 	}
 }
 
+JSModule::JSModule( JSReturn module, std::string filename ) :
+  m_module( std::move( module ) ),
+  m_filename( std::move( filename ) )
+{
+	if ( !m_module.m_ctx )
+	{
+		throw std::runtime_error( "Module requires a runtime" );
+	}
+
+	if ( JS_VALUE_GET_TAG( m_module.m_value ) != JS_TAG_MODULE )
+	{
+		throw std::runtime_error( "Expected a compiled JavaScript module" );
+	}
+
+	resolveImports();
+
+	evaluate();
+	loadNamespace();
+	spdlog::debug( "Initialized parser module {}", m_filename );
+}
+
 JSReturn JSModule::getExport( const char* name ) const
 {
 	auto value { findExport( name ) };
@@ -133,62 +133,6 @@ JSReturn JSModule::findExport( const char* name ) const
 	}
 
 	return value;
-}
-
-bool ParserInstance::hasManifest() const
-{
-	const auto parserClass { m_module.findExport( "default" ) };
-	if ( parserClass.isUndefined() || parserClass.isNull() )
-	{
-		return false;
-	}
-
-	const auto metadata { parserClass.getProperty( "metadata" ) };
-	return !metadata.isUndefined() && !metadata.isNull();
-}
-
-bool ParserInstance::hasUrlClass() const
-{
-	const auto urlClasses { m_module.findExport( "urlClasses" ) };
-	return !urlClasses.isUndefined() && !urlClasses.isNull();
-}
-
-std::vector< URLClass > ParserInstance::urlClasses() const
-{
-	const auto classes { m_module.getExport( "urlClasses" ) };
-	if ( !classes.isArray() )
-	{
-		throw std::runtime_error( "urlClasses export must be an array" );
-	}
-
-	const auto json { classes.stringifyJson() };
-	if ( json.isException() || !json.isString() )
-	{
-		throw std::runtime_error( "Failed to serialize URL classes" );
-	}
-
-	const auto text { json.toString() };
-	simdjson::dom::parser parser {};
-	simdjson::dom::element root {};
-	const auto error { parser.parse( text ).get( root ) };
-	if ( error )
-	{
-		throw std::runtime_error( simdjson::error_message( error ) );
-	}
-
-	simdjson::dom::array values {};
-	if ( root.get_array().get( values ) )
-	{
-		throw std::runtime_error( "URL classes must be an array" );
-	}
-
-	std::vector< URLClass > result {};
-	for ( const auto value : values )
-	{
-		result.emplace_back( value );
-	}
-
-	return result;
 }
 
 JSReturn ParserInstance::loadBytecode() const
@@ -251,4 +195,60 @@ ParserManifest ParserInstance::manifest()
 	}
 
 	return ParserManifest { root };
+}
+
+std::vector< URLClass > ParserInstance::urlClasses() const
+{
+	const auto classes { m_module.getExport( "urlClasses" ) };
+	if ( !classes.isArray() )
+	{
+		throw std::runtime_error( "urlClasses export must be an array" );
+	}
+
+	const auto json { classes.stringifyJson() };
+	if ( json.isException() || !json.isString() )
+	{
+		throw std::runtime_error( "Failed to serialize URL classes" );
+	}
+
+	const auto text { json.toString() };
+	simdjson::dom::parser parser {};
+	simdjson::dom::element root {};
+	const auto error { parser.parse( text ).get( root ) };
+	if ( error )
+	{
+		throw std::runtime_error( simdjson::error_message( error ) );
+	}
+
+	simdjson::dom::array values {};
+	if ( root.get_array().get( values ) )
+	{
+		throw std::runtime_error( "URL classes must be an array" );
+	}
+
+	std::vector< URLClass > result {};
+	for ( const auto value : values )
+	{
+		result.emplace_back( value );
+	}
+
+	return result;
+}
+
+bool ParserInstance::hasManifest() const
+{
+	const auto parserClass { m_module.findExport( "default" ) };
+	if ( parserClass.isUndefined() || parserClass.isNull() )
+	{
+		return false;
+	}
+
+	const auto metadata { parserClass.getProperty( "metadata" ) };
+	return !metadata.isUndefined() && !metadata.isNull();
+}
+
+bool ParserInstance::hasUrlClass() const
+{
+	const auto urlClasses { m_module.findExport( "urlClasses" ) };
+	return !urlClasses.isUndefined() && !urlClasses.isNull();
 }

@@ -8,7 +8,7 @@ include(Options)
 include(Dependencies)
 
 # CTest must be enabled at the root so all component suites are discoverable.
-if (BUILD_IDHAN_TESTS OR BUILD_PTR_CORE_TESTS)
+if (BUILD_IDHAN_TESTS OR BUILD_PTR_CORE_TESTS OR (BUILD_IDHAN_DOWNLOADER AND IDHAN_DOWNLOADER_BUILD_TESTS))
 	enable_testing()
 endif ()
 

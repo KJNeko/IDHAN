@@ -25,7 +25,7 @@ if (BUILD_IDHAN_SERVER)
 	include(toml)
 endif ()
 
-if (BUILD_IDHAN_TESTS)
+if (BUILD_IDHAN_TESTS OR (BUILD_IDHAN_DOWNLOADER AND IDHAN_DOWNLOADER_BUILD_TESTS))
 	find_package(GTest CONFIG REQUIRED)
 	include(GoogleTest)
 endif ()

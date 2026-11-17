@@ -4,6 +4,8 @@ option(BUILD_IDHAN_DOCS "Builds the API and source docs" ON)
 option(BUILD_IDHAN_SERVER "Builds the server" ON)
 option(BUILD_IDHAN_DOWNLOADER "Builds the downloader runtime" ON)
 
+option(IDHAN_DOWNLOADER_BUILD_TESTS "Build the downloader GoogleTest suites" ON)
+
 option(BUILD_IDHAN_TESTS "Builds the GoogleTest C++ suites" OFF)
 
 option(BUILD_IDHAN_CLIENT "Builds the shared library for the IDHANClient" ON)

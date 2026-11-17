@@ -53,3 +53,27 @@ ParserRegistry::ParserRegistry( std::filesystem::path search_dir ) : m_dir( std:
 		}
 	}
 }
+
+std::optional< ParserInfo > ParserRegistry::tryParseUrl( const std::string& url )
+{
+	auto url_e { ada::parse< ada::url_aggregator >( url ) };
+	if ( !url_e.has_value() )
+	{
+		return std::nullopt;
+	}
+
+	const auto& parsed_url { url_e.value() };
+	for ( auto& entry : m_parsers )
+	{
+		for ( auto& url_class : entry.url_classes )
+		{
+			auto match { url_class.tryMatch( parsed_url ) };
+			if ( match.has_value() )
+			{
+				return ParserInfo { .script = entry.script, .match = std::move( match.value() ) };
+			}
+		}
+	}
+
+	return std::nullopt;
+}

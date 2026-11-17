@@ -5,7 +5,7 @@
 
 using namespace idhan::downloader::manifest_json;
 
-ParserManifest::ParserManifest( element json ) :
+ParserManifest::ParserManifest( const element json ) :
   m_format_version { read< std::uint32_t >( json, "formatVersion" ) },
   m_sdk_version { read< std::string >( json, "sdkVersion" ) },
   m_id { read< std::string >( json, "id" ) }, m_version { read< std::uint64_t >( json, "version" ) },

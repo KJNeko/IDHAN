@@ -11,10 +11,11 @@
 #include "JsonDecodingValues.hpp"
 
 using AdaPattern = ada::url_pattern< ada::url_pattern_regex::std_regex_provider >;
+using URLCaptures = std::unordered_map< std::string, std::string >;
 
 struct SearchParameter
 {
-	SearchParameter( std::string name, simdjson::dom::element json ) :
+	SearchParameter( std::string name, const simdjson::dom::element json ) :
 	  m_key { std::move( name ) },
 	  m_value { idhan::downloader::manifest_json::decode< std::string >( json ) },
 	  m_capture { m_value.starts_with( ':' ) }
@@ -33,18 +34,13 @@ struct SearchParameter
 
 struct SearchPattern
 {
+	[[nodiscard]] std::optional< URLCaptures > tryMatch( std::string_view search ) const;
 	std::vector< SearchParameter > m_queries {};
-
-	bool match( std::string_view key ) const;
-	//! Returns true if the search pattern is a capture
-	bool is_capture( std::string_view key ) const;
-
-	//! Returns true only if all required search parameters are found
-	bool hasRequired( ada::url_search_params& params );
 };
 
 struct Pattern
 {
+	std::optional< URLCaptures > tryMatch( const ada::url_aggregator& url );
 	AdaPattern m_ada_pattern {};
 	SearchPattern m_search_pattern {};
 
@@ -55,6 +51,6 @@ struct Pattern
 	//! Returns true if the url matches the pattern
 	bool match( std::string_view url );
 	//! Returns true if the query matches.
-	bool matchQuery( std::string_view url );
+	bool matchQuery( std::string_view url ) const;
 	std::unordered_map< std::string, std::string > captures( std::string_view url );
 };

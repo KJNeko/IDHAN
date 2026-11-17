@@ -12,7 +12,11 @@ class ParserScript;
 
 class ParserInfo
 {
-}
+  public:
+
+	std::shared_ptr< ParserScript > script;
+	URLMatch match;
+};
 
 /** @brief Manages parser compilation and keeps track of file changes
  **/
@@ -32,5 +36,5 @@ class ParserRegistry
 
 	explicit ParserRegistry( std::filesystem::path search_dir );
 
-	ParserInfo tryParseUrl( const std::string& test_url );
+	std::optional< ParserInfo > tryParseUrl( const std::string& test_url );
 };

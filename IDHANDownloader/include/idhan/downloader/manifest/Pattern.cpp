@@ -8,7 +8,7 @@
 
 using namespace idhan::downloader::manifest_json;
 
-AdaPattern initAdaPattern( element json )
+static AdaPattern initAdaPattern( const element json )
 {
 	ada::url_pattern_init init {};
 
@@ -41,54 +41,125 @@ AdaPattern initAdaPattern( element json )
 	return std::move( pattern_e.value() );
 }
 
-SearchPattern initSearchPattern( element json )
+static SearchPattern initSearchPattern( const element json )
 {
 	// json["query"]
 	const auto search_params { field( json, "query" ) };
 	SearchPattern pattern {};
 	if ( !search_params ) return pattern;
 
+	for ( const auto entry : object( search_params.value() ) )
+	{
+		pattern.m_queries.emplace_back( std::string { entry.key }, entry.value );
+	}
+
 	return pattern;
 }
 
-Pattern::Pattern( element json ) :
+Pattern::Pattern( const element json ) :
   m_ada_pattern( initAdaPattern( json ) ),
   m_search_pattern( initSearchPattern( json ) )
 {}
 
-bool Pattern::match( std::string_view url )
+bool Pattern::match( const std::string_view url )
 {
-	// split after ?
-	auto url_start { url.subview( 0, url.find( '?' ) ) };
-	spdlog::info( "Splitting {}", url );
-
-	return m_ada_pattern.match( url_start ) && this->matchQuery( url );
-}
-
-bool Pattern::matchQuery( std::string_view url )
-{
-	const auto query { url.subview( url.find( '?' ) ) };
-	ada::url_search_params params { query };
-
-	std::size_t found_count { 0 };
-
-	for ( const auto& [ key, value, capture ] : this->m_search_pattern.m_queries )
+	auto url_e { ada::parse< ada::url_aggregator >( url ) };
+	if ( !url_e.has_value() )
 	{
-		const auto found { params.get_all( key ) };
-
-		if ( found.empty() ) return false; // Early eject, We're missing an expected parameter
-
-		//TODO: Add in ability to ask for specific size of parameters
-		// if(found.size() > N)
-
-		// If we are not a capture we want the value to be exact. Ex: `gelbooru?s=list`
-		if ( !capture && found[ 0 ] != value ) return false;
+		return false;
 	}
 
-	if ( found_count == this->m_search_pattern.m_queries.size() ) return true;
+	return tryMatch( url_e.value() ).has_value();
+}
 
-	return false;
+bool Pattern::matchQuery( const std::string_view url ) const
+{
+	auto url_e { ada::parse< ada::url_aggregator >( url ) };
+	if ( !url_e.has_value() )
+	{
+		return false;
+	}
+
+	return m_search_pattern.tryMatch( url_e.value().get_search() ).has_value();
+}
+
+std::optional< URLCaptures > SearchPattern::tryMatch( const std::string_view search ) const
+{
+	ada::url_search_params params { search };
+	URLCaptures captures {};
+	for ( const auto& query : m_queries )
+	{
+		const auto value { params.get( query.m_key ) };
+		if ( !value.has_value() )
+		{
+			return std::nullopt;
+		}
+
+		if ( query.m_capture )
+		{
+			captures.emplace( query.m_value, std::string { value.value() } );
+			continue;
+		}
+
+		if ( value.value() != query.m_value )
+		{
+			return std::nullopt;
+		}
+	}
+
+	return captures;
+}
+
+std::optional< URLCaptures > Pattern::tryMatch( const ada::url_aggregator& url )
+{
+	auto match_e { m_ada_pattern.exec( std::string_view { url.get_href() } ) };
+	if ( !match_e.has_value() )
+	{
+		return std::nullopt;
+	}
+
+	const auto& match { match_e.value() };
+	if ( !match.has_value() )
+	{
+		return std::nullopt;
+	}
+
+	auto captures { m_search_pattern.tryMatch( url.get_search() ) };
+	if ( !captures.has_value() )
+	{
+		return std::nullopt;
+	}
+
+	const auto& result { match.value() };
+	for ( const auto* component :
+	      { &result.protocol,
+	        &result.username,
+	        &result.password,
+	        &result.hostname,
+	        &result.port,
+	        &result.pathname,
+	        &result.search,
+	        &result.hash } )
+	{
+		for ( const auto& [ name, value ] : component->groups )
+		{
+			if ( value.has_value() )
+			{
+				captures.value().emplace( name, value.value() );
+			}
+		}
+	}
+
+	return captures;
 }
 
 std::unordered_map< std::string, std::string > Pattern::captures( std::string_view url )
-{}
+{
+	auto url_e { ada::parse< ada::url_aggregator >( url ) };
+	if ( !url_e.has_value() )
+	{
+		return {};
+	}
+
+	return tryMatch( url_e.value() ).value_or( URLCaptures {} );
+}

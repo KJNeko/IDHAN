@@ -18,12 +18,12 @@ using simdjson::dom::element;
 
 constexpr std::int64_t js_max_safe_integer { ( std::int64_t { 1 } << 53 ) - 1 };
 
-[[noreturn]] inline void invalid( std::string_view field, std::string_view reason )
+[[noreturn]] inline void invalid( const std::string_view field, const std::string_view reason )
 {
 	throw std::runtime_error( "Manifest field '" + std::string { field } + "': " + std::string { reason } );
 }
 
-inline simdjson::dom::object object( element value )
+inline simdjson::dom::object object( const element value )
 {
 	simdjson::dom::object result {};
 	if ( value.get_object().get( result ) )
@@ -34,7 +34,7 @@ inline simdjson::dom::object object( element value )
 	return result;
 }
 
-inline std::optional< element > field( element json, std::string_view key )
+inline std::optional< element > field( const element json, const std::string_view key )
 {
 	const auto fields { object( json ) };
 	element value {};
@@ -52,7 +52,7 @@ inline std::optional< element > field( element json, std::string_view key )
 	return value;
 }
 
-inline element required( element json, std::string_view key )
+inline element required( const element json, const std::string_view key )
 {
 	const auto value { field( json, key ) };
 	if ( !value )
@@ -120,7 +120,7 @@ T decode( element json )
 }
 
 template < typename T >
-T read( element json, std::string_view key )
+T read( const element json, const std::string_view key )
 {
 	try
 	{
@@ -133,7 +133,7 @@ T read( element json, std::string_view key )
 }
 
 template < typename T >
-std::optional< T > optional( element json, std::string_view key )
+std::optional< T > optional( const element json, const std::string_view key )
 {
 	const auto value { field( json, key ) };
 	if ( !value ) return std::nullopt;
@@ -142,7 +142,7 @@ std::optional< T > optional( element json, std::string_view key )
 }
 
 template < typename T >
-std::vector< T > array( element json )
+std::vector< T > array( const element json )
 {
 	simdjson::dom::array values {};
 	if ( json.get_array().get( values ) ) invalid( "array", "expected an array" );
@@ -167,12 +167,12 @@ std::vector< T > array( element json )
 }
 
 template < typename T >
-std::vector< T > list( element json, std::string_view key, bool mandatory = false )
+std::vector< T > list( const element json, const std::string_view key, const bool required = false )
 {
 	const auto value { field( json, key ) };
 	if ( !value )
 	{
-		if ( mandatory ) invalid( key, "required array is missing" );
+		if ( required ) invalid( key, "required array is missing" );
 
 		return {};
 	}

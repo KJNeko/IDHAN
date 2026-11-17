@@ -27,6 +27,14 @@ std::shared_ptr< CompiledScript > ParserScript::compileModule( std::shared_ptr< 
 	return std::make_shared< CompiledScript >( bytes, size, ctx, m_filename );
 }
 
+JSReturn ParserScript::eval( const std::shared_ptr< IDHANJSRuntime >& ctx, int eval_type ) const
+{
+	const auto result { JS_Eval( ctx->context(), m_script.c_str(), m_script.size(), m_filename.c_str(), eval_type ) };
+
+	JSReturn ret { ctx, result };
+	return ret;
+}
+
 ParserScript::ParserScript( std::string file_name, std::string script ) :
   m_filename( std::move( file_name ) ),
   m_script( std::move( script ) )
@@ -38,12 +46,9 @@ ParserScript::ParserScript( std::string file_name, std::string script ) :
 		"Loaded script {} with size {} ({} compiled)", this->m_filename, m_script.size(), m_compiled->size() );
 }
 
-JSReturn ParserScript::eval( const std::shared_ptr< IDHANJSRuntime >& ctx, int eval_type ) const
+std::shared_ptr< ParserInstance > ParserScript::createInstance() const
 {
-	const auto result { JS_Eval( ctx->context(), m_script.c_str(), m_script.size(), m_filename.c_str(), eval_type ) };
-
-	JSReturn ret { ctx, result };
-	return ret;
+	return this->m_compiled->createInstance();
 }
 
 std::shared_ptr< ParserScript > readScript( const std::filesystem::path& path )
@@ -61,9 +66,4 @@ std::shared_ptr< ParserScript > readScript( const std::filesystem::path& path )
 
 	spdlog::error( "Failed to load {} at pwd {}", path.string(), std::filesystem::current_path().string() );
 	throw std::runtime_error( "Failed to read parser file" );
-}
-
-std::shared_ptr< ParserInstance > ParserScript::createInstance() const
-{
-	return this->m_compiled->createInstance();
 }

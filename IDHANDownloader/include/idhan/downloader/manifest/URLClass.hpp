@@ -11,8 +11,17 @@
 #include "URLGenerator.hpp"
 #include "URLPattern.hpp"
 
+struct URLMatch
+{
+	std::string url_class;
+	std::string pattern;
+	std::optional< std::string > generator;
+	URLCaptures captures;
+};
+
 struct URLClass
 {
+	std::optional< URLMatch > tryMatch( const ada::url_aggregator& url );
 	explicit URLClass( simdjson::dom::element json );
 
 	std::string m_id;

@@ -11,3 +11,17 @@ URLPattern::URLPattern( element json ) :
   m_patterns { list< Pattern >( json, "patterns", true ) },
   m_remove_query { list< std::string >( json, "removeQuery" ) }
 {}
+
+std::optional< URLCaptures > URLPattern::tryMatch( const ada::url_aggregator& url )
+{
+	for ( auto& pattern : m_patterns )
+	{
+		auto captures { pattern.tryMatch( url ) };
+		if ( captures.has_value() )
+		{
+			return captures;
+		}
+	}
+
+	return std::nullopt;
+}
